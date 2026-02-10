@@ -1,0 +1,30 @@
+{
+  "compilerOptions": {
+    "jsx": "react-jsx", 
+    "types": ["node", "react"], 
+    "noImplicitAny": false,
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "lib": ["ESNext", "DOM"],
+    "strict": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "isolatedModules": true,
+    "declaration": true,
+    "emitDeclarationOnly": true,
+    "baseUrl": ".",
+    "paths": {
+      "bit-form": ["./src/index.ts"]
+    }
+  },
+  "include": ["src/**/*"], 
+  "exclude": ["node_modules", "dist", "**/*.test.ts", "**/*.test.tsx"],
+  "references": [
+    { "path": "./tsconfig.core.json" },
+    { "path": "./tsconfig.resolvers.json" },
+    { "path": "./tsconfig.react.json" },
+    { "path": "./tsconfig.vue.json" },
+    { "path": "./tsconfig.angular.json" }
+  ]
+}

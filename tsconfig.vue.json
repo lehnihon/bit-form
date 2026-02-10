@@ -1,0 +1,11 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "composite": true,
+    "outDir": "./dist/vue",
+    "rootDir": "src",
+    "types": ["node"]
+  },
+  "include": ["src/vue/**/*.ts"],
+  "references": [{ "path": "./tsconfig.core.json" }]
+}
