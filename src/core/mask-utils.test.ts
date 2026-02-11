@@ -1,21 +1,50 @@
 import { describe, it, expect } from 'vitest';
-import { createPatternMask, currencyMask } from './mask-utils';
+import { 
+  createPatternMask, 
+  maskBRL, 
+  maskUSD, 
+  unmask, 
+  unmaskCurrency 
+} from './mask-utils';
 
-describe('Mask Utils', () => {
-  it('deve aplicar máscara de CPF', () => {
-    const mask = createPatternMask('###.###.###-##');
-    expect(mask('12345678901')).toBe('123.456.789-01');
+describe('Mask Utils - Patterns', () => {
+  it('should respect tokens (#, A, X)', () => {
+    const mask = createPatternMask('AAA-####-X');
+    expect(mask('abc1234z')).toBe('abc-1234-z');
+    expect(mask('123-abc')).toBe(''); 
   });
 
-  it('deve lidar com valores incompletos na máscara', () => {
-    const mask = createPatternMask('##/##/####');
-    expect(mask('12')).toBe('12/');
-    expect(mask('1212')).toBe('12/12/');
+  it('should handle fixed characters correctly', () => {
+    const mask = createPatternMask('+55 (##) #####-####');
+    expect(mask('11988887777')).toBe('+55 (11) 98888-7777');
+  });
+});
+
+describe('Mask Utils - Currency', () => {
+  it('should format BRL positive and negative', () => {
+    expect(maskBRL('123456')).toBe('R$ 1.234,56');
+    expect(maskBRL('-123456')).toBe('-R$ 1.234,56');
   });
 
-  it('deve formatar moeda brasileira corretamente', () => {
-    const result = currencyMask(10.5);
-    // Normaliza espaços inseparáveis do Intl
-    expect(result.replace(/\u00a0/g, ' ')).toMatch(/R\$\s10,50/);
+  it('should format USD correctly', () => {
+    expect(maskUSD('100050')).toBe('$ 1,000.50');
+    expect(maskUSD('-100050')).toBe('-$ 1,000.50');
+  });
+
+  it('should return only the sign when input is just a minus', () => {
+    expect(maskBRL('-')).toBe('-');
+  });
+});
+
+describe('Mask Utils - Unmasking', () => {
+  it('should clean strings to raw numbers keeping negative sign', () => {
+    expect(unmask('(11) 9999-9999')).toBe('1199999999');
+    expect(unmask('FIA-6208')).toBe('FIA6208');
+  });
+
+  it('should convert currency strings to float numbers', () => {
+    expect(unmaskCurrency('R$ 1.200,50')).toBe(1200.5);
+    expect(unmaskCurrency('-R$ 50,00')).toBe(-50.0);
+    expect(unmaskCurrency('')).toBe(0);
   });
 });

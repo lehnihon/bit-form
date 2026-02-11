@@ -1,61 +1,76 @@
-import { ref, onMounted, onUnmounted, computed, readonly } from 'vue';
+import { ref, computed, onUnmounted } from 'vue';
 import { BitStore } from '../core/bit-store';
 
-export function useBitField<T extends Record<string, any>, K extends keyof T>(
-  store: BitStore<T>,
-  fieldName: K
-) {
-  // 1. Criamos refs para os estados que o Vue precisa observar
-  const value = ref<T[K]>(store.getState()[fieldName]);
-  const errorMsg = ref<string | undefined>(store.getErrors()[fieldName]);
-  const isTouched = ref<boolean>(!!store.getTouched()[fieldName]);
+export function useBitField<T extends object>(store: BitStore<T>, path: string) {
+  const _trigger = ref(0);
 
-  // 2. Sincronizamos com a store
-  let unsubscribe: () => void;
-
-  onMounted(() => {
-    unsubscribe = store.subscribe(() => {
-      value.value = store.getState()[fieldName];
-      errorMsg.value = store.getErrors()[fieldName];
-      isTouched.value = !!store.getTouched()[fieldName];
-    });
+  const unsubscribe = store.subscribe(() => {
+    _trigger.value++;
   });
 
-  onUnmounted(() => {
-    if (unsubscribe) unsubscribe();
+  onUnmounted(() => unsubscribe());
+
+  const getDeepValue = (obj: any, path: string) => {
+    return path.split('.').reduce((prev, curr) => prev?.[curr], obj);
+  };
+
+  const value = computed({
+    get: () => {
+      _trigger.value;
+      return getDeepValue(store.getState().values, path);
+    },
+    set: (val) => {
+      store.setField(path, val);
+    }
+  });
+
+  const error = computed(() => {
+    _trigger.value;
+    const state = store.getState();
+    return !!state.touched[path] ? state.errors[path] : undefined;
+  });
+
+  const touched = computed(() => {
+    _trigger.value;
+    return !!store.getState().touched[path];
   });
 
   return {
-    // Retornamos refs para manter a reatividade no template
     value,
-    // Erro derivado (computed)
-    error: computed(() => isTouched.value ? errorMsg.value : undefined),
-    
-    setValue: (val: T[K]) => store.setState({ [fieldName]: val } as any),
-    onBlur: () => store.markTouched(fieldName)
+    error,
+    touched,
+    blur: () => store.blurField(path)
   };
 }
 
-export function useBitFormStatus(store: BitStore<any>) {
-  const isDirty = ref(store.isDirty());
-  const isValidating = ref(store.isValidating);
-
-  let unsubscribe: () => void;
-
-  onMounted(() => {
-    unsubscribe = store.subscribe(() => {
-      isDirty.value = store.isDirty();
-      isValidating.value = store.isValidating;
-    });
+export function useBitForm<T extends object>(store: BitStore<T>) {
+  const _trigger = ref(0);
+  
+  const unsubscribe = store.subscribe(() => {
+    _trigger.value++;
   });
 
-  onUnmounted(() => {
-    if (unsubscribe) unsubscribe();
+  onUnmounted(() => unsubscribe());
+
+  const state = computed(() => {
+    _trigger.value;
+    return store.getState();
   });
 
   return {
-    isDirty: readonly(isDirty),
-    isValidating: readonly(isValidating),
-    reset: () => store.reset()
+    values: computed(() => state.value.values),
+    errors: computed(() => state.value.errors),
+    touched: computed(() => state.value.touched),
+    isValid: computed(() => state.value.isValid),
+    isSubmitting: computed(() => state.value.isSubmitting),
+    setField: store.setField.bind(store),
+    pushItem: store.pushItem.bind(store),
+    removeItem: store.removeItem.bind(store),
+    submit: (onSuccess: (values: T) => void | Promise<void>) => {
+      return (e?: Event) => {
+        if (e?.preventDefault) e.preventDefault();
+        return store.submit(onSuccess);
+      };
+    }
   };
 }

@@ -1,43 +1,91 @@
-import { useSyncExternalStore, useMemo } from 'react';
+import { useSyncExternalStore, useCallback } from 'react';
 import { BitStore } from '../core/bit-store';
 
-export function useBitField<T extends Record<string, any>, K extends keyof T>(
-  store: BitStore<T>,
-  fieldName: K
-) {
+export function useBitField<T extends object>(store: BitStore<T>, path: string) {
+  // Snapshot para o valor (suporta caminhos profundos como 'user.address.city')
+  const getSnapshot = useCallback(() => {
+    const state = store.getState();
+    return path.split('.').reduce((prev, curr) => prev?.[curr], state.values);
+  }, [store, path]);
+
+  const getErrorSnapshot = useCallback(() => {
+    return store.getState().errors[path];
+  }, [store, path]);
+
+  const getTouchedSnapshot = useCallback(() => {
+    return !!store.getState().touched[path];
+  }, [store, path]);
+
   const value = useSyncExternalStore(
-    (callback: () => void) => store.subscribe(callback), // Tipado explicitamente
-    () => store.getState()[fieldName]
+    store.subscribe.bind(store),
+    getSnapshot,
+    getSnapshot
   );
 
   const error = useSyncExternalStore(
-    (callback: () => void) => store.subscribe(callback), // Tipado explicitamente
-    () => {
-      const isTouched = store.getTouched()[fieldName];
-      return isTouched ? store.getErrors()[fieldName] : undefined;
-    }
+    store.subscribe.bind(store),
+    getErrorSnapshot,
+    getErrorSnapshot
   );
 
-  // 2. Memorizamos as funções de callback para evitar re-renders desnecessários em componentes filhos
-  return useMemo(() => ({
-    value,
-    error,
-    setValue: (val: T[K]) => store.setState({ [fieldName]: val } as any),
-    onBlur: () => store.markTouched(fieldName)
-  }), [value, error, store, fieldName]);
-}
+  const touched = useSyncExternalStore(
+    store.subscribe.bind(store),
+    getTouchedSnapshot,
+    getTouchedSnapshot
+  );
 
-/**
- * Hook para monitorar o status global (loading, dirty, etc)
- */
-export function useBitFormStatus(store: BitStore<any>) {
-  const isDirty = useSyncExternalStore(store.subscribe, () => store.isDirty());
-  const isValidating = useSyncExternalStore(store.subscribe, () => store.isValidating);
+  const setValue = useCallback((newValue: any) => {
+    store.setField(path, newValue);
+  }, [store, path]);
+
+  const setBlur = useCallback(() => {
+    store.blurField(path);
+  }, [store, path]);
 
   return {
-    isDirty,
-    isValidating,
-    reset: () => store.reset(),
-    getRawData: () => store.getRawState()
+    value,
+    error: touched ? error : undefined,
+    touched,
+    setValue,
+    setBlur,
+    props: {
+      value: value ?? '',
+      onChange: (e: any) => {
+        // Suporta tanto eventos de input quanto valores diretos
+        const val = e?.target ? e.target.value : e;
+        setValue(val);
+      },
+      onBlur: setBlur
+    }
+  };
+}
+
+export function useBitForm<T extends object>(store: BitStore<T>) {
+  const getFullState = useCallback(() => store.getState(), [store]);
+
+  const state = useSyncExternalStore(
+    store.subscribe.bind(store),
+    getFullState,
+    getFullState
+  );
+
+  // Melhorado para facilitar o uso no onSubmit do <form>
+  const submit = useCallback((onSuccess: (values: T) => void | Promise<void>) => {
+    return (e?: { preventDefault: () => void }) => {
+      if (e?.preventDefault) e.preventDefault();
+      return store.submit(onSuccess);
+    };
+  }, [store]);
+
+  return { 
+    isValid: state.isValid,
+    isSubmitting: state.isSubmitting,
+    values: state.values,
+    errors: state.errors,
+    touched: state.touched,
+    pushItem: store.pushItem.bind(store),
+    removeItem: store.removeItem.bind(store),
+    setField: store.setField.bind(store),
+    submit
   };
 }

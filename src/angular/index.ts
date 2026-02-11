@@ -1,57 +1,67 @@
-import { signal, computed, inject, DestroyRef, Signal } from '@angular/core';
+import { signal, computed, inject, DestroyRef } from '@angular/core';
 import { BitStore } from '../core/bit-store';
 
-export function createBitSignal<T extends Record<string, any>, K extends keyof T>(
-  store: BitStore<T>,
-  fieldName: K
-) {
-  // 1. Uso do Signal (como tipo) e signal (como valor)
-  const fieldSignal = signal<T[K]>(store.getState()[fieldName]);
-  const errorSignal = signal<string | undefined>(store.getErrors()[fieldName]);
-  const touchedSignal = signal<boolean>(!!store.getTouched()[fieldName]);
+export function injectBitField<T extends object>(store: BitStore<T>, path: string) {
+  const stateSignal = signal(store.getState());
 
-  // 2. Injetamos o DestroyRef para limpeza automática (substitui o onDestroy manual)
-  // Isso garante que o subscribe seja cancelado quando o componente for destruído
-  try {
-    const destroyRef = inject(DestroyRef);
-    const unsubscribe = store.subscribe(() => {
-      fieldSignal.set(store.getState()[fieldName]);
-      errorSignal.set(store.getErrors()[fieldName]);
-      touchedSignal.set(!!store.getTouched()[fieldName]);
-    });
-    destroyRef.onDestroy(() => unsubscribe());
-  } catch (e) {
-    console.warn('BitForm: createBitSignal deve ser chamado em um contexto de injeção (constructor/field init).');
-  }
+  const sub = store.subscribe(() => {
+    stateSignal.set(store.getState());
+  });
+
+  inject(DestroyRef).onDestroy(() => sub());
+
+  const getDeepValue = (obj: any, path: string) => {
+    return path.split('.').reduce((prev, curr) => prev?.[curr], obj);
+  };
+
+  const value = computed(() => getDeepValue(stateSignal().values, path));
+  
+  const error = computed(() => {
+    const state = stateSignal();
+    const isTouched = !!state.touched[path];
+    return isTouched ? state.errors[path] : undefined;
+  });
+
+  const touched = computed(() => !!stateSignal().touched[path]);
 
   return {
-    // Retornamos como Signal readonly para manter a integridade
-    value: fieldSignal.asReadonly() as Signal<T[K]>,
-    
-    // 3. Uso do computed para lógica derivada
-    error: computed(() => touchedSignal() ? errorSignal() : undefined),
-    
-    setValue: (val: T[K]) => store.setState({ [fieldName]: val } as any),
-    onBlur: () => store.markTouched(fieldName)
+    value,
+    error,
+    touched,
+    setValue: (val: any) => store.setField(path, val),
+    blur: () => store.blurField(path)
   };
 }
 
-export function useBitFormStatus(store: BitStore<any>) {
-  const isDirty = signal(store.isDirty());
-  const isValidating = signal(store.isValidating);
+export function injectBitForm<T extends object>(store: BitStore<T>) {
+  const stateSignal = signal(store.getState());
 
-  try {
-    const destroyRef = inject(DestroyRef);
-    const unsubscribe = store.subscribe(() => {
-      isDirty.set(store.isDirty());
-      isValidating.set(store.isValidating);
-    });
-    destroyRef.onDestroy(() => unsubscribe());
-  } catch (e) {}
+  const sub = store.subscribe(() => {
+    stateSignal.set(store.getState());
+  });
+
+  inject(DestroyRef).onDestroy(() => sub());
+
+  const values = computed(() => stateSignal().values);
+  const errors = computed(() => stateSignal().errors);
+  const touched = computed(() => stateSignal().touched);
+  const isValid = computed(() => stateSignal().isValid);
+  const isSubmitting = computed(() => stateSignal().isSubmitting);
 
   return {
-    isDirty: isDirty.asReadonly(),
-    isValidating: isValidating.asReadonly(),
-    reset: () => store.reset()
+    values,
+    errors,
+    touched,
+    isValid,
+    isSubmitting,
+    setField: store.setField.bind(store),
+    pushItem: store.pushItem.bind(store),
+    removeItem: store.removeItem.bind(store),
+    submit: (onSuccess: (values: T) => void | Promise<void>) => {
+      return (event?: Event) => {
+        if (event?.preventDefault) event.preventDefault();
+        return store.submit(onSuccess);
+      };
+    }
   };
 }

@@ -1,17 +1,18 @@
 import { ZodSchema } from 'zod';
-import { ValidatorFn } from '../core/bit-store';
+import { BitErrors } from '../core/bit-store';
 
-export const zodResolver = <T extends Record<string, any>>(schema: ZodSchema<T>): ValidatorFn<T> => {
-  return (values: T) => {
-    const result = schema.safeParse(values);
+export const zodResolver = <T extends object>(schema: ZodSchema<T>) => {
+  return async (values: T): Promise<BitErrors<T>> => {
+    const result = await schema.safeParseAsync(values);
     
     if (result.success) return {};
 
-    const errors: Partial<Record<keyof T, string>> = {};
+    const errors: BitErrors<T> = {};
     
     for (const issue of result.error.issues) {
-      const path = issue.path[0] as keyof T;
-      if (path) {
+      const path = issue.path.join('.');
+      
+      if (path && !errors[path]) {
         errors[path] = issue.message;
       }
     }

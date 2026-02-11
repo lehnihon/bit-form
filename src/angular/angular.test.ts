@@ -1,77 +1,106 @@
 import { describe, it, expect, vi } from 'vitest';
-import { BitStore } from '../core/bit-store';
-import { createBitSignal } from './index';
-import { EnvironmentInjector, runInInjectionContext, DestroyRef } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { runInInjectionContext, Component } from '@angular/core';
+import { BitStore } from '../core/bit-store';
+import { injectBitField, injectBitForm } from './index';
+import { unmaskCurrency } from '../core/mask-utils';
 
-describe('Angular Adapter (Signals)', () => {
-  // Setup para simular o ambiente do Angular
-  const setup = () => {
-    const store = new BitStore({ name: 'Bit', age: 25 });
-    const injector = TestBed.inject(EnvironmentInjector);
-    return { store, injector };
-  };
-
-  it('deve refletir o valor inicial da store no signal', () => {
-    const { store, injector } = setup();
-
-    runInInjectionContext(injector, () => {
-      const nameField = createBitSignal(store, 'name');
-      // No Angular, signals são chamados como funções: nameField.value()
-      expect(nameField.value()).toBe('Bit');
-    });
+@Component({
+  standalone: true,
+  template: ''
+})
+class HostComponent {
+  store = new BitStore({
+    initialValues: { 
+      total: 'R$ 50,00',
+      user: { name: 'Leo', address: { city: 'São Paulo' } },
+      items: ['Item 1'] as string[]
+    },
+    transform: { 
+      total: unmaskCurrency,
+      'user.name': (v: string) => v.toUpperCase()
+    }
   });
 
-  it('deve atualizar o signal quando a store mudar', async () => {
-    const { store, injector } = setup();
+  // Fields
+  totalField = injectBitField(this.store, 'total');
+  cityName = injectBitField(this.store, 'user.address.city');
+  userName = injectBitField(this.store, 'user.name');
+  
+  // Form engine
+  form = injectBitForm(this.store);
+}
 
-    await runInInjectionContext(injector, async () => {
-      const nameField = createBitSignal(store, 'name');
-      
-      await store.setState({ name: 'Updated' });
-      
-      expect(nameField.value()).toBe('Updated');
-    });
+describe('Angular Integration', () => {
+  
+  it('should handle nested object access and transformation', async () => {
+    TestBed.configureTestingModule({ imports: [HostComponent] });
+    const fixture = TestBed.createComponent(HostComponent);
+    const app = fixture.componentInstance;
+    const onSubmit = vi.fn();
+
+    // Testa valor inicial aninhado profundamente
+    expect(app.cityName.value()).toBe('São Paulo');
+
+    // Testa alteração em nível intermediário
+    app.userName.setValue('leo');
+    
+    await app.form.submit(onSubmit)(); // Executa o handler de submit
+
+    expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({
+      user: { 
+        name: 'LEO', // Transformação aplicada
+        address: { city: 'São Paulo' } 
+      }
+    }));
   });
 
-  it('deve derivar o erro apenas quando o campo for "touched"', async () => {
-    const { store, injector } = setup();
+  it('should react to array manipulations (push/remove)', () => {
+    TestBed.configureTestingModule({ imports: [HostComponent] });
+    const fixture = TestBed.createComponent(HostComponent);
+    const app = fixture.componentInstance;
 
-    await runInInjectionContext(injector, async () => {
-      const ageField = createBitSignal(store, 'age');
+    // Inicial
+    expect(app.form.values().items).toEqual(['Item 1']);
 
-      // Simula um erro na store (manualmente para o teste)
-      // @ts-ignore - forçando erro para validar o computed
-      store['errors'] = { age: 'Muito jovem' };
-      store['notify']();
+    // Push
+    app.form.pushItem('items', 'Item 2');
+    fixture.detectChanges(); // Garante ciclo do Angular (opcional com signals mas boa prática)
+    expect(app.form.values().items).toEqual(['Item 1', 'Item 2']);
 
-      // Não deve ter erro ainda porque não foi tocado
-      expect(ageField.error()).toBeUndefined();
-
-      // Marca como tocado
-      ageField.onBlur();
-      
-      expect(ageField.error()).toBe('Muito jovem');
-    });
+    // Remove
+    app.form.removeItem('items', 0);
+    expect(app.form.values().items).toEqual(['Item 2']);
   });
 
-  it('deve cancelar a subscrição automaticamente no onDestroy', () => {
-    const { store, injector } = setup();
-    const spy = vi.spyOn(store, 'subscribe');
+  it('should synchronize field signals with array items', () => {
+    TestBed.configureTestingModule({ imports: [HostComponent] });
+    const fixture = TestBed.createComponent(HostComponent);
+    const app = fixture.componentInstance;
 
-    runInInjectionContext(injector, () => {
-      const destroyRef = TestBed.inject(DestroyRef);
-      createBitSignal(store, 'name');
+    const firstItem = runInInjectionContext(fixture.debugElement.injector, () => 
+      injectBitField(app.store, 'items.0')
+    );
+    
+    expect(firstItem.value()).toBe('Item 1');
 
-      // O subscribe deve ter sido chamado
-      expect(spy).toHaveBeenCalled();
+    firstItem.setValue('Item Alterado');
+    expect(app.form.values().items[0]).toBe('Item Alterado');
+  });
 
-      // Simula a destruição do contexto (componente/provider)
-      // @ts-ignore - acessando internals para disparar o destroy
-      destroyRef.destroy();
+  it('should submit unmasked values and arrays using signals', async () => {
+    TestBed.configureTestingModule({ imports: [HostComponent] });
+    const fixture = TestBed.createComponent(HostComponent);
+    const app = fixture.componentInstance;
+    const onSubmit = vi.fn();
 
-      // Aqui, internamente, o unsubscribe retornado pelo store.subscribe 
-      // deve ter sido executado pelo DestroyRef.
-    });
+    app.form.pushItem('items', 'Novo Item');
+    await app.form.submit(onSubmit)();
+
+    expect(app.totalField.value()).toBe('R$ 50,00'); 
+    expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ 
+      total: 50, // Unmasked
+      items: ['Item 1', 'Novo Item']
+    }));
   });
 });

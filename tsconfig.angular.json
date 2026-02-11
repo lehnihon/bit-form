@@ -8,6 +8,9 @@
     "emitDecoratorMetadata": true,
     "types": ["node"]
   },
-  "include": ["src/angular/**/*.ts"],
+  "include": [
+    "src/angular/**/*",           
+    "src/angular/**/*.test.ts"   
+  ],
   "references": [{ "path": "./tsconfig.core.json" }]
 }

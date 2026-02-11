@@ -8,13 +8,6 @@ import {
   platformBrowserTesting
 } from '@angular/platform-browser/testing';
 
-try {
-  getTestBed().initTestEnvironment(
-    BrowserTestingModule,
-    platformBrowserTesting()
-  );
-} catch {}
-
 Object.defineProperty(window, 'matchMedia', {
   writable: true,
   value: vi.fn().mockImplementation(query => ({
@@ -28,3 +21,17 @@ Object.defineProperty(window, 'matchMedia', {
     dispatchEvent: vi.fn(),
   })),
 });
+
+const testBed = getTestBed();
+try {
+  if (!testBed.platform) {
+    testBed.initTestEnvironment(
+      BrowserTestingModule,
+      platformBrowserTesting(),
+      {
+        teardown: { destroyAfterEach: true }
+      }
+    );
+  }
+} catch (error) {
+}

@@ -1,19 +1,27 @@
-import { AnyObject, ObjectSchema } from 'yup';
-import { ValidatorFn } from '../core/bit-store';
+import { ValidationError } from 'yup';
+import { BitErrors } from '../core/bit-store';
 
-export const yupResolver = <T extends AnyObject>(schema: ObjectSchema<T>): ValidatorFn<T> => {
-  return async (values: T) => {
-    try {
-      await schema.validate(values, { abortEarly: false });
-      return {};
-    } catch (yupError: any) {
-      const errors: Record<string, string> = {};
-      yupError.inner.forEach((error: any) => {
-        if (error.path && !errors[error.path]) {
-          errors[error.path] = error.message;
+export const yupResolver = <T extends object>(schema: any) => {
+  return (values: T): Promise<BitErrors<T>> => {
+    return schema
+      .validate(values, { abortEarly: false })
+      .then(() => ({}))
+      .catch((err: any) => {
+        if (err.name === 'ValidationError' || err instanceof ValidationError) {
+          const errors: BitErrors<T> = {};
+          
+          err.inner?.forEach((error: any) => {
+            if (error.path) {
+              const normalizedPath = error.path.replace(/\[(\d+)\]/g, '.$1');
+              if (!errors[normalizedPath]) {
+                errors[normalizedPath] = error.message;
+              }
+            }
+          });
+          
+          return errors;
         }
+        return {};
       });
-      return errors;
-    }
   };
 };

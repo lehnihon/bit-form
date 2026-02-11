@@ -1,15 +1,17 @@
 import { ObjectSchema } from 'joi';
-import { ValidatorFn } from '../core/bit-store';
+import { BitErrors } from '../core/bit-store';
 
-export const joiResolver = <T>(schema: ObjectSchema<T>): ValidatorFn<T> => {
-  return (values: T) => {
+export const joiResolver = <T extends object>(schema: ObjectSchema<T>) => {
+  return async (values: T): Promise<BitErrors<T>> => {
     const { error } = schema.validate(values, { abortEarly: false });
     
     if (!error) return {};
 
-    const errors: Record<string, string> = {};
+    const errors: BitErrors<T> = {};
+
     error.details.forEach((detail) => {
-      const path = detail.path[0] as string;
+      const path = detail.path.join('.');
+      
       if (path && !errors[path]) {
         errors[path] = detail.message;
       }
