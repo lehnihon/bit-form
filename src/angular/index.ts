@@ -1,8 +1,8 @@
 import { signal, computed, inject, DestroyRef, Signal } from '@angular/core';
-import { BitFormStore } from '../core/bit-store';
+import { BitStore } from '../core/bit-store';
 
 export function createBitSignal<T extends Record<string, any>, K extends keyof T>(
-  store: BitFormStore<T>,
+  store: BitStore<T>,
   fieldName: K
 ) {
   // 1. Uso do Signal (como tipo) e signal (como valor)
@@ -36,7 +36,7 @@ export function createBitSignal<T extends Record<string, any>, K extends keyof T
   };
 }
 
-export function useBitFormStatus(store: BitFormStore<any>) {
+export function useBitFormStatus(store: BitStore<any>) {
   const isDirty = signal(store.isDirty());
   const isValidating = signal(store.isValidating);
 

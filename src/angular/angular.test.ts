@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { BitFormStore } from '../core/bit-store';
+import { BitStore } from '../core/bit-store';
 import { createBitSignal } from './index';
 import { EnvironmentInjector, runInInjectionContext, DestroyRef } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
@@ -7,7 +7,7 @@ import { TestBed } from '@angular/core/testing';
 describe('Angular Adapter (Signals)', () => {
   // Setup para simular o ambiente do Angular
   const setup = () => {
-    const store = new BitFormStore({ name: 'Bit', age: 25 });
+    const store = new BitStore({ name: 'Bit', age: 25 });
     const injector = TestBed.inject(EnvironmentInjector);
     return { store, injector };
   };

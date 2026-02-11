@@ -1,9 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { BitFormStore } from '../../src/core/bit-store';
+import { BitStore } from '../../src/core/bit-store';
 
 describe('Integration: Cross-Framework Consistency', () => {
   it('should sync state across different subscription types', async () => {
-    const store = new BitFormStore({ count: 0 });
+    const store = new BitStore({ count: 0 });
     
     let reactValue = 0;
     let vueValue = 0;

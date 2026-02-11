@@ -1,8 +1,8 @@
 import { useSyncExternalStore, useMemo } from 'react';
-import { BitFormStore } from '../core/bit-store';
+import { BitStore } from '../core/bit-store';
 
 export function useBitField<T extends Record<string, any>, K extends keyof T>(
-  store: BitFormStore<T>,
+  store: BitStore<T>,
   fieldName: K
 ) {
   const value = useSyncExternalStore(
@@ -30,7 +30,7 @@ export function useBitField<T extends Record<string, any>, K extends keyof T>(
 /**
  * Hook para monitorar o status global (loading, dirty, etc)
  */
-export function useBitFormStatus(store: BitFormStore<any>) {
+export function useBitFormStatus(store: BitStore<any>) {
   const isDirty = useSyncExternalStore(store.subscribe, () => store.isDirty());
   const isValidating = useSyncExternalStore(store.subscribe, () => store.isValidating);
 

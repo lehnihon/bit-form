@@ -1,9 +1,9 @@
 import { describe, it, expect, vi } from 'vitest';
-import { BitFormStore } from './bit-store';
+import { BitStore } from './bit-store';
 
-describe('BitFormStore', () => {
+describe('BitStore', () => {
   it('deve resetar para os valores iniciais', async () => {
-    const store = new BitFormStore({ email: 'old@bit.com' });
+    const store = new BitStore({ email: 'old@bit.com' });
     await store.setState({ email: 'new@bit.com' });
     expect(store.isDirty()).toBe(true);
     
@@ -13,7 +13,7 @@ describe('BitFormStore', () => {
   });
 
   it('deve disparar notificações na subscrição', async () => {
-    const store = new BitFormStore({ count: 0 });
+    const store = new BitStore({ count: 0 });
     const spy = vi.fn();
     store.subscribe(spy);
     await store.setState({ count: 1 });

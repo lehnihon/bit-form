@@ -1,8 +1,8 @@
 import { ref, onMounted, onUnmounted, computed, readonly } from 'vue';
-import { BitFormStore } from '../core/bit-store';
+import { BitStore } from '../core/bit-store';
 
 export function useBitField<T extends Record<string, any>, K extends keyof T>(
-  store: BitFormStore<T>,
+  store: BitStore<T>,
   fieldName: K
 ) {
   // 1. Criamos refs para os estados que o Vue precisa observar
@@ -36,7 +36,7 @@ export function useBitField<T extends Record<string, any>, K extends keyof T>(
   };
 }
 
-export function useBitFormStatus(store: BitFormStore<any>) {
+export function useBitFormStatus(store: BitStore<any>) {
   const isDirty = ref(store.isDirty());
   const isValidating = ref(store.isValidating);
 

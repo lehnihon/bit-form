@@ -8,7 +8,7 @@ export interface BitOptions<T> {
   validator?: ValidatorFn<T>;
 }
 
-export class BitFormStore<T extends Record<string, any>> {
+export class BitStore<T extends Record<string, any>> {
   private initialValues: T;
   private state: T;
   private touched: Partial<Record<keyof T, boolean>> = {};

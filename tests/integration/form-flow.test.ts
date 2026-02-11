@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { BitFormStore } from '../../src/core/bit-store';
+import { BitStore } from '../../src/core/bit-store';
 import { zodResolver } from '../../src/resolvers/zod';
 import { createPatternMask } from '../../src/core/mask-utils';
 import { z } from 'zod';
@@ -13,7 +13,7 @@ describe('Integration: Full Form Flow', () => {
     });
 
     // 2. Setup da Store com Máscaras e Resolvers
-    const store = new BitFormStore(
+    const store = new BitStore(
       { phone: '', age: 0 },
       {
         validator: zodResolver(userSchema),

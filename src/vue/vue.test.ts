@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { mount } from '@vue/test-utils';
 import { defineComponent } from 'vue';
-import { BitFormStore } from '../core/bit-store';
+import { BitStore } from '../core/bit-store';
 import { useBitField } from './index';
 
 // Componente de teste (simulando um SFC)
@@ -26,7 +26,7 @@ const TestComponent = defineComponent({
 
 describe('Vue Adapter', () => {
   it('deve reagir a mudanças na store', async () => {
-    const store = new BitFormStore({ name: 'Bit' });
+    const store = new BitStore({ name: 'Bit' });
     const wrapper = mount(TestComponent, { props: { store } });
 
     const input = wrapper.find('#name-input');
@@ -37,7 +37,7 @@ describe('Vue Adapter', () => {
   });
 
   it('deve limpar a subscrição ao desmontar', () => {
-    const store = new BitFormStore({ name: 'Bit' });
+    const store = new BitStore({ name: 'Bit' });
     const wrapper = mount(TestComponent, { props: { store } });
     
     // @ts-ignore - acessando listeners privados para teste

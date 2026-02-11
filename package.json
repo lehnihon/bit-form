@@ -1,65 +1,59 @@
 {
   "name": "bit-form",
   "version": "1.0.0",
-  "description": "Atomic, ultra-lightweight, and framework-agnostic form engine with signals and masks.",
+  "description": "Gerenciamento de estado de formulários agnóstico e performático",
   "type": "module",
-  "main": "./dist/index.js",
-  "module": "./dist/index.mjs",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "import": "./dist/index.mjs",
-      "require": "./dist/index.js"
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
     },
     "./react": {
-      "types": "./dist/react/index.d.ts",
-      "import": "./dist/react/index.mjs",
-      "require": "./dist/react/index.js"
+      "types": "./dist/react.d.ts",
+      "import": "./dist/react.js",
+      "require": "./dist/react.cjs"
     },
     "./vue": {
-      "types": "./dist/vue/index.d.ts",
-      "import": "./dist/vue/index.mjs",
-      "require": "./dist/vue/index.js"
+      "types": "./dist/vue.d.ts",
+      "import": "./dist/vue.js",
+      "require": "./dist/vue.cjs"
     },
     "./angular": {
-      "types": "./dist/angular/index.d.ts",
-      "import": "./dist/angular/index.mjs",
-      "require": "./dist/angular/index.js"
+      "types": "./dist/angular.d.ts",
+      "import": "./dist/angular.js",
+      "require": "./dist/angular.cjs"
     },
     "./resolvers/*": {
       "types": "./dist/resolvers/*.d.ts",
-      "import": "./dist/resolvers/*.mjs",
-      "require": "./dist/resolvers/*.js"
+      "import": "./dist/resolvers/*.js",
+      "require": "./dist/resolvers/*.cjs"
     }
   },
   "files": [
-    "dist"
+    "dist",
+    "README.md"
   ],
   "scripts": {
     "dev": "tsup --watch",
     "build": "tsup",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
     "lint": "tsc --build",
-    "prepublishOnly": "npm run lint && npm run test && npm run build"
+    "prepublishOnly": "npm run build && npm run test",
+    "release": "npm publish",
+    "dry-run": "npm publish --dry-run"
   },
-  "keywords": [
-    "form",
-    "atomic",
-    "react",
-    "vue",
-    "angular",
-    "signals",
-    "mask",
-    "validation"
-  ],
-  "author": "Your Name",
-  "license": "MIT",
   "peerDependencies": {
     "@angular/core": ">=16.0.0",
     "react": ">=16.8.0",
-    "vue": ">=3.0.0"
+    "rxjs": "^7.0.0",
+    "vue": ">=3.0.0",
+    "zod": "^3.0.0"
   },
   "peerDependenciesMeta": {
     "@angular/core": {
@@ -70,20 +64,36 @@
     },
     "vue": {
       "optional": true
+    },
+    "zod": {
+      "optional": true
     }
   },
   "devDependencies": {
+    "@angular/compiler": "^21.1.3",
     "@angular/core": "^21.1.3",
-    "@types/node": "^25.2.3",
-    "@types/react": "^19.2.13",
-    "@types/react-dom": "^19.2.3",
-    "react": "^18.2.0",
-    "rxjs": "^7.8.0",
-    "tsup": "^8.0.0",
-    "typescript": "^5.3.0",
-    "vitest": "^4.0.18",
-    "vue": "^3.4.0",
-    "zod": "^3.22.0",
-    "zone.js": "^0.16.0"
+    "@angular/platform-browser": "^21.1.3",
+    "@testing-library/jest-dom": "^6.6.3",
+    "@testing-library/react": "^16.2.0",
+    "@types/node": "^22.13.1",
+    "@types/react": "^19.0.8",
+    "@types/react-dom": "^19.0.3",
+    "@vitejs/plugin-react": "^4.3.4",
+    "@vitejs/plugin-vue": "^5.2.1",
+    "@vitest/coverage-v8": "^3.0.5",
+    "@vue/test-utils": "^2.4.6",
+    "jsdom": "^26.0.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "rxjs": "^7.8.1",
+    "tsup": "^8.3.6",
+    "typescript": "^5.7.3",
+    "vitest": "^3.0.5",
+    "vue": "^3.5.13",
+    "zod": "^3.24.1",
+    "zone.js": "~0.16.0"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

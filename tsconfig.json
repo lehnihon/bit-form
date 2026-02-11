@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
     "jsx": "react-jsx", 
-    "types": ["node", "react"], 
+    "types": ["node", "react", "vitest/globals"], 
     "noImplicitAny": false,
     "target": "ESNext",
     "module": "ESNext",

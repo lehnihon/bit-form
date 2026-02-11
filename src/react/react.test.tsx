@@ -1,11 +1,11 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import React from 'react';
-import { BitFormStore } from '../core/bit-store';
+import { BitStore } from '../core/bit-store';
 import { useBitField } from './index';
 
 // Componente de teste
-const TestForm = ({ store }: { store: BitFormStore<{ name: string }> }) => {
+const TestForm = ({ store }: { store: BitStore<{ name: string }> }) => {
   const nameField = useBitField(store, 'name');
   return (
     <div>
@@ -22,7 +22,7 @@ const TestForm = ({ store }: { store: BitFormStore<{ name: string }> }) => {
 
 describe('React Adapter', () => {
   it('deve atualizar o input quando a store muda', async () => {
-    const store = new BitFormStore({ name: 'Bit' });
+    const store = new BitStore({ name: 'Bit' });
     render(<TestForm store={store} />);
     
     const input = screen.getByTestId('name-input') as HTMLInputElement;
@@ -37,7 +37,7 @@ describe('React Adapter', () => {
   });
 
   it('deve mostrar erro apenas após o onBlur (touched)', async () => {
-    const store = new BitFormStore({ name: '' }, {
+    const store = new BitStore({ name: '' }, {
       validator: (values) => (!values.name ? { name: 'Obrigatório' } : {})
     });
     
