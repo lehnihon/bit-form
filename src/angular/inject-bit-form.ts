@@ -1,9 +1,9 @@
-import { signal, computed, inject, DestroyRef } from '@angular/core';
-import { useBitStore } from './provider';
+import { signal, computed, inject, DestroyRef } from "@angular/core";
+import { useBitStore } from "./provider";
 
 export function injectBitForm<T extends object>() {
   const store = useBitStore<T>();
-  
+
   const stateSignal = signal(store.getState());
 
   const sub = store.subscribe(() => {
@@ -18,7 +18,7 @@ export function injectBitForm<T extends object>() {
     touched: computed(() => stateSignal().touched),
     isValid: computed(() => stateSignal().isValid),
     isSubmitting: computed(() => stateSignal().isSubmitting),
-    isDirty: computed(() => stateSignal().isDirty), 
+    isDirty: computed(() => stateSignal().isDirty),
     reset: () => store.reset(),
     setValues: (v: T) => store.setValues(v),
     setField: store.setField.bind(store),
@@ -35,6 +35,6 @@ export function injectBitForm<T extends object>() {
         }
         return store.submit(onSuccess);
       };
-    }
+    },
   };
 }

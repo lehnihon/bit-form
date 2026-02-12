@@ -1,10 +1,10 @@
-import { ref, computed, onUnmounted } from 'vue';
-import { useBitStore } from './context';
+import { ref, computed, onUnmounted } from "vue";
+import { useBitStore } from "./context";
 
 export function useBitForm<T extends object>() {
   const store = useBitStore<T>();
   const _trigger = ref(0);
-  
+
   const unsubscribe = store.subscribe(() => {
     _trigger.value++;
   });
@@ -36,6 +36,6 @@ export function useBitForm<T extends object>() {
         e?.preventDefault?.();
         return store.submit(onSuccess);
       };
-    }
+    },
   };
 }

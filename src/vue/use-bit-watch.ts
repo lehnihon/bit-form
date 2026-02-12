@@ -1,11 +1,11 @@
-import { ref, onMounted, onUnmounted, readonly } from 'vue';
-import { useBitStore } from './context'; 
+import { ref, onMounted, onUnmounted, readonly } from "vue";
+import { useBitStore } from "./context";
 
 export function useBitWatch<T = any>(path: string) {
   const store = useBitStore();
-  
-  const getDeepValue = (obj: any, p: string) => 
-    p.split('.').reduce((acc: any, part) => acc?.[part], obj);
+
+  const getDeepValue = (obj: any, p: string) =>
+    p.split(".").reduce((acc: any, part) => acc?.[part], obj);
 
   const value = ref<T>(getDeepValue(store.getState().values, path));
 

@@ -1,5 +1,5 @@
-import { useCallback, useSyncExternalStore, useRef } from 'react';
-import { useBitStore } from './context';
+import { useCallback, useSyncExternalStore, useRef } from "react";
+import { useBitStore } from "./context";
 
 export function useBitField<T = any>(path: string) {
   const store = useBitStore();
@@ -7,7 +7,7 @@ export function useBitField<T = any>(path: string) {
 
   const getSnapshot = useCallback(() => {
     const state = store.getState();
-    const value = path.split('.').reduce((p: any, c) => p?.[c], state.values);
+    const value = path.split(".").reduce((p: any, c) => p?.[c], state.values);
     const error = state.errors[path];
     const touched = !!state.touched[path];
 
@@ -28,10 +28,13 @@ export function useBitField<T = any>(path: string) {
   const fieldState = useSyncExternalStore(
     store.subscribe.bind(store),
     getSnapshot,
-    getSnapshot
+    getSnapshot,
   );
 
-  const setValue = useCallback((val: T) => store.setField(path, val), [store, path]);
+  const setValue = useCallback(
+    (val: T) => store.setField(path, val),
+    [store, path],
+  );
   const setBlur = useCallback(() => store.blurField(path), [store, path]);
 
   return {
@@ -42,14 +45,14 @@ export function useBitField<T = any>(path: string) {
     setValue,
     setBlur,
     props: {
-      value: fieldState.value ?? '',
+      value: fieldState.value ?? "",
       onChange: (e: any) => setValue(e?.target ? e.target.value : e),
-      onBlur: setBlur
+      onBlur: setBlur,
     },
     mobileProps: {
-      value: fieldState.value != null ? String(fieldState.value) : '',
+      value: fieldState.value != null ? String(fieldState.value) : "",
       onChangeText: setValue,
-      onBlur: setBlur
-    }
+      onBlur: setBlur,
+    },
   };
 }

@@ -1,12 +1,12 @@
 {
   "extends": "./tsconfig.base.json",
   "compilerOptions": {
-    "noEmit": true, 
+    "noEmit": true,
     "composite": false,
     "incremental": false,
     "jsx": "react-jsx",
-    "types": ["node", "react", "react-dom", "vitest"] 
+    "types": ["node", "react", "react-dom", "vitest"]
   },
-  "include": ["src/**/*"], 
+  "include": ["src/**/*"],
   "exclude": ["node_modules", "dist"]
 }

@@ -1,5 +1,5 @@
-import { ref, computed, onUnmounted } from 'vue';
-import { useBitStore } from './context';
+import { ref, computed, onUnmounted } from "vue";
+import { useBitStore } from "./context";
 
 export function useBitField<T = any>(path: string) {
   const store = useBitStore();
@@ -11,21 +11,23 @@ export function useBitField<T = any>(path: string) {
 
   onUnmounted(unsubscribe);
 
-  const getDeepValue = (obj: any, p: string) => 
-    p.split('.').reduce((prev: any, curr) => prev?.[curr], obj);
+  const getDeepValue = (obj: any, p: string) =>
+    p.split(".").reduce((prev: any, curr) => prev?.[curr], obj);
 
   const value = computed({
     get: () => {
-      _trigger.value; 
+      _trigger.value;
       return getDeepValue(store.getState().values, path) as T;
     },
-    set: (val: T) => store.setField(path, val)
+    set: (val: T) => store.setField(path, val),
   });
 
   const error = computed(() => {
     _trigger.value;
     const state = store.getState();
-    return (state.touched as any)[path] ? (state.errors as any)[path] : undefined;
+    return (state.touched as any)[path]
+      ? (state.errors as any)[path]
+      : undefined;
   });
 
   const touched = computed(() => {
@@ -41,6 +43,6 @@ export function useBitField<T = any>(path: string) {
     touched,
     invalid,
     setValue: (val: T) => store.setField(path, val),
-    setBlur: () => store.blurField(path)
+    setBlur: () => store.blurField(path),
   };
 }

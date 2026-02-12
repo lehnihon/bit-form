@@ -1,9 +1,9 @@
-import { signal, computed, inject, DestroyRef } from '@angular/core';
-import { useBitStore } from './provider';
+import { signal, computed, inject, DestroyRef } from "@angular/core";
+import { useBitStore } from "./provider";
 
 export function injectBitField<T = any>(path: string) {
   const store = useBitStore();
-  
+
   const stateSignal = signal(store.getState());
 
   const sub = store.subscribe(() => {
@@ -12,11 +12,11 @@ export function injectBitField<T = any>(path: string) {
 
   inject(DestroyRef).onDestroy(() => sub());
 
-  const getDeepValue = (obj: any, p: string) => 
-    p.split('.').reduce((prev, curr) => prev?.[curr], obj);
+  const getDeepValue = (obj: any, p: string) =>
+    p.split(".").reduce((prev, curr) => prev?.[curr], obj);
 
   const value = computed(() => getDeepValue(stateSignal().values, path) as T);
-  
+
   const error = computed(() => {
     const state = stateSignal();
     return state.touched[path] ? state.errors[path] : undefined;
@@ -29,6 +29,6 @@ export function injectBitField<T = any>(path: string) {
     error,
     touched,
     setValue: (val: T) => store.setField(path, val),
-    setBlur: () => store.blurField(path)
+    setBlur: () => store.blurField(path),
   };
 }

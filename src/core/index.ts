@@ -1,2 +1,2 @@
-export * from './bit-store';
-export * from './mask-utils';
+export * from "./bit-store";
+export * from "./mask-utils";

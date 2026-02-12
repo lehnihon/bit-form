@@ -59,13 +59,27 @@
     "rxjs": "^7.0.0"
   },
   "peerDependenciesMeta": {
-    "@angular/core": { "optional": true },
-    "react": { "optional": true },
-    "vue": { "optional": true },
-    "zod": { "optional": true },
-    "yup": { "optional": true },
-    "joi": { "optional": true },
-    "rxjs": { "optional": true }
+    "@angular/core": {
+      "optional": true
+    },
+    "react": {
+      "optional": true
+    },
+    "vue": {
+      "optional": true
+    },
+    "zod": {
+      "optional": true
+    },
+    "yup": {
+      "optional": true
+    },
+    "joi": {
+      "optional": true
+    },
+    "rxjs": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "@angular/common": "^21.1.3",

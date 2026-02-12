@@ -1,13 +1,15 @@
-import { ref, computed, onUnmounted } from 'vue';
-import { useBitStore } from './context';
+import { ref, computed, onUnmounted } from "vue";
+import { useBitStore } from "./context";
 
 const generateId = () => Math.random().toString(36).substring(2, 9);
 
 export function useBitFieldArray<T = any>(path: string) {
   const store = useBitStore();
-  
+
   const getSnapshot = () => {
-    const val = path.split('.').reduce((acc: any, part) => acc?.[part], store.getState().values);
+    const val = path
+      .split(".")
+      .reduce((acc: any, part) => acc?.[part], store.getState().values);
     return Array.isArray(val) ? val : [];
   };
 
@@ -17,7 +19,7 @@ export function useBitFieldArray<T = any>(path: string) {
   const unsubscribe = store.subscribe(() => {
     const newValues = getSnapshot();
     values.value = [...newValues];
-    
+
     if (newValues.length !== ids.value.length) {
       ids.value = newValues.map(generateId);
     }
@@ -25,10 +27,12 @@ export function useBitFieldArray<T = any>(path: string) {
 
   onUnmounted(unsubscribe);
 
-  const fields = computed(() => values.value.map((v, i) => ({
-    id: ids.value[i] || generateId(),
-    value: v
-  })));
+  const fields = computed(() =>
+    values.value.map((v, i) => ({
+      id: ids.value[i] || generateId(),
+      value: v,
+    })),
+  );
 
   return {
     fields,
@@ -60,6 +64,6 @@ export function useBitFieldArray<T = any>(path: string) {
       [currentIds[a], currentIds[b]] = [currentIds[b], currentIds[a]];
       ids.value = currentIds;
       store.swapItems(path, a, b);
-    }
+    },
   };
 }
