@@ -45,6 +45,11 @@ export function useBitField<T = any>(path: string) {
       value: fieldState.value ?? '',
       onChange: (e: any) => setValue(e?.target ? e.target.value : e),
       onBlur: setBlur
+    },
+    mobileProps: {
+      value: fieldState.value != null ? String(fieldState.value) : '',
+      onChangeText: setValue,
+      onBlur: setBlur
     }
   };
 }
