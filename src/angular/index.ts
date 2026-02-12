@@ -8,7 +8,11 @@ export function injectBitField<T extends object>(store: BitStore<T>, path: strin
     stateSignal.set(store.getState());
   });
 
-  inject(DestroyRef).onDestroy(() => sub());
+  try {
+    inject(DestroyRef).onDestroy(() => sub());
+  } catch (e) {
+    console.warn('injectBitField must be called in an injection context (constructor or field initializer).');
+  }
 
   const getDeepValue = (obj: any, path: string) => {
     return path.split('.').reduce((prev, curr) => prev?.[curr], obj);
@@ -40,7 +44,11 @@ export function injectBitForm<T extends object>(store: BitStore<T>) {
     stateSignal.set(store.getState());
   });
 
-  inject(DestroyRef).onDestroy(() => sub());
+  try {
+    inject(DestroyRef).onDestroy(() => sub());
+  } catch (e) {
+    console.warn('injectBitForm must be called in an injection context.');
+  }
 
   const values = computed(() => stateSignal().values);
   const errors = computed(() => stateSignal().errors);

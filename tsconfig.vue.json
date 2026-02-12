@@ -1,11 +1,12 @@
 {
-  "extends": "./tsconfig.json",
+  "extends": "./tsconfig.base.json",
   "compilerOptions": {
     "composite": true,
-    "outDir": "./dist/vue",
+    "outDir": "./dist",
     "rootDir": "src",
-    "types": ["node"]
+    "types": ["node", "vue"]
   },
   "include": ["src/vue/**/*.ts"],
+  "exclude": ["**/*.test.ts", "**/*.test.tsx"],
   "references": [{ "path": "./tsconfig.core.json" }]
 }

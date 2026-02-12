@@ -1,5 +1,5 @@
-export type BitErrors<T> = Partial<Record<string, string>>;
-export type BitTouched<T> = Partial<Record<string, boolean>>;
+export type BitErrors<T> = { [key: string]: string | undefined };
+export type BitTouched<T> = { [key: string]: boolean | undefined };
 
 export interface BitState<T> {
   values: T;
@@ -17,7 +17,7 @@ export interface BitConfig<T> {
   transform?: Partial<Record<string, (value: any) => any>>;
 }
 
-export class BitStore<T extends Record<string, any> | any[] = any> {
+export class BitStore<T extends object = any> {
   private state: BitState<T>;
   private listeners: Set<() => void> = new Set();
   private resolver?: ValidatorFn<T>;
@@ -35,19 +35,14 @@ export class BitStore<T extends Record<string, any> | any[] = any> {
     this.transform = config.transform;
   }
 
-  // --- ACESSO AO ESTADO (GETTERS PÚBLICOS) ---
-
-  /** Retorna o estado completo (somente leitura) */
   getState(): BitState<T> {
     return this.state;
   }
 
-  /** Atalho para verificar se o formulário é válido */
   get isValid(): boolean {
     return this.state.isValid;
   }
 
-  /** Atalho para verificar se o formulário está enviando dados */
   get isSubmitting(): boolean {
     return this.state.isSubmitting;
   }
@@ -60,8 +55,6 @@ export class BitStore<T extends Record<string, any> | any[] = any> {
   private notify() {
     this.listeners.forEach((listener) => listener());
   }
-
-  // --- MANIPULAÇÃO DE CAMPOS ---
 
   setField(path: string, value: any) {
     const newValues = this.setDeepValue(this.state.values, path, value);
@@ -83,8 +76,6 @@ export class BitStore<T extends Record<string, any> | any[] = any> {
     this.notify();
   }
 
-  // --- MANIPULAÇÃO DE ARRAYS ---
-
   pushItem(path: string, value: any) {
     const currentArray = this.getDeepValue(this.state.values, path) || [];
     if (!Array.isArray(currentArray)) return;
@@ -100,7 +91,6 @@ export class BitStore<T extends Record<string, any> | any[] = any> {
     const newArray = currentArray.filter((_, i) => i !== index);
     const newValues = this.setDeepValue(this.state.values, path, newArray);
     
-    // Limpeza de erros e touched do índice removido
     const prefix = `${path}.${index}`;
     const newErrors = this.cleanPrefixedKeys(this.state.errors, prefix);
     const newTouched = this.cleanPrefixedKeys(this.state.touched, prefix);
@@ -115,8 +105,6 @@ export class BitStore<T extends Record<string, any> | any[] = any> {
     if (this.resolver) this.validateField();
     this.notify();
   }
-
-  // --- VALIDAÇÃO E SUBMISSÃO ---
 
   async validate(): Promise<boolean> {
     if (!this.resolver) return true;
@@ -164,8 +152,6 @@ export class BitStore<T extends Record<string, any> | any[] = any> {
     };
     this.notify();
   }
-
-  // --- HELPERS INTERNOS ---
 
   private getDeepValue(obj: any, path: string): any {
     return path.split('.').reduce((prev, curr) => prev?.[curr], obj);

@@ -1,16 +1,14 @@
 {
-  "extends": "./tsconfig.json",
+  "extends": "./tsconfig.base.json",
   "compilerOptions": {
     "composite": true,
-    "outDir": "./dist/angular",
+    "outDir": "./dist",
     "rootDir": "src",
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
     "types": ["node"]
   },
-  "include": [
-    "src/angular/**/*",           
-    "src/angular/**/*.test.ts"   
-  ],
+  "include": ["src/angular/**/*.ts"],
+  "exclude": ["**/*.test.ts", "**/*.test.tsx"],
   "references": [{ "path": "./tsconfig.core.json" }]
 }

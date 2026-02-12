@@ -5,6 +5,7 @@ on:
     branches: [ main ]
   pull_request:
     branches: [ main ]
+  workflow_dispatch: # Permite rodar manualmente pelo GitHub
 
 jobs:
   build-and-test:
@@ -20,7 +21,7 @@ jobs:
           cache: 'npm'
 
       - name: Install Dependencies
-        run: npm install
+        run: npm ci
 
       - name: Lint (Check Types)
         run: npm run lint

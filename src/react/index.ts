@@ -2,10 +2,9 @@ import { useSyncExternalStore, useCallback } from 'react';
 import { BitStore } from '../core/bit-store';
 
 export function useBitField<T extends object>(store: BitStore<T>, path: string) {
-  // Snapshot para o valor (suporta caminhos profundos como 'user.address.city')
   const getSnapshot = useCallback(() => {
     const state = store.getState();
-    return path.split('.').reduce((prev, curr) => prev?.[curr], state.values);
+    return path.split('.').reduce((prev: any, curr) => prev?.[curr], state.values);
   }, [store, path]);
 
   const getErrorSnapshot = useCallback(() => {
@@ -51,7 +50,6 @@ export function useBitField<T extends object>(store: BitStore<T>, path: string) 
     props: {
       value: value ?? '',
       onChange: (e: any) => {
-        // Suporta tanto eventos de input quanto valores diretos
         const val = e?.target ? e.target.value : e;
         setValue(val);
       },
@@ -69,7 +67,6 @@ export function useBitForm<T extends object>(store: BitStore<T>) {
     getFullState
   );
 
-  // Melhorado para facilitar o uso no onSubmit do <form>
   const submit = useCallback((onSuccess: (values: T) => void | Promise<void>) => {
     return (e?: { preventDefault: () => void }) => {
       if (e?.preventDefault) e.preventDefault();
