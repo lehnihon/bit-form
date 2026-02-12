@@ -1,106 +1,96 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { TestBed } from '@angular/core/testing';
-import { runInInjectionContext, Component } from '@angular/core';
+import { Component } from '@angular/core';
 import { BitStore } from '../core/bit-store';
-import { injectBitField, injectBitForm } from './index';
-import { unmaskCurrency } from '../core/mask-utils';
+import { 
+  injectBitField, 
+  injectBitForm, 
+  injectBitFieldArray,
+  provideBitStore 
+} from './index';
+
+interface MyForm {
+  user: { name: string };
+  items: string[];
+}
 
 @Component({
   standalone: true,
-  template: ''
+  template: '',
 })
 class HostComponent {
-  store = new BitStore({
-    initialValues: { 
-      total: 'R$ 50,00',
-      user: { name: 'Leo', address: { city: 'São Paulo' } },
-      items: ['Item 1'] as string[]
-    },
-    transform: { 
-      total: unmaskCurrency,
-      'user.name': (v: string) => v.toUpperCase()
-    }
-  });
-
-  // Fields
-  totalField = injectBitField(this.store, 'total');
-  cityName = injectBitField(this.store, 'user.address.city');
-  userName = injectBitField(this.store, 'user.name');
-  
-  // Form engine
-  form = injectBitForm(this.store);
+  form = injectBitForm<MyForm>();
+  userName = injectBitField<string>('user.name');
+  list = injectBitFieldArray<string>('items');
 }
 
-describe('Angular Integration', () => {
-  
-  it('should handle nested object access and transformation', async () => {
-    TestBed.configureTestingModule({ imports: [HostComponent] });
+describe('Angular Integration (Signals)', () => {
+  let store: BitStore<MyForm>;
+
+  beforeEach(() => {
+    store = new BitStore<MyForm>({
+      initialValues: { 
+        user: { name: 'Leo' },
+        items: ['Item 1'] 
+      },
+      validationDelay: 0
+    });
+
+    TestBed.configureTestingModule({
+      imports: [HostComponent],
+      providers: [provideBitStore(store)]
+    });
+  });
+
+  it('deve gerenciar listas com IDs estáveis usando injectBitFieldArray', () => {
     const fixture = TestBed.createComponent(HostComponent);
     const app = fixture.componentInstance;
-    const onSubmit = vi.fn();
 
-    // Testa valor inicial aninhado profundamente
-    expect(app.cityName.value()).toBe('São Paulo');
+    const initialId = app.list.fields()[0].id;
+    app.list.append('Item 2');
+    app.list.move(0, 1);
 
-    // Testa alteração em nível intermediário
-    app.userName.setValue('leo');
+    expect(app.form.values().items).toEqual(['Item 2', 'Item 1']);
+    expect(app.list.fields()[1].id).toBe(initialId);
+  });
+
+  it('deve rastrear o estado isDirty e permitir Reset', () => {
+    const fixture = TestBed.createComponent(HostComponent);
+    const app = fixture.componentInstance;
+
+    app.userName.setValue('Mudou');
+    expect(app.form.isDirty()).toBe(true);
+
+    app.form.reset();
+    expect(app.form.isDirty()).toBe(false);
+    expect(app.userName.value()).toBe('Leo');
+  });
+
+  it('deve validar campos dinamicamente com Signals', async () => {
+    const storeWithResolver = new BitStore<MyForm>({
+      initialValues: { user: { name: '' }, items: [] },
+      validationDelay: 0,
+      resolver: (vals) => (!vals.user.name ? { 'user.name': 'Obrigatório' } : {})
+    });
+
+    await storeWithResolver.validate();
+
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      imports: [HostComponent],
+      providers: [provideBitStore(storeWithResolver)]
+    });
+
+    const fixture = TestBed.createComponent(HostComponent);
+    const app = fixture.componentInstance;
+
+    expect(app.form.isValid()).toBe(false);
+
+    app.userName.setValue('Leandro');
     
-    await app.form.submit(onSubmit)(); // Executa o handler de submit
+    await new Promise(resolve => setTimeout(resolve, 0));
+    fixture.detectChanges(); 
 
-    expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({
-      user: { 
-        name: 'LEO', // Transformação aplicada
-        address: { city: 'São Paulo' } 
-      }
-    }));
-  });
-
-  it('should react to array manipulations (push/remove)', () => {
-    TestBed.configureTestingModule({ imports: [HostComponent] });
-    const fixture = TestBed.createComponent(HostComponent);
-    const app = fixture.componentInstance;
-
-    // Inicial
-    expect(app.form.values().items).toEqual(['Item 1']);
-
-    // Push
-    app.form.pushItem('items', 'Item 2');
-    fixture.detectChanges(); // Garante ciclo do Angular (opcional com signals mas boa prática)
-    expect(app.form.values().items).toEqual(['Item 1', 'Item 2']);
-
-    // Remove
-    app.form.removeItem('items', 0);
-    expect(app.form.values().items).toEqual(['Item 2']);
-  });
-
-  it('should synchronize field signals with array items', () => {
-    TestBed.configureTestingModule({ imports: [HostComponent] });
-    const fixture = TestBed.createComponent(HostComponent);
-    const app = fixture.componentInstance;
-
-    const firstItem = runInInjectionContext(fixture.debugElement.injector, () => 
-      injectBitField(app.store, 'items.0')
-    );
-    
-    expect(firstItem.value()).toBe('Item 1');
-
-    firstItem.setValue('Item Alterado');
-    expect(app.form.values().items[0]).toBe('Item Alterado');
-  });
-
-  it('should submit unmasked values and arrays using signals', async () => {
-    TestBed.configureTestingModule({ imports: [HostComponent] });
-    const fixture = TestBed.createComponent(HostComponent);
-    const app = fixture.componentInstance;
-    const onSubmit = vi.fn();
-
-    app.form.pushItem('items', 'Novo Item');
-    await app.form.submit(onSubmit)();
-
-    expect(app.totalField.value()).toBe('R$ 50,00'); 
-    expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ 
-      total: 50, // Unmasked
-      items: ['Item 1', 'Novo Item']
-    }));
+    expect(app.form.isValid()).toBe(true);
   });
 });
