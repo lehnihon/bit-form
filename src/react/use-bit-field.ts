@@ -18,7 +18,6 @@ export function useBitField<T = any>(
     store,
   } = useBitFieldBase<T>(path);
 
-  // 1. Resolução da máscara
   const resolvedMask = useMemo(() => {
     const maskOption = options?.mask;
     if (!maskOption) return undefined;
@@ -29,20 +28,16 @@ export function useBitField<T = any>(
 
   const shouldUnmask = options?.unmask ?? store.defaultUnmask ?? true;
 
-  // 2. Cálculo do valor de exibição (sempre string para o input)
   const displayValue = useMemo(() => {
     const val = fieldState.value;
     if (val === undefined || val === null || val === "") return "";
 
     if (resolvedMask) {
-      // Se unmask=true (dado limpo na store), formatamos para exibir
-      // Se unmask=false (dado formatado na store), apenas garantimos que é string
       return shouldUnmask ? resolvedMask.format(val) : String(val);
     }
     return String(val);
   }, [fieldState.value, resolvedMask, shouldUnmask]);
 
-  // 3. Função de atualização que respeita a máscara
   const setValue = useCallback(
     (val: any) => {
       if (!resolvedMask) {
@@ -50,7 +45,6 @@ export function useBitField<T = any>(
         return;
       }
 
-      // Garante que o valor passado para o parse/format seja string
       const stringVal = String(val ?? "");
 
       if (shouldUnmask) {
@@ -64,11 +58,11 @@ export function useBitField<T = any>(
 
   return {
     value: fieldState.value as T,
-    displayValue, // AGORA DISPONÍVEL NA RAIZ (Resolve o erro de TS)
+    displayValue,
     error: fieldState.touched ? fieldState.error : undefined,
     touched: fieldState.touched,
     invalid: !!(fieldState.touched && fieldState.error),
-    setValue, // Agora esta função aplica a máscara!
+    setValue,
     setBlur,
     props: {
       value: displayValue,

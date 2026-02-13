@@ -1,5 +1,5 @@
 import { ZodSchema } from "zod";
-import { BitErrors } from "../core/bit-store";
+import { BitErrors } from "../core/store/types";
 
 export const zodResolver = <T extends object>(schema: ZodSchema<T>) => {
   return async (values: T): Promise<BitErrors<T>> => {

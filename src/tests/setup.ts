@@ -1,4 +1,4 @@
-import { vi } from "vitest";
+import { vi, afterEach } from "vitest";
 import "@testing-library/jest-dom/vitest";
 import "zone.js";
 import "zone.js/testing";
@@ -7,6 +7,7 @@ import {
   BrowserTestingModule,
   platformBrowserTesting,
 } from "@angular/platform-browser/testing";
+import { cleanup } from "@testing-library/react";
 
 Object.defineProperty(window, "matchMedia", {
   writable: true,
@@ -20,6 +21,10 @@ Object.defineProperty(window, "matchMedia", {
     removeEventListener: vi.fn(),
     dispatchEvent: vi.fn(),
   })),
+});
+
+afterEach(() => {
+  cleanup();
 });
 
 const testBed = getTestBed();

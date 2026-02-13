@@ -41,9 +41,9 @@ export function useBitField<T = any>(
       }
 
       if (shouldUnmask) {
-        setValue(resolvedMask.parse(text));
+        setValue(resolvedMask.parse(text) as any);
       } else {
-        setValue(resolvedMask.format(text));
+        setValue(resolvedMask.format(text) as any);
       }
     },
     [resolvedMask, shouldUnmask, setValue],

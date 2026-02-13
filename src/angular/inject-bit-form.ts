@@ -8,7 +8,7 @@ export function injectBitForm<T extends object>() {
   const stateSignal = signal(store.getState());
 
   const sub = store.subscribe(() => {
-    stateSignal.set({ ...store.getState() });
+    stateSignal.set(store.getState());
   });
 
   destroyRef.onDestroy(() => sub());
@@ -22,10 +22,8 @@ export function injectBitForm<T extends object>() {
 
   const submit = (onSuccess: (values: T) => void | Promise<void>) => {
     return (event?: Event) => {
-      if (event) {
-        event.preventDefault();
-        event.stopPropagation();
-      }
+      event?.preventDefault();
+      event?.stopPropagation();
       return store.submit(onSuccess);
     };
   };

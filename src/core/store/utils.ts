@@ -1,6 +1,7 @@
 export function deepClone(obj: any): any {
   if (obj === null || typeof obj !== "object") return obj;
   if (Array.isArray(obj)) return obj.map((item) => deepClone(item));
+
   const clone: any = {};
   for (const key in obj) {
     if (Object.prototype.hasOwnProperty.call(obj, key)) {
@@ -26,29 +27,37 @@ export function deepEqual(a: any, b: any): boolean {
   if (keysA.length !== keysB.length) return false;
 
   for (const key of keysA) {
-    if (!keysB.includes(key) || !deepEqual(a[key], b[key])) return false;
+    if (
+      !Object.prototype.hasOwnProperty.call(b, key) ||
+      !deepEqual(a[key], b[key])
+    ) {
+      return false;
+    }
   }
 
   return true;
 }
 
 export function getDeepValue(obj: any, path: string): any {
+  if (!path) return obj;
   return path.split(".").reduce((prev, curr) => prev?.[curr], obj);
 }
 
 export function setDeepValue(obj: any, path: string, value: any): any {
   const keys = path.split(".");
   const lastKey = keys.pop()!;
-  // Clona o array se for array, ou objeto se for objeto
   const newObj = Array.isArray(obj) ? [...obj] : { ...obj };
-
   let current = newObj;
+
   for (const key of keys) {
-    if (!current[key]) current[key] = {};
-    // Garante imutabilidade no caminho
+    if (current[key] === undefined || current[key] === null) {
+      current[key] = {};
+    }
+
     current[key] = Array.isArray(current[key])
       ? [...current[key]]
       : { ...current[key] };
+
     current = current[key];
   }
 

@@ -1,5 +1,5 @@
 import { ValidationError } from "yup";
-import { BitErrors } from "../core/bit-store";
+import { BitErrors } from "../core/store/types";
 
 export const yupResolver = <T extends object>(schema: any) => {
   return (values: T): Promise<BitErrors<T>> => {
