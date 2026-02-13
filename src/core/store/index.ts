@@ -28,14 +28,42 @@ export class BitStore<T extends object = any> {
     this.defaultUnmask = config.defaultUnmask ?? true;
     this.masks = config.masks ?? bitMasks;
 
+    const initialValues = deepClone(this.config.initialValues);
+    const valuesWithComputeds = this.applyComputeds(initialValues);
+
     this.state = {
-      values: deepClone(this.config.initialValues),
+      values: valuesWithComputeds,
       errors: {},
       touched: {},
       isValid: true,
       isSubmitting: false,
       isDirty: false,
     };
+  }
+
+  private applyComputeds(values: T): T {
+    if (!this.config.computed) return values;
+
+    let nextValues = values;
+    const computedEntries = Object.entries(this.config.computed);
+
+    for (let i = 0; i < 2; i++) {
+      let changedInThisPass = false;
+
+      for (const [path, computeFn] of computedEntries) {
+        const newValue = computeFn(nextValues);
+        const currentValue = getDeepValue(nextValues, path);
+
+        if (!deepEqual(currentValue, newValue)) {
+          nextValues = setDeepValue(nextValues, path, newValue);
+          changedInThisPass = true;
+        }
+      }
+
+      if (!changedInThisPass) break;
+    }
+
+    return nextValues;
   }
 
   get isValid(): boolean {
@@ -72,6 +100,7 @@ export class BitStore<T extends object = any> {
 
   setField(path: string, value: any) {
     const newValues = setDeepValue(this.state.values, path, value);
+
     this.updateState({
       values: newValues,
       isDirty: !deepEqual(newValues, this.config.initialValues),
@@ -262,7 +291,13 @@ export class BitStore<T extends object = any> {
   }
 
   private updateState(partialState: Partial<BitState<T>>) {
-    this.state = { ...this.state, ...partialState };
+    let nextState = { ...this.state, ...partialState };
+
+    if (partialState.values) {
+      nextState.values = this.applyComputeds(partialState.values);
+    }
+
+    this.state = nextState;
     this.notify();
   }
 

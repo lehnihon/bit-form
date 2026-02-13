@@ -2,6 +2,7 @@ import { BitMask } from "../mask/types";
 
 export type BitErrors<T> = { [key: string]: string | undefined };
 export type BitTouched<T> = { [key: string]: boolean | undefined };
+export type BitComputedFn<T> = (values: T) => any;
 
 export interface BitState<T> {
   values: T;
@@ -19,6 +20,7 @@ export type ValidatorFn<T> = (
 export interface BitConfig<T> {
   initialValues: T;
   resolver?: ValidatorFn<T>;
+  computed?: Record<string, BitComputedFn<T>>;
   transform?: Partial<Record<string, (value: any) => any>>;
   validationDelay?: number;
   defaultUnmask?: boolean;

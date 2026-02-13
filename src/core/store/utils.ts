@@ -38,31 +38,45 @@ export function deepEqual(a: any, b: any): boolean {
   return true;
 }
 
-export function getDeepValue(obj: any, path: string): any {
-  if (!path) return obj;
-  return path.split(".").reduce((prev, curr) => prev?.[curr], obj);
-}
-
 export function setDeepValue(obj: any, path: string, value: any): any {
+  if (!path) return value;
+
   const keys = path.split(".");
   const lastKey = keys.pop()!;
-  const newObj = Array.isArray(obj) ? [...obj] : { ...obj };
-  let current = newObj;
 
-  for (const key of keys) {
-    if (current[key] === undefined || current[key] === null) {
-      current[key] = {};
+  const helper = (current: any, index: number): any => {
+    const key = keys[index];
+
+    if (index === keys.length) {
+      if (current?.[lastKey] === value) return current;
+
+      const clone = Array.isArray(current) ? [...current] : { ...current };
+      clone[lastKey] = value;
+      return clone;
     }
 
-    current[key] = Array.isArray(current[key])
-      ? [...current[key]]
-      : { ...current[key] };
+    const currentValue = current?.[key] ?? {};
+    const updatedValue = helper(currentValue, index + 1);
 
+    if (current?.[key] === updatedValue) return current;
+
+    const clone = Array.isArray(current) ? [...current] : { ...current };
+    clone[key] = updatedValue;
+    return clone;
+  };
+
+  return helper(obj, 0);
+}
+
+export function getDeepValue(obj: any, path: string): any {
+  if (!path) return obj;
+  const keys = path.split(".");
+  let current = obj;
+  for (const key of keys) {
+    if (current === null || current === undefined) return undefined;
     current = current[key];
   }
-
-  current[lastKey] = value;
-  return newObj;
+  return current;
 }
 
 export function cleanPrefixedKeys(
