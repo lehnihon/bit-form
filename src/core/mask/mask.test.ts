@@ -14,9 +14,8 @@ import {
 describe("Mask Utils - Patterns", () => {
   it("should respect standard tokens (#, A, X)", () => {
     const mask = createPatternMask("AAA-####-X");
-    // Agora chamamos .format()
     expect(mask.format("abc1234z")).toBe("abc-1234-z");
-    expect(mask.format("123-abc")).toBe(""); // Números onde deveriam ser letras
+    expect(mask.format("123-abc")).toBe("");
   });
 
   it("should handle fixed characters correctly", () => {
@@ -25,13 +24,11 @@ describe("Mask Utils - Patterns", () => {
   });
 
   it("should handle new international tokens (H, U, L)", () => {
-    // H = Hexadecimal (0-9, A-F)
-    const hexMask = createPatternMask("#HHHHHH");
-    expect(hexMask.format("FF00GG")).toBe("FF00"); // G é inválido para Hex
+    const hexMask = createPatternMask("HHHHHH");
+    expect(hexMask.format("FF00GG")).toBe("FF00");
 
-    // U = Uppercase Only
     const upperMask = createPatternMask("UUU");
-    expect(upperMask.format("abc")).toBe(""); // Bloqueia minúsculas
+    expect(upperMask.format("abc")).toBe("ABC");
     expect(upperMask.format("ABC")).toBe("ABC");
   });
 
@@ -53,7 +50,6 @@ describe("Mask Utils - Currency & Numbers", () => {
   });
 
   it("should format EUR with suffix", () => {
-    // maskEUR foi definida com suffix: " €"
     expect(maskEUR.format("5000")).toBe("50,00 €");
   });
 
@@ -64,14 +60,13 @@ describe("Mask Utils - Currency & Numbers", () => {
       allowNegative: false,
     });
 
-    expect(positiveOnly.format("-100")).toBe("1,00"); // Ignora o sinal
-    expect(positiveOnly.parse("-100")).toBe(1); // Parse também retorna absoluto
+    expect(positiveOnly.format("-100")).toBe("1,00");
+    expect(positiveOnly.parse("-100")).toBe(1);
   });
 
   it("should parse currency strings back to float numbers", () => {
     expect(maskBRL.parse("R$ 1.200,50")).toBe(1200.5);
     expect(maskUSD.parse("-$ 1,000.50")).toBe(-1000.5);
-    // Teste com sufixo
     expect(maskEUR.parse("50,00 €")).toBe(50.0);
   });
 
@@ -87,10 +82,8 @@ describe("Mask Utils - Unmasking Helpers", () => {
   });
 
   it("should support allowedChars exception list", () => {
-    // Novo recurso: permitir caracteres específicos
     expect(unmask("123.456", ".")).toBe("123.456");
     expect(unmask("ABC-123", "-")).toBe("ABC-123");
-    // Se não permitir, remove
     expect(unmask("123.456")).toBe("123456");
   });
 

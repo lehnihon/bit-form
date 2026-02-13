@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach } from "vitest";
 import { TestBed } from "@angular/core/testing";
 import { Component } from "@angular/core";
 import { BitStore } from "../core/store";
@@ -33,7 +33,7 @@ describe("Angular Integration (Signals)", () => {
     store = new BitStore<MyForm>({
       initialValues: {
         user: { name: "Leo" },
-        salary: 1000,
+        salary: 10,
         items: ["Item 1"],
       },
       validationDelay: 0,
@@ -48,10 +48,12 @@ describe("Angular Integration (Signals)", () => {
   it("deve gerenciar listas com keys estáveis usando injectBitFieldArray", () => {
     const fixture = TestBed.createComponent(HostComponent);
     const app = fixture.componentInstance;
+    fixture.detectChanges();
 
     const initialKey = app.list.fields()[0].key;
     app.list.append("Item 2");
     app.list.move(0, 1);
+    fixture.detectChanges();
 
     expect(app.form.values().items).toEqual(["Item 2", "Item 1"]);
     expect(app.list.fields()[1].key).toBe(initialKey);
@@ -60,10 +62,12 @@ describe("Angular Integration (Signals)", () => {
   it("deve aplicar máscara no displayValue e manter valor numérico na store", () => {
     const fixture = TestBed.createComponent(HostComponent);
     const app = fixture.componentInstance;
+    fixture.detectChanges();
 
     expect(app.salary.displayValue()).toBe("R$ 10,00");
 
     app.salary.setValue("R$ 2.500,50");
+    fixture.detectChanges();
 
     expect(app.salary.displayValue()).toBe("R$ 2.500,50");
     expect(app.form.values().salary).toBe(2500.5);
@@ -72,11 +76,15 @@ describe("Angular Integration (Signals)", () => {
   it("deve rastrear o estado isDirty e permitir Reset", () => {
     const fixture = TestBed.createComponent(HostComponent);
     const app = fixture.componentInstance;
+    fixture.detectChanges();
 
     app.userName.setValue("Mudou");
+    fixture.detectChanges();
     expect(app.form.isDirty()).toBe(true);
 
     app.form.reset();
+    fixture.detectChanges();
+
     expect(app.form.isDirty()).toBe(false);
     expect(app.userName.value()).toBe("Leo");
     expect(app.salary.displayValue()).toBe("R$ 10,00");

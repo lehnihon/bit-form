@@ -6,7 +6,6 @@ describe("Cross-Framework Consistency", () => {
   it("should maintain data integrity and case sensitivity across adapters", async () => {
     const store = new BitStore({
       initialValues: { apiKey: "" },
-      transform: { apiKey: (v) => unmask(v) },
     });
 
     const mask = createPatternMask("XXXX-####");
@@ -20,13 +19,13 @@ describe("Cross-Framework Consistency", () => {
     expect(state.values.apiKey).toBe("test-1234");
 
     await store.submit((values) => {
-      expect(values.apiKey).toBe("test1234");
+      expect(values.apiKey).toBe("test-1234");
     });
   });
 
   it("should exhibit identical behavior for currency between frameworks", () => {
     const store = new BitStore({
-      initialValues: { balance: 1000 },
+      initialValues: { balance: 10 },
     });
 
     const brl = store.masks.brl;

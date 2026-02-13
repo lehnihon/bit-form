@@ -26,20 +26,18 @@ export const unmask = (
   const stringValue = String(value);
   const isNegative = stringValue.startsWith("-");
 
-  if (allowChars) {
-    const escapedChars = allowChars.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    const regex = new RegExp(`[^a-zA-Z0-9${escapedChars}]`, "g");
-    const clean = stringValue.replace(regex, "");
-    return isNegative && !clean.startsWith("-") ? `-${clean}` : clean;
-  }
+  const escapedChars = allowChars
+    ? allowChars.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+    : "";
+  const regex = new RegExp(`[^a-zA-Z0-9${escapedChars}]`, "g");
 
-  const clean = stringValue.replace(/[^a-zA-Z0-9]/g, "");
-  return isNegative && clean ? `-${clean}` : clean;
+  const clean = stringValue.replace(regex, "");
+  return isNegative && clean && !clean.startsWith("-") ? `-${clean}` : clean;
 };
 
 export const unmaskCurrency = (value: any, precision = 2): number => {
-  if (value === null || value === undefined || value === "") return 0;
   if (typeof value === "number") return value;
+  if (!value) return 0;
 
   const stringValue = String(value);
   const isNegative = stringValue.includes("-");
@@ -54,9 +52,7 @@ export const unmaskCurrency = (value: any, precision = 2): number => {
 export const createPatternMask = (pattern: string): BitMask => {
   return {
     format: (value: any) => {
-      const fixedChars = pattern.replace(/[#09ASXULH*]/g, "");
-      const stringVal = unmask(value, fixedChars);
-
+      let stringVal = unmask(value);
       if (!stringVal) return "";
 
       let masked = "";
@@ -69,9 +65,12 @@ export const createPatternMask = (pattern: string): BitMask => {
       ) {
         const patternChar = pattern[i];
         const token = tokens[patternChar];
-        const dataChar = stringVal[valueIndex];
+        let dataChar = stringVal[valueIndex];
 
         if (token) {
+          if (patternChar === "U") dataChar = dataChar.toUpperCase();
+          if (patternChar === "L") dataChar = dataChar.toLowerCase();
+
           if (token.test(dataChar)) {
             masked += dataChar;
             valueIndex++;
@@ -85,7 +84,10 @@ export const createPatternMask = (pattern: string): BitMask => {
       }
       return masked;
     },
-    parse: (value: string) => unmask(value),
+    parse: (value: string) => {
+      const mask = createPatternMask(pattern);
+      return unmask(mask.format(value));
+    },
   };
 };
 
@@ -101,25 +103,31 @@ export const createCurrencyMask = ({
     format: (value: any) => {
       if (value === undefined || value === null || value === "") return "";
 
-      let stringValue =
-        typeof value === "number"
-          ? value.toFixed(precision).replace(".", "")
-          : String(value);
+      let stringValue = "";
 
-      const isNegative = stringValue.includes("-");
-      const cleanValue = stringValue.replace(/\D/g, "");
+      if (typeof value === "number") {
+        stringValue = Math.abs(value).toFixed(precision).replace(/\D/g, "");
+      } else {
+        stringValue = String(value).replace(/\D/g, "");
+      }
 
-      if (!cleanValue) return isNegative && allowNegative ? "-" : "";
+      if (!stringValue && String(value).includes("-") && allowNegative)
+        return "-";
+      if (!stringValue) return "";
 
-      const divider = Math.pow(10, precision);
-      const amount = (parseInt(cleanValue, 10) / divider).toFixed(precision);
+      stringValue = stringValue.padStart(precision + 1, "0");
 
-      const [integerPart, decimalPart] = amount.split(".");
+      const integerPart =
+        stringValue.slice(0, -precision).replace(/^0+(?=\d)/, "") || "0";
+      const decimalPart = stringValue.slice(-precision);
+
       const formattedInteger = integerPart.replace(
         /\B(?=(\d{3})+(?!\d))/g,
         thousand,
       );
 
+      const isNegative =
+        typeof value === "number" ? value < 0 : String(value).includes("-");
       const sign = isNegative && allowNegative ? "-" : "";
 
       return `${sign}${prefix}${formattedInteger}${decimal}${decimalPart}${suffix}`;

@@ -1,5 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { renderHook, act } from "@testing-library/react";
 import { BitStore } from "../../src/core";
 import {
@@ -11,7 +10,7 @@ import {
 } from "../../src/react";
 
 interface MyForm {
-  salary: number; // Agora como number para testar o unmask
+  salary: number;
   user: {
     firstName: string;
     lastName: string;
@@ -20,14 +19,15 @@ interface MyForm {
 }
 
 describe("React Integration (Context + Hooks)", () => {
-  const createTestStore = () =>
+  const createTestStore = (initialValues?: Partial<MyForm>) =>
     new BitStore<MyForm>({
       initialValues: {
-        salary: 1000, // Valor puro (number)
+        salary: 10,
         user: { firstName: "Leandro", lastName: "Ishikawa" },
         skills: ["React"],
+        ...initialValues,
       },
-      validationDelay: 0, // Síncrono para os testes
+      validationDelay: 0,
     });
 
   const wrapper = ({ children, store }: any) => (
@@ -58,29 +58,26 @@ describe("React Integration (Context + Hooks)", () => {
         store.setError("user.firstName", "Erro");
         result.current.field.setBlur();
       });
+
       expect(result.current.field.invalid).toBe(true);
     });
   });
 
   describe("Masks & Formatting", () => {
     it("deve aplicar máscara no displayValue mas manter valor limpo na store", async () => {
-      const store = createTestStore();
+      const store = createTestStore({ salary: 10 });
       const { result } = renderHook(
         () => useBitField("salary", { mask: "brl" }),
         { wrapper: (props) => wrapper({ ...props, store }) },
       );
 
-      // 1000 na store deve virar R$ 10,00 (considerando precisão 2 do preset brl)
-      // Se 1000 for reais inteiros, na store vira 1000.00
-      expect(result.current.displayValue).toBe("R$ 10,00");
+      expect(result.current.props.value).toBe("R$ 10,00");
 
       await act(async () => {
-        // Simulando usuário digitando no input
         result.current.setValue("R$ 2.500,50");
       });
 
-      expect(result.current.displayValue).toBe("R$ 2.500,50");
-      // Na store o valor deve ser um float puro (number)
+      expect(result.current.props.value).toBe("R$ 2.500,50");
       expect(store.getState().values.salary).toBe(2500.5);
     });
 
@@ -95,7 +92,7 @@ describe("React Integration (Context + Hooks)", () => {
         result.current.setValue("12345678901");
       });
 
-      expect(result.current.displayValue).toBe("123.456.789-01");
+      expect(result.current.props.value).toBe("123.456.789-01");
       expect(store.getState().values.user.lastName).toBe("12345678901");
     });
   });
@@ -115,11 +112,10 @@ describe("React Integration (Context + Hooks)", () => {
       });
 
       await act(async () => {
-        result.current.move(0, 1); // Move React para o fim
+        result.current.move(0, 1);
       });
 
       expect(store.getState().values.skills).toEqual(["Vue", "React"]);
-      // A key do item 'React' deve ser a mesma, mesmo mudando de posição
       expect(result.current.fields[1].key).toBe(initialKey);
     });
   });

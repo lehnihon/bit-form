@@ -17,7 +17,7 @@ describe("Form Lifecycle Flow", () => {
       },
     });
 
-    const couponMask = createPatternMask("AAAA-##");
+    const couponMask = createPatternMask("UUUU-##");
 
     store.setField("coupon", couponMask.format("save20"));
     store.setField("price", "R$ 1.500,90");

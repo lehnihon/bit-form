@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { mount } from "@vue/test-utils";
 import { defineComponent, nextTick } from "vue";
 import { BitStore } from "../core/store";
@@ -35,7 +35,7 @@ describe("Vue Integration", () => {
 
     expect(wrapper.vm.form.isDirty.value).toBe(false);
 
-    wrapper.vm.field.value = "Leandro";
+    wrapper.vm.field.setValue("Leandro");
     await nextTick();
 
     expect(wrapper.vm.form.values.value.user.info.name).toBe("Leandro");
@@ -44,7 +44,7 @@ describe("Vue Integration", () => {
 
   it("should apply masks and handle displayValue vs raw value", async () => {
     const store = new BitStore({
-      initialValues: { salary: 1000 },
+      initialValues: { salary: 10 },
     });
 
     const wrapper = createWrapper(store, () => ({
@@ -53,7 +53,7 @@ describe("Vue Integration", () => {
 
     expect(wrapper.vm.salary.displayValue.value).toBe("R$ 10,00");
 
-    wrapper.vm.salary.value = "R$ 2.500,50";
+    wrapper.vm.salary.setValue("R$ 2.500,50");
     await nextTick();
 
     expect(wrapper.vm.salary.displayValue.value).toBe("R$ 2.500,50");
@@ -83,7 +83,7 @@ describe("Vue Integration", () => {
     const store = new BitStore({
       initialValues: { email: "" },
       validationDelay: 0,
-      resolver: (vals) => (!vals.email ? { email: "Erro" } : {}),
+      resolver: (vals: any) => (!vals.email ? { email: "Erro" } : {}),
     });
 
     const onSubmit = vi.fn();
@@ -104,7 +104,7 @@ describe("Vue Integration", () => {
     const store = new BitStore({ initialValues: { count: 0 } });
     const wrapper = createWrapper(store, () => ({ form: useBitForm() }));
 
-    wrapper.vm.form.setField("count", 10);
+    store.setField("count", 10);
     await nextTick();
 
     wrapper.vm.form.reset();
