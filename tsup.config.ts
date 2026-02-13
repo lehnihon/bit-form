@@ -5,6 +5,7 @@ export default defineConfig({
     index: "src/index.ts",
     "core/index": "src/core/index.ts",
     "react/index": "src/react/index.ts",
+    "react-native/index": "src/react-native/index.ts",
     "vue/index": "src/vue/index.ts",
     "angular/index": "src/angular/index.ts",
     "resolvers/zod": "src/resolvers/zod.ts",

@@ -1,4 +1,4 @@
-import { useBitFieldBase } from "./use-bit-field-base";
+import { useBitFieldBase } from "../react/use-bit-field-base";
 
 export function useBitField<T = any>(path: string) {
   const { fieldState, setValue, setBlur } = useBitFieldBase<T>(path);
@@ -11,8 +11,8 @@ export function useBitField<T = any>(path: string) {
     setValue,
     setBlur,
     props: {
-      value: fieldState.value ?? "",
-      onChange: (e: any) => setValue(e?.target ? e.target.value : e),
+      value: fieldState.value != null ? String(fieldState.value) : "",
+      onChangeText: setValue,
       onBlur: setBlur,
     },
   };

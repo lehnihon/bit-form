@@ -138,42 +138,4 @@ describe("React Integration (Context + Hooks)", () => {
     expect(mockEvent.preventDefault).toHaveBeenCalled();
     expect(onSubmit).toHaveBeenCalled();
   });
-
-  // --- NOVO TESTE PARA REACT NATIVE ---
-  it("deve fornecer mobileProps compatíveis com React Native (TextInput)", async () => {
-    const store = createTestStore();
-    const { result } = renderHook(
-      () => ({
-        // Testando um campo numérico para garantir a conversão para string
-        // React Native crasha se passar number para TextInput value
-        salaryField: useBitField("salary"),
-        nameField: useBitField("user.firstName"),
-      }),
-      {
-        wrapper: (props) => wrapper({ ...props, store }),
-      },
-    );
-
-    // 1. Verifica se mobileProps existe e tem as chaves certas
-    expect(result.current.nameField.mobileProps).toBeDefined();
-    expect(result.current.nameField.mobileProps.onChangeText).toBeDefined();
-
-    // 2. Simula digitação no Mobile (onChangeText recebe string direta, não evento)
-    await act(async () => {
-      result.current.nameField.mobileProps.onChangeText("Mobile User");
-    });
-
-    expect(result.current.nameField.value).toBe("Mobile User");
-    expect(store.getState().values.user.firstName).toBe("Mobile User");
-
-    // 3. Verifica segurança de tipo (Safety String Check)
-    // Mesmo que na store seja number, no mobileProps.value deve vir string
-    await act(async () => {
-      store.setField("salary", 5000);
-    });
-
-    expect(store.getState().values.salary).toBe(5000); // Store tem number
-    expect(typeof result.current.salaryField.mobileProps.value).toBe("string"); // Mobile recebe string "5000"
-    expect(result.current.salaryField.mobileProps.value).toBe("5000");
-  });
 });

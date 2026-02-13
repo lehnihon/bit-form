@@ -17,6 +17,11 @@
       "import": "./dist/react/index.js",
       "require": "./dist/react/index.cjs"
     },
+    "./react-native": {
+      "types": "./dist/react-native/index.d.ts",
+      "import": "./dist/react-native/index.js",
+      "require": "./dist/react-native/index.cjs"
+    },
     "./vue": {
       "types": "./dist/vue/index.d.ts",
       "import": "./dist/vue/index.js",
