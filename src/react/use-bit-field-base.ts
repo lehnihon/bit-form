@@ -38,5 +38,5 @@ export function useBitFieldBase<T = any>(path: string) {
 
   const setBlur = useCallback(() => store.blurField(path), [store, path]);
 
-  return { fieldState, setValue, setBlur };
+  return { fieldState, setValue, setBlur, store };
 }

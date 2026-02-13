@@ -1,5 +1,6 @@
-import { DestroyRef, signal, computed, inject } from "@angular/core";
+import { DestroyRef, signal, computed, inject, untracked } from "@angular/core";
 import { useBitStore } from "./provider";
+import { getDeepValue } from "../core";
 
 const generateId = () => Math.random().toString(36).substring(2, 9);
 
@@ -7,33 +8,53 @@ export function injectBitFieldArray<T = any>(path: string) {
   const store = useBitStore();
   const destroyRef = inject(DestroyRef);
 
-  const getSnapshot = () => {
-    const val = path
-      .split(".")
-      .reduce((acc: any, part) => acc?.[part], store.getState().values);
-    return Array.isArray(val) ? val : [];
+  // 1. Helper para extrair o dado atual
+  const getRawArray = () => {
+    const val = getDeepValue(store.getState().values, path);
+    return Array.isArray(val) ? (val as T[]) : [];
   };
 
-  const idsSig = signal<string[]>(getSnapshot().map(generateId));
-  const valuesSig = signal<T[]>(getSnapshot());
+  // 2. Estado reativo local
+  const initialData = getRawArray();
+  const valuesSig = signal<T[]>(initialData);
+  const idsSig = signal<string[]>(initialData.map(generateId));
 
+  // 3. Sincronização Inteligente (Store -> Signal)
   const unsub = store.subscribe(() => {
-    const newValues = getSnapshot();
-    valuesSig.set(newValues);
+    const nextValues = getRawArray();
+    const currentIds = untracked(idsSig); // Evita dependência circular
 
-    if (newValues.length !== idsSig().length) {
-      idsSig.set(newValues.map(generateId));
+    // Atualiza valores
+    valuesSig.set(nextValues);
+
+    // Ajusta IDs apenas se necessário, sem regenerar os existentes
+    if (nextValues.length !== currentIds.length) {
+      if (nextValues.length > currentIds.length) {
+        // Adicionou itens: gera IDs apenas para os novos
+        const diff = nextValues.length - currentIds.length;
+        const newIds = Array.from({ length: diff }, generateId);
+        idsSig.set([...currentIds, ...newIds]);
+      } else {
+        // Removeu itens: corta o excesso
+        idsSig.set(currentIds.slice(0, nextValues.length));
+      }
     }
   });
 
   destroyRef.onDestroy(unsub);
 
+  // 4. Mapeamento para o Template
   const fields = computed(() => {
-    const ids = idsSig();
     const vals = valuesSig();
-    return vals.map((v, i) => ({ id: ids[i] || generateId(), value: v }));
+    const ids = idsSig();
+    return vals.map((v, i) => ({
+      key: ids[i] || generateId(), // Mantém consistência com o 'key' do React
+      value: v,
+      index: i,
+    }));
   });
 
+  // 5. Métodos de Mutação (Otimistas)
   return {
     fields,
     append: (val: T) => {

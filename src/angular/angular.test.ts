@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { TestBed } from "@angular/core/testing";
 import { Component } from "@angular/core";
-import { BitStore } from "../core/bit-store";
+import { BitStore } from "../core/store";
 import {
   injectBitField,
   injectBitForm,
@@ -11,6 +11,7 @@ import {
 
 interface MyForm {
   user: { name: string };
+  salary: number;
   items: string[];
 }
 
@@ -21,6 +22,7 @@ interface MyForm {
 class HostComponent {
   form = injectBitForm<MyForm>();
   userName = injectBitField<string>("user.name");
+  salary = injectBitField<number>("salary", { mask: "brl" });
   list = injectBitFieldArray<string>("items");
 }
 
@@ -31,6 +33,7 @@ describe("Angular Integration (Signals)", () => {
     store = new BitStore<MyForm>({
       initialValues: {
         user: { name: "Leo" },
+        salary: 1000,
         items: ["Item 1"],
       },
       validationDelay: 0,
@@ -42,16 +45,28 @@ describe("Angular Integration (Signals)", () => {
     });
   });
 
-  it("deve gerenciar listas com IDs estáveis usando injectBitFieldArray", () => {
+  it("deve gerenciar listas com keys estáveis usando injectBitFieldArray", () => {
     const fixture = TestBed.createComponent(HostComponent);
     const app = fixture.componentInstance;
 
-    const initialId = app.list.fields()[0].id;
+    const initialKey = app.list.fields()[0].key;
     app.list.append("Item 2");
     app.list.move(0, 1);
 
     expect(app.form.values().items).toEqual(["Item 2", "Item 1"]);
-    expect(app.list.fields()[1].id).toBe(initialId);
+    expect(app.list.fields()[1].key).toBe(initialKey);
+  });
+
+  it("deve aplicar máscara no displayValue e manter valor numérico na store", () => {
+    const fixture = TestBed.createComponent(HostComponent);
+    const app = fixture.componentInstance;
+
+    expect(app.salary.displayValue()).toBe("R$ 10,00");
+
+    app.salary.setValue("R$ 2.500,50");
+
+    expect(app.salary.displayValue()).toBe("R$ 2.500,50");
+    expect(app.form.values().salary).toBe(2500.5);
   });
 
   it("deve rastrear o estado isDirty e permitir Reset", () => {
@@ -64,17 +79,16 @@ describe("Angular Integration (Signals)", () => {
     app.form.reset();
     expect(app.form.isDirty()).toBe(false);
     expect(app.userName.value()).toBe("Leo");
+    expect(app.salary.displayValue()).toBe("R$ 10,00");
   });
 
   it("deve validar campos dinamicamente com Signals", async () => {
     const storeWithResolver = new BitStore<MyForm>({
-      initialValues: { user: { name: "" }, items: [] },
+      initialValues: { user: { name: "" }, salary: 0, items: [] },
       validationDelay: 0,
       resolver: (vals) =>
         !vals.user.name ? { "user.name": "Obrigatório" } : {},
     });
-
-    await storeWithResolver.validate();
 
     TestBed.resetTestingModule();
     TestBed.configureTestingModule({
@@ -85,11 +99,14 @@ describe("Angular Integration (Signals)", () => {
     const fixture = TestBed.createComponent(HostComponent);
     const app = fixture.componentInstance;
 
+    await storeWithResolver.validate();
+    fixture.detectChanges();
+
     expect(app.form.isValid()).toBe(false);
 
     app.userName.setValue("Leandro");
 
-    await new Promise((resolve) => setTimeout(resolve, 0));
+    await storeWithResolver.validate();
     fixture.detectChanges();
 
     expect(app.form.isValid()).toBe(true);

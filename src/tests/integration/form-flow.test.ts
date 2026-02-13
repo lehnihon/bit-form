@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
-import { BitStore } from "bit-form/core/bit-store";
-import { createPatternMask, unmaskCurrency } from "bit-form/core/mask-utils";
+import { BitStore } from "../../core/store";
+import { createPatternMask, unmaskCurrency } from "../../core/mask";
 
 describe("Form Lifecycle Flow", () => {
   it("should process the full lifecycle from raw input to unmasked data", async () => {
@@ -13,15 +13,16 @@ describe("Form Lifecycle Flow", () => {
       },
       resolver: mockResolver,
       transform: {
-        price: unmaskCurrency,
+        price: (v) => unmaskCurrency(v),
       },
     });
 
     const couponMask = createPatternMask("AAAA-##");
-    store.setField("coupon", couponMask("save20"));
+
+    store.setField("coupon", couponMask.format("save20"));
     store.setField("price", "R$ 1.500,90");
 
-    expect(store.getState().values.coupon).toBe("save-20");
+    expect(store.getState().values.coupon).toBe("SAVE-20");
     expect(store.getState().values.price).toBe("R$ 1.500,90");
 
     let finalPayload: any = null;
@@ -30,7 +31,7 @@ describe("Form Lifecycle Flow", () => {
     });
 
     expect(finalPayload).toEqual({
-      coupon: "save-20",
+      coupon: "SAVE-20",
       price: 1500.9,
     });
 

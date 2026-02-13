@@ -1,7 +1,7 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { mount } from "@vue/test-utils";
 import { defineComponent, nextTick } from "vue";
-import { BitStore } from "../core/bit-store";
+import { BitStore } from "../core/store";
 import { useBitField, useBitForm, useBitFieldArray } from "./index";
 import { BIT_STORE_KEY } from "./context";
 
@@ -34,14 +34,33 @@ describe("Vue Integration", () => {
     }));
 
     expect(wrapper.vm.form.isDirty.value).toBe(false);
-    wrapper.vm.field.value.value = "Leandro";
+
+    wrapper.vm.field.value = "Leandro";
     await nextTick();
 
     expect(wrapper.vm.form.values.value.user.info.name).toBe("Leandro");
     expect(wrapper.vm.form.isDirty.value).toBe(true);
   });
 
-  it("should react to advanced array manipulations (move/swap)", async () => {
+  it("should apply masks and handle displayValue vs raw value", async () => {
+    const store = new BitStore({
+      initialValues: { salary: 1000 },
+    });
+
+    const wrapper = createWrapper(store, () => ({
+      salary: useBitField("salary", { mask: "brl" }),
+    }));
+
+    expect(wrapper.vm.salary.displayValue.value).toBe("R$ 10,00");
+
+    wrapper.vm.salary.value = "R$ 2.500,50";
+    await nextTick();
+
+    expect(wrapper.vm.salary.displayValue.value).toBe("R$ 2.500,50");
+    expect(store.getState().values.salary).toBe(2500.5);
+  });
+
+  it("should react to advanced array manipulations with stable keys", async () => {
     const store = new BitStore({
       initialValues: { tags: ["A", "B", "C"] },
     });
@@ -51,12 +70,16 @@ describe("Vue Integration", () => {
       form: useBitForm(),
     }));
 
+    const initialKey = wrapper.vm.list.fields.value[0].key;
+
     wrapper.vm.list.swap(0, 2);
     await nextTick();
+
     expect(wrapper.vm.form.values.value.tags).toEqual(["C", "B", "A"]);
+    expect(wrapper.vm.list.fields.value[2].key).toBe(initialKey);
   });
 
-  it("should track isSubmitting and validation debounce", async () => {
+  it("should track isSubmitting and validation state", async () => {
     const store = new BitStore({
       initialValues: { email: "" },
       validationDelay: 0,
@@ -66,8 +89,14 @@ describe("Vue Integration", () => {
     const onSubmit = vi.fn();
     const wrapper = createWrapper(store, () => ({ form: useBitForm() }));
 
-    await wrapper.vm.form.submit(onSubmit)();
+    const submitFn = wrapper.vm.form.submit(onSubmit);
+
+    const promise = submitFn();
+    expect(wrapper.vm.form.isSubmitting.value).toBe(true);
+
+    await promise;
     expect(wrapper.vm.form.isValid.value).toBe(false);
+    expect(wrapper.vm.form.isSubmitting.value).toBe(false);
     expect(onSubmit).not.toHaveBeenCalled();
   });
 
@@ -75,10 +104,12 @@ describe("Vue Integration", () => {
     const store = new BitStore({ initialValues: { count: 0 } });
     const wrapper = createWrapper(store, () => ({ form: useBitForm() }));
 
-    store.setField("count", 10);
+    wrapper.vm.form.setField("count", 10);
     await nextTick();
+
     wrapper.vm.form.reset();
     await nextTick();
+
     expect(wrapper.vm.form.values.value.count).toBe(0);
     expect(wrapper.vm.form.isDirty.value).toBe(false);
   });

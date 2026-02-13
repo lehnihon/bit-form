@@ -1,17 +1,15 @@
 import { useCallback, useSyncExternalStore } from "react";
 import { useBitStore } from "./context";
+import { getDeepValue } from "../core";
 
-export function useBitWatch(path: string) {
+export function useBitWatch<T = any>(path: string): T {
   const store = useBitStore();
 
   const getSnapshot = useCallback(() => {
-    const value = path
-      .split(".")
-      .reduce((prev: any, curr) => prev?.[curr], store.getState().values);
-    return value;
+    const value = getDeepValue(store.getState().values, path);
+    return value as T;
   }, [store, path]);
 
-  // Retorna o valor atualizado do campo observado
   return useSyncExternalStore(
     store.subscribe.bind(store),
     getSnapshot,

@@ -1,5 +1,5 @@
 import React, { createContext, useContext } from "react";
-import { BitStore } from "../core/bit-store";
+import { BitStore } from "../core/store";
 
 const BitContext = createContext<BitStore<any> | null>(null);
 

@@ -1,7 +1,12 @@
-import { describe, it, expect, vi } from "vitest";
-import { BitStore } from "../../src/core/bit-store";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { BitStore } from "../../core/store";
+import { bitMasks } from "../../core/mask";
 
 describe("BitStore Core", () => {
+  beforeEach(() => {
+    vi.useRealTimers();
+  });
+
   describe("Basic Functionality", () => {
     it("should initialize with correct state", () => {
       const store = new BitStore({ initialValues: { name: "Leo" } });
@@ -43,6 +48,56 @@ describe("BitStore Core", () => {
 
       store.setField("name", "Leo"); // Volta ao original
       expect(store.getState().isDirty).toBe(false);
+    });
+  });
+
+  describe("Configuration & Masks", () => {
+    it("should use 'true' as default for defaultUnmask if not provided", () => {
+      const store = new BitStore({ initialValues: {} });
+      expect(store.defaultUnmask).toBe(true);
+    });
+
+    it("should accept custom configuration for defaultUnmask", () => {
+      const store = new BitStore({
+        initialValues: {},
+        defaultUnmask: false,
+      });
+      expect(store.defaultUnmask).toBe(false);
+    });
+
+    it("should load default presets (bitMasks) if no masks provided", () => {
+      const store = new BitStore({ initialValues: {} });
+      // Verifica se carregou máscaras comuns como BRL e CPF
+      expect(store.masks).toHaveProperty("brl");
+      expect(store.masks).toHaveProperty("cpf");
+      expect(store.masks.brl).toBeDefined();
+    });
+
+    it("should allow registering new masks dynamically", () => {
+      const store = new BitStore({ initialValues: {} });
+      const customMask = {
+        format: (v: any) => `X-${v}`,
+        parse: (v: string) => v,
+      };
+
+      store.registerMask("custom", customMask);
+
+      expect(store.masks).toHaveProperty("custom");
+      expect(store.masks.custom.format("test")).toBe("X-test");
+    });
+
+    it("should allow overriding initial masks via config", () => {
+      const myMask = { format: () => "", parse: () => "" };
+      const store = new BitStore({
+        initialValues: {},
+        masks: { only_mine: myMask },
+      });
+
+      // Se passou masks no config, ele DEVE respeitar o que foi passado (ou mergear, dependendo da sua lógica final.
+      // No código atual: this.masks = config.masks ?? bitMasks; -> Ou usa um ou usa outro)
+      expect(store.masks).toHaveProperty("only_mine");
+      // Se a lógica for substituir:
+      expect(store.masks).not.toHaveProperty("brl");
     });
   });
 
@@ -137,7 +192,7 @@ describe("BitStore Core", () => {
       store.swapItems("list", 0, 2);
       expect(store.getState().values.list).toEqual(["c", "b", "a"]);
 
-      store.moveItem("list", 2, 0); // Move 'a' de volta para o início
+      store.moveItem("list", 2, 0);
       expect(store.getState().values.list).toEqual(["a", "c", "b"]);
     });
 
@@ -165,6 +220,63 @@ describe("BitStore Core", () => {
       });
       store.pushItem("user.skills", "Vue");
       expect(store.getState().values.user.skills).toEqual(["React", "Vue"]);
+    });
+  });
+
+  describe("Advanced Features (Watch & Debounce)", () => {
+    it("should debounce validation execution", () => {
+      vi.useFakeTimers();
+      const resolver = vi.fn().mockReturnValue({});
+      const store = new BitStore({
+        initialValues: { name: "" },
+        resolver,
+        validationDelay: 500,
+      });
+
+      store.setField("name", "L");
+      store.setField("name", "Le");
+      store.setField("name", "Leo");
+
+      // Não deve ter chamado ainda
+      expect(resolver).not.toHaveBeenCalled();
+
+      // Avança o tempo
+      vi.advanceTimersByTime(500);
+
+      // Deve ter chamado APENAS UMA VEZ após o delay
+      expect(resolver).toHaveBeenCalledTimes(1);
+      expect(store.getState().values.name).toBe("Leo");
+    });
+
+    it("should watch for specific field changes", () => {
+      const store = new BitStore({ initialValues: { name: "Leo", age: 30 } });
+      const nameWatcher = vi.fn();
+
+      // Monitora apenas 'name'
+      const unsubscribe = store.watch("name", nameWatcher);
+
+      store.setField("age", 31);
+      expect(nameWatcher).not.toHaveBeenCalled(); // Mudou age, não name
+
+      store.setField("name", "Leandro");
+      expect(nameWatcher).toHaveBeenCalledWith("Leandro");
+      expect(nameWatcher).toHaveBeenCalledTimes(1);
+
+      unsubscribe();
+      store.setField("name", "Leonardo");
+      expect(nameWatcher).toHaveBeenCalledTimes(1); // Não chama mais após unsubscribe
+    });
+
+    it("should watch nested fields", () => {
+      const store = new BitStore({
+        initialValues: { config: { active: false } },
+      });
+      const watcher = vi.fn();
+
+      store.watch("config.active", watcher);
+
+      store.setField("config.active", true);
+      expect(watcher).toHaveBeenCalledWith(true);
     });
   });
 });

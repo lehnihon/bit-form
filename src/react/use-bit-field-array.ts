@@ -7,18 +7,20 @@ import {
 } from "react";
 import { useBitStore } from "./context";
 
-// Gerador de ID simples e rápido (sem dependência externa)
+// Gerador de ID simples e rápido (gera string aleatória tipo "abc1234")
 const generateId = () => Math.random().toString(36).substring(2, 9);
 
 export function useBitFieldArray<T = any>(path: string) {
   const store = useBitStore();
 
-  // Pegamos os dados reais da store
+  // 1. Snapshot: Pega o array atual da store com segurança
   const getSnapshot = useCallback(() => {
     const state = store.getState();
+    // Navega profundamente no objeto (ex: "users.0.skills")
     const value = path
       .split(".")
       .reduce((prev: any, curr) => prev?.[curr], state.values);
+
     return Array.isArray(value) ? value : [];
   }, [store, path]);
 
@@ -28,17 +30,31 @@ export function useBitFieldArray<T = any>(path: string) {
     getSnapshot,
   );
 
-  // Estado local para manter os IDs estáveis
+  // 2. IDs Estáveis: Mantemos IDs locais para usar nas 'keys' do React
+  // Inicializamos lazy para evitar processamento desnecessário
   const [ids, setIds] = useState<string[]>(() => data.map(generateId));
 
-  // Sincroniza os IDs se a store mudar externamente (ex: via setValues)
+  // 3. Sincronização Externa: Se a store mudar por fora (ex: reset ou load API)
+  // ajustamos a quantidade de IDs para bater com os dados.
   useEffect(() => {
     if (data.length !== ids.length) {
-      setIds(data.map(generateId));
+      setIds((prevIds) => {
+        if (data.length > prevIds.length) {
+          // Array cresceu externamente: criar novos IDs
+          const newIds = Array(data.length - prevIds.length)
+            .fill(null)
+            .map(generateId);
+          return [...prevIds, ...newIds];
+        } else {
+          // Array diminuiu externamente: cortar IDs excedentes
+          return prevIds.slice(0, data.length);
+        }
+      });
     }
-  }, [data.length]);
+  }, [data.length]); // Dependência apenas no tamanho para performance
 
-  // Métodos que manipulam a Store e os IDs simultaneamente
+  // 4. Métodos de Mutação (Otimistic Update)
+  // Atualizamos os IDs locais IMEDIATAMENTE antes da store para evitar flash de tela
   const methods = useMemo(
     () => ({
       append: (value: T) => {
@@ -48,6 +64,14 @@ export function useBitFieldArray<T = any>(path: string) {
       prepend: (value: T) => {
         setIds((prev) => [generateId(), ...prev]);
         store.prependItem(path, value);
+      },
+      insert: (index: number, value: T) => {
+        setIds((prev) => {
+          const newIds = [...prev];
+          newIds.splice(index, 0, generateId());
+          return newIds;
+        });
+        store.insertItem(path, index, value);
       },
       remove: (index: number) => {
         setIds((prev) => prev.filter((_, i) => i !== index));
@@ -62,14 +86,6 @@ export function useBitFieldArray<T = any>(path: string) {
         });
         store.moveItem(path, from, to);
       },
-      insert: (index: number, value: T) => {
-        setIds((prev) => {
-          const newIds = [...prev];
-          newIds.splice(index, 0, generateId());
-          return newIds;
-        });
-        store.insertItem(path, index, value);
-      },
       swap: (indexA: number, indexB: number) => {
         setIds((prev) => {
           const newIds = [...prev];
@@ -82,12 +98,14 @@ export function useBitFieldArray<T = any>(path: string) {
     [store, path],
   );
 
-  // Montamos o array final para o map do usuário
+  // 5. Montagem do Resultado Final
+  // Combinamos dados + IDs para o usuário renderizar listas com key={field.key}
   const fields = useMemo(
     () =>
-      data.map((item, index) => ({
-        id: ids[index] || generateId(), // Fallback de segurança
+      data.map((item: T, index: number) => ({
+        key: ids[index] || generateId(), // Key estável para o React
         value: item,
+        index, // Útil para passar no remove(index)
       })),
     [data, ids],
   );

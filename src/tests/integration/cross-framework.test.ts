@@ -1,21 +1,40 @@
 import { describe, it, expect } from "vitest";
-import { BitStore } from "bit-form/core/bit-store";
-import { createPatternMask, unmask } from "bit-form/core/mask-utils";
+import { BitStore } from "../../core/store";
+import { createPatternMask, unmask } from "../../core/mask";
 
 describe("Cross-Framework Consistency", () => {
   it("should maintain data integrity and case sensitivity across adapters", async () => {
     const store = new BitStore({
       initialValues: { apiKey: "" },
-      transform: { apiKey: unmask },
+      transform: { apiKey: (v) => unmask(v) },
     });
 
     const mask = createPatternMask("XXXX-####");
-    const maskedValue = mask("test1234");
-    store.setField("apiKey", maskedValue);
+
+    const formatted = mask.format("test1234");
+    expect(formatted).toBe("test-1234");
+
+    store.setField("apiKey", formatted);
+
     const state = store.getState();
     expect(state.values.apiKey).toBe("test-1234");
+
     await store.submit((values) => {
       expect(values.apiKey).toBe("test1234");
     });
+  });
+
+  it("should exhibit identical behavior for currency between frameworks", () => {
+    const store = new BitStore({
+      initialValues: { balance: 1000 },
+    });
+
+    const brl = store.masks.brl;
+
+    const display = brl.format(store.getState().values.balance);
+    expect(display).toBe("R$ 10,00");
+
+    const parsed = brl.parse("R$ 50,00");
+    expect(parsed).toBe(50);
   });
 });

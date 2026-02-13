@@ -1,25 +1,13 @@
-export type BitErrors<T> = { [key: string]: string | undefined };
-export type BitTouched<T> = { [key: string]: boolean | undefined };
-
-export interface BitState<T> {
-  values: T;
-  errors: BitErrors<T>;
-  touched: BitTouched<T>;
-  isValid: boolean;
-  isSubmitting: boolean;
-  isDirty: boolean;
-}
-
-export type ValidatorFn<T> = (
-  values: T,
-) => Promise<BitErrors<T>> | BitErrors<T>;
-
-export interface BitConfig<T> {
-  initialValues: T;
-  resolver?: ValidatorFn<T>;
-  transform?: Partial<Record<string, (value: any) => any>>;
-  validationDelay?: number;
-}
+import { BitMask } from "../mask/types";
+import { bitMasks } from "../mask";
+import { BitConfig, BitErrors, BitState } from "./types";
+import {
+  deepClone,
+  deepEqual,
+  getDeepValue,
+  setDeepValue,
+  cleanPrefixedKeys,
+} from "./utils";
 
 export class BitStore<T extends object = any> {
   private state: BitState<T>;
@@ -27,14 +15,21 @@ export class BitStore<T extends object = any> {
   private config: BitConfig<T>;
   private validationTimeout?: any;
 
+  public defaultUnmask: boolean;
+  public masks: Record<string, BitMask>;
+
   constructor(config: BitConfig<T>) {
     this.config = {
       validationDelay: 300,
       ...config,
-      initialValues: this.deepClone(config.initialValues),
+      initialValues: deepClone(config.initialValues),
     };
+
+    this.defaultUnmask = config.defaultUnmask ?? true;
+    this.masks = config.masks ?? bitMasks;
+
     this.state = {
-      values: this.deepClone(this.config.initialValues),
+      values: deepClone(this.config.initialValues),
       errors: {},
       touched: {},
       isValid: true,
@@ -65,21 +60,21 @@ export class BitStore<T extends object = any> {
   }
 
   watch(path: string, callback: (value: any) => void) {
-    let lastValue = this.deepClone(this.getDeepValue(this.state.values, path));
+    let lastValue = deepClone(getDeepValue(this.state.values, path));
     return this.subscribe(() => {
-      const newValue = this.getDeepValue(this.state.values, path);
-      if (!this.deepEqual(newValue, lastValue)) {
-        lastValue = this.deepClone(newValue);
+      const newValue = getDeepValue(this.state.values, path);
+      if (!deepEqual(newValue, lastValue)) {
+        lastValue = deepClone(newValue);
         callback(newValue);
       }
     });
   }
 
   setField(path: string, value: any) {
-    const newValues = this.setDeepValue(this.state.values, path, value);
+    const newValues = setDeepValue(this.state.values, path, value);
     this.updateState({
       values: newValues,
-      isDirty: !this.deepEqual(newValues, this.config.initialValues),
+      isDirty: !deepEqual(newValues, this.config.initialValues),
     });
 
     if (!this.config.resolver) {
@@ -110,8 +105,8 @@ export class BitStore<T extends object = any> {
   }
 
   setValues(newValues: T) {
-    const clonedValues = this.deepClone(newValues);
-    this.config.initialValues = this.deepClone(clonedValues);
+    const clonedValues = deepClone(newValues);
+    this.config.initialValues = deepClone(clonedValues);
 
     if (this.validationTimeout) clearTimeout(this.validationTimeout);
 
@@ -144,7 +139,7 @@ export class BitStore<T extends object = any> {
     if (this.validationTimeout) clearTimeout(this.validationTimeout);
 
     this.updateState({
-      values: this.deepClone(this.config.initialValues),
+      values: deepClone(this.config.initialValues),
       errors: {},
       touched: {},
       isValid: true,
@@ -153,40 +148,42 @@ export class BitStore<T extends object = any> {
     });
   }
 
+  registerMask(name: string, mask: BitMask) {
+    this.masks[name] = mask;
+  }
+
   pushItem(path: string, value: any) {
-    const currentArray = this.getDeepValue(this.state.values, path) || [];
+    const currentArray = getDeepValue(this.state.values, path) || [];
     if (!Array.isArray(currentArray)) return;
     this.setField(path, [...currentArray, value]);
   }
 
   prependItem(path: string, value: any) {
-    const currentArray = this.getDeepValue(this.state.values, path) || [];
+    const currentArray = getDeepValue(this.state.values, path) || [];
     if (!Array.isArray(currentArray)) return;
     this.setField(path, [value, ...currentArray]);
   }
 
   insertItem(path: string, index: number, value: any) {
-    const currentArray = [
-      ...(this.getDeepValue(this.state.values, path) || []),
-    ];
+    const currentArray = [...(getDeepValue(this.state.values, path) || [])];
     if (!Array.isArray(currentArray)) return;
     currentArray.splice(index, 0, value);
     this.setField(path, currentArray);
   }
 
   removeItem(path: string, index: number) {
-    const currentArray = this.getDeepValue(this.state.values, path);
+    const currentArray = getDeepValue(this.state.values, path);
     if (!Array.isArray(currentArray)) return;
 
-    const newArray = currentArray.filter((_, i) => i !== index);
-    const newValues = this.setDeepValue(this.state.values, path, newArray);
+    const newArray = currentArray.filter((_: any, i: number) => i !== index);
+    const newValues = setDeepValue(this.state.values, path, newArray);
 
     const prefix = `${path}.${index}`;
     this.updateState({
       values: newValues,
-      errors: this.cleanPrefixedKeys(this.state.errors, prefix),
-      touched: this.cleanPrefixedKeys(this.state.touched, prefix),
-      isDirty: !this.deepEqual(newValues, this.config.initialValues),
+      errors: cleanPrefixedKeys(this.state.errors, prefix),
+      touched: cleanPrefixedKeys(this.state.touched, prefix),
+      isDirty: !deepEqual(newValues, this.config.initialValues),
     });
 
     if (this.validationTimeout) clearTimeout(this.validationTimeout);
@@ -194,9 +191,7 @@ export class BitStore<T extends object = any> {
   }
 
   swapItems(path: string, indexA: number, indexB: number) {
-    const currentArray = [
-      ...(this.getDeepValue(this.state.values, path) || []),
-    ];
+    const currentArray = [...(getDeepValue(this.state.values, path) || [])];
     if (!Array.isArray(currentArray)) return;
 
     [currentArray[indexA], currentArray[indexB]] = [
@@ -207,9 +202,7 @@ export class BitStore<T extends object = any> {
   }
 
   moveItem(path: string, from: number, to: number) {
-    const currentArray = [
-      ...(this.getDeepValue(this.state.values, path) || []),
-    ];
+    const currentArray = [...(getDeepValue(this.state.values, path) || [])];
     if (!Array.isArray(currentArray)) return;
 
     const [item] = currentArray.splice(from, 1);
@@ -238,14 +231,14 @@ export class BitStore<T extends object = any> {
 
     if (isValid) {
       try {
-        let valuesToSubmit = this.deepClone(this.state.values);
+        let valuesToSubmit = deepClone(this.state.values);
 
         if (this.config.transform) {
           for (const path in this.config.transform) {
             const transformer = this.config.transform[path];
             if (transformer) {
-              const currentVal = this.getDeepValue(valuesToSubmit, path);
-              valuesToSubmit = this.setDeepValue(
+              const currentVal = getDeepValue(valuesToSubmit, path);
+              valuesToSubmit = setDeepValue(
                 valuesToSubmit,
                 path,
                 transformer(currentVal),
@@ -275,76 +268,5 @@ export class BitStore<T extends object = any> {
 
   private notify() {
     this.listeners.forEach((listener) => listener());
-  }
-
-  private getDeepValue(obj: any, path: string): any {
-    return path.split(".").reduce((prev, curr) => prev?.[curr], obj);
-  }
-
-  private setDeepValue(obj: any, path: string, value: any): any {
-    const keys = path.split(".");
-    const lastKey = keys.pop()!;
-    const newObj = Array.isArray(obj) ? [...obj] : { ...obj };
-
-    let current = newObj;
-    for (const key of keys) {
-      if (!current[key]) current[key] = {};
-      current[key] = Array.isArray(current[key])
-        ? [...current[key]]
-        : { ...current[key] };
-      current = current[key];
-    }
-
-    current[lastKey] = value;
-    return newObj;
-  }
-
-  private cleanPrefixedKeys(
-    obj: Record<string, any>,
-    prefix: string,
-  ): Record<string, any> {
-    const newObj: Record<string, any> = {};
-    const prefixWithDot = `${prefix}.`;
-
-    for (const key in obj) {
-      if (key !== prefix && !key.startsWith(prefixWithDot)) {
-        newObj[key] = obj[key];
-      }
-    }
-    return newObj;
-  }
-
-  private deepClone(obj: any): any {
-    if (obj === null || typeof obj !== "object") return obj;
-    if (Array.isArray(obj)) return obj.map((item) => this.deepClone(item));
-    const clone: any = {};
-    for (const key in obj) {
-      if (Object.prototype.hasOwnProperty.call(obj, key)) {
-        clone[key] = this.deepClone(obj[key]);
-      }
-    }
-    return clone;
-  }
-
-  private deepEqual(a: any, b: any): boolean {
-    if (a === b) return true;
-    if (
-      a === null ||
-      typeof a !== "object" ||
-      b === null ||
-      typeof b !== "object"
-    )
-      return false;
-
-    const keysA = Object.keys(a);
-    const keysB = Object.keys(b);
-
-    if (keysA.length !== keysB.length) return false;
-
-    for (const key of keysA) {
-      if (!keysB.includes(key) || !this.deepEqual(a[key], b[key])) return false;
-    }
-
-    return true;
   }
 }
