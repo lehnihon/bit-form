@@ -55,7 +55,8 @@ describe("Angular Integration (Signals)", () => {
     app.list.move(0, 1);
     fixture.detectChanges();
 
-    expect(app.form.values().items).toEqual(["Item 2", "Item 1"]);
+    // Ajuste: getValues() em vez de values()
+    expect(app.form.getValues().items).toEqual(["Item 2", "Item 1"]);
     expect(app.list.fields()[1].key).toBe(initialKey);
   });
 
@@ -70,7 +71,8 @@ describe("Angular Integration (Signals)", () => {
     fixture.detectChanges();
 
     expect(app.salary.displayValue()).toBe("R$ 2.500,50");
-    expect(app.form.values().salary).toBe(2500.5);
+    // Ajuste: getValues()
+    expect(app.form.getValues().salary).toBe(2500.5);
   });
 
   it("deve rastrear o estado isDirty e permitir Reset", () => {

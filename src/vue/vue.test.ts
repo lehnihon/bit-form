@@ -38,7 +38,7 @@ describe("Vue Integration", () => {
     wrapper.vm.field.setValue("Leandro");
     await nextTick();
 
-    expect(wrapper.vm.form.values.value.user.info.name).toBe("Leandro");
+    expect(wrapper.vm.form.getValues().user.info.name).toBe("Leandro");
     expect(wrapper.vm.form.isDirty.value).toBe(true);
   });
 
@@ -75,7 +75,7 @@ describe("Vue Integration", () => {
     wrapper.vm.list.swap(0, 2);
     await nextTick();
 
-    expect(wrapper.vm.form.values.value.tags).toEqual(["C", "B", "A"]);
+    expect(wrapper.vm.form.getValues().tags).toEqual(["C", "B", "A"]);
     expect(wrapper.vm.list.fields.value[2].key).toBe(initialKey);
   });
 
@@ -110,7 +110,7 @@ describe("Vue Integration", () => {
     wrapper.vm.form.reset();
     await nextTick();
 
-    expect(wrapper.vm.form.values.value.count).toBe(0);
+    expect(wrapper.vm.form.getValues().count).toBe(0);
     expect(wrapper.vm.form.isDirty.value).toBe(false);
   });
 });

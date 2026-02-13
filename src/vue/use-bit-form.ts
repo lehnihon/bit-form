@@ -1,4 +1,4 @@
-import { ref, computed, onUnmounted, shallowRef } from "vue";
+import { computed, onUnmounted, shallowRef } from "vue";
 import { useBitStore } from "./context";
 
 export function useBitForm<T extends object>() {
@@ -11,24 +11,29 @@ export function useBitForm<T extends object>() {
 
   onUnmounted(unsubscribe);
 
+  const getValues = () => state.value.values;
+  const getErrors = () => state.value.errors;
+  const getTouched = () => state.value.touched;
+
   return {
-    values: computed(() => state.value.values),
-    errors: computed(() => state.value.errors),
-    touched: computed(() => state.value.touched),
     isValid: computed(() => state.value.isValid),
     isSubmitting: computed(() => state.value.isSubmitting),
     isDirty: computed(() => state.value.isDirty),
+    getValues,
+    getErrors,
+    getTouched,
     submit: (onSuccess: (values: T) => void | Promise<void>) => {
       return (e?: Event) => {
         e?.preventDefault?.();
         return store.submit(onSuccess);
       };
     },
-    reset: () => store.reset(),
-    validate: () => store.validate(),
-    setValues: (v: T) => store.setValues(v),
-    setError: (path: string, msg?: string) => store.setError(path, msg),
-    setErrors: (errs: any) => store.setErrors(errs),
+
+    reset: store.reset.bind(store),
+    validate: store.validate.bind(store),
+    setValues: store.setValues.bind(store),
+    setError: store.setError.bind(store),
+    setErrors: store.setErrors.bind(store),
     setField: store.setField.bind(store),
     registerMask: store.registerMask.bind(store),
     pushItem: store.pushItem.bind(store),

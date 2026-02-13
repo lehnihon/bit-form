@@ -176,6 +176,8 @@ describe("React Integration (Context + Hooks)", () => {
 
       expect(mockEvent.preventDefault).toHaveBeenCalled();
       expect(onSubmit).toHaveBeenCalled();
+
+      expect(result.current.getValues().salary).toBe(10);
     });
   });
 });

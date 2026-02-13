@@ -1,12 +1,37 @@
-import { useCallback, useSyncExternalStore, useMemo } from "react";
+import { useCallback, useSyncExternalStore, useMemo, useRef } from "react";
 import { useBitStore } from "./context";
 
 export function useBitForm<T extends object>() {
   const store = useBitStore<T>();
-  const state = useSyncExternalStore(
+
+  const lastMeta = useRef<{
+    isValid: boolean;
+    isDirty: boolean;
+    isSubmitting: boolean;
+  } | null>(null);
+
+  const getMetaSnapshot = useCallback(() => {
+    const state = store.getState();
+    const { isValid, isDirty, isSubmitting } = state;
+
+    if (
+      lastMeta.current &&
+      lastMeta.current.isValid === isValid &&
+      lastMeta.current.isDirty === isDirty &&
+      lastMeta.current.isSubmitting === isSubmitting
+    ) {
+      return lastMeta.current;
+    }
+
+    const nextMeta = { isValid, isDirty, isSubmitting };
+    lastMeta.current = nextMeta;
+    return nextMeta;
+  }, [store]);
+
+  const metaState = useSyncExternalStore(
     store.subscribe.bind(store),
-    store.getState.bind(store),
-    store.getState.bind(store),
+    getMetaSnapshot,
+    getMetaSnapshot,
   );
 
   const submit = useCallback(
@@ -18,6 +43,10 @@ export function useBitForm<T extends object>() {
     },
     [store],
   );
+
+  const getValues = useCallback(() => store.getState().values, [store]);
+  const getErrors = useCallback(() => store.getState().errors, [store]);
+  const getTouched = useCallback(() => store.getState().touched, [store]);
 
   const actions = useMemo(
     () => ({
@@ -39,12 +68,10 @@ export function useBitForm<T extends object>() {
   );
 
   return {
-    values: state.values,
-    errors: state.errors,
-    touched: state.touched,
-    isValid: state.isValid,
-    isDirty: state.isDirty,
-    isSubmitting: state.isSubmitting,
+    ...metaState,
+    getValues,
+    getErrors,
+    getTouched,
     submit,
     ...actions,
     store,

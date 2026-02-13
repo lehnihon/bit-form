@@ -4,7 +4,6 @@ import { useBitStore } from "./provider";
 export function injectBitForm<T extends object>() {
   const store = useBitStore<T>();
   const destroyRef = inject(DestroyRef);
-
   const stateSignal = signal(store.getState());
 
   const sub = store.subscribe(() => {
@@ -13,12 +12,13 @@ export function injectBitForm<T extends object>() {
 
   destroyRef.onDestroy(() => sub());
 
-  const values = computed(() => stateSignal().values);
-  const errors = computed(() => stateSignal().errors);
-  const touched = computed(() => stateSignal().touched);
   const isValid = computed(() => stateSignal().isValid);
   const isSubmitting = computed(() => stateSignal().isSubmitting);
   const isDirty = computed(() => stateSignal().isDirty);
+
+  const getValues = () => stateSignal().values;
+  const getErrors = () => stateSignal().errors;
+  const getTouched = () => stateSignal().touched;
 
   const submit = (onSuccess: (values: T) => void | Promise<void>) => {
     return (event?: Event) => {
@@ -29,18 +29,18 @@ export function injectBitForm<T extends object>() {
   };
 
   return {
-    values,
-    errors,
-    touched,
     isValid,
     isSubmitting,
     isDirty,
+    getValues,
+    getErrors,
+    getTouched,
     submit,
-    reset: () => store.reset(),
-    validate: () => store.validate(),
-    setValues: (v: T) => store.setValues(v),
-    setError: (path: string, msg?: string) => store.setError(path, msg),
-    setErrors: (errs: any) => store.setErrors(errs),
+    reset: store.reset.bind(store),
+    validate: store.validate.bind(store),
+    setValues: store.setValues.bind(store),
+    setError: store.setError.bind(store),
+    setErrors: store.setErrors.bind(store),
     setField: store.setField.bind(store),
     registerMask: store.registerMask.bind(store),
     pushItem: store.pushItem.bind(store),
