@@ -56,12 +56,15 @@ export function useBitField<T = any>(
     [resolvedMask, shouldUnmask, rawSetValue],
   );
 
+  const isDirty = store.isFieldDirty(path);
+
   return {
     value: fieldState.value as T,
     displayValue,
     error: fieldState.touched ? fieldState.error : undefined,
     touched: fieldState.touched,
     invalid: !!(fieldState.touched && fieldState.error),
+    isDirty,
     setValue,
     setBlur,
     props: {

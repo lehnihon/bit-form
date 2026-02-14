@@ -15,10 +15,27 @@ export function useBitForm<T extends object>() {
   const getErrors = () => state.value.errors;
   const getTouched = () => state.value.touched;
 
+  const isValid = computed(() => state.value.isValid);
+  const isSubmitting = computed(() => state.value.isSubmitting);
+  const isDirty = computed(() => state.value.isDirty);
+
+  const canUndo = computed(() => {
+    state.value;
+    return store.canUndo;
+  });
+
+  const canRedo = computed(() => {
+    state.value;
+    return store.canRedo;
+  });
+
   return {
-    isValid: computed(() => state.value.isValid),
-    isSubmitting: computed(() => state.value.isSubmitting),
-    isDirty: computed(() => state.value.isDirty),
+    store,
+    isValid,
+    isSubmitting,
+    isDirty,
+    canUndo,
+    canRedo,
     getValues,
     getErrors,
     getTouched,
@@ -28,13 +45,14 @@ export function useBitForm<T extends object>() {
         return store.submit(onSuccess);
       };
     },
-
     reset: store.reset.bind(store),
     validate: store.validate.bind(store),
     setValues: store.setValues.bind(store),
     setError: store.setError.bind(store),
     setErrors: store.setErrors.bind(store),
+    setServerErrors: store.setServerErrors.bind(store),
     setField: store.setField.bind(store),
+    blurField: store.blurField.bind(store),
     registerMask: store.registerMask.bind(store),
     pushItem: store.pushItem.bind(store),
     prependItem: store.prependItem.bind(store),
@@ -42,6 +60,7 @@ export function useBitForm<T extends object>() {
     insertItem: store.insertItem.bind(store),
     moveItem: store.moveItem.bind(store),
     swapItems: store.swapItems.bind(store),
-    store,
+    undo: store.undo.bind(store),
+    redo: store.redo.bind(store),
   };
 }

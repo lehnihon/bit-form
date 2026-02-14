@@ -1,6 +1,6 @@
 import { signal, computed, inject, DestroyRef } from "@angular/core";
-import { useBitStore } from "./provider"; // Assumindo que você tem isso
-import { BitMask, getDeepValue } from "../core"; // Importando do core compartilhado
+import { useBitStore } from "./provider";
+import { BitMask, getDeepValue } from "../core";
 
 export interface UseBitFieldOptions {
   mask?: BitMask | string;
@@ -14,8 +14,6 @@ export function injectBitField<T = any>(
   const store = useBitStore();
   const destroyRef = inject(DestroyRef);
 
-  // 1. Resolve a Máscara (Registry Global ou Objeto Local)
-  // No Angular não temos useMemo, fazemos direto pois a func roda no injection context
   let activeMask: BitMask | undefined;
   const maskOption = options?.mask;
 
@@ -30,34 +28,23 @@ export function injectBitField<T = any>(
     }
   }
 
-  // 2. Resolve a Configuração de Limpeza
   const shouldUnmask = options?.unmask ?? store.defaultUnmask ?? true;
 
-  // 3. Estado Reativo (Signal Central)
   const state = signal(store.getState());
 
-  // Sincroniza Store -> Signal
   const unsubscribe = store.subscribe(() => {
-    // Atualizamos o signal com uma cópia rasa para disparar os computeds
     state.set({ ...store.getState() });
   });
 
-  // Limpeza automática ao destruir o componente
   destroyRef.onDestroy(() => unsubscribe());
 
-  // 4. Computeds (Seletores de Leitura)
-
-  // Valor cru da store (Raw Value)
   const rawValue = computed(() => getDeepValue(state().values, path) as T);
 
-  // Valor para exibir no Input (Display Value)
   const displayValue = computed(() => {
     const val = rawValue();
     if (val === undefined || val === null) return "";
 
     if (activeMask) {
-      // Se unmask=true (store limpa), formatamos para mostrar
-      // Se unmask=false (store suja), mostramos direto
       return shouldUnmask ? activeMask.format(val) : String(val);
     }
     return val;
@@ -71,7 +58,10 @@ export function injectBitField<T = any>(
   const touched = computed(() => !!state().touched[path]);
   const invalid = computed(() => !!(touched() && error()));
 
-  // 5. Métodos de Escrita (Actions)
+  const isDirty = computed(() => {
+    state();
+    return store.isFieldDirty(path);
+  });
 
   const setValue = (val: any) => {
     if (!activeMask) {
@@ -80,9 +70,9 @@ export function injectBitField<T = any>(
     }
 
     if (shouldUnmask) {
-      store.setField(path, activeMask.parse(val)); // Salva limpo
+      store.setField(path, activeMask.parse(val));
     } else {
-      store.setField(path, activeMask.format(val)); // Salva formatado
+      store.setField(path, activeMask.format(val));
     }
   };
 
@@ -90,27 +80,21 @@ export function injectBitField<T = any>(
     store.blurField(path);
   };
 
-  // Helper para facilitar o binding no template (HTML)
-  // Ex: (input)="onInput($event)"
   const onInput = (event: Event) => {
     const target = event.target as HTMLInputElement;
     setValue(target.value);
   };
 
   return {
-    // Sinais de leitura
-    value: rawValue, // Valor real (store)
-    displayValue, // Valor formatado (view)
+    value: rawValue,
+    displayValue,
     error,
     touched,
     invalid,
-
-    // Métodos
+    isDirty,
     setValue,
     setBlur,
-    onInput, // Facilitador para eventos do DOM
-
-    // Objeto props para spread (se o Angular suportar no futuro ou via diretiva customizada)
+    onInput,
     props: {
       value: displayValue,
       onBlur: setBlur,
