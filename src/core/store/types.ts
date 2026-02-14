@@ -16,6 +16,7 @@ export interface BitState<T> {
 
 export type ValidatorFn<T> = (
   values: T,
+  options?: { scopeFields?: string[] },
 ) => Promise<BitErrors<T>> | BitErrors<T>;
 
 export interface BitConfig<T> {

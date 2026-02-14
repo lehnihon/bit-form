@@ -144,14 +144,14 @@ export class BitStore<T extends object = any> {
   }
 
   blurField(path: string) {
-    // Guarda snapshot ao sair do campo (evita guardar a cada letra digitada)
     this.saveSnapshot();
 
-    if (this.state.touched[path]) return;
+    if (!this.state.touched[path]) {
+      this.updateState({
+        touched: { ...this.state.touched, [path]: true },
+      });
+    }
 
-    this.updateState({
-      touched: { ...this.state.touched, [path]: true },
-    });
     this.validate({ scopeFields: [path] });
   }
 
@@ -344,16 +344,19 @@ export class BitStore<T extends object = any> {
     if (!this.config.resolver) return true;
 
     const validationId = ++this.currentValidationId;
-    const allErrors = await this.config.resolver(this.state.values);
-
-    if (validationId !== this.currentValidationId) {
-      return this.state.isValid;
-    }
 
     let targetFields: string[] | undefined = options?.scopeFields;
 
     if (options?.scope && this.config.scopes?.[options.scope]) {
       targetFields = this.config.scopes[options.scope];
+    }
+
+    const allErrors = await this.config.resolver(this.state.values, {
+      scopeFields: targetFields,
+    });
+
+    if (validationId !== this.currentValidationId) {
+      return this.state.isValid;
     }
 
     if (targetFields) {

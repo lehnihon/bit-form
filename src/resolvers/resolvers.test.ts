@@ -10,12 +10,10 @@ import { joiResolver } from "./joi";
 describe("Resolvers Validation Consistency", () => {
   const complexData = {
     user: {
-      profile: { name: "Li" }, // Erro: Min 3
+      profile: { name: "Li" },
     },
-    tags: ["React", "V"], // Erro: Segundo item Min 2
+    tags: ["React", "V"],
   };
-
-  // --- 1. TESTES DE ESTRUTURAS ANINHADAS E ARRAYS ---
 
   describe("Deep Structures (Nested & Arrays)", () => {
     it("Zod: deve mapear caminhos aninhados e índices de array com pontos", async () => {
@@ -48,7 +46,6 @@ describe("Resolvers Validation Consistency", () => {
       const resolver = yupResolver(schema);
       const errors = await resolver(complexData as any);
 
-      // Agora o log de stderr deve sumir e o teste continua passando
       expect(errors["user.profile.name"]).toBe("Nome curto");
       expect(errors["tags.1"]).toBe("Tag curta");
     });
@@ -73,7 +70,59 @@ describe("Resolvers Validation Consistency", () => {
     });
   });
 
-  // --- 2. TESTES DE COMPORTAMENTO GERAL ---
+  describe("Targeted Validation (Partial)", () => {
+    const invalidData = {
+      name: "Ab",
+      email: "invalid-email",
+    };
+
+    it("Zod: deve validar apenas os campos informados em scopeFields", async () => {
+      const schema = z.object({
+        name: z.string().min(5, "Nome curto"),
+        email: z.string().email("Email inválido"),
+      });
+
+      const resolver = zodResolver(schema);
+      const errors = await resolver(invalidData as any, {
+        scopeFields: ["name"],
+      });
+
+      expect(errors.name).toBe("Nome curto");
+      expect(errors.email).toBeUndefined();
+    });
+
+    it("Yup: deve validar apenas os campos informados em scopeFields", async () => {
+      const schema = yup.object({
+        name: yup.string().min(5, "Nome curto"),
+        email: yup.string().email("Email inválido"),
+      });
+
+      const resolver = yupResolver(schema);
+      const errors = await resolver(invalidData as any, {
+        scopeFields: ["email"],
+      });
+
+      expect(errors.email).toBe("Email inválido");
+      expect(errors.name).toBeUndefined();
+    });
+
+    it("Joi: deve filtrar erros para retornar apenas os presentes em scopeFields", async () => {
+      const schema = Joi.object({
+        name: Joi.string().min(5).messages({ "string.min": "Nome curto" }),
+        email: Joi.string()
+          .email()
+          .messages({ "string.email": "Email inválido" }),
+      });
+
+      const resolver = joiResolver(schema);
+      const errors = await resolver(invalidData as any, {
+        scopeFields: ["name"],
+      });
+
+      expect(errors.name).toBe("Nome curto");
+      expect(errors.email).toBeUndefined();
+    });
+  });
 
   describe("General Behavior", () => {
     it("Deve retornar objeto vazio quando os dados são válidos", async () => {

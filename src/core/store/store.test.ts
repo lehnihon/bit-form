@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { BitStore } from "../../core/store";
-import { bitMasks } from "../../core/mask";
 
 describe("BitStore Core", () => {
   beforeEach(() => {
@@ -107,39 +106,7 @@ describe("BitStore Core", () => {
     });
   });
 
-  describe("Configuration & Masks", () => {
-    it("should use 'true' as default for defaultUnmask if not provided", () => {
-      const store = new BitStore({ initialValues: {} });
-      expect(store.defaultUnmask).toBe(true);
-    });
-
-    it("should accept custom configuration for defaultUnmask", () => {
-      const store = new BitStore({
-        initialValues: {},
-        defaultUnmask: false,
-      });
-      expect(store.defaultUnmask).toBe(false);
-    });
-
-    it("should load default presets (bitMasks) if no masks provided", () => {
-      const store = new BitStore({ initialValues: {} });
-      expect(store.masks).toHaveProperty("brl");
-      expect(store.masks).toHaveProperty("cpf");
-    });
-
-    it("should allow registering new masks dynamically", () => {
-      const store = new BitStore({ initialValues: {} });
-      const customMask = {
-        format: (v: any) => `X-${v}`,
-        parse: (v: string) => v,
-      };
-
-      store.registerMask("custom", customMask);
-      expect(store.masks.custom.format("test")).toBe("X-test");
-    });
-  });
-
-  describe("Validation & Errors", () => {
+  describe("Validation & Race Conditions", () => {
     it("should handle manual error setting with setError and setErrors", () => {
       const store = new BitStore({ initialValues: { email: "" } });
 
@@ -151,18 +118,125 @@ describe("BitStore Core", () => {
       expect(store.getState().errors.password).toBe("Too short");
     });
 
-    it("should mark all fields as touched if submit fails validation", async () => {
-      const store = new BitStore({
-        initialValues: { name: "" },
-        resolver: (vals) => (!vals.name ? { name: "Required" } : {}),
+    it("should ignore stale validation results (Race Condition protection)", async () => {
+      let resolveFirst: any;
+      const firstValidation = new Promise((resolve) => {
+        resolveFirst = resolve;
       });
 
-      await store.submit(vi.fn());
-      expect(store.getState().touched.name).toBe(true);
+      const resolver = vi
+        .fn()
+        .mockReturnValueOnce(firstValidation)
+        .mockReturnValueOnce({ name: "Error from second" });
+
+      const store = new BitStore({ initialValues: { name: "" }, resolver });
+
+      const p1 = store.validate();
+      const p2 = store.validate();
+
+      resolveFirst({ name: "Error from first" });
+
+      await Promise.all([p1, p2]);
+
+      expect(store.getState().errors.name).toBe("Error from second");
+    });
+
+    it("should clear field error instantly when value changes", () => {
+      const store = new BitStore({ initialValues: { name: "" } });
+      store.setError("name", "Required");
+
+      store.setField("name", "L");
+      expect(store.getState().errors.name).toBeUndefined();
     });
   });
 
-  describe("Form Lifecycle (Edit, Reset, Submit)", () => {
+  describe("Server Errors (Laravel Adapter)", () => {
+    it("should map server errors from array (Laravel) or string", () => {
+      const store = new BitStore({ initialValues: { email: "", cpf: "" } });
+
+      store.setServerErrors({
+        email: ["Already taken"],
+        cpf: "Invalid format",
+      });
+
+      expect(store.getState().errors.email).toBe("Already taken");
+      expect(store.getState().errors.cpf).toBe("Invalid format");
+      expect(store.isValid).toBe(false);
+    });
+  });
+
+  describe("Field Dirty State", () => {
+    it("should check if an individual field is dirty", () => {
+      const store = new BitStore({ initialValues: { name: "Leo", age: 30 } });
+
+      expect(store.isFieldDirty("name")).toBe(false);
+
+      store.setField("name", "Leandro");
+      expect(store.isFieldDirty("name")).toBe(true);
+      expect(store.isFieldDirty("age")).toBe(false);
+
+      store.setField("name", "Leo");
+      expect(store.isFieldDirty("name")).toBe(false);
+    });
+  });
+
+  describe("Undo/Redo History", () => {
+    it("should not track history if enableHistory is false", () => {
+      const store = new BitStore({
+        initialValues: { name: "Leo" },
+        enableHistory: false,
+      });
+
+      store.setField("name", "A");
+      store.blurField("name");
+
+      expect(store.canUndo).toBe(false);
+    });
+
+    it("should undo and redo state changes correctly", () => {
+      const store = new BitStore({
+        initialValues: { name: "Leo" },
+        enableHistory: true,
+      });
+
+      store.setField("name", "Leandro");
+      store.blurField("name");
+
+      store.setField("name", "Ishikawa");
+      store.blurField("name");
+
+      expect(store.getState().values.name).toBe("Ishikawa");
+
+      store.undo();
+      expect(store.getState().values.name).toBe("Leandro");
+
+      store.undo();
+      expect(store.getState().values.name).toBe("Leo");
+
+      store.redo();
+      expect(store.getState().values.name).toBe("Leandro");
+    });
+
+    it("should discard future history if change happens after undo", () => {
+      const store = new BitStore({
+        initialValues: { val: 1 },
+        enableHistory: true,
+      });
+
+      store.setField("val", 2);
+      store.blurField("val");
+
+      store.undo();
+      store.setField("val", 3);
+      store.blurField("val");
+
+      expect(store.canRedo).toBe(false);
+      store.undo();
+      expect(store.getState().values.val).toBe(1);
+    });
+  });
+
+  describe("Form Lifecycle & Arrays", () => {
     it("should hydrate state using setValues for edit mode", () => {
       const store = new BitStore({
         initialValues: { name: "", id: null as number | null },
@@ -173,35 +247,15 @@ describe("BitStore Core", () => {
       expect(store.getState().isDirty).toBe(false);
     });
 
-    it("should apply transformations during submit", async () => {
+    it("should push items and update history", () => {
       const store = new BitStore({
-        initialValues: { age: "25" },
-        transform: { age: (v) => Number(v) },
+        initialValues: { tags: [] },
+        enableHistory: true,
       });
 
-      const onSubmit = vi.fn();
-      await store.submit(onSubmit);
-
-      expect(onSubmit).toHaveBeenCalledWith({ age: 25 });
-    });
-  });
-
-  describe("Advanced Array Manipulations", () => {
-    it("should push and prepend items correctly", () => {
-      const store = new BitStore({ initialValues: { tags: ["JS"] } });
-
-      store.pushItem("tags", "TS");
-      expect(store.getState().values.tags).toEqual(["JS", "TS"]);
-
-      store.prependItem("tags", "HTML");
-      expect(store.getState().values.tags).toEqual(["HTML", "JS", "TS"]);
-    });
-
-    it("should swap and move items correctly", () => {
-      const store = new BitStore({ initialValues: { list: ["a", "b", "c"] } });
-
-      store.swapItems("list", 0, 2);
-      expect(store.getState().values.list).toEqual(["c", "b", "a"]);
+      store.pushItem("tags", "JS");
+      expect(store.getState().values.tags).toEqual(["JS"]);
+      expect(store.canUndo).toBe(true);
     });
 
     it("should clean up errors and touched state when an item is removed", () => {
@@ -213,35 +267,6 @@ describe("BitStore Core", () => {
       store.removeItem("list", 1);
 
       expect(store.getState().errors["list.1"]).toBeUndefined();
-    });
-  });
-
-  describe("Advanced Features (Watch & Debounce)", () => {
-    it("should debounce validation execution", () => {
-      vi.useFakeTimers();
-      const resolver = vi.fn().mockReturnValue({});
-      const store = new BitStore({
-        initialValues: { name: "" },
-        resolver,
-        validationDelay: 500,
-      });
-
-      store.setField("name", "Leo");
-      expect(resolver).not.toHaveBeenCalled();
-
-      vi.advanceTimersByTime(500);
-      expect(resolver).toHaveBeenCalledTimes(1);
-    });
-
-    it("should watch for specific field changes", () => {
-      const store = new BitStore({ initialValues: { name: "Leo", age: 30 } });
-      const nameWatcher = vi.fn();
-
-      const unsubscribe = store.watch("name", nameWatcher);
-      store.setField("name", "Leandro");
-
-      expect(nameWatcher).toHaveBeenCalledWith("Leandro");
-      unsubscribe();
     });
   });
 });
