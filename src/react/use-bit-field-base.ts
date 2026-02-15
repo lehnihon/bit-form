@@ -1,6 +1,6 @@
 import { useCallback, useSyncExternalStore, useRef } from "react";
 import { useBitStore } from "./context";
-import { getDeepValue } from "../core/store/utils";
+import { getDeepValue } from "../core";
 
 export function useBitFieldBase<T = any>(path: string) {
   const store = useBitStore();

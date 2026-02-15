@@ -1,6 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { BitStore } from "../../core/store";
-import { createPatternMask, unmask } from "../../core/mask";
+import { BitStore, createPatternMask } from "../../core";
 
 describe("Cross-Framework Consistency", () => {
   it("should maintain data integrity and case sensitivity across adapters", async () => {

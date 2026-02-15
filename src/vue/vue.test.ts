@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
 import { mount } from "@vue/test-utils";
 import { defineComponent, nextTick } from "vue";
-import { BitStore } from "../core/store";
+import { BitStore } from "../core";
 import { useBitField, useBitForm, useBitFieldArray } from "./index";
 import { BIT_STORE_KEY } from "./context";
 

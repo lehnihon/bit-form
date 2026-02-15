@@ -1,5 +1,5 @@
 import { ref, onMounted, onUnmounted } from "vue";
-import { BitStore } from "../core/store";
+import { BitStore } from "../core";
 
 export function useBitStep<T extends object>(
   store: BitStore<T>,

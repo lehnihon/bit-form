@@ -38,16 +38,21 @@ export function deepEqual(a: any, b: any): boolean {
   return true;
 }
 
+const pathCache = new Map<string, string[]>();
+
 export function setDeepValue(obj: any, path: string, value: any): any {
   if (!path) return value;
 
-  const keys = path.split(".");
-  const lastKey = keys.pop()!;
+  const keys = pathCache.get(path) || path.split(".");
+  if (!pathCache.has(path)) pathCache.set(path, keys);
+
+  const keysCopy = [...keys];
+  const lastKey = keysCopy.pop()!;
 
   const helper = (current: any, index: number): any => {
-    const key = keys[index];
+    const key = keysCopy[index];
 
-    if (index === keys.length) {
+    if (index === keysCopy.length) {
       if (current?.[lastKey] === value) return current;
 
       const clone = Array.isArray(current) ? [...current] : { ...current };

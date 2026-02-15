@@ -1,18 +1,21 @@
 import { signal, computed, inject, DestroyRef } from "@angular/core";
 import { useBitStore } from "./provider";
-import { BitMask, getDeepValue } from "../core";
+import { BitFieldOptions, BitMask, getDeepValue } from "../core";
 
-export interface UseBitFieldOptions {
-  mask?: BitMask | string;
-  unmask?: boolean;
-}
-
-export function injectBitField<T = any>(
+export function injectBitField<T extends object = any>(
   path: string,
-  options?: UseBitFieldOptions,
+  options?: BitFieldOptions<T>,
 ) {
   const store = useBitStore();
   const destroyRef = inject(DestroyRef);
+
+  if (options?.dependsOn || options?.showIf || options?.requiredIf) {
+    store.registerConfig(path, {
+      dependsOn: options.dependsOn,
+      showIf: options.showIf,
+      requiredIf: options.requiredIf,
+    } as any);
+  }
 
   let activeMask: BitMask | undefined;
   const maskOption = options?.mask;
@@ -38,7 +41,7 @@ export function injectBitField<T = any>(
 
   destroyRef.onDestroy(() => unsubscribe());
 
-  const rawValue = computed(() => getDeepValue(state().values, path) as T);
+  const rawValue = computed(() => getDeepValue(state().values, path) as any);
 
   const displayValue = computed(() => {
     const val = rawValue();
@@ -61,6 +64,11 @@ export function injectBitField<T = any>(
   const isDirty = computed(() => {
     state();
     return store.isFieldDirty(path);
+  });
+
+  const isHidden = computed(() => {
+    state();
+    return store.isHidden(path);
   });
 
   const setValue = (val: any) => {
@@ -92,6 +100,7 @@ export function injectBitField<T = any>(
     touched,
     invalid,
     isDirty,
+    isHidden,
     setValue,
     setBlur,
     onInput,

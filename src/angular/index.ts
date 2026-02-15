@@ -1,5 +1,5 @@
-export * from "./provider";
-export * from "./inject-bit-form";
-export * from "./inject-bit-field";
-export * from "./inject-bit-field-array";
-export * from "./inject-bit-watch";
+export { provideBitStore, useBitStore } from "./provider";
+export { injectBitForm } from "./inject-bit-form";
+export { injectBitField } from "./inject-bit-field";
+export { injectBitFieldArray } from "./inject-bit-field-array";
+export { injectBitWatch } from "./inject-bit-watch";

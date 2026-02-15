@@ -1,6 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { BitStore } from "../../core/store";
-import { createPatternMask, unmaskCurrency } from "../../core/mask";
+import { BitStore, createPatternMask, unmaskCurrency } from "../../core";
 
 describe("Form Lifecycle Flow", () => {
   it("should process the full lifecycle from raw input to unmasked data", async () => {

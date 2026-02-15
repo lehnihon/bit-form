@@ -1,17 +1,22 @@
-import { useMemo, useCallback } from "react";
+import { useMemo, useCallback, useEffect } from "react";
 import { useBitFieldBase } from "../react/use-bit-field-base";
-import { BitMask } from "../core/mask/types";
+import { BitFieldOptions } from "../core";
 
-export interface UseBitFieldOptions {
-  mask?: BitMask | string;
-  unmask?: boolean;
-}
-
-export function useBitField<T = any>(
+export function useBitField<T extends object = any>(
   path: string,
-  options?: UseBitFieldOptions,
+  options?: BitFieldOptions<T>,
 ) {
   const { fieldState, setValue, setBlur, store } = useBitFieldBase<T>(path);
+
+  useEffect(() => {
+    if (options?.dependsOn || options?.showIf || options?.requiredIf) {
+      store.registerConfig(path, {
+        dependsOn: options.dependsOn,
+        showIf: options.showIf,
+        requiredIf: options.requiredIf,
+      } as any);
+    }
+  }, [path, store]);
 
   const resolvedMask = useMemo(() => {
     const maskOption = options?.mask;
@@ -50,6 +55,7 @@ export function useBitField<T = any>(
   );
 
   const isDirty = store.isFieldDirty(path);
+  const isHidden = store.isHidden(path);
 
   return {
     value: fieldState.value as T,
@@ -57,6 +63,7 @@ export function useBitField<T = any>(
     touched: fieldState.touched,
     invalid: !!(fieldState.touched && fieldState.error),
     isDirty,
+    isHidden,
     setValue,
     setBlur,
     props: {

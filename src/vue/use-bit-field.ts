@@ -1,17 +1,20 @@
 import { computed, onUnmounted, shallowRef } from "vue";
 import { useBitStore } from "./context";
-import { BitMask, getDeepValue } from "../core";
+import { BitFieldOptions, getDeepValue } from "../core";
 
-export interface UseBitFieldOptions {
-  mask?: string | BitMask;
-  unmask?: boolean;
-}
-
-export function useBitField<T = any>(
+export function useBitField<T extends object = any>(
   path: string,
-  options?: UseBitFieldOptions,
+  options?: BitFieldOptions<T>,
 ) {
   const store = useBitStore();
+
+  if (options?.dependsOn || options?.showIf || options?.requiredIf) {
+    store.registerConfig(path, {
+      dependsOn: options.dependsOn,
+      showIf: options.showIf,
+      requiredIf: options.requiredIf,
+    } as any);
+  }
 
   const resolvedMask = options?.mask
     ? typeof options.mask === "string"
@@ -30,7 +33,7 @@ export function useBitField<T = any>(
   onUnmounted(unsubscribe);
 
   const rawValue = computed(() => {
-    return getDeepValue(state.value.values, path) as T;
+    return getDeepValue(state.value.values, path) as any;
   });
 
   const displayValue = computed(() => {
@@ -71,6 +74,11 @@ export function useBitField<T = any>(
     return store.isFieldDirty(path);
   });
 
+  const isHidden = computed(() => {
+    state.value;
+    return store.isHidden(path);
+  });
+
   const setBlur = () => store.blurField(path);
 
   return {
@@ -80,7 +88,8 @@ export function useBitField<T = any>(
     touched,
     invalid,
     isDirty,
+    isHidden,
     setBlur,
-    setValue: (val: T) => (value.value = val),
+    setValue: (val: any) => (value.value = val),
   };
 }

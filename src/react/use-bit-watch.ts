@@ -1,6 +1,6 @@
 import { useCallback, useSyncExternalStore, useRef } from "react";
 import { useBitStore } from "./context";
-import { getDeepValue, deepEqual } from "../core"; // Certifique-se de que deepEqual está exportado do core
+import { getDeepValue, deepEqual } from "../core";
 
 export function useBitWatch<T = any>(path: string): T {
   const store = useBitStore();

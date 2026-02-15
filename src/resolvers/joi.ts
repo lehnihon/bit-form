@@ -1,5 +1,5 @@
 import { ObjectSchema } from "joi";
-import { BitErrors } from "../core/store/types";
+import { BitErrors } from "../core";
 
 export const joiResolver = <T extends object>(schema: ObjectSchema<T>) => {
   return async (

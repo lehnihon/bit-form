@@ -1,5 +1,5 @@
 import { ValidationError, Schema } from "yup";
-import { BitErrors } from "../core/store/types";
+import { BitErrors } from "../core";
 
 export const yupResolver = <T extends object>(schema: Schema<any>) => {
   return async (

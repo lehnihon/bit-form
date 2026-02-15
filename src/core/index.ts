@@ -1,8 +1,62 @@
-export * from "./store/index";
-export * from "./store/types";
-export * from "./store/utils";
+export { BitStore } from "./store/index";
+export {
+  getDeepValue,
+  setDeepValue,
+  deepClone,
+  deepEqual,
+  cleanPrefixedKeys,
+} from "./store/utils";
 
-export * from "./mask/index";
-export * from "./mask/creators";
-export * from "./mask/presets";
-export * from "./mask/types";
+export type {
+  BitConfig,
+  BitState,
+  BitErrors,
+  BitTouched,
+  BitFieldConfig,
+  BitFieldOptions,
+  ValidatorFn,
+  BitComputedFn,
+  BitTransformFn,
+} from "./store/types";
+
+export { bitMasks } from "./mask/index";
+export type { BitMask, CurrencyConfig } from "./mask/types";
+
+export {
+  unmask,
+  unmaskCurrency,
+  createPatternMask,
+  createCurrencyMask,
+} from "./mask/creators";
+export type { ExtendedCurrencyConfig } from "./mask/creators";
+
+export {
+  maskBRL,
+  maskUSD,
+  maskEUR,
+  maskGBP,
+  maskJPY,
+  maskPercent,
+  maskDecimal,
+  maskInteger,
+  maskCPF,
+  maskCNPJ,
+  maskPhone,
+  maskLandline,
+  maskCEP,
+  maskDate,
+  maskTime,
+  maskCNH,
+  maskRG,
+  maskUSPhone,
+  maskZipCode,
+  maskDateUS,
+  maskSSN,
+  maskCreditCard,
+  maskCVV,
+  maskDateISO,
+  maskMacAddress,
+  maskColorHex,
+  maskIPv4,
+  maskIPv6,
+} from "./mask/presets";

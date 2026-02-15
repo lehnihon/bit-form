@@ -1,5 +1,5 @@
 import { signal, DestroyRef, inject } from "@angular/core";
-import { BitStore } from "../core/store";
+import { BitStore } from "../core";
 
 export function injectBitStep<T extends object>(
   store: BitStore<T>,

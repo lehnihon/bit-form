@@ -1,5 +1,5 @@
 import { inject, provide, InjectionKey } from "vue";
-import { BitStore } from "../core/store";
+import { BitStore } from "../core";
 
 // Chave única para evitar colisões
 export const BIT_STORE_KEY: InjectionKey<BitStore<any>> = Symbol("BIT_STORE");

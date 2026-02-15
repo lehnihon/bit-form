@@ -1,5 +1,5 @@
 import { inject, InjectionToken, Provider } from "@angular/core"; // IMPORTANTE: Adicione o 'inject' aqui
-import { BitStore } from "../core/store";
+import { BitStore } from "../core";
 
 export const BIT_STORE_TOKEN = new InjectionToken<BitStore<any>>("BIT_STORE");
 
