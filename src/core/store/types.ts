@@ -19,6 +19,12 @@ export type ValidatorFn<T> = (
   options?: { scopeFields?: string[] },
 ) => Promise<BitErrors<T>> | BitErrors<T>;
 
+export interface BitFieldConfig<T extends object = any> {
+  dependsOn?: string[];
+  showIf?: (values: T) => boolean;
+  requiredIf?: (values: T) => boolean;
+}
+
 export interface BitConfig<T extends object = any> {
   initialValues?: T;
   resolver?: ValidatorFn<T>;
@@ -29,23 +35,10 @@ export interface BitConfig<T extends object = any> {
   defaultUnmask?: boolean;
   masks?: Record<string, BitMask>;
   enableHistory?: boolean;
+  fields?: Record<string, BitFieldConfig<T>>;
 }
 
-export interface BitFieldConfig<T extends object = any> {
-  dependsOn?: string[];
-  showIf?: (values: T) => boolean;
-  requiredIf?: (values: T) => boolean;
-}
-
-export interface BitFieldConfig<T extends object = any> {
-  dependsOn?: string[];
-  showIf?: (values: T) => boolean;
-  requiredIf?: (values: T) => boolean;
-}
-
-export interface BitFieldOptions<
-  T extends object = any,
-> extends BitFieldConfig<T> {
+export interface BitFieldOptions {
   mask?: BitMask | string;
   unmask?: boolean;
 }

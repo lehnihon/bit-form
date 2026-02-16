@@ -1,98 +1,71 @@
 import { DestroyRef, signal, computed, inject, untracked } from "@angular/core";
-import { useBitStore } from "./provider";
+import { BIT_STORE_TOKEN } from "./provider";
 import { getDeepValue } from "../core";
 
 const generateId = () => Math.random().toString(36).substring(2, 9);
 
 export function injectBitFieldArray<T = any>(path: string) {
-  const store = useBitStore();
+  const store = inject(BIT_STORE_TOKEN);
   const destroyRef = inject(DestroyRef);
 
-  // 1. Helper para extrair o dado atual
-  const getRawArray = () => {
+  const getRaw = () => {
     const val = getDeepValue(store.getState().values, path);
     return Array.isArray(val) ? (val as T[]) : [];
   };
 
-  // 2. Estado reativo local
-  const initialData = getRawArray();
-  const valuesSig = signal<T[]>(initialData);
-  const idsSig = signal<string[]>(initialData.map(generateId));
+  const valuesSig = signal<T[]>(getRaw());
+  const idsSig = signal<string[]>(valuesSig().map(generateId));
 
-  // 3. Sincronização Inteligente (Store -> Signal)
   const unsub = store.subscribe(() => {
-    const nextValues = getRawArray();
-    const currentIds = untracked(idsSig); // Evita dependência circular
+    const next = getRaw();
+    const ids = untracked(idsSig);
+    valuesSig.set(next);
 
-    // Atualiza valores
-    valuesSig.set(nextValues);
-
-    // Ajusta IDs apenas se necessário, sem regenerar os existentes
-    if (nextValues.length !== currentIds.length) {
-      if (nextValues.length > currentIds.length) {
-        // Adicionou itens: gera IDs apenas para os novos
-        const diff = nextValues.length - currentIds.length;
-        const newIds = Array.from({ length: diff }, generateId);
-        idsSig.set([...currentIds, ...newIds]);
+    if (next.length !== ids.length) {
+      if (next.length > ids.length) {
+        idsSig.set([
+          ...ids,
+          ...Array.from({ length: next.length - ids.length }, generateId),
+        ]);
       } else {
-        // Removeu itens: corta o excesso
-        idsSig.set(currentIds.slice(0, nextValues.length));
+        idsSig.set(ids.slice(0, next.length));
       }
     }
   });
 
-  destroyRef.onDestroy(unsub);
-
-  // 4. Mapeamento para o Template
-  const fields = computed(() => {
-    const vals = valuesSig();
-    const ids = idsSig();
-    return vals.map((v, i) => ({
-      key: ids[i] || generateId(), // Mantém consistência com o 'key' do React
-      value: v,
-      index: i,
-    }));
+  destroyRef.onDestroy(() => {
+    unsub();
+    if (store.unregisterPrefix) store.unregisterPrefix(`${path}.`);
   });
 
-  // 5. Métodos de Mutação (Otimistas)
   return {
-    fields,
-    append: (val: T) => {
+    fields: computed(() =>
+      valuesSig().map((v, i) => ({
+        key: idsSig()[i] || `temp-${i}`,
+        value: v,
+        index: i,
+      })),
+    ),
+    append: (v: T) => {
       idsSig.update((ids) => [...ids, generateId()]);
-      store.pushItem(path, val);
+      store.pushItem(path, v);
     },
-    prepend: (val: T) => {
+    prepend: (v: T) => {
       idsSig.update((ids) => [generateId(), ...ids]);
-      store.prependItem(path, val);
+      store.prependItem(path, v);
     },
-    remove: (index: number) => {
-      idsSig.update((ids) => ids.filter((_, i) => i !== index));
-      store.removeItem(path, index);
+    remove: (i: number) => {
+      idsSig.update((ids) => ids.filter((_, idx) => idx !== i));
+      store.removeItem(path, i);
     },
-    insert: (index: number, val: T) => {
+    move: (f: number, t: number) => {
       idsSig.update((ids) => {
-        const copy = [...ids];
-        copy.splice(index, 0, generateId());
-        return copy;
+        const c = [...ids];
+        const [it] = c.splice(f, 1);
+        c.splice(t, 0, it);
+        return c;
       });
-      store.insertItem(path, index, val);
-    },
-    move: (from: number, to: number) => {
-      idsSig.update((ids) => {
-        const copy = [...ids];
-        const [item] = copy.splice(from, 1);
-        copy.splice(to, 0, item);
-        return copy;
-      });
-      store.moveItem(path, from, to);
-    },
-    swap: (a: number, b: number) => {
-      idsSig.update((ids) => {
-        const copy = [...ids];
-        [copy[a], copy[b]] = [copy[b], copy[a]];
-        return copy;
-      });
-      store.swapItems(path, a, b);
+      store.moveItem(path, f, t);
     },
   };
 }

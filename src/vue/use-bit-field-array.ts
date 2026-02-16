@@ -32,11 +32,16 @@ export function useBitFieldArray<T = any>(path: string) {
     }
   });
 
-  onUnmounted(unsubscribe);
+  onUnmounted(() => {
+    unsubscribe();
+    if (store.unregisterPrefix) {
+      store.unregisterPrefix(`${path}.`);
+    }
+  });
 
   const fields = computed(() =>
     values.value.map((v, i) => ({
-      key: ids.value[i] || generateId(),
+      key: ids.value[i] || `temp-${i}`,
       value: v,
       index: i,
     })),

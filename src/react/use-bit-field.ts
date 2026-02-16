@@ -1,27 +1,14 @@
-import { useMemo, useCallback, useEffect } from "react";
+import { useMemo, useCallback } from "react";
 import { useBitFieldBase } from "./use-bit-field-base";
 import { BitFieldOptions } from "../core";
 
-export function useBitField<T extends object = any>(
-  path: string,
-  options?: BitFieldOptions<T>,
-) {
+export function useBitField<T = any>(path: string, options?: BitFieldOptions) {
   const {
     fieldState,
     setValue: rawSetValue,
     setBlur,
     store,
   } = useBitFieldBase<T>(path);
-
-  useEffect(() => {
-    if (options?.dependsOn || options?.showIf || options?.requiredIf) {
-      store.registerConfig(path, {
-        dependsOn: options.dependsOn,
-        showIf: options.showIf,
-        requiredIf: options.requiredIf,
-      } as any);
-    }
-  }, [path, store]);
 
   const resolvedMask = useMemo(() => {
     const maskOption = options?.mask;
@@ -43,6 +30,9 @@ export function useBitField<T extends object = any>(
     return String(val);
   }, [fieldState.value, resolvedMask, shouldUnmask]);
 
+  /**
+   * 3. Atualização de valor com parse de máscara
+   */
   const setValue = useCallback(
     (val: any) => {
       if (!resolvedMask) {
@@ -61,17 +51,19 @@ export function useBitField<T extends object = any>(
     [resolvedMask, shouldUnmask, rawSetValue],
   );
 
+  const { isHidden, isRequired, value, error, touched } = fieldState;
+
   const isDirty = store.isFieldDirty(path);
-  const isHidden = store.isHidden(path);
 
   return {
-    value: fieldState.value as T,
+    value: value as T,
     displayValue,
-    error: fieldState.touched ? fieldState.error : undefined,
-    touched: fieldState.touched,
-    invalid: !!(fieldState.touched && fieldState.error),
+    error: touched ? error : undefined,
+    touched: touched,
+    invalid: !!(touched && error),
     isDirty,
     isHidden,
+    isRequired,
     setValue,
     setBlur,
     props: {

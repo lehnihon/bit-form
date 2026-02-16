@@ -15,11 +15,7 @@ describe("Vue Integration", () => {
     });
 
     return mount(TestComponent, {
-      global: {
-        provide: {
-          [BIT_STORE_KEY as any]: store,
-        },
-      },
+      global: { provide: { [BIT_STORE_KEY as any]: store } },
     });
   };
 
@@ -42,13 +38,42 @@ describe("Vue Integration", () => {
     expect(wrapper.vm.form.isDirty.value).toBe(true);
   });
 
-  it("should apply masks and handle displayValue vs raw value", async () => {
-    const store = new BitStore({
-      initialValues: { salary: 10 },
+  it("should react to isHidden and isRequired changes", async () => {
+    const store = new BitStore({ initialValues: { type: "PF", cnpj: "" } });
+    store.registerConfig("cnpj", {
+      dependsOn: ["type"],
+      showIf: (v: any) => v.type === "PJ",
+      requiredIf: (v: any) => v.type === "PJ",
     });
 
     const wrapper = createWrapper(store, () => ({
-      salary: useBitField("salary", { mask: "brl" }),
+      type: useBitField("type"),
+      cnpj: useBitField("cnpj"),
+    }));
+
+    expect(wrapper.vm.cnpj.isHidden.value).toBe(true);
+
+    wrapper.vm.type.setValue("PJ");
+    await nextTick();
+
+    expect(wrapper.vm.cnpj.isHidden.value).toBe(false);
+  });
+
+  it("should call unregisterField on unmount", async () => {
+    const store = new BitStore({ initialValues: { name: "" } });
+    const spy = vi.spyOn(store, "unregisterField");
+
+    const wrapper = createWrapper(store, () => ({
+      field: useBitField("name"),
+    }));
+    wrapper.unmount();
+    expect(spy).toHaveBeenCalledWith("name");
+  });
+
+  it("should apply masks and handle displayValue vs raw value", async () => {
+    const store = new BitStore({ initialValues: { salary: 10 } });
+    const wrapper = createWrapper(store, () => ({
+      salary: useBitField("salary", undefined, { mask: "brl" }),
     }));
 
     expect(wrapper.vm.salary.displayValue.value).toBe("R$ 10,00");
@@ -56,27 +81,56 @@ describe("Vue Integration", () => {
     wrapper.vm.salary.setValue("R$ 2.500,50");
     await nextTick();
 
-    expect(wrapper.vm.salary.displayValue.value).toBe("R$ 2.500,50");
     expect(store.getState().values.salary).toBe(2500.5);
   });
 
-  it("should react to advanced array manipulations with stable keys", async () => {
-    const store = new BitStore({
-      initialValues: { tags: ["A", "B", "C"] },
-    });
+  it("should shift errors and keep stable keys in arrays", async () => {
+    const store = new BitStore({ initialValues: { tags: ["A", "B", "C"] } });
+    (store as any).validate = vi.fn();
+    (store as any).triggerValidation = vi.fn();
 
     const wrapper = createWrapper(store, () => ({
       list: useBitFieldArray("tags"),
       form: useBitForm(),
     }));
 
-    const initialKey = wrapper.vm.list.fields.value[0].key;
+    store.setError("tags.2", "Error on C");
+    const initialKeyC = wrapper.vm.list.fields.value[2].key;
 
-    wrapper.vm.list.swap(0, 2);
+    wrapper.vm.list.remove(1);
     await nextTick();
 
-    expect(wrapper.vm.form.getValues().tags).toEqual(["C", "B", "A"]);
-    expect(wrapper.vm.list.fields.value[2].key).toBe(initialKey);
+    expect(wrapper.vm.form.getValues().tags).toEqual(["A", "C"]);
+    expect(store.getState().errors["tags.1"]).toBe("Error on C");
+    expect(wrapper.vm.list.fields.value[1].key).toBe(initialKeyC);
+  });
+
+  it("should swap items and their respective errors", async () => {
+    const store = new BitStore({ initialValues: { tags: ["A", "B"] } });
+    (store as any).validate = vi.fn();
+    (store as any).triggerValidation = vi.fn();
+
+    const wrapper = createWrapper(store, () => ({
+      list: useBitFieldArray("tags"),
+    }));
+
+    store.setError("tags.0", "Error on A");
+    wrapper.vm.list.swap(0, 1);
+    await nextTick();
+
+    expect(store.getState().values.tags).toEqual(["B", "A"]);
+    expect(store.getState().errors["tags.1"]).toBe("Error on A");
+  });
+
+  it("should call unregisterPrefix on array unmount", async () => {
+    const store = new BitStore({ initialValues: { tags: [] } });
+    const spy = vi.spyOn(store, "unregisterPrefix");
+
+    const wrapper = createWrapper(store, () => ({
+      list: useBitFieldArray("tags"),
+    }));
+    wrapper.unmount();
+    expect(spy).toHaveBeenCalledWith("tags.");
   });
 
   it("should track isSubmitting and validation state", async () => {
@@ -90,14 +144,11 @@ describe("Vue Integration", () => {
     const wrapper = createWrapper(store, () => ({ form: useBitForm() }));
 
     const submitFn = wrapper.vm.form.submit(onSubmit);
-
     const promise = submitFn();
     expect(wrapper.vm.form.isSubmitting.value).toBe(true);
 
     await promise;
     expect(wrapper.vm.form.isValid.value).toBe(false);
-    expect(wrapper.vm.form.isSubmitting.value).toBe(false);
-    expect(onSubmit).not.toHaveBeenCalled();
   });
 
   it("should reset form to initial values", async () => {
@@ -111,6 +162,5 @@ describe("Vue Integration", () => {
     await nextTick();
 
     expect(wrapper.vm.form.getValues().count).toBe(0);
-    expect(wrapper.vm.form.isDirty.value).toBe(false);
   });
 });

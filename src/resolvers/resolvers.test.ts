@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi, beforeAll, afterAll } from "vitest";
 import { z } from "zod";
 import * as yup from "yup";
 import Joi from "joi";
@@ -8,6 +8,14 @@ import { yupResolver } from "./yup";
 import { joiResolver } from "./joi";
 
 describe("Resolvers Validation Consistency", () => {
+  beforeAll(() => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+  });
+
+  afterAll(() => {
+    vi.restoreAllMocks();
+  });
+
   const complexData = {
     user: {
       profile: { name: "Li" },

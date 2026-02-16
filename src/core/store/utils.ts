@@ -98,3 +98,100 @@ export function cleanPrefixedKeys(
   }
   return newObj;
 }
+
+export const shiftKeys = (
+  obj: Record<string, any>,
+  path: string,
+  removedIndex: number,
+) => {
+  const newObj: Record<string, any> = {};
+  const prefix = `${path}.`;
+
+  Object.keys(obj).forEach((key) => {
+    if (!key.startsWith(prefix)) {
+      newObj[key] = obj[key];
+      return;
+    }
+    const remaining = key.substring(prefix.length);
+    const parts = remaining.split(".");
+    const currentIdx = parseInt(parts[0], 10);
+    const rest = parts.slice(1).join(".");
+
+    if (currentIdx === removedIndex) return; // Exclui o item removido
+
+    if (currentIdx > removedIndex) {
+      const newIdx = currentIdx - 1;
+      const newKey = rest ? `${prefix}${newIdx}.${rest}` : `${prefix}${newIdx}`;
+      newObj[newKey] = obj[key];
+    } else {
+      newObj[key] = obj[key];
+    }
+  });
+  return newObj;
+};
+
+export const swapKeys = (
+  obj: Record<string, any>,
+  path: string,
+  indexA: number,
+  indexB: number,
+) => {
+  const newObj: Record<string, any> = {};
+  const prefix = `${path}.`;
+
+  Object.keys(obj).forEach((key) => {
+    if (!key.startsWith(prefix)) {
+      newObj[key] = obj[key];
+      return;
+    }
+    const remaining = key.substring(prefix.length);
+    const parts = remaining.split(".");
+    const currentIdx = parseInt(parts[0], 10);
+    const rest = parts.slice(1).join(".");
+
+    if (currentIdx === indexA) {
+      const newKey = rest ? `${prefix}${indexB}.${rest}` : `${prefix}${indexB}`;
+      newObj[newKey] = obj[key];
+    } else if (currentIdx === indexB) {
+      const newKey = rest ? `${prefix}${indexA}.${rest}` : `${prefix}${indexA}`;
+      newObj[newKey] = obj[key];
+    } else {
+      newObj[key] = obj[key];
+    }
+  });
+  return newObj;
+};
+
+export const moveKeys = (
+  obj: Record<string, any>,
+  path: string,
+  from: number,
+  to: number,
+) => {
+  const newObj: Record<string, any> = {};
+  const prefix = `${path}.`;
+
+  Object.keys(obj).forEach((key) => {
+    if (!key.startsWith(prefix)) {
+      newObj[key] = obj[key];
+      return;
+    }
+    const remaining = key.substring(prefix.length);
+    const parts = remaining.split(".");
+    const currentIdx = parseInt(parts[0], 10);
+    const rest = parts.slice(1).join(".");
+
+    let newIdx = currentIdx;
+    if (currentIdx === from) {
+      newIdx = to;
+    } else if (from < to && currentIdx > from && currentIdx <= to) {
+      newIdx = currentIdx - 1;
+    } else if (from > to && currentIdx >= to && currentIdx < from) {
+      newIdx = currentIdx + 1;
+    }
+
+    const newKey = rest ? `${prefix}${newIdx}.${rest}` : `${prefix}${newIdx}`;
+    newObj[newKey] = obj[key];
+  });
+  return newObj;
+};

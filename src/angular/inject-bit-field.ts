@@ -1,113 +1,94 @@
-import { signal, computed, inject, DestroyRef } from "@angular/core";
-import { useBitStore } from "./provider";
-import { BitFieldOptions, BitMask, getDeepValue } from "../core";
+import { inject, DestroyRef, computed, signal } from "@angular/core";
+import { BIT_STORE_TOKEN } from "./provider";
+import { BitFieldConfig, BitFieldOptions, getDeepValue } from "../core";
 
-export function injectBitField<T extends object = any>(
+export function injectBitField<TValue = any, TForm extends object = any>(
   path: string,
-  options?: BitFieldOptions<T>,
+  config?: BitFieldConfig<TForm>,
+  options?: BitFieldOptions,
 ) {
-  const store = useBitStore();
-  const destroyRef = inject(DestroyRef);
+  const store = inject(BIT_STORE_TOKEN);
 
-  if (options?.dependsOn || options?.showIf || options?.requiredIf) {
-    store.registerConfig(path, {
-      dependsOn: options.dependsOn,
-      showIf: options.showIf,
-      requiredIf: options.requiredIf,
-    } as any);
-  }
-
-  let activeMask: BitMask | undefined;
-  const maskOption = options?.mask;
-
-  if (maskOption) {
-    if (typeof maskOption === "string") {
-      activeMask = store.masks?.[maskOption];
-      if (!activeMask) {
-        console.warn(`[BitForm] Máscara '${maskOption}' não encontrada.`);
-      }
-    } else {
-      activeMask = maskOption;
-    }
-  }
-
-  const shouldUnmask = options?.unmask ?? store.defaultUnmask ?? true;
-
-  const state = signal(store.getState());
+  const stateSignal = signal(store.getState());
 
   const unsubscribe = store.subscribe(() => {
-    state.set({ ...store.getState() });
+    stateSignal.set(store.getState());
   });
 
-  destroyRef.onDestroy(() => unsubscribe());
-
-  const rawValue = computed(() => getDeepValue(state().values, path) as any);
-
-  const displayValue = computed(() => {
-    const val = rawValue();
-    if (val === undefined || val === null) return "";
-
-    if (activeMask) {
-      return shouldUnmask ? activeMask.format(val) : String(val);
+  inject(DestroyRef).onDestroy(() => {
+    unsubscribe();
+    if (store.unregisterField) {
+      store.unregisterField(path);
     }
-    return val;
   });
 
-  const error = computed(() => {
-    const s = state();
-    return s.touched[path] ? s.errors[path] : undefined;
-  });
+  if (config) {
+    store.registerConfig(path, config as any);
+  }
 
-  const touched = computed(() => !!state().touched[path]);
-  const invalid = computed(() => !!(touched() && error()));
-
-  const isDirty = computed(() => {
-    state();
-    return store.isFieldDirty(path);
-  });
+  const value = computed(
+    () => getDeepValue(stateSignal().values, path) as TValue,
+  );
+  const error = computed(
+    () => (stateSignal().errors as Record<string, any>)[path],
+  );
+  const touched = computed(
+    () => !!(stateSignal().touched as Record<string, any>)[path],
+  );
 
   const isHidden = computed(() => {
-    state();
+    stateSignal();
     return store.isHidden(path);
   });
 
+  const isRequired = computed(() => {
+    stateSignal();
+    return store.isRequired(path);
+  });
+
+  const invalid = computed(() => touched() && !!error());
+
+  const resolvedMask = options?.mask
+    ? typeof options.mask === "string"
+      ? store.masks[options.mask]
+      : options.mask
+    : undefined;
+
+  const displayValue = computed(() => {
+    const val = value();
+    if (val === undefined || val === null || val === "") return "";
+    if (resolvedMask) {
+      return (options?.unmask ?? store.defaultUnmask ?? true)
+        ? resolvedMask.format(val)
+        : String(val);
+    }
+    return String(val);
+  });
+
   const setValue = (val: any) => {
-    if (!activeMask) {
-      store.setField(path, val);
-      return;
+    let finalValue = val;
+    if (resolvedMask) {
+      const stringVal = String(val ?? "");
+      finalValue =
+        (options?.unmask ?? store.defaultUnmask ?? true)
+          ? (resolvedMask.parse(stringVal) as any)
+          : resolvedMask.format(stringVal);
     }
-
-    if (shouldUnmask) {
-      store.setField(path, activeMask.parse(val));
-    } else {
-      store.setField(path, activeMask.format(val));
-    }
+    store.setField(path, finalValue);
   };
 
-  const setBlur = () => {
-    store.blurField(path);
-  };
-
-  const onInput = (event: Event) => {
-    const target = event.target as HTMLInputElement;
-    setValue(target.value);
-  };
+  const setBlur = () => store.blurField(path);
 
   return {
-    value: rawValue,
+    value,
     displayValue,
     error,
     touched,
     invalid,
-    isDirty,
     isHidden,
+    isRequired,
     setValue,
     setBlur,
-    onInput,
-    props: {
-      value: displayValue,
-      onBlur: setBlur,
-      onInput: onInput,
-    },
+    update: (e: any) => setValue(e?.target?.value ?? e),
   };
 }

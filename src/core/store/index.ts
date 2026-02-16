@@ -49,6 +49,16 @@ export class BitStore<T extends object = any> implements BitStoreAdapter<T> {
     this.history = new BitHistoryManager<T>(!!this.config.enableHistory, 15);
     this.arrays = new BitArrayManager<T>(this);
 
+    if (this.config.fields) {
+      Object.entries(this.config.fields).forEach(([path, fieldConfig]) => {
+        this.deps.register(
+          path,
+          fieldConfig as BitFieldConfig<T>,
+          initialValues,
+        );
+      });
+    }
+
     this.internalSaveSnapshot();
   }
 
@@ -97,12 +107,32 @@ export class BitStore<T extends object = any> implements BitStoreAdapter<T> {
     return this.state.isDirty;
   }
 
+  unregisterField(path: string) {
+    this.deps.unregister(path);
+    const newErrors = { ...this.state.errors };
+    if (newErrors[path as keyof BitErrors<T>]) {
+      delete newErrors[path as keyof BitErrors<T>];
+      this.internalUpdateState({
+        errors: newErrors,
+        isValid: Object.keys(newErrors).length === 0,
+      });
+    }
+  }
+
+  unregisterPrefix(prefix: string) {
+    this.deps.unregisterPrefix(prefix);
+  }
+
   registerConfig(path: string, config: BitFieldConfig<T>) {
     this.deps.register(path, config, this.state.values);
   }
 
   isHidden(path: string): boolean {
     return this.deps.isHidden(path);
+  }
+
+  isRequired(path: string): boolean {
+    return this.deps.isRequired(path, this.state.values);
   }
 
   subscribe(listener: () => void): () => void {
@@ -127,7 +157,7 @@ export class BitStore<T extends object = any> implements BitStoreAdapter<T> {
     delete newErrors[path as keyof BitErrors<T>];
 
     const toggledFields = this.deps.updateDependencies(path, newValues);
-    let visibilitiesChanged = toggledFields.length > 0;
+    const visibilitiesChanged = toggledFields.length > 0;
 
     toggledFields.forEach((depPath) => {
       if (this.deps.isHidden(depPath)) {
@@ -301,8 +331,6 @@ export class BitStore<T extends object = any> implements BitStoreAdapter<T> {
     scope?: string;
     scopeFields?: string[];
   }): Promise<boolean> {
-    if (!this.config.resolver) return true;
-
     const validationId = ++this.currentValidationId;
 
     let targetFields: string[] | undefined = options?.scopeFields;
@@ -311,10 +339,22 @@ export class BitStore<T extends object = any> implements BitStoreAdapter<T> {
       targetFields = this.config.scopes[options.scope];
     }
 
-    const allErrors = await this.config.resolver(this.state.values, {
-      scopeFields: targetFields,
-    });
+    // 1. Validação via Resolver (Zod/Yup/Joi)
+    let allErrors: Record<string, any> = this.config.resolver
+      ? await this.config.resolver(this.state.values, {
+          scopeFields: targetFields,
+        })
+      : {};
 
+    // 2. Validação Dinâmica (requiredIf) vinda do DependencyManager
+    const dynamicRequiredErrors = this.deps.getRequiredErrors(
+      this.state.values,
+    );
+
+    // Mesclamos os erros. Regras de requiredIf têm prioridade ou complementam o resolver.
+    allErrors = { ...allErrors, ...dynamicRequiredErrors };
+
+    // 3. Limpeza de campos escondidos (Campos ocultos nunca devem ter erros)
     this.deps.hiddenFields.forEach((hiddenPath) => {
       delete allErrors[hiddenPath as keyof typeof allErrors];
     });
@@ -379,6 +419,7 @@ export class BitStore<T extends object = any> implements BitStoreAdapter<T> {
       try {
         let valuesToSubmit = deepClone(this.state.values);
 
+        // Limpa campos escondidos do payload final
         this.deps.hiddenFields.forEach((hiddenPath) => {
           valuesToSubmit = setDeepValue(valuesToSubmit, hiddenPath, undefined);
         });

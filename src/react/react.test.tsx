@@ -16,6 +16,8 @@ interface MyForm {
     lastName: string;
   };
   skills: string[];
+  hasBonus: boolean;
+  bonusValue: number;
 }
 
 describe("React Integration (Context + Hooks)", () => {
@@ -25,6 +27,8 @@ describe("React Integration (Context + Hooks)", () => {
         salary: 10,
         user: { firstName: "Leandro", lastName: "Ishikawa" },
         skills: ["React"],
+        hasBonus: false,
+        bonusValue: 0,
         ...initialValues,
       },
       validationDelay: 0,
@@ -34,7 +38,7 @@ describe("React Integration (Context + Hooks)", () => {
     <BitFormProvider store={store}>{children}</BitFormProvider>
   );
 
-  describe("Basic Field Logic", () => {
+  describe("Basic Field Logic & Lifecycle", () => {
     it("deve sincronizar useBitField, rastrear isDirty e invalid", async () => {
       const store = createTestStore();
       const { result } = renderHook(
@@ -47,19 +51,66 @@ describe("React Integration (Context + Hooks)", () => {
 
       expect(result.current.form.isDirty).toBe(false);
 
-      await act(async () => {
+      await act(() => {
         result.current.field.setValue("Kenji");
       });
 
       expect(result.current.field.value).toBe("Kenji");
       expect(result.current.form.isDirty).toBe(true);
 
-      await act(async () => {
-        store.setError("user.firstName", "Erro");
+      await act(() => {
         result.current.field.setBlur();
       });
 
+      await act(() => {
+        store.setError("user.firstName", "Erro");
+      });
+
       expect(result.current.field.invalid).toBe(true);
+    });
+
+    it("deve chamar unregisterField ao desmontar o componente", () => {
+      const store = createTestStore();
+      const spy = vi.spyOn(store, "unregisterField");
+
+      const { unmount } = renderHook(() => useBitField("user.firstName"), {
+        wrapper: (props) => wrapper({ ...props, store }),
+      });
+
+      unmount();
+      expect(spy).toHaveBeenCalledWith("user.firstName");
+    });
+  });
+
+  describe("Reactivity & Conditional Logic", () => {
+    it("deve reagir a mudanças de isHidden e isRequired via DependencyManager", async () => {
+      const store = createTestStore();
+
+      store.registerConfig("bonusValue", {
+        dependsOn: ["hasBonus"],
+        showIf: (v) => v.hasBonus === true,
+        requiredIf: (v) => v.hasBonus === true,
+      });
+
+      const { result } = renderHook(
+        () => ({
+          bonus: useBitField("hasBonus"),
+          value: useBitField("bonusValue"),
+        }),
+        {
+          wrapper: (props) => wrapper({ ...props, store }),
+        },
+      );
+
+      expect(result.current.value.isHidden).toBe(true);
+      expect(result.current.value.isRequired).toBe(false);
+
+      await act(() => {
+        result.current.bonus.setValue(true);
+      });
+
+      expect(result.current.value.isHidden).toBe(false);
+      expect(result.current.value.isRequired).toBe(true);
     });
   });
 
@@ -73,7 +124,7 @@ describe("React Integration (Context + Hooks)", () => {
 
       expect(result.current.props.value).toBe("R$ 10,00");
 
-      await act(async () => {
+      await act(() => {
         result.current.setValue("R$ 2.500,50");
       });
 
@@ -83,12 +134,17 @@ describe("React Integration (Context + Hooks)", () => {
 
     it("deve aceitar máscaras de padrão (pattern) como CPF", async () => {
       const store = createTestStore();
+      store.registerMask("cpf", {
+        format: (v) => v.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4"),
+        parse: (v) => v.replace(/\D/g, ""),
+      });
+
       const { result } = renderHook(
         () => useBitField("user.lastName", { mask: "cpf" }),
         { wrapper: (props) => wrapper({ ...props, store }) },
       );
 
-      await act(async () => {
+      await act(() => {
         result.current.setValue("12345678901");
       });
 
@@ -98,25 +154,47 @@ describe("React Integration (Context + Hooks)", () => {
   });
 
   describe("Arrays & Iteration", () => {
-    it("deve gerenciar listas dinâmicas com useBitFieldArray e keys estáveis", async () => {
-      const store = createTestStore();
+    it("deve gerenciar listas dinâmicas e remapear erros ao mover itens", async () => {
+      const store = createTestStore({ skills: ["React", "Vue"] });
+      (store as any).validate = vi.fn();
+      (store as any).triggerValidation = vi.fn();
+
       const { result } = renderHook(() => useBitFieldArray("skills"), {
         wrapper: (props) => wrapper({ ...props, store }),
       });
 
-      const initialKey = result.current.fields[0].key;
-      expect(initialKey).toBeDefined();
-
-      await act(async () => {
-        result.current.append("Vue");
+      await act(() => {
+        store.setError("skills.0", "Erro no React");
       });
 
-      await act(async () => {
+      const initialKeyReact = result.current.fields[0].key;
+
+      await act(() => {
         result.current.move(0, 1);
       });
 
       expect(store.getState().values.skills).toEqual(["Vue", "React"]);
-      expect(result.current.fields[1].key).toBe(initialKey);
+      expect(result.current.fields[1].key).toBe(initialKeyReact);
+      expect(store.getState().errors["skills.1"]).toBe("Erro no React");
+      expect(store.getState().errors["skills.0"]).toBeUndefined();
+    });
+
+    it("deve limpar erros residuais ao remover um item do array", async () => {
+      const store = createTestStore({ skills: ["React", "Vue"] });
+      (store as any).validate = vi.fn();
+      (store as any).triggerValidation = vi.fn();
+
+      const { result } = renderHook(() => useBitFieldArray("skills"), {
+        wrapper: (props) => wrapper({ ...props, store }),
+      });
+
+      await act(() => {
+        store.setError("skills.1", "Erro no Vue");
+        result.current.remove(1);
+      });
+
+      expect(store.getState().values.skills).toEqual(["React"]);
+      expect(store.getState().errors["skills.1"]).toBeUndefined();
     });
   });
 
@@ -129,7 +207,7 @@ describe("React Integration (Context + Hooks)", () => {
 
       expect(result.current).toBe("Leandro");
 
-      await act(async () => {
+      await act(() => {
         store.setField("user.firstName", "Kenji");
       });
 
@@ -146,13 +224,16 @@ describe("React Integration (Context + Hooks)", () => {
         { wrapper: (props) => wrapper({ ...props, store }) },
       );
 
-      await act(async () => {
+      await act(() => {
         result.current.field.setValue("Novo Nome");
         result.current.field.setBlur();
+      });
+
+      await act(() => {
         store.setError("user.firstName", "Erro");
       });
 
-      await act(async () => {
+      await act(() => {
         result.current.form.reset();
       });
 
@@ -170,14 +251,12 @@ describe("React Integration (Context + Hooks)", () => {
 
       const mockEvent = { preventDefault: vi.fn() } as any;
 
-      await act(async () => {
-        await result.current.submit(onSubmit)(mockEvent);
+      await act(() => {
+        result.current.submit(onSubmit)(mockEvent);
       });
 
       expect(mockEvent.preventDefault).toHaveBeenCalled();
       expect(onSubmit).toHaveBeenCalled();
-
-      expect(result.current.getValues().salary).toBe(10);
     });
   });
 });

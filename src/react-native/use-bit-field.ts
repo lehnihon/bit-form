@@ -1,22 +1,9 @@
-import { useMemo, useCallback, useEffect } from "react";
+import { useMemo, useCallback } from "react";
 import { useBitFieldBase } from "../react/use-bit-field-base";
 import { BitFieldOptions } from "../core";
 
-export function useBitField<T extends object = any>(
-  path: string,
-  options?: BitFieldOptions<T>,
-) {
+export function useBitField<T = any>(path: string, options?: BitFieldOptions) {
   const { fieldState, setValue, setBlur, store } = useBitFieldBase<T>(path);
-
-  useEffect(() => {
-    if (options?.dependsOn || options?.showIf || options?.requiredIf) {
-      store.registerConfig(path, {
-        dependsOn: options.dependsOn,
-        showIf: options.showIf,
-        requiredIf: options.requiredIf,
-      } as any);
-    }
-  }, [path, store]);
 
   const resolvedMask = useMemo(() => {
     const maskOption = options?.mask;
@@ -30,12 +17,12 @@ export function useBitField<T extends object = any>(
 
   const displayValue = useMemo(() => {
     const val = fieldState.value;
-    if (val === undefined || val === null) return "";
+    if (val === undefined || val === null || val === "") return "";
 
     if (resolvedMask) {
       return shouldUnmask ? resolvedMask.format(val) : String(val);
     }
-    return val != null ? String(val) : "";
+    return String(val);
   }, [fieldState.value, resolvedMask, shouldUnmask]);
 
   const handleChange = useCallback(
@@ -45,25 +32,30 @@ export function useBitField<T extends object = any>(
         return;
       }
 
+      const stringVal = String(text ?? "");
+
       if (shouldUnmask) {
-        setValue(resolvedMask.parse(text) as any);
+        setValue(resolvedMask.parse(stringVal) as any);
       } else {
-        setValue(resolvedMask.format(text) as any);
+        setValue(resolvedMask.format(stringVal) as any);
       }
     },
     [resolvedMask, shouldUnmask, setValue],
   );
 
+  const { isHidden, isRequired, value, error, touched } = fieldState;
+
   const isDirty = store.isFieldDirty(path);
-  const isHidden = store.isHidden(path);
 
   return {
-    value: fieldState.value as T,
-    error: fieldState.touched ? fieldState.error : undefined,
-    touched: fieldState.touched,
-    invalid: !!(fieldState.touched && fieldState.error),
+    value: value as T,
+    displayValue,
+    error: touched ? error : undefined,
+    touched: touched,
+    invalid: !!(touched && error),
     isDirty,
     isHidden,
+    isRequired,
     setValue,
     setBlur,
     props: {

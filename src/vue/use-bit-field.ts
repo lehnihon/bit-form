@@ -1,19 +1,16 @@
 import { computed, onUnmounted, shallowRef } from "vue";
 import { useBitStore } from "./context";
-import { BitFieldOptions, getDeepValue } from "../core";
+import { BitFieldOptions, BitFieldConfig, getDeepValue } from "../core";
 
-export function useBitField<T extends object = any>(
+export function useBitField<TValue = any, TForm extends object = any>(
   path: string,
-  options?: BitFieldOptions<T>,
+  config?: BitFieldConfig<TForm>,
+  options?: BitFieldOptions,
 ) {
   const store = useBitStore();
 
-  if (options?.dependsOn || options?.showIf || options?.requiredIf) {
-    store.registerConfig(path, {
-      dependsOn: options.dependsOn,
-      showIf: options.showIf,
-      requiredIf: options.requiredIf,
-    } as any);
+  if (config) {
+    store.registerConfig(path, config as any);
   }
 
   const resolvedMask = options?.mask
@@ -30,18 +27,22 @@ export function useBitField<T extends object = any>(
     state.value = store.getState();
   });
 
-  onUnmounted(unsubscribe);
+  onUnmounted(() => {
+    unsubscribe();
+    if (store.unregisterField) {
+      store.unregisterField(path);
+    }
+  });
 
   const rawValue = computed(() => {
-    return getDeepValue(state.value.values, path) as any;
+    return getDeepValue(state.value.values, path) as TValue;
   });
 
   const displayValue = computed(() => {
     const val = rawValue.value;
-    if (val === undefined || val === null) return "";
-
+    if (val === undefined || val === null || val === "") return "";
     if (resolvedMask) {
-      return resolvedMask.format(val);
+      return shouldUnmask ? resolvedMask.format(val as any) : String(val);
     }
     return String(val);
   });
@@ -53,19 +54,18 @@ export function useBitField<T extends object = any>(
         store.setField(path, val);
         return;
       }
-
+      const stringVal = String(val ?? "");
       if (shouldUnmask) {
-        store.setField(path, resolvedMask.parse(String(val)));
+        store.setField(path, resolvedMask.parse(stringVal));
       } else {
-        store.setField(path, resolvedMask.format(String(val)));
+        store.setField(path, resolvedMask.format(stringVal));
       }
     },
   });
 
-  const error = computed(() => {
-    return state.value.touched[path] ? state.value.errors[path] : undefined;
-  });
-
+  const error = computed(() =>
+    state.value.touched[path] ? state.value.errors[path] : undefined,
+  );
   const touched = computed(() => !!state.value.touched[path]);
   const invalid = computed(() => !!(touched.value && error.value));
 
@@ -79,7 +79,10 @@ export function useBitField<T extends object = any>(
     return store.isHidden(path);
   });
 
-  const setBlur = () => store.blurField(path);
+  const isRequired = computed(() => {
+    state.value;
+    return store.isRequired(path);
+  });
 
   return {
     value,
@@ -89,7 +92,8 @@ export function useBitField<T extends object = any>(
     invalid,
     isDirty,
     isHidden,
-    setBlur,
+    isRequired,
+    setBlur: () => store.blurField(path),
     setValue: (val: any) => (value.value = val),
   };
 }

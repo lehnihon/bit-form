@@ -1,89 +1,111 @@
 import {
   getDeepValue,
   setDeepValue,
-  cleanPrefixedKeys,
   deepEqual,
+  shiftKeys,
+  swapKeys,
+  moveKeys,
 } from "./utils";
 
+// Retiramos o triggerValidation daqui para não conflitar com o seu método privado!
 export interface BitStoreAdapter<T extends object = any> {
   getState(): any;
   getConfig(): any;
   setField(path: string, value: any): void;
   internalUpdateState(partialState: any): void;
   internalSaveSnapshot(): void;
-  internalValidate(): void;
+  unregisterPrefix?: (prefix: string) => void;
+  validate?: () => Promise<boolean>;
 }
 
 export class BitArrayManager<T extends object = any> {
   constructor(private store: BitStoreAdapter<T>) {}
 
   pushItem(path: string, value: any) {
-    const currentArray = getDeepValue(this.store.getState().values, path) || [];
-    if (!Array.isArray(currentArray)) return;
-    this.store.setField(path, [...currentArray, value]);
+    const arr = getDeepValue(this.store.getState().values, path) || [];
+    this.store.setField(path, [...arr, value]);
     this.store.internalSaveSnapshot();
   }
 
   prependItem(path: string, value: any) {
-    const currentArray = getDeepValue(this.store.getState().values, path) || [];
-    if (!Array.isArray(currentArray)) return;
-    this.store.setField(path, [value, ...currentArray]);
+    const arr = getDeepValue(this.store.getState().values, path) || [];
+    this.store.setField(path, [value, ...arr]);
     this.store.internalSaveSnapshot();
   }
 
   insertItem(path: string, index: number, value: any) {
-    const currentArray = [
-      ...(getDeepValue(this.store.getState().values, path) || []),
-    ];
-    if (!Array.isArray(currentArray)) return;
-    currentArray.splice(index, 0, value);
-    this.store.setField(path, currentArray);
+    const arr = [...(getDeepValue(this.store.getState().values, path) || [])];
+    arr.splice(index, 0, value);
+    this.store.setField(path, arr);
     this.store.internalSaveSnapshot();
   }
 
   removeItem(path: string, index: number) {
     const state = this.store.getState();
-    const currentArray = getDeepValue(state.values, path);
-    if (!Array.isArray(currentArray)) return;
+    const arr = getDeepValue(state.values, path);
+    if (!Array.isArray(arr)) return;
 
-    const newArray = currentArray.filter((_: any, i: number) => i !== index);
+    if (this.store.unregisterPrefix) {
+      this.store.unregisterPrefix(`${path}.${index}.`);
+    }
+
+    const newArray = arr.filter((_, i) => i !== index);
     const newValues = setDeepValue(state.values, path, newArray);
 
-    const prefix = `${path}.${index}`;
     this.store.internalUpdateState({
       values: newValues,
-      errors: cleanPrefixedKeys(state.errors, prefix),
-      touched: cleanPrefixedKeys(state.touched, prefix),
+      errors: shiftKeys(state.errors, path, index),
+      touched: shiftKeys(state.touched, path, index),
       isDirty: !deepEqual(newValues, this.store.getConfig().initialValues),
     });
 
     this.store.internalSaveSnapshot();
-    this.store.internalValidate();
+    this.revalidate(path);
   }
 
   swapItems(path: string, indexA: number, indexB: number) {
-    const currentArray = [
-      ...(getDeepValue(this.store.getState().values, path) || []),
-    ];
-    if (!Array.isArray(currentArray)) return;
+    const state = this.store.getState();
+    const arr = [...(getDeepValue(state.values, path) || [])];
+    [arr[indexA], arr[indexB]] = [arr[indexB], arr[indexA]];
 
-    [currentArray[indexA], currentArray[indexB]] = [
-      currentArray[indexB],
-      currentArray[indexA],
-    ];
-    this.store.setField(path, currentArray);
+    const newValues = setDeepValue(state.values, path, arr);
+
+    this.store.internalUpdateState({
+      values: newValues,
+      errors: swapKeys(state.errors, path, indexA, indexB),
+      touched: swapKeys(state.touched, path, indexA, indexB),
+    });
+
     this.store.internalSaveSnapshot();
+    this.revalidate(path);
   }
 
   moveItem(path: string, from: number, to: number) {
-    const currentArray = [
-      ...(getDeepValue(this.store.getState().values, path) || []),
-    ];
-    if (!Array.isArray(currentArray)) return;
+    const state = this.store.getState();
+    const arr = [...(getDeepValue(state.values, path) || [])];
+    const [item] = arr.splice(from, 1);
+    arr.splice(to, 0, item);
 
-    const [item] = currentArray.splice(from, 1);
-    currentArray.splice(to, 0, item);
-    this.store.setField(path, currentArray);
+    const newValues = setDeepValue(state.values, path, arr);
+
+    this.store.internalUpdateState({
+      values: newValues,
+      errors: moveKeys(state.errors, path, from, to),
+      touched: moveKeys(state.touched, path, from, to),
+    });
+
     this.store.internalSaveSnapshot();
+    this.revalidate(path);
+  }
+
+  private revalidate(path: string) {
+    // Como somos uma engrenagem interna, usamos 'any' para acessar o método privado da Store sem ferir a tipagem pública
+    const storeInternals = this.store as any;
+
+    if (typeof storeInternals.triggerValidation === "function") {
+      storeInternals.triggerValidation([path]);
+    } else if (typeof this.store.validate === "function") {
+      this.store.validate();
+    }
   }
 }

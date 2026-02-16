@@ -153,7 +153,8 @@ describe("BitStore Core", () => {
 
     it("should clear errors when a field becomes hidden", () => {
       const store = new BitStore({
-        initialValues: { type: "person", cnpj: "" },
+        // Inicia como company para o cnpj nascer visível
+        initialValues: { type: "company", cnpj: "" },
       });
       store.registerConfig("cnpj", {
         dependsOn: ["type"],
@@ -163,9 +164,28 @@ describe("BitStore Core", () => {
       store.setError("cnpj", "Required");
       expect(store.getState().errors.cnpj).toBe("Required");
 
+      // Mudar para person oculta o campo e deve limpar o erro
       store.setField("type", "person");
       expect(store.isHidden("cnpj")).toBe(true);
       expect(store.getState().errors.cnpj).toBeUndefined();
+    });
+
+    it("should unregister field configurations and dependencies", () => {
+      const store = new BitStore({
+        initialValues: { country: "BR", state: "" },
+      });
+
+      store.registerConfig("state", {
+        dependsOn: ["country"],
+        showIf: (v) => v.country === "BR",
+      });
+
+      expect(store.isHidden("state")).toBe(false);
+
+      store.unregisterField("state");
+
+      expect(store.isHidden("state")).toBe(false);
+      store.setField("country", "US");
     });
   });
 
@@ -214,6 +234,27 @@ describe("BitStore Core", () => {
       expect(store.getState().errors.email).toBe("Already taken");
       expect(store.getState().errors.cpf).toBe("Invalid format");
       expect(store.isValid).toBe(false);
+    });
+
+    it("should trigger requiredIf validation dynamically", async () => {
+      const store = new BitStore({
+        initialValues: { hasLicense: true, licenseNumber: "" },
+      });
+
+      store.registerConfig("licenseNumber", {
+        dependsOn: ["hasLicense"],
+        requiredIf: (v) => v.hasLicense === true,
+      });
+
+      const isValid = await store.validate();
+      expect(isValid).toBe(false);
+      expect(store.getState().errors.licenseNumber).toBe(
+        "Este campo é obrigatório",
+      );
+
+      store.setField("hasLicense", false);
+      const isValidNow = await store.validate();
+      expect(isValidNow).toBe(true);
     });
   });
 
@@ -305,28 +346,43 @@ describe("BitStore Core", () => {
       expect(store.getState().values.list).toEqual([1, 2, 3]);
     });
 
-    it("should clean up errors and touched state when item is removed", () => {
+    it("should clean up and shift errors when item is removed", () => {
       const store = new BitStore({ initialValues: { list: ["A", "B", "C"] } });
+      (store as any).validate = vi.fn();
+      (store as any).triggerValidation = vi.fn();
 
-      store.setError("list.1", "Error on B");
+      store.setError("list.2", "Error on C");
       store.removeItem("list", 1);
 
       expect(store.getState().values.list).toEqual(["A", "C"]);
-      expect(store.getState().errors["list.1"]).toBeUndefined();
+      expect(store.getState().errors["list.1"]).toBe("Error on C");
+      expect(store.getState().errors["list.2"]).toBeUndefined();
     });
 
-    it("should swap items", () => {
+    it("should swap items and swap their errors", () => {
       const store = new BitStore({ initialValues: { list: ["A", "B"] } });
+      (store as any).validate = vi.fn();
+      (store as any).triggerValidation = vi.fn();
 
+      store.setError("list.0", "Error on A");
       store.swapItems("list", 0, 1);
+
       expect(store.getState().values.list).toEqual(["B", "A"]);
+      expect(store.getState().errors["list.1"]).toBe("Error on A");
+      expect(store.getState().errors["list.0"]).toBeUndefined();
     });
 
-    it("should move items", () => {
+    it("should move items and shift errors accordingly", () => {
       const store = new BitStore({ initialValues: { list: ["A", "B", "C"] } });
+      (store as any).validate = vi.fn();
+      (store as any).triggerValidation = vi.fn();
 
+      store.setError("list.0", "Error on A");
       store.moveItem("list", 0, 2);
+
       expect(store.getState().values.list).toEqual(["B", "C", "A"]);
+      expect(store.getState().errors["list.2"]).toBe("Error on A");
+      expect(store.getState().errors["list.0"]).toBeUndefined();
     });
   });
 
