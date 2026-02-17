@@ -3,14 +3,9 @@ import { getDeepValue } from "./utils";
 
 export class BitDependencyManager<T extends object = any> {
   public fieldConfigs: Map<string, BitFieldConfig<T>> = new Map();
-  /** Mapeia: "campo que mudou" -> Set de "campos que dependem dele" */
   public dependencies: Map<string, Set<string>> = new Map();
   public hiddenFields: Set<string> = new Set();
 
-  /**
-   * Registra as regras de um campo.
-   * Centraliza a inteligência de dependência para showIf e requiredIf.
-   */
   register(path: string, config: BitFieldConfig<T>, currentValues: T) {
     this.fieldConfigs.set(path, config);
 
@@ -30,20 +25,12 @@ export class BitDependencyManager<T extends object = any> {
     return this.hiddenFields.has(path);
   }
 
-  /**
-   * Verifica se um campo é obrigatório no momento atual.
-   * Útil para o Hook retornar um `isRequired` e a UI mostrar um asterisco.
-   */
   isRequired(path: string, values: T): boolean {
     const config = this.fieldConfigs.get(path);
     if (!config || this.isHidden(path)) return false;
     return !!config.requiredIf?.(values);
   }
 
-  /**
-   * Retorna um objeto de erros para todos os campos que são obrigatórios
-   * (via requiredIf) mas estão vazios.
-   */
   getRequiredErrors(values: T): Record<string, string> {
     const errors: Record<string, string> = {};
 
@@ -59,18 +46,12 @@ export class BitDependencyManager<T extends object = any> {
     return errors;
   }
 
-  /**
-   * Reavalia todos os campos registrados (útil no reset ou setValues)
-   */
   evaluateAll(values: T) {
     this.fieldConfigs.forEach((_, path) => {
       this.evaluateFieldCondition(path, values);
     });
   }
 
-  /**
-   * Quando um campo muda, atualizamos apenas quem depende dele.
-   */
   updateDependencies(changedPath: string, newValues: T): string[] {
     const toggledFields: string[] = [];
     const dependents = this.dependencies.get(changedPath);
@@ -82,7 +63,6 @@ export class BitDependencyManager<T extends object = any> {
       this.evaluateFieldCondition(depPath, newValues);
       const isHiddenNow = this.isHidden(depPath);
 
-      // Se o estado de visibilidade mudou, avisamos a Store
       if (wasHidden !== isHiddenNow) {
         toggledFields.push(depPath);
       }
@@ -113,9 +93,6 @@ export class BitDependencyManager<T extends object = any> {
     pathsToRemove.forEach((path) => this.unregister(path));
   }
 
-  /**
-   * Lógica interna para decidir se um campo deve estar oculto ou não.
-   */
   private evaluateFieldCondition(path: string, values: T) {
     const config = this.fieldConfigs.get(path);
     if (!config?.showIf) return;

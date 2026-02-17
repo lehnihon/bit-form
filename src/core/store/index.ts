@@ -1,24 +1,32 @@
 import { BitMask } from "../mask/types";
 import { bitMasks } from "../mask";
 import { BitConfig, BitErrors, BitState, BitFieldConfig } from "./types";
-import { deepClone, deepEqual, getDeepValue, setDeepValue } from "./utils";
+import { deepClone, deepEqual, getDeepValue } from "./utils";
 import { BitDependencyManager } from "./dependency-manager";
 import { BitHistoryManager } from "./history-manager";
 import { BitArrayManager, BitStoreAdapter } from "./array-manager";
+import { BitComputedManager } from "./computed-manager";
+import {
+  BitValidationManager,
+  BitValidationAdapter,
+} from "./validation-manager";
+import { BitLifecycleManager, BitLifecycleAdapter } from "./lifecycle-manager";
 
-export class BitStore<T extends object = any> implements BitStoreAdapter<T> {
+export class BitStore<T extends object = any>
+  implements BitStoreAdapter<T>, BitValidationAdapter<T>, BitLifecycleAdapter<T>
+{
   private state: BitState<T>;
   private listeners: Set<() => void> = new Set();
-  private config: BitConfig<T>;
-  private validationTimeout?: any;
-  private currentValidationId: number = 0;
 
-  public defaultUnmask: boolean;
-  public masks: Record<string, BitMask>;
-
-  private deps: BitDependencyManager<T>;
-  private history: BitHistoryManager<T>;
+  public config: BitConfig<T>;
+  public deps: BitDependencyManager<T>;
+  public history: BitHistoryManager<T>;
+  public validator: BitValidationManager<T>;
+  public computeds: BitComputedManager<T>;
+  public lifecycle: BitLifecycleManager<T>;
   public arrays: BitArrayManager<T>;
+  public masks: Record<string, BitMask>;
+  public defaultUnmask: boolean;
 
   constructor(config: BitConfig<T> = {}) {
     const rawInitial = config.initialValues || ({} as T);
@@ -33,21 +41,25 @@ export class BitStore<T extends object = any> implements BitStoreAdapter<T> {
     this.defaultUnmask = config.defaultUnmask ?? true;
     this.masks = config.masks ?? bitMasks;
 
+    this.deps = new BitDependencyManager<T>();
+    this.history = new BitHistoryManager<T>(!!this.config.enableHistory, 15);
+    this.computeds = new BitComputedManager<T>(this.config);
+    this.validator = new BitValidationManager<T>(this);
+    this.arrays = new BitArrayManager<T>(this);
+    this.lifecycle = new BitLifecycleManager<T>(this);
+
     const initialValues = deepClone(this.config.initialValues);
-    const valuesWithComputeds = this.applyComputeds(initialValues);
+    const valuesWithComputeds = this.computeds.apply(initialValues);
 
     this.state = {
       values: valuesWithComputeds,
       errors: {},
       touched: {},
+      isValidating: {},
       isValid: true,
       isSubmitting: false,
       isDirty: false,
     };
-
-    this.deps = new BitDependencyManager<T>();
-    this.history = new BitHistoryManager<T>(!!this.config.enableHistory, 15);
-    this.arrays = new BitArrayManager<T>(this);
 
     if (this.config.fields) {
       Object.entries(this.config.fields).forEach(([path, fieldConfig]) => {
@@ -60,31 +72,6 @@ export class BitStore<T extends object = any> implements BitStoreAdapter<T> {
     }
 
     this.internalSaveSnapshot();
-  }
-
-  private applyComputeds(values: T): T {
-    if (!this.config.computed) return values;
-
-    let nextValues = values;
-    const computedEntries = Object.entries(this.config.computed);
-
-    for (let i = 0; i < 2; i++) {
-      let changedInThisPass = false;
-
-      for (const [path, computeFn] of computedEntries) {
-        const newValue = computeFn(nextValues);
-        const currentValue = getDeepValue(nextValues, path);
-
-        if (!deepEqual(currentValue, newValue)) {
-          nextValues = setDeepValue(nextValues, path, newValue);
-          changedInThisPass = true;
-        }
-      }
-
-      if (!changedInThisPass) break;
-    }
-
-    return nextValues;
   }
 
   getConfig() {
@@ -125,6 +112,9 @@ export class BitStore<T extends object = any> implements BitStoreAdapter<T> {
 
   registerConfig(path: string, config: BitFieldConfig<T>) {
     this.deps.register(path, config, this.state.values);
+    if (this.deps.isHidden(path)) {
+      this.notify();
+    }
   }
 
   isHidden(path: string): boolean {
@@ -152,34 +142,11 @@ export class BitStore<T extends object = any> implements BitStoreAdapter<T> {
   }
 
   setField(path: string, value: any) {
-    const newValues = setDeepValue(this.state.values, path, value);
-    const newErrors = { ...this.state.errors };
-    delete newErrors[path as keyof BitErrors<T>];
+    const { visibilitiesChanged } = this.lifecycle.updateField(path, value);
 
-    const toggledFields = this.deps.updateDependencies(path, newValues);
-    const visibilitiesChanged = toggledFields.length > 0;
-
-    toggledFields.forEach((depPath) => {
-      if (this.deps.isHidden(depPath)) {
-        delete newErrors[depPath as keyof BitErrors<T>];
-      }
-    });
-
-    const isNowValid = Object.keys(newErrors).length === 0;
-
-    this.internalUpdateState({
-      values: newValues,
-      errors: newErrors,
-      isValid: isNowValid,
-      isDirty: !deepEqual(newValues, this.config.initialValues),
-    });
-
-    if (!this.config.resolver) {
-      if (visibilitiesChanged) this.notify();
-      return;
+    if (!this.config.resolver || visibilitiesChanged) {
+      this.notify();
     }
-
-    this.triggerValidation([path]);
   }
 
   blurField(path: string) {
@@ -191,27 +158,11 @@ export class BitStore<T extends object = any> implements BitStoreAdapter<T> {
       });
     }
 
-    this.triggerValidation([path]);
+    this.validator.trigger([path]);
   }
 
   setValues(newValues: T) {
-    const clonedValues = deepClone(newValues);
-    this.config.initialValues = deepClone(clonedValues);
-
-    if (this.validationTimeout) clearTimeout(this.validationTimeout);
-
-    this.deps.evaluateAll(clonedValues);
-
-    this.internalUpdateState({
-      values: clonedValues,
-      errors: {},
-      touched: {},
-      isValid: true,
-      isDirty: false,
-      isSubmitting: false,
-    });
-    this.internalSaveSnapshot();
-    this.internalValidate();
+    this.lifecycle.updateAll(newValues);
   }
 
   setError(path: string, message: string | undefined) {
@@ -244,20 +195,7 @@ export class BitStore<T extends object = any> implements BitStoreAdapter<T> {
   }
 
   reset() {
-    if (this.validationTimeout) clearTimeout(this.validationTimeout);
-
-    const initialCloned = deepClone(this.config.initialValues);
-    this.deps.evaluateAll(initialCloned);
-
-    this.internalUpdateState({
-      values: initialCloned,
-      errors: {},
-      touched: {},
-      isValid: true,
-      isDirty: false,
-      isSubmitting: false,
-    });
-    this.history.reset(initialCloned);
+    this.lifecycle.reset();
   }
 
   registerMask(name: string, mask: BitMask) {
@@ -294,7 +232,7 @@ export class BitStore<T extends object = any> implements BitStoreAdapter<T> {
     const prevState = this.history.undo();
     if (prevState) {
       this.internalUpdateState({ values: prevState });
-      this.internalValidate();
+      this.validator.validate();
     }
   }
 
@@ -302,87 +240,15 @@ export class BitStore<T extends object = any> implements BitStoreAdapter<T> {
     const nextState = this.history.redo();
     if (nextState) {
       this.internalUpdateState({ values: nextState });
-      this.internalValidate();
+      this.validator.validate();
     }
   }
 
-  private triggerValidation(scopeFields: string[]) {
-    if (this.validationTimeout) clearTimeout(this.validationTimeout);
-
-    const delay = this.config.validationDelay ?? 300;
-
-    if (delay > 0) {
-      this.validationTimeout = setTimeout(() => {
-        this.internalValidate({ scopeFields });
-      }, delay);
-    } else {
-      this.internalValidate({ scopeFields });
-    }
-  }
-
-  internalValidate(options?: {
+  validate(options?: {
     scope?: string;
     scopeFields?: string[];
   }): Promise<boolean> {
-    return this.validate(options);
-  }
-
-  async validate(options?: {
-    scope?: string;
-    scopeFields?: string[];
-  }): Promise<boolean> {
-    const validationId = ++this.currentValidationId;
-
-    let targetFields: string[] | undefined = options?.scopeFields;
-
-    if (options?.scope && this.config.scopes?.[options.scope]) {
-      targetFields = this.config.scopes[options.scope];
-    }
-
-    // 1. Validação via Resolver (Zod/Yup/Joi)
-    let allErrors: Record<string, any> = this.config.resolver
-      ? await this.config.resolver(this.state.values, {
-          scopeFields: targetFields,
-        })
-      : {};
-
-    // 2. Validação Dinâmica (requiredIf) vinda do DependencyManager
-    const dynamicRequiredErrors = this.deps.getRequiredErrors(
-      this.state.values,
-    );
-
-    // Mesclamos os erros. Regras de requiredIf têm prioridade ou complementam o resolver.
-    allErrors = { ...allErrors, ...dynamicRequiredErrors };
-
-    // 3. Limpeza de campos escondidos (Campos ocultos nunca devem ter erros)
-    this.deps.hiddenFields.forEach((hiddenPath) => {
-      delete allErrors[hiddenPath as keyof typeof allErrors];
-    });
-
-    if (validationId !== this.currentValidationId) {
-      return this.state.isValid;
-    }
-
-    if (targetFields) {
-      const newErrors = { ...this.state.errors };
-
-      targetFields.forEach((field) => {
-        if (allErrors[field]) {
-          newErrors[field as keyof BitErrors<T>] = allErrors[field] as any;
-        } else {
-          delete newErrors[field as keyof BitErrors<T>];
-        }
-      });
-
-      const isValid = Object.keys(allErrors).length === 0;
-      this.internalUpdateState({ errors: newErrors, isValid });
-
-      return targetFields.every((field) => !allErrors[field]);
-    }
-
-    const isValid = Object.keys(allErrors).length === 0;
-    this.internalUpdateState({ errors: allErrors as BitErrors<T>, isValid });
-    return isValid;
+    return this.validator.validate(options);
   }
 
   getStepStatus(scopeName: string) {
@@ -406,57 +272,19 @@ export class BitStore<T extends object = any> implements BitStoreAdapter<T> {
     return !deepEqual(currentValue, initialValue);
   }
 
+  isFieldValidating(path: string): boolean {
+    return !!this.getState().isValidating[path];
+  }
+
   async submit(onSuccess: (values: T) => void | Promise<void>) {
-    if (this.state.isSubmitting) return;
-
-    if (this.validationTimeout) clearTimeout(this.validationTimeout);
-
-    this.internalUpdateState({ isSubmitting: true });
-
-    const isValid = await this.validate();
-
-    if (isValid) {
-      try {
-        let valuesToSubmit = deepClone(this.state.values);
-
-        // Limpa campos escondidos do payload final
-        this.deps.hiddenFields.forEach((hiddenPath) => {
-          valuesToSubmit = setDeepValue(valuesToSubmit, hiddenPath, undefined);
-        });
-
-        if (this.config.transform) {
-          for (const path in this.config.transform) {
-            const transformer = this.config.transform[path];
-            if (transformer) {
-              const currentVal = getDeepValue(valuesToSubmit, path);
-              valuesToSubmit = setDeepValue(
-                valuesToSubmit,
-                path,
-                transformer(currentVal, this.state.values),
-              );
-            }
-          }
-        }
-        await onSuccess(valuesToSubmit);
-      } catch (error) {
-        console.error(error);
-      }
-    } else {
-      const newTouched = { ...this.state.touched };
-      Object.keys(this.state.errors).forEach((path) => {
-        newTouched[path as keyof typeof newTouched] = true;
-      });
-      this.internalUpdateState({ touched: newTouched });
-    }
-
-    this.internalUpdateState({ isSubmitting: false });
+    return this.lifecycle.submit(onSuccess);
   }
 
   internalUpdateState(partialState: Partial<BitState<T>>) {
     let nextState = { ...this.state, ...partialState };
 
     if (partialState.values) {
-      nextState.values = this.applyComputeds(partialState.values);
+      nextState.values = this.computeds.apply(partialState.values);
     }
 
     this.state = nextState;
@@ -465,6 +293,11 @@ export class BitStore<T extends object = any> implements BitStoreAdapter<T> {
 
   internalSaveSnapshot() {
     this.history.saveSnapshot(this.state.values);
+  }
+
+  cleanup() {
+    this.listeners.clear();
+    this.validator.cancelAll();
   }
 
   private notify() {

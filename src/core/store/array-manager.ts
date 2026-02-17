@@ -7,7 +7,6 @@ import {
   moveKeys,
 } from "./utils";
 
-// Retiramos o triggerValidation daqui para não conflitar com o seu método privado!
 export interface BitStoreAdapter<T extends object = any> {
   getState(): any;
   getConfig(): any;
@@ -99,7 +98,6 @@ export class BitArrayManager<T extends object = any> {
   }
 
   private revalidate(path: string) {
-    // Como somos uma engrenagem interna, usamos 'any' para acessar o método privado da Store sem ferir a tipagem pública
     const storeInternals = this.store as any;
 
     if (typeof storeInternals.triggerValidation === "function") {

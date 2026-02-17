@@ -30,9 +30,6 @@ export function useBitField<T = any>(path: string, options?: BitFieldOptions) {
     return String(val);
   }, [fieldState.value, resolvedMask, shouldUnmask]);
 
-  /**
-   * 3. Atualização de valor com parse de máscara
-   */
   const setValue = useCallback(
     (val: any) => {
       if (!resolvedMask) {
@@ -53,15 +50,14 @@ export function useBitField<T = any>(path: string, options?: BitFieldOptions) {
 
   const { isHidden, isRequired, value, error, touched } = fieldState;
 
-  const isDirty = store.isFieldDirty(path);
-
   return {
     value: value as T,
     displayValue,
     error: touched ? error : undefined,
     touched: touched,
     invalid: !!(touched && error),
-    isDirty,
+    isValidating: store.isFieldValidating(path),
+    isDirty: store.isFieldDirty(path),
     isHidden,
     isRequired,
     setValue,

@@ -69,6 +69,11 @@ export function useBitField<TValue = any, TForm extends object = any>(
   const touched = computed(() => !!state.value.touched[path]);
   const invalid = computed(() => !!(touched.value && error.value));
 
+  const isValidating = computed(() => {
+    state.value;
+    return store.isFieldValidating(path);
+  });
+
   const isDirty = computed(() => {
     state.value;
     return store.isFieldDirty(path);
@@ -90,6 +95,7 @@ export function useBitField<TValue = any, TForm extends object = any>(
     error,
     touched,
     invalid,
+    isValidating,
     isDirty,
     isHidden,
     isRequired,

@@ -9,6 +9,7 @@ export interface BitState<T> {
   values: T;
   errors: BitErrors<T>;
   touched: BitTouched<T>;
+  isValidating: Record<string, boolean>;
   isValid: boolean;
   isSubmitting: boolean;
   isDirty: boolean;
@@ -23,6 +24,8 @@ export interface BitFieldConfig<T extends object = any> {
   dependsOn?: string[];
   showIf?: (values: T) => boolean;
   requiredIf?: (values: T) => boolean;
+  asyncValidate?: (value: any, values: T) => Promise<string | null | undefined>;
+  asyncValidateDelay?: number;
 }
 
 export interface BitConfig<T extends object = any> {

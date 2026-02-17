@@ -36,6 +36,16 @@ export function injectBitField<TValue = any, TForm extends object = any>(
     () => !!(stateSignal().touched as Record<string, any>)[path],
   );
 
+  const isDirty = computed(() => {
+    stateSignal();
+    return store.isFieldDirty(path);
+  });
+
+  const isValidating = computed(() => {
+    stateSignal();
+    return store.isFieldValidating(path);
+  });
+
   const isHidden = computed(() => {
     stateSignal();
     return store.isHidden(path);
@@ -85,6 +95,8 @@ export function injectBitField<TValue = any, TForm extends object = any>(
     error,
     touched,
     invalid,
+    isDirty,
+    isValidating,
     isHidden,
     isRequired,
     setValue,
