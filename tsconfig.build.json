@@ -3,7 +3,10 @@
     "target": "ESNext",
     "module": "ESNext",
     "moduleResolution": "bundler",
-    "lib": ["ESNext", "DOM"],
+    "lib": [
+      "ESNext",
+      "DOM"
+    ],
     "jsx": "react-jsx",
     "strict": true,
     "skipLibCheck": true,
@@ -12,14 +15,27 @@
     "rootDir": "src",
     "baseUrl": ".",
     "paths": {
-      "bit-form": ["./src/index.ts"],
-      "bit-form/*": ["./src/*"]
+      "bit-form": [
+        "./src/index.ts"
+      ],
+      "bit-form/*": [
+        "./src/*"
+      ]
     },
+    "outDir": "./dist",
+    "declarationDir": "./dist/types",
     "composite": false,
     "incremental": false,
     "declaration": true,
     "emitDeclarationOnly": true
   },
-  "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist", "**/*.test.ts", "**/*.test.tsx"]
+  "include": [
+    "src/**/*"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "**/*.test.ts",
+    "**/*.test.tsx"
+  ]
 }

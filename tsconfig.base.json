@@ -12,11 +12,6 @@
     "esModuleInterop": true,
     "isolatedModules": true,
     "noImplicitAny": false,
-    "declaration": true,
-    "declarationMap": true,
-    "emitDeclarationOnly": true,
-    "composite": true,
-    "incremental": true,
     "baseUrl": ".",
     "paths": {
       "bit-form": [

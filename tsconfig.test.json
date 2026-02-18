@@ -5,8 +5,20 @@
     "composite": false,
     "incremental": false,
     "jsx": "react-jsx",
-    "types": ["node", "react", "react-dom", "vitest"]
+    "types": [
+      "node",
+      "react",
+      "react-dom",
+      "vitest",
+      "vue",
+      "react-native"
+    ]
   },
-  "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist"]
+  "include": [
+    "src/**/*"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist"
+  ]
 }

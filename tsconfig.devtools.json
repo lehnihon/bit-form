@@ -1,6 +1,10 @@
 {
   "extends": "./tsconfig.base.json",
   "compilerOptions": {
+    "composite": true,
+    "declaration": true,
+    "declarationMap": true,
+    "emitDeclarationOnly": true,
     "outDir": "./dist/devtools",
     "rootDir": "./src",
     "lib": [
@@ -13,5 +17,14 @@
   "include": [
     "src/devtools/**/*",
     "src/core/**/*"
+  ],
+  "exclude": [
+    "**/*.test.ts",
+    "**/*.test.tsx"
+  ],
+  "references": [
+    {
+      "path": "./tsconfig.core.json"
+    }
   ]
 }
