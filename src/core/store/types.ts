@@ -29,6 +29,7 @@ export interface BitFieldConfig<T extends object = any> {
 }
 
 export interface BitConfig<T extends object = any> {
+  name?: string;
   initialValues?: T;
   resolver?: ValidatorFn<T>;
   computed?: Record<string, BitComputedFn<T>>;

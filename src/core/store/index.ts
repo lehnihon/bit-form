@@ -12,6 +12,34 @@ import {
 } from "./validation-manager";
 import { BitLifecycleManager, BitLifecycleAdapter } from "./lifecycle-manager";
 
+declare global {
+  var __BIT_FORM__:
+    | {
+        stores: Record<string, any>;
+        listeners: Set<Function>;
+        dispatch: (storeId: string, state: any) => void;
+        subscribe: (
+          listener: (storeId: string, state: any) => void,
+        ) => () => void;
+      }
+    | undefined;
+}
+
+const rootGlobal = typeof globalThis !== "undefined" ? globalThis : global;
+if (!rootGlobal.__BIT_FORM__) {
+  rootGlobal.__BIT_FORM__ = {
+    stores: {},
+    listeners: new Set(),
+    dispatch(id, state) {
+      this.listeners.forEach((fn) => fn(id, state));
+    },
+    subscribe(fn) {
+      this.listeners.add(fn);
+      return () => this.listeners.delete(fn);
+    },
+  };
+}
+
 export class BitStore<T extends object = any>
   implements BitStoreAdapter<T>, BitValidationAdapter<T>, BitLifecycleAdapter<T>
 {
@@ -27,6 +55,7 @@ export class BitStore<T extends object = any>
   public arrays: BitArrayManager<T>;
   public masks: Record<string, BitMask>;
   public defaultUnmask: boolean;
+  public storeId: string;
 
   constructor(config: BitConfig<T> = {}) {
     const rawInitial = config.initialValues || ({} as T);
@@ -72,6 +101,12 @@ export class BitStore<T extends object = any>
     }
 
     this.internalSaveSnapshot();
+
+    this.storeId =
+      config.name || `bit-form-${Math.random().toString(36).substring(2, 9)}`;
+    if (rootGlobal.__BIT_FORM__) {
+      rootGlobal.__BIT_FORM__.stores[this.storeId] = this;
+    }
   }
 
   getConfig() {
@@ -289,6 +324,10 @@ export class BitStore<T extends object = any>
 
     this.state = nextState;
     this.notify();
+
+    if (rootGlobal.__BIT_FORM__) {
+      rootGlobal.__BIT_FORM__?.dispatch(this.storeId, this.state);
+    }
   }
 
   internalSaveSnapshot() {
@@ -298,6 +337,10 @@ export class BitStore<T extends object = any>
   cleanup() {
     this.listeners.clear();
     this.validator.cancelAll();
+
+    if (rootGlobal.__BIT_FORM__) {
+      delete rootGlobal.__BIT_FORM__.stores[this.storeId];
+    }
   }
 
   private notify() {

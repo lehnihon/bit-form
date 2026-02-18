@@ -43,6 +43,7 @@
     "README.md"
   ],
   "scripts": {
+    "sync": "npm run build && yalc push",
     "dev": "tsup --watch",
     "build": "tsup",
     "test": "vitest run",
