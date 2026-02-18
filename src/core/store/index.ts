@@ -1,44 +1,23 @@
+import { bitBus } from "./bus";
 import { BitMask } from "../mask/types";
 import { bitMasks } from "../mask";
-import { BitConfig, BitErrors, BitState, BitFieldConfig } from "./types";
+import {
+  BitConfig,
+  BitErrors,
+  BitState,
+  BitFieldConfig,
+  BitResolvedConfig,
+  BitStoreAdapter,
+  BitValidationAdapter,
+  BitLifecycleAdapter,
+} from "./types";
 import { deepClone, deepEqual, getDeepValue } from "./utils";
 import { BitDependencyManager } from "./dependency-manager";
 import { BitHistoryManager } from "./history-manager";
-import { BitArrayManager, BitStoreAdapter } from "./array-manager";
+import { BitArrayManager } from "./array-manager";
 import { BitComputedManager } from "./computed-manager";
-import {
-  BitValidationManager,
-  BitValidationAdapter,
-} from "./validation-manager";
-import { BitLifecycleManager, BitLifecycleAdapter } from "./lifecycle-manager";
-
-declare global {
-  var __BIT_FORM__:
-    | {
-        stores: Record<string, any>;
-        listeners: Set<Function>;
-        dispatch: (storeId: string, state: any) => void;
-        subscribe: (
-          listener: (storeId: string, state: any) => void,
-        ) => () => void;
-      }
-    | undefined;
-}
-
-const rootGlobal = typeof globalThis !== "undefined" ? globalThis : global;
-if (!rootGlobal.__BIT_FORM__) {
-  rootGlobal.__BIT_FORM__ = {
-    stores: {},
-    listeners: new Set(),
-    dispatch(id, state) {
-      this.listeners.forEach((fn) => fn(id, state));
-    },
-    subscribe(fn) {
-      this.listeners.add(fn);
-      return () => this.listeners.delete(fn);
-    },
-  };
-}
+import { BitValidationManager } from "./validation-manager";
+import { BitLifecycleManager } from "./lifecycle-manager";
 
 export class BitStore<T extends object = any>
   implements BitStoreAdapter<T>, BitValidationAdapter<T>, BitLifecycleAdapter<T>
@@ -46,7 +25,7 @@ export class BitStore<T extends object = any>
   private state: BitState<T>;
   private listeners: Set<() => void> = new Set();
 
-  public config: BitConfig<T>;
+  public config: BitResolvedConfig<T>;
   public deps: BitDependencyManager<T>;
   public history: BitHistoryManager<T>;
   public validator: BitValidationManager<T>;
@@ -104,9 +83,7 @@ export class BitStore<T extends object = any>
 
     this.storeId =
       config.name || `bit-form-${Math.random().toString(36).substring(2, 9)}`;
-    if (rootGlobal.__BIT_FORM__) {
-      rootGlobal.__BIT_FORM__.stores[this.storeId] = this;
-    }
+    bitBus.stores[this.storeId] = this;
   }
 
   getConfig() {
@@ -131,12 +108,25 @@ export class BitStore<T extends object = any>
 
   unregisterField(path: string) {
     this.deps.unregister(path);
+
     const newErrors = { ...this.state.errors };
+    const newTouched = { ...this.state.touched };
+    let stateChanged = false;
+
     if (newErrors[path as keyof BitErrors<T>]) {
       delete newErrors[path as keyof BitErrors<T>];
+      stateChanged = true;
+    }
+
+    if (newTouched[path as keyof typeof newTouched]) {
+      delete newTouched[path as keyof typeof newTouched];
+      stateChanged = true;
+    }
+
+    if (stateChanged) {
       this.internalUpdateState({
         errors: newErrors,
-        isValid: Object.keys(newErrors).length === 0,
+        touched: newTouched,
       });
     }
   }
@@ -201,16 +191,15 @@ export class BitStore<T extends object = any>
   }
 
   setError(path: string, message: string | undefined) {
-    this.internalUpdateState({
-      errors: { ...this.state.errors, [path]: message },
-      isValid: false,
-    });
+    const newErrors = { ...this.state.errors, [path]: message };
+    if (!message) delete (newErrors as any)[path];
+
+    this.internalUpdateState({ errors: newErrors });
   }
 
   setErrors(errors: BitErrors<T>) {
     this.internalUpdateState({
       errors: { ...this.state.errors, ...errors },
-      isValid: Object.keys(errors).length === 0,
     });
   }
 
@@ -322,12 +311,14 @@ export class BitStore<T extends object = any>
       nextState.values = this.computeds.apply(partialState.values);
     }
 
+    if (partialState.errors) {
+      nextState.isValid = Object.keys(nextState.errors).length === 0;
+    }
+
     this.state = nextState;
     this.notify();
 
-    if (rootGlobal.__BIT_FORM__) {
-      rootGlobal.__BIT_FORM__?.dispatch(this.storeId, this.state);
-    }
+    bitBus.dispatch(this.storeId, this.state);
   }
 
   internalSaveSnapshot() {
@@ -338,9 +329,7 @@ export class BitStore<T extends object = any>
     this.listeners.clear();
     this.validator.cancelAll();
 
-    if (rootGlobal.__BIT_FORM__) {
-      delete rootGlobal.__BIT_FORM__.stores[this.storeId];
-    }
+    delete bitBus.stores[this.storeId];
   }
 
   private notify() {

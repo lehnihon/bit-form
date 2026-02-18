@@ -1,18 +1,5 @@
-import { BitState, BitConfig, BitErrors } from "./types";
+import { BitErrors, BitLifecycleAdapter } from "./types";
 import { deepClone, deepEqual, getDeepValue, setDeepValue } from "./utils";
-import { BitDependencyManager } from "./dependency-manager";
-import { BitValidationManager } from "./validation-manager";
-import { BitHistoryManager } from "./history-manager";
-
-export interface BitLifecycleAdapter<T extends object> {
-  getState: () => BitState<T>;
-  internalUpdateState: (partial: Partial<BitState<T>>) => void;
-  internalSaveSnapshot: () => void;
-  config: BitConfig<T>;
-  deps: BitDependencyManager<T>;
-  validator: BitValidationManager<T>;
-  history: BitHistoryManager<T>;
-}
 
 export class BitLifecycleManager<T extends object> {
   constructor(private store: BitLifecycleAdapter<T>) {}

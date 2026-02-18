@@ -1,4 +1,7 @@
 import { BitMask } from "../mask/types";
+import { BitDependencyManager } from "./dependency-manager";
+import { BitHistoryManager } from "./history-manager";
+import { BitValidationManager } from "./validation-manager";
 
 export type BitErrors<T> = { [key: string]: string | undefined };
 export type BitTouched<T> = { [key: string]: boolean | undefined };
@@ -42,7 +45,39 @@ export interface BitConfig<T extends object = any> {
   fields?: Record<string, BitFieldConfig<T>>;
 }
 
+export type BitResolvedConfig<T extends object> = BitConfig<T> & {
+  initialValues: T;
+};
+
 export interface BitFieldOptions {
   mask?: BitMask | string;
   unmask?: boolean;
+}
+
+export interface BitLifecycleAdapter<T extends object> {
+  getState: () => BitState<T>;
+  internalUpdateState: (partial: Partial<BitState<T>>) => void;
+  internalSaveSnapshot: () => void;
+  config: BitResolvedConfig<T>;
+  deps: BitDependencyManager<T>;
+  validator: BitValidationManager<T>;
+  history: BitHistoryManager<T>;
+}
+
+export interface BitStoreAdapter<T extends object = any> {
+  getState: () => BitState<T>;
+  getConfig(): BitResolvedConfig<T>;
+  setField(path: string, value: any): void;
+  internalUpdateState(partialState: any): void;
+  internalSaveSnapshot(): void;
+  unregisterPrefix?: (prefix: string) => void;
+  validate?: () => Promise<boolean>;
+}
+
+export interface BitValidationAdapter<T extends object> {
+  getState: () => BitState<T>;
+  internalUpdateState: (partial: Partial<BitState<T>>) => void;
+  setError: (path: string, message: string | undefined) => void;
+  config: BitResolvedConfig<T>;
+  deps: BitDependencyManager<T>;
 }

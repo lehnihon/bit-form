@@ -1,3 +1,4 @@
+import { BitStoreAdapter } from "./types";
 import {
   getDeepValue,
   setDeepValue,
@@ -6,16 +7,6 @@ import {
   swapKeys,
   moveKeys,
 } from "./utils";
-
-export interface BitStoreAdapter<T extends object = any> {
-  getState(): any;
-  getConfig(): any;
-  setField(path: string, value: any): void;
-  internalUpdateState(partialState: any): void;
-  internalSaveSnapshot(): void;
-  unregisterPrefix?: (prefix: string) => void;
-  validate?: () => Promise<boolean>;
-}
 
 export class BitArrayManager<T extends object = any> {
   constructor(private store: BitStoreAdapter<T>) {}

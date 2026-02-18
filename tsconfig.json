@@ -3,14 +3,32 @@
   "compilerOptions": {
     "baseUrl": ".",
     "paths": {
-      "bit-form": ["src/index.ts"],
-      "bit-form/*": ["src/*"]
+      "bit-form": [
+        "src/index.ts"
+      ],
+      "bit-form/*": [
+        "src/*"
+      ]
     }
   },
   "references": [
-    { "path": "./tsconfig.core.json" },
-    { "path": "./tsconfig.react.json" },
-    { "path": "./tsconfig.vue.json" },
-    { "path": "./tsconfig.angular.json" }
+    {
+      "path": "./tsconfig.core.json"
+    },
+    {
+      "path": "./tsconfig.react.json"
+    },
+    {
+      "path": "./tsconfig.react-native.json"
+    },
+    {
+      "path": "./tsconfig.vue.json"
+    },
+    {
+      "path": "./tsconfig.angular.json"
+    },
+    {
+      "path": "./tsconfig.devtools.json"
+    },
   ]
 }

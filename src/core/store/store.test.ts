@@ -163,7 +163,6 @@ describe("BitStore Core", () => {
       store.setError("cnpj", "Required");
       expect(store.getState().errors.cnpj).toBe("Required");
 
-      // Mudar para person oculta o campo e deve limpar o erro
       store.setField("type", "person");
       expect(store.isHidden("cnpj")).toBe(true);
       expect(store.getState().errors.cnpj).toBeUndefined();

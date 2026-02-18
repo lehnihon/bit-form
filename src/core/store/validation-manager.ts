@@ -1,12 +1,4 @@
-import { BitConfig, BitErrors, BitState } from "./types";
-
-export interface BitValidationAdapter<T extends object> {
-  getState: () => BitState<T>;
-  internalUpdateState: (partial: Partial<BitState<T>>) => void;
-  setError: (path: string, message: string | undefined) => void;
-  config: BitConfig<T>;
-  deps: any;
-}
+import { BitConfig, BitErrors, BitState, BitValidationAdapter } from "./types";
 
 export class BitValidationManager<T extends object> {
   private validationTimeout?: any;

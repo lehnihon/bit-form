@@ -1,4 +1,4 @@
-import { deepClone } from "./utils";
+import { deepClone, deepEqual } from "./utils";
 
 export class BitHistoryManager<T extends object = any> {
   private history: T[] = [];
@@ -11,6 +11,12 @@ export class BitHistoryManager<T extends object = any> {
 
   saveSnapshot(values: T) {
     if (!this.enableHistory) return;
+
+    const currentSnapshot = this.history[this.historyIndex];
+
+    if (currentSnapshot && deepEqual(currentSnapshot, values)) {
+      return;
+    }
 
     if (this.historyIndex < this.history.length - 1) {
       this.history = this.history.slice(0, this.historyIndex + 1);

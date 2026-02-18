@@ -1,14 +1,26 @@
-export function deepClone(obj: any): any {
-  if (obj === null || typeof obj !== "object") return obj;
-  if (Array.isArray(obj)) return obj.map((item) => deepClone(item));
+export function deepClone<T>(obj: T): T {
+  if (obj === null || typeof obj !== "object") {
+    return obj;
+  }
+
+  if (obj instanceof Date) {
+    return new Date(obj.getTime()) as any as T;
+  }
+  if (obj instanceof RegExp) {
+    return new RegExp(obj.source, obj.flags) as any as T;
+  }
+
+  if (Array.isArray(obj)) {
+    return obj.map((item) => deepClone(item)) as any as T;
+  }
 
   const clone: any = {};
   for (const key in obj) {
     if (Object.prototype.hasOwnProperty.call(obj, key)) {
-      clone[key] = deepClone(obj[key]);
+      clone[key] = deepClone((obj as any)[key]);
     }
   }
-  return clone;
+  return clone as T;
 }
 
 export function deepEqual(a: any, b: any): boolean {
@@ -18,8 +30,14 @@ export function deepEqual(a: any, b: any): boolean {
     typeof a !== "object" ||
     b === null ||
     typeof b !== "object"
-  )
+  ) {
     return false;
+  }
+
+  if (a instanceof Date && b instanceof Date)
+    return a.getTime() === b.getTime();
+  if (a instanceof RegExp && b instanceof RegExp)
+    return a.toString() === b.toString();
 
   const keysA = Object.keys(a);
   const keysB = Object.keys(b);
@@ -40,48 +58,50 @@ export function deepEqual(a: any, b: any): boolean {
 
 const pathCache = new Map<string, string[]>();
 
-export function setDeepValue(obj: any, path: string, value: any): any {
-  if (!path) return value;
+export function getDeepValue(obj: any, path: string): any {
+  if (!path) return obj;
 
   const keys = pathCache.get(path) || path.split(".");
   if (!pathCache.has(path)) pathCache.set(path, keys);
 
-  const keysCopy = [...keys];
-  const lastKey = keysCopy.pop()!;
-
-  const helper = (current: any, index: number): any => {
-    const key = keysCopy[index];
-
-    if (index === keysCopy.length) {
-      if (current?.[lastKey] === value) return current;
-
-      const clone = Array.isArray(current) ? [...current] : { ...current };
-      clone[lastKey] = value;
-      return clone;
-    }
-
-    const currentValue = current?.[key] ?? {};
-    const updatedValue = helper(currentValue, index + 1);
-
-    if (current?.[key] === updatedValue) return current;
-
-    const clone = Array.isArray(current) ? [...current] : { ...current };
-    clone[key] = updatedValue;
-    return clone;
-  };
-
-  return helper(obj, 0);
-}
-
-export function getDeepValue(obj: any, path: string): any {
-  if (!path) return obj;
-  const keys = path.split(".");
   let current = obj;
   for (const key of keys) {
     if (current === null || current === undefined) return undefined;
     current = current[key];
   }
   return current;
+}
+
+export function setDeepValue(obj: any, path: string, value: any): any {
+  if (!path) return value;
+
+  const keys = pathCache.get(path) || path.split(".");
+  if (!pathCache.has(path)) pathCache.set(path, keys);
+
+  const result = Array.isArray(obj) ? [...obj] : { ...obj };
+  let current = result;
+
+  for (let i = 0; i < keys.length - 1; i++) {
+    const key = keys[i];
+    const nextKey = keys[i + 1];
+
+    const isNextNumeric = /^\d+$/.test(nextKey);
+    const currentValue = current[key];
+
+    if (currentValue === null || currentValue === undefined) {
+      current[key] = isNextNumeric ? [] : {};
+    } else {
+      current[key] = Array.isArray(currentValue)
+        ? [...currentValue]
+        : { ...currentValue };
+    }
+
+    current = current[key];
+  }
+
+  current[keys[keys.length - 1]] = value;
+
+  return result;
 }
 
 export function cleanPrefixedKeys(
@@ -117,7 +137,7 @@ export const shiftKeys = (
     const currentIdx = parseInt(parts[0], 10);
     const rest = parts.slice(1).join(".");
 
-    if (currentIdx === removedIndex) return; // Exclui o item removido
+    if (currentIdx === removedIndex) return;
 
     if (currentIdx > removedIndex) {
       const newIdx = currentIdx - 1;

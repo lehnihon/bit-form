@@ -1,4 +1,7 @@
 export { BitStore } from "./store/index";
+
+export { bitBus } from "./store/bus";
+
 export {
   getDeepValue,
   setDeepValue,

@@ -1,0 +1,17 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "./dist/devtools",
+    "rootDir": "./src",
+    "lib": [
+      "DOM",
+      "DOM.Iterable",
+      "ESNext"
+    ],
+    "types": []
+  },
+  "include": [
+    "src/devtools/**/*",
+    "src/core/**/*"
+  ]
+}
