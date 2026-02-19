@@ -15,6 +15,7 @@ export default defineConfig([
       "resolvers/yup": "src/resolvers/yup.ts",
       "resolvers/joi": "src/resolvers/joi.ts",
       "devtools/index": "src/devtools/index.ts",
+      "devtools/bridge": "src/devtools/bridge.ts",
     },
     tsconfig: "./tsconfig.build.json",
     format: ["cjs", "esm"],

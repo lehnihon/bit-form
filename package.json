@@ -44,6 +44,11 @@
       "types": "./dist/devtools/index.d.ts",
       "import": "./dist/devtools/index.js",
       "require": "./dist/devtools/index.cjs"
+    },
+    "./devtools/bridge": {
+      "types": "./dist/devtools/bridge.d.ts",
+      "import": "./dist/devtools/bridge.js",
+      "require": "./dist/devtools/bridge.cjs"
     }
   },
   "files": [

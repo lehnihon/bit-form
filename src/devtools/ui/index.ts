@@ -11,8 +11,6 @@ export class BitFormDevToolsUI {
   private actions: DevToolsActions;
   private rootElement: HTMLDivElement;
   private currentStoresState: Record<string, any> = {};
-
-  // O seu state 'isOpen' do React
   private isOpen: boolean = false;
 
   constructor(container: HTMLElement, actions: DevToolsActions) {

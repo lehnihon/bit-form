@@ -5,14 +5,12 @@ import { WebSocketServer } from "ws";
 
 export function startDevServer(port = 3000) {
   const server = http.createServer((req, res) => {
-    // Rota do Dashboard
     if (req.url === "/" || req.url === "/index.html") {
       res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
       res.end(getDashboardHTML(port));
       return;
     }
 
-    // Servidor de Arquivos Estáticos (Lê do /dist)
     if (req.url?.startsWith("/dist/")) {
       const relativePath = req.url.replace("/dist/", "");
       const filePath = path.resolve(
@@ -55,6 +53,14 @@ export function startDevServer(port = 3000) {
   wss.on("connection", (ws) => {
     ws.on("message", (messageBuffer) => {
       const messageStr = messageBuffer.toString();
+
+      try {
+        const data = JSON.parse(messageStr);
+
+        if (data.type === "PING") {
+          return;
+        }
+      } catch (e) {}
 
       wss.clients.forEach((client) => {
         if (client !== ws && client.readyState === 1) {
