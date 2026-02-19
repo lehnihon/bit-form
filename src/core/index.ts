@@ -23,13 +23,20 @@ export type {
 } from "./store/types";
 
 export { bitMasks } from "./mask/index";
-export type { BitMask, CurrencyMaskConfig } from "./mask/types";
+export type {
+  BitMask,
+  CurrencyMaskConfig,
+  PatternMaskOptions,
+  DateMaskConfig,
+} from "./mask/types";
 
 export {
   unmask,
   unmaskCurrency,
   createPatternMask,
   createCurrencyMask,
+  createCreditCardMask,
+  createDateMask,
 } from "./mask/creators";
 
 export {
@@ -61,4 +68,5 @@ export {
   maskColorHex,
   maskIPv4,
   maskIPv6,
+  maskIBAN,
 } from "./mask/presets";
