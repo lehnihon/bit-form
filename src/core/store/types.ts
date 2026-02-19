@@ -39,7 +39,6 @@ export interface BitConfig<T extends object = any> {
   scopes?: Record<string, string[]>;
   transform?: Partial<Record<string, BitTransformFn<T>>>;
   validationDelay?: number;
-  defaultUnmask?: boolean;
   masks?: Record<string, BitMask>;
   enableHistory?: boolean;
   fields?: Record<string, BitFieldConfig<T>>;
@@ -51,7 +50,6 @@ export type BitResolvedConfig<T extends object> = BitConfig<T> & {
 
 export interface BitFieldOptions {
   mask?: BitMask | string;
-  unmask?: boolean;
 }
 
 export interface BitLifecycleAdapter<T extends object> {

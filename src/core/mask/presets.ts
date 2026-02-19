@@ -1,4 +1,9 @@
-import { createCurrencyMask, createPatternMask } from "./creators";
+import {
+  createCreditCardMask,
+  createCurrencyMask,
+  createDateMask,
+  createPatternMask,
+} from "./creators";
 
 // ==========================================
 // 💲 MOEDAS (Currencies)
@@ -80,8 +85,10 @@ export const maskCPF = createPatternMask("###.###.###-##");
 /** CNPJ (00.000.000/0000-00) */
 export const maskCNPJ = createPatternMask("##.###.###/####-##");
 
-/** Telefone Celular BR (11) 90000-0000 */
-export const maskPhone = createPatternMask("(##) #####-####");
+export const maskPhone = createPatternMask([
+  "(##) ####-####", // Fixo (10 dígitos)
+  "(##) #####-####", // Celular (11 dígitos)
+]);
 
 /** Telefone Fixo BR (11) 0000-0000 */
 export const maskLandline = createPatternMask("(##) ####-####");
@@ -89,8 +96,19 @@ export const maskLandline = createPatternMask("(##) ####-####");
 /** CEP (00000-000) */
 export const maskCEP = createPatternMask("#####-###");
 
-/** Data BR (DD/MM/AAAA) */
-export const maskDate = createPatternMask("##/##/####");
+/** Data PT/BR com correção automática de dia/mês */
+export const maskDate = createDateMask({
+  format: "DD/MM/YYYY",
+  guide: true,
+  customParse: (val) => {
+    const cleanVal = val.replace(/_/g, "");
+    const parts = cleanVal.split("/");
+    if (parts.length === 3 && parts[2].length === 4) {
+      return `${parts[2]}-${parts[1]}-${parts[0]}`;
+    }
+    return cleanVal.replace(/\D/g, "");
+  },
+});
 
 /** Hora Curta (HH:MM) */
 export const maskTime = createPatternMask("##:##");
@@ -121,14 +139,18 @@ export const maskSSN = createPatternMask("###-##-####");
 // 🌐 PADRÕES GLOBAIS / TÉCNICOS
 // ==========================================
 
-/** Cartão de Crédito (0000 0000 0000 0000) */
-export const maskCreditCard = createPatternMask("#### #### #### ####");
+/** Cartão de Crédito Inteligente (Detecta Visa/Master, Amex e Diners) */
+export const maskCreditCard = createCreditCardMask();
 
 /** CVV (3 ou 4 dígitos) */
 export const maskCVV = createPatternMask("####");
 
-/** Data ISO (AAAA-MM-DD) */
-export const maskDateISO = createPatternMask("####-##-##");
+/** Data ISO (Ideal para base de dados: YYYY-MM-DD) */
+export const maskDateISO = createDateMask({
+  format: "YYYY-MM-DD",
+  saveRaw: true,
+  guide: true,
+});
 
 /** Endereço MAC (HH:HH:HH:HH:HH:HH) - Usa o token Hexadecimal */
 export const maskMacAddress = createPatternMask("HH:HH:HH:HH:HH:HH");
@@ -142,4 +164,13 @@ export const maskIPv4 = createPatternMask("###.###.###.###");
 /** IPv6 (HHHH:HHHH:HHHH:HHHH:HHHH:HHHH:HHHH:HHHH) */
 export const maskIPv6 = createPatternMask(
   "HHHH:HHHH:HHHH:HHHH:HHHH:HHHH:HHHH:HHHH",
+);
+
+/** * IBAN Internacional
+ * Força as duas primeiras letras para maiúsculas e agrupa de 4 em 4.
+ * O tamanho máximo cobre os 34 caracteres do padrão IBAN.
+ */
+export const maskIBAN = createPatternMask(
+  "UU## XXXX XXXX XXXX XXXX XXXX XXXX XXXX XX",
+  { allowChars: " " },
 );

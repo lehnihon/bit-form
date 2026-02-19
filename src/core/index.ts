@@ -23,7 +23,7 @@ export type {
 } from "./store/types";
 
 export { bitMasks } from "./mask/index";
-export type { BitMask, CurrencyConfig } from "./mask/types";
+export type { BitMask, CurrencyMaskConfig } from "./mask/types";
 
 export {
   unmask,
@@ -31,7 +31,6 @@ export {
   createPatternMask,
   createCurrencyMask,
 } from "./mask/creators";
-export type { ExtendedCurrencyConfig } from "./mask/creators";
 
 export {
   maskBRL,

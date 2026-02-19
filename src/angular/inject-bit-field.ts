@@ -67,24 +67,18 @@ export function injectBitField<TValue = any, TForm extends object = any>(
   const displayValue = computed(() => {
     const val = value();
     if (val === undefined || val === null || val === "") return "";
-    if (resolvedMask) {
-      return (options?.unmask ?? store.defaultUnmask ?? true)
-        ? resolvedMask.format(val)
-        : String(val);
-    }
-    return String(val);
+
+    return resolvedMask ? resolvedMask.format(val) : String(val);
   });
 
   const setValue = (val: any) => {
-    let finalValue = val;
-    if (resolvedMask) {
-      const stringVal = String(val ?? "");
-      finalValue =
-        (options?.unmask ?? store.defaultUnmask ?? true)
-          ? (resolvedMask.parse(stringVal) as any)
-          : resolvedMask.format(stringVal);
+    if (!resolvedMask) {
+      store.setField(path, val);
+      return;
     }
-    store.setField(path, finalValue);
+
+    const stringVal = String(val ?? "");
+    store.setField(path, resolvedMask.parse(stringVal) as any);
   };
 
   const setBlur = () => store.blurField(path);

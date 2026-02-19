@@ -33,7 +33,6 @@ export class BitStore<T extends object = any>
   public lifecycle: BitLifecycleManager<T>;
   public arrays: BitArrayManager<T>;
   public masks: Record<string, BitMask>;
-  public defaultUnmask: boolean;
   public storeId: string;
 
   constructor(config: BitConfig<T> = {}) {
@@ -46,9 +45,7 @@ export class BitStore<T extends object = any>
       initialValues: deepClone(rawInitial),
     };
 
-    this.defaultUnmask = config.defaultUnmask ?? true;
     this.masks = config.masks ?? bitMasks;
-
     this.deps = new BitDependencyManager<T>();
     this.history = new BitHistoryManager<T>(!!this.config.enableHistory, 15);
     this.computeds = new BitComputedManager<T>(this.config);

@@ -18,17 +18,12 @@ export function useBitField<T = any>(path: string, options?: BitFieldOptions) {
       : maskOption;
   }, [options?.mask, store.masks]);
 
-  const shouldUnmask = options?.unmask ?? store.defaultUnmask ?? true;
-
   const displayValue = useMemo(() => {
     const val = fieldState.value;
     if (val === undefined || val === null || val === "") return "";
 
-    if (resolvedMask) {
-      return shouldUnmask ? resolvedMask.format(val) : String(val);
-    }
-    return String(val);
-  }, [fieldState.value, resolvedMask, shouldUnmask]);
+    return resolvedMask ? resolvedMask.format(val) : String(val);
+  }, [fieldState.value, resolvedMask]);
 
   const setValue = useCallback(
     (val: any) => {
@@ -37,15 +32,9 @@ export function useBitField<T = any>(path: string, options?: BitFieldOptions) {
         return;
       }
 
-      const stringVal = String(val ?? "");
-
-      if (shouldUnmask) {
-        rawSetValue(resolvedMask.parse(stringVal) as any);
-      } else {
-        rawSetValue(resolvedMask.format(stringVal) as any);
-      }
+      rawSetValue(resolvedMask.parse(String(val ?? "")) as any);
     },
-    [resolvedMask, shouldUnmask, rawSetValue],
+    [resolvedMask, rawSetValue],
   );
 
   const { isHidden, isRequired, value, error, touched } = fieldState;

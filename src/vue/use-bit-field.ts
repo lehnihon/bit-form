@@ -19,8 +19,6 @@ export function useBitField<TValue = any, TForm extends object = any>(
       : options.mask
     : undefined;
 
-  const shouldUnmask = options?.unmask ?? store.defaultUnmask ?? true;
-
   const state = shallowRef(store.getState());
 
   const unsubscribe = store.subscribe(() => {
@@ -41,10 +39,8 @@ export function useBitField<TValue = any, TForm extends object = any>(
   const displayValue = computed(() => {
     const val = rawValue.value;
     if (val === undefined || val === null || val === "") return "";
-    if (resolvedMask) {
-      return shouldUnmask ? resolvedMask.format(val as any) : String(val);
-    }
-    return String(val);
+
+    return resolvedMask ? resolvedMask.format(val as any) : String(val);
   });
 
   const value = computed({
@@ -54,12 +50,8 @@ export function useBitField<TValue = any, TForm extends object = any>(
         store.setField(path, val);
         return;
       }
-      const stringVal = String(val ?? "");
-      if (shouldUnmask) {
-        store.setField(path, resolvedMask.parse(stringVal));
-      } else {
-        store.setField(path, resolvedMask.format(stringVal));
-      }
+
+      store.setField(path, resolvedMask.parse(String(val ?? "")));
     },
   });
 
