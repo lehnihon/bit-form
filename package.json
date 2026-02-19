@@ -66,7 +66,8 @@
     "lint": "npm run clean && tsc --build && tsc -p tsconfig.test.json",
     "prepublishOnly": "npm run build && npm run test",
     "release": "npm publish",
-    "dry-run": "npm publish --dry-run"
+    "dry-run": "npm publish --dry-run",
+    "bundle-ctx": "repomix"
   },
   "peerDependencies": {
     "@angular/core": ">=16.0.0",
@@ -121,6 +122,7 @@
     "jsdom": "^26.0.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "repomix": "^1.11.1",
     "rxjs": "^7.8.1",
     "tsup": "^8.3.6",
     "typescript": "^5.7.3",

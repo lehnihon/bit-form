@@ -1,0 +1,22 @@
+{
+  "output": {
+    "filePath": "bit-form-context.txt",
+    "headerText": "Contexto completo da biblioteca bit-form para análise de IA.",
+    "removeComments": false,
+    "showLineNumbers": true
+  },
+  "include": [
+    "src/**/*",
+    "package.json",
+    "tsup.config.ts",
+    "tsconfig.json"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "coverage",
+    "*.log",
+    ".git",
+    "package-lock.json"
+  ]
+}
