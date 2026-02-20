@@ -4,12 +4,14 @@ import { setupRemoteDevTools } from "./adapters/remote";
 export interface BitDevToolsOptions {
   container?: HTMLElement | string;
   mode?: "local" | "remote";
-  socket?: any;
+  url?: string;
 }
 
 export function initDevTools(options: BitDevToolsOptions = {}) {
-  const { mode = "local", socket } = options;
+  const { mode = "local", url } = options;
   let containerEl: HTMLElement;
+
+  let isAutoCreated = false;
 
   if (typeof options.container === "string") {
     const el = document.querySelector<HTMLElement>(options.container);
@@ -31,22 +33,33 @@ export function initDevTools(options: BitDevToolsOptions = {}) {
     containerEl.style.overflowY = "auto";
     containerEl.style.boxShadow = "0 10px 25px rgba(0,0,0,0.1)";
     document.body.appendChild(containerEl);
+    isAutoCreated = true;
   }
+
+  let adapterInstance: any;
 
   if (mode === "local") {
     console.log("[bit-form] DevTools iniciado em modo Local.");
-    return setupLocalDevTools(containerEl);
-  }
-
-  if (mode === "remote") {
-    if (!socket) {
-      throw new Error(
-        "[bit-form] Você precisa passar a instância do 'socket' para usar o modo remote.",
-      );
-    }
+    adapterInstance = setupLocalDevTools(containerEl);
+  } else if (mode === "remote") {
     console.log("[bit-form] DevTools iniciado em modo Remote.");
-    return setupRemoteDevTools(containerEl, socket);
+    adapterInstance = setupRemoteDevTools(containerEl, url);
+  } else {
+    throw new Error(`[bit-form] Modo DevTools inválido: ${mode}`);
   }
 
-  throw new Error(`[bit-form] Modo DevTools inválido: ${mode}`);
+  return {
+    ...adapterInstance,
+    destroy: () => {
+      if (adapterInstance && typeof adapterInstance.destroy === "function") {
+        adapterInstance.destroy();
+      }
+
+      if (isAutoCreated && containerEl.parentNode) {
+        containerEl.parentNode.removeChild(containerEl);
+      } else {
+        containerEl.innerHTML = "";
+      }
+    },
+  };
 }

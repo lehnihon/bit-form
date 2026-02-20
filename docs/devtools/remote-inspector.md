@@ -14,7 +14,7 @@ Run the following command in your terminal:
 npx bit-form devtools
 ```
 
-By default, this will start the server on port `8090` and output a URL for you to open the dashboard in your browser (e.g., `http://localhost:8090`).
+By default, this will start the server on port `3000` and output a URL for you to open the dashboard in your browser (e.g., `http://localhost:3000`).
 
 You can customize the port if needed:
 
@@ -33,12 +33,15 @@ import { BitStore } from "bit-form";
 
 const store = new BitStore({
   initialValues: { username: "", password: "" },
-  // Enable the remote connection
   enableRemoteDevTools: true,
-  // Optional: defaults to ws://localhost:8090
-  devToolsUrl: "ws://localhost:8090",
+  devTools: {
+    mode: "remote",
+    url: "http://localhost:3000",
+  },
 });
 ```
+
+If you omit the url property, Bit-Form will automatically fallback to ws://localhost:3000
 
 ## 3. What You Can Do
 

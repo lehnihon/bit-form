@@ -18,6 +18,7 @@ import { BitArrayManager } from "./array-manager";
 import { BitComputedManager } from "./computed-manager";
 import { BitValidationManager } from "./validation-manager";
 import { BitLifecycleManager } from "./lifecycle-manager";
+import { BitDevtoolsManager } from "./devtools-manager";
 
 export class BitStore<T extends object = any>
   implements BitStoreAdapter<T>, BitValidationAdapter<T>, BitLifecycleAdapter<T>
@@ -32,6 +33,7 @@ export class BitStore<T extends object = any>
   public computeds: BitComputedManager<T>;
   public lifecycle: BitLifecycleManager<T>;
   public arrays: BitArrayManager<T>;
+  public devtools: BitDevtoolsManager<T>;
   public masks: Record<string, BitMask>;
   public storeId: string;
 
@@ -52,6 +54,7 @@ export class BitStore<T extends object = any>
     this.validator = new BitValidationManager<T>(this);
     this.arrays = new BitArrayManager<T>(this);
     this.lifecycle = new BitLifecycleManager<T>(this);
+    this.devtools = new BitDevtoolsManager<T>(this);
 
     const initialValues = deepClone(this.config.initialValues);
     const valuesWithComputeds = this.computeds.apply(initialValues);

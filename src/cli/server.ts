@@ -83,7 +83,6 @@ function getDashboardHTML(port: number) {
   <meta charset="UTF-8">
   <title>🛠 Bit-Form Remote Inspector</title>
   <style>
-    /* 1. Reset e Box-Sizing (Essencial para não estourar) */
     *, *::before, *::after { 
       box-sizing: border-box; 
     }
@@ -92,25 +91,23 @@ function getDashboardHTML(port: number) {
       background: #0f172a; 
       margin: 0; 
       padding: 0; 
-      width: 100%; /* Trocado de 100vw para 100% */
+      width: 100%;
       height: 100%; 
-      overflow-x: hidden; /* Garante que nunca haverá scroll horizontal */
+      overflow-x: hidden;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     }
 
-    /* 2. Mensagem de Loading centralizada */
     .status-container { 
       position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); 
       text-align: center; color: #64748b; z-index: 1;
     }
 
-    /* 3. MÁGICA FULLSCREEN: Ajustada para 100% */
     body.has-panel .bit-devtools-panel {
       display: flex !important;
       flex-direction: column !important;
       position: fixed !important;
       inset: 0 !important;
-      width: 100% !important; /* Trocado de 100vw para 100% */
+      width: 100% !important;
       height: 100% !important;
       max-width: 100% !important;
       max-height: 100% !important;
@@ -122,14 +119,12 @@ function getDashboardHTML(port: number) {
       z-index: 9999 !important;
     }
 
-    /* Ajuste fino para o conteúdo interno */
     body.has-panel .bit-store-block {
       border-bottom: 1px solid #1e293b !important;
       padding: 20px !important;
-      width: 100%; /* Garante que o bloco respeite o pai */
+      width: 100%;
     }
 
-    /* 4. Esconde o botão original */
     .bit-devtools-trigger {
       display: none !important;
     }
@@ -146,37 +141,25 @@ function getDashboardHTML(port: number) {
   <script type="module">
     import { initDevTools } from "/dist/devtools/index.js";
 
-    const ws = new WebSocket("ws://localhost:${port}");
+    document.body.classList.add('connected');
     
-    ws.onopen = () => {
-      document.body.classList.add('connected');
+    initDevTools({
+      mode: "remote",
+      url: "ws://localhost:${port}",
+      container: document.body
+    });
+
+    const observer = new MutationObserver(() => {
+      const panel = document.querySelector('.bit-devtools-panel');
+      const btn = document.querySelector('.bit-devtools-trigger');
       
-      const devtools = initDevTools({
-        mode: "remote",
-        socket: ws,
-        container: document.body,
-        onUndo: (id) => ws.send(JSON.stringify({ type: 'ACTION', payload: { storeId: id, action: 'undo' } })),
-        onRedo: (id) => ws.send(JSON.stringify({ type: 'ACTION', payload: { storeId: id, action: 'redo' } })),
-        onReset: (id) => ws.send(JSON.stringify({ type: 'ACTION', payload: { storeId: id, action: 'reset' } })),
-      });
+      if (btn && !panel) {
+        btn.click();
+        document.body.classList.add('has-panel');
+      }
+    });
 
-      ws.addEventListener('message', (event) => {
-        const data = JSON.parse(event.data);
-        if (data.type === 'STATE_UPDATE') {
-          // 1. Injeta os dados na UI
-          devtools.updateState(data.payload);
-
-          // 2. Força a abertura se ainda não estiver aberto
-          const panel = document.querySelector('.bit-devtools-panel');
-          if (!panel) {
-            // Buscamos o botão pelo seletor que você criou no UI.ts
-            const btn = document.querySelector('.bit-devtools-trigger');
-            if (btn) btn.click();
-            document.body.classList.add('has-panel');
-          }
-        }
-      });
-    };
+    observer.observe(document.body, { childList: true, subtree: true });
   </script>
 </body>
 </html>`;

@@ -11,7 +11,8 @@
   "include": [
     "src/index.ts",
     "src/core/**/*.ts",
-    "src/resolvers/**/*.ts"
+    "src/resolvers/**/*.ts",
+    "src/devtools/**/*.ts"
   ],
   "exclude": [
     "**/*.test.ts"

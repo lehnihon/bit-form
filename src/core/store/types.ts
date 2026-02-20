@@ -31,6 +31,12 @@ export interface BitFieldConfig<T extends object = any> {
   asyncValidateDelay?: number;
 }
 
+export interface DevToolsOptions {
+  enabled?: boolean;
+  mode?: "local" | "remote";
+  url?: string;
+}
+
 export interface BitConfig<T extends object = any> {
   name?: string;
   initialValues?: T;
@@ -42,6 +48,7 @@ export interface BitConfig<T extends object = any> {
   masks?: Record<string, BitMask>;
   enableHistory?: boolean;
   fields?: Record<string, BitFieldConfig<T>>;
+  devTools?: boolean | DevToolsOptions;
 }
 
 export type BitResolvedConfig<T extends object> = BitConfig<T> & {
