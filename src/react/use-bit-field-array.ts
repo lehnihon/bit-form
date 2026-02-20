@@ -78,6 +78,14 @@ export function useBitFieldArray<T = any>(path: string) {
         });
         store.swapItems(path, indexA, indexB);
       },
+      replace: (items: T[]) => {
+        setIds(items.map(generateId));
+        store.setField(path, items);
+      },
+      clear: () => {
+        setIds([]);
+        store.setField(path, []);
+      },
     }),
     [store, path],
   );

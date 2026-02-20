@@ -67,5 +67,14 @@ export function injectBitFieldArray<T = any>(path: string) {
       });
       store.moveItem(path, f, t);
     },
+    replace: (items: T[]) => {
+      idsSig.set(items.map(() => generateId()));
+      store.setField(path, items);
+    },
+
+    clear: () => {
+      idsSig.set([]);
+      store.setField(path, []);
+    },
   };
 }
