@@ -36,7 +36,7 @@ const store = new BitStore({
   enableRemoteDevTools: true,
   devTools: {
     mode: "remote",
-    url: "http://localhost:3000",
+    url: "ws://localhost:3000",
   },
 });
 ```
