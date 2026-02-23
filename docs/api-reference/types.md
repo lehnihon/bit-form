@@ -1,67 +1,209 @@
 # TypeScript Reference
 
-Bit-Form is written in TypeScript and exports comprehensive types to ensure maximum type safety across your forms.
+Bit-Form is written in TypeScript and ships first-class types for all core primitives. This section documents the main types you will interact with when using the core store.
 
-## `BitConfig<T>`
+---
 
-The primary configuration object passed when creating a new `BitStore`.
+## `BitErrors<T>`
 
-```typescript
-interface BitConfig<T = Record<string, any>> {
-  // Required
-  initialValues: T;
+Represents the map of validation errors for the form.
 
-  // Optional Validation
-  resolver?: (
-    values: T,
-  ) => Record<string, string> | Promise<Record<string, string>>;
-  validationDelay?: number; // Default: 0
-
-  // Optional Global Settings
-  enableHistory?: boolean; // Default: false
-  historyLimit?: number; // Default: 15
-  enableRemoteDevTools?: boolean; // Default: false
-  devToolsUrl?: string;
-
-  // Optional Computations & Field Configs
-  computed?: Record<string, (values: T) => any>;
-  fields?: Record<string, BitFieldConfig<T>>;
-}
+```ts
+type BitErrors<T> = { [key: string]: string | undefined };
 ```
+
+Each key is a field path (e.g. `"email"`, `"address.zip"`), and the value is either a string error message or `undefined` when there is no error.
+
+---
+
+## `BitTouched<T>`
+
+Records which fields have been interacted with (typically via `blurField`).
+
+```ts
+type BitTouched<T> = { [key: string]: boolean | undefined };
+```
+
+If a key is `true`, the field has been "touched"; missing keys or `undefined` are interpreted as not touched.
+
+---
 
 ## `BitState<T>`
 
-The object representing the exact current state of the store.
+Represents the full state owned by a `BitStore<T>`.
 
-```typescript
+```ts
 interface BitState<T> {
   values: T;
-  errors: Record<string, string>;
-  touched: Record<string, boolean>;
-  isValid: boolean;
-  isDirty: boolean;
-  isSubmitting: boolean;
+  errors: BitErrors<T>;
+  touched: BitTouched<T>;
   isValidating: Record<string, boolean>;
+  isValid: boolean;
+  isSubmitting: boolean;
+  isDirty: boolean;
 }
 ```
 
+- **`values`** — the current values object for your form.
+- **`errors`** — map of field errors (see `BitErrors<T>`).
+- **`touched`** — map of which fields were interacted with.
+- **`isValidating`** — flags for fields that are currently running async validation.
+- **`isValid`** — `true` when there are no error entries.
+- **`isSubmitting`** — `true` while a submission is in progress.
+- **`isDirty`** — `true` if `values` differs from `initialValues`.
+
+---
+
+## `ValidatorFn<T>`
+
+Signature for custom resolvers used in `BitConfig.resolver`.
+
+```ts
+type ValidatorFn<T> = (
+  values: T,
+  options?: { scopeFields?: string[] },
+) => Promise<BitErrors<T>> | BitErrors<T>;
+```
+
+- You can return errors synchronously or as a Promise.
+- `scopeFields` is used internally when validating a subset of fields.
+
+---
+
+## `BitComputedFn<T>`
+
+Represents a function that derives a computed value from the current `values`.
+
+```ts
+type BitComputedFn<T> = (values: T) => any;
+```
+
+Used in the `BitConfig.computed` map.
+
+---
+
+## `BitTransformFn<T>`
+
+Represents a transformation applied to a field before submission.
+
+```ts
+type BitTransformFn<T> = (value: any, allValues: T) => any;
+```
+
+Used in the `BitConfig.transform` map (per-field transforms).
+
+---
+
 ## `BitFieldConfig<T>`
 
-The configuration object for individual fields, used in `registerConfig` or the `fields` property of `BitConfig`.
+Configuration for an individual field, used either in `BitConfig.fields` or at runtime via `store.registerConfig`.
 
-```typescript
-interface BitFieldConfig<T> {
-  // Formatting & Masks
-  mask?: string | BitMaskPattern | ReturnType<typeof createCurrencyMask>;
-  transform?: (value: any) => any; // Applied before submission
-
+```ts
+interface BitFieldConfig<T extends object = any> {
   // Dependencies & Conditional Logic
-  dependsOn?: string[]; // Array of field paths to watch
+  dependsOn?: string[];
   showIf?: (values: T) => boolean;
   requiredIf?: (values: T) => boolean;
 
   // Asynchronous Validation
-  asyncValidate?: (value: any, allValues: T) => Promise<string | null>;
-  asyncValidateDelay?: number; // Default: 300
+  asyncValidate?: (value: any, values: T) => Promise<string | null | undefined>;
+  asyncValidateDelay?: number;
 }
 ```
+
+- **`dependsOn`** — list of field paths that influence visibility/requirement logic.
+- **`showIf`** — returns `true` when the field should be visible.
+- **`requiredIf`** — returns `true` when the field should be considered required.
+- **`asyncValidate`** — field-level async validation; should resolve to an error message or `null`/`undefined` when valid.
+- **`asyncValidateDelay`** — debounce delay in milliseconds for `asyncValidate`.
+
+---
+
+## `DevToolsOptions`
+
+Options for enabling DevTools in the config.
+
+```ts
+interface DevToolsOptions {
+  enabled?: boolean;
+  mode?: "local" | "remote";
+  url?: string;
+}
+```
+
+These options are used via the `BitConfig.devTools` property.
+
+---
+
+## `BitConfig<T>`
+
+Primary configuration object passed to the `BitStore` constructor.
+
+```ts
+interface BitConfig<T extends object = any> {
+  // Identification
+  name?: string;
+
+  // Values
+  initialValues?: T;
+
+  // Validation
+  resolver?: ValidatorFn<T>;
+  validationDelay?: number;
+
+  // Computed & scopes
+  computed?: Record<string, BitComputedFn<T>>;
+  scopes?: Record<string, string[]>;
+
+  // Transforms
+  transform?: Partial<Record<string, BitTransformFn<T>>>;
+
+  // Masks
+  masks?: Record<string, BitMask>;
+
+  // History
+  enableHistory?: boolean;
+
+  // Per-field configs
+  fields?: Record<string, BitFieldConfig<T>>;
+
+  // DevTools
+  devTools?: boolean | DevToolsOptions;
+}
+```
+
+Key points:
+
+- `initialValues` is optional at the type level, but the resolved config will always have a non-null `initialValues`.
+- `scopes` allows grouping fields (e.g. by wizard step) for per-scope validation and status.
+- `transform` lets you normalize values before `submit` calls your handler.
+- `masks` lets you override or extend the global mask registry.
+- `devTools` can be a simple boolean or an object with fine-grained options.
+
+---
+
+## `BitResolvedConfig<T>`
+
+Internal form of the configuration, exposing a non-optional `initialValues`.
+
+```ts
+type BitResolvedConfig<T extends object> = BitConfig<T> & {
+  initialValues: T;
+};
+```
+
+You will rarely use this directly, but it is returned by `store.getConfig()`.
+
+---
+
+## `BitFieldOptions`
+
+Additional options for field hooks/composables in framework integrations.
+
+```ts
+interface BitFieldOptions {
+  mask?: BitMask | string;
+}
+```
+
+This is typically used at the adapter layer (e.g. `useBitField("price", { mask: "currency" })`).
