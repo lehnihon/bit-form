@@ -7,7 +7,7 @@ const generateId = () => Math.random().toString(36).substring(2, 9);
 export function injectBitFieldArray<T = any>(path: string) {
   const store = inject(BIT_STORE_TOKEN);
   const destroyRef = inject(DestroyRef);
-
+          
   const getRaw = () => {
     const val = getDeepValue(store.getState().values, path);
     return Array.isArray(val) ? (val as T[]) : [];
