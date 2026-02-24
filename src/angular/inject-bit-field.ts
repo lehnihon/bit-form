@@ -1,12 +1,18 @@
 import { inject, DestroyRef, computed, signal } from "@angular/core";
 import { BIT_STORE_TOKEN } from "./provider";
-import { BitFieldConfig, BitFieldOptions, getDeepValue } from "../core";
+import {
+  BitFieldConfig,
+  BitFieldOptions,
+  getDeepValue,
+  BitPath,
+  BitPathValue,
+} from "../core";
 
-export function injectBitField<TValue = any, TForm extends object = any>(
-  path: string,
-  config?: BitFieldConfig<TForm>,
-  options?: BitFieldOptions,
-) {
+export function injectBitField<
+  TValue = any,
+  TForm extends object = any,
+  P extends BitPath<TForm> = BitPath<TForm>,
+>(path: P, config?: BitFieldConfig<TForm>, options?: BitFieldOptions) {
   const store = inject(BIT_STORE_TOKEN);
 
   const stateSignal = signal(store.getState());
@@ -18,16 +24,20 @@ export function injectBitField<TValue = any, TForm extends object = any>(
   inject(DestroyRef).onDestroy(() => {
     unsubscribe();
     if (store.unregisterField) {
-      store.unregisterField(path);
+      store.unregisterField(path as string);
     }
   });
 
   if (config) {
-    store.registerConfig(path, config as any);
+    store.registerConfig(path as string, config as any);
   }
 
   const value = computed(
-    () => getDeepValue(stateSignal().values, path) as TValue,
+    () =>
+      getDeepValue(
+        stateSignal().values,
+        path as string,
+      ) as BitPathValue<TForm, P>,
   );
   const error = computed(
     () => (stateSignal().errors as Record<string, any>)[path],

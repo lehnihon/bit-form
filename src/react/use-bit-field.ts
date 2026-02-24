@@ -1,14 +1,17 @@
 import { useMemo, useCallback } from "react";
 import { useBitFieldBase } from "./use-bit-field-base";
-import { BitFieldOptions } from "../core";
+import { BitFieldOptions, BitPath, BitPathValue } from "../core";
 
-export function useBitField<T = any>(path: string, options?: BitFieldOptions) {
+export function useBitField<
+  TForm extends object = any,
+  P extends BitPath<TForm> = BitPath<TForm>,
+>(path: P, options?: BitFieldOptions) {
   const {
     fieldState,
     setValue: rawSetValue,
     setBlur,
     store,
-  } = useBitFieldBase<T>(path);
+  } = useBitFieldBase<BitPathValue<TForm, P>, TForm, P>(path);
 
   const resolvedMask = useMemo(() => {
     const maskOption = options?.mask;
@@ -40,7 +43,7 @@ export function useBitField<T = any>(path: string, options?: BitFieldOptions) {
   const { isHidden, isRequired, value, error, touched } = fieldState;
 
   return {
-    value: value as T,
+    value: value as BitPathValue<TForm, P>,
     displayValue,
     error: touched ? error : undefined,
     touched: touched,
