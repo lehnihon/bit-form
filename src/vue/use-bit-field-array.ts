@@ -5,6 +5,7 @@ import {
   BitArrayPath,
   BitPathValue,
   BitArrayItem,
+  BitPath,
 } from "../core";
 
 const generateId = () => Math.random().toString(36).substring(2, 9);
@@ -93,11 +94,11 @@ export function useBitFieldArray<
     },
     replace: (items: Item[]) => {
       ids.value = items.map(generateId);
-      store.setField(path, items);
+      store.setField(path as unknown as BitPath<TForm>, items as any);
     },
     clear: () => {
       ids.value = [];
-      store.setField(path, []);
+      store.setField(path as unknown as BitPath<TForm>, [] as any);
     },
   };
 }

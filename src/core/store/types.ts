@@ -133,9 +133,12 @@ export type BitPathValue<T, P extends string> =
         : never;
 
 // Filters BitPath<T> to only those paths that resolve to array types.
-export type BitArrayPath<T> = BitPath<T> extends infer P extends string
-  ? BitPathValue<T, P> extends readonly any[]
-    ? P
+// Distributive over union so each path is checked individually.
+export type BitArrayPath<T> = BitPath<T> extends infer P
+  ? P extends string
+    ? BitPathValue<T, P> extends readonly any[]
+      ? P
+      : never
     : never
   : never;
 

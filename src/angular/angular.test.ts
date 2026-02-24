@@ -22,7 +22,7 @@ class HostComponent {
   form = injectBitForm<MyForm>();
   userName = injectBitField<string>("user.name");
   salary = injectBitField<number>("salary", undefined, { mask: "brl" });
-  list = injectBitFieldArray<string>("items");
+  list = injectBitFieldArray<MyForm, "items">("items");
   bonusValue = injectBitField<number>("bonusValue");
 }
 

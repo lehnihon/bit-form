@@ -1,6 +1,12 @@
 import { DestroyRef, signal, computed, inject, untracked } from "@angular/core";
 import { BIT_STORE_TOKEN } from "./provider";
-import { getDeepValue, BitArrayPath, BitPathValue, BitArrayItem } from "../core";
+import {
+  getDeepValue,
+  BitArrayPath,
+  BitPathValue,
+  BitArrayItem,
+  BitPath,
+} from "../core";
 
 const generateId = () => Math.random().toString(36).substring(2, 9);
 
@@ -77,12 +83,12 @@ export function injectBitFieldArray<
     },
     replace: (items: BitArrayItem<BitPathValue<TForm, P>>[]) => {
       idsSig.set(items.map(() => generateId()));
-      store.setField(path, items);
+      store.setField(path as unknown as BitPath<TForm>, items as any);
     },
 
     clear: () => {
       idsSig.set([]);
-      store.setField(path, []);
+      store.setField(path as unknown as BitPath<TForm>, [] as any);
     },
   };
 }

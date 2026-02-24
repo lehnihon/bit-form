@@ -9,7 +9,7 @@ export function useBitFieldBase<
 >(path: P, config?: BitFieldConfig<TForm>) {
   const store = useBitStore<TForm>();
   const lastState = useRef<{
-    value: TValue;
+    value: BitPathValue<TForm, P>;
     error: any;
     touched: boolean;
     isHidden: boolean;
