@@ -1,12 +1,13 @@
 import { useCallback, useSyncExternalStore, useRef, useEffect } from "react";
 import { useBitStore } from "./context";
-import { getDeepValue, BitFieldConfig } from "../core";
+import { getDeepValue, BitFieldConfig, BitPath, BitPathValue } from "../core";
 
-export function useBitFieldBase<TValue = any, TForm extends object = any>(
-  path: string,
-  config?: BitFieldConfig<TForm>,
-) {
-  const store = useBitStore();
+export function useBitFieldBase<
+  TValue = any,
+  TForm extends object = any,
+  P extends BitPath<TForm> = BitPath<TForm>,
+>(path: P, config?: BitFieldConfig<TForm>) {
+  const store = useBitStore<TForm>();
   const lastState = useRef<{
     value: TValue;
     error: any;
@@ -29,7 +30,10 @@ export function useBitFieldBase<TValue = any, TForm extends object = any>(
 
   const getSnapshot = useCallback(() => {
     const state = store.getState();
-    const value = getDeepValue(state.values, path) as TValue;
+    const value = getDeepValue(
+      state.values,
+      path as string,
+    ) as BitPathValue<TForm, P>;
     const error = state.errors[path];
     const touched = !!state.touched[path];
 
@@ -60,7 +64,7 @@ export function useBitFieldBase<TValue = any, TForm extends object = any>(
   const fieldState = useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
 
   const setValue = useCallback(
-    (val: TValue) => store.setField(path, val),
+    (val: BitPathValue<TForm, P>) => store.setField(path, val),
     [store, path],
   );
 

@@ -1,19 +1,32 @@
 import { ref, computed, onUnmounted } from "vue";
 import { useBitStore } from "./context";
-import { getDeepValue } from "../core";
+import {
+  getDeepValue,
+  BitArrayPath,
+  BitPathValue,
+  BitArrayItem,
+} from "../core";
 
 const generateId = () => Math.random().toString(36).substring(2, 9);
 
-export function useBitFieldArray<T = any>(path: string) {
-  const store = useBitStore();
+export function useBitFieldArray<
+  TForm extends object = any,
+  P extends BitArrayPath<TForm> = BitArrayPath<TForm>,
+>(path: P) {
+  const store = useBitStore<TForm>();
 
-  const getSnapshot = () => {
-    const val = getDeepValue(store.getState().values, path);
-    return Array.isArray(val) ? (val as T[]) : [];
+  type Item = BitArrayItem<BitPathValue<TForm, P>>;
+
+  const getSnapshot = (): Item[] => {
+    const val = getDeepValue(
+      store.getState().values,
+      path as string,
+    ) as BitPathValue<TForm, P> | undefined;
+    return Array.isArray(val) ? (val as Item[]) : [];
   };
 
   const initialValues = getSnapshot();
-  const values = ref<T[]>(initialValues) as { value: T[] };
+  const values = ref<Item[]>(initialValues);
   const ids = ref<string[]>(initialValues.map(generateId));
 
   const unsubscribe = store.subscribe(() => {
@@ -35,7 +48,7 @@ export function useBitFieldArray<T = any>(path: string) {
   onUnmounted(() => {
     unsubscribe();
     if (store.unregisterPrefix) {
-      store.unregisterPrefix(`${path}.`);
+      store.unregisterPrefix(`${path as string}.`);
     }
   });
 
@@ -49,15 +62,15 @@ export function useBitFieldArray<T = any>(path: string) {
 
   return {
     fields,
-    append: (val: T) => {
+    append: (val: Item) => {
       ids.value.push(generateId());
       store.pushItem(path, val);
     },
-    prepend: (val: T) => {
+    prepend: (val: Item) => {
       ids.value.unshift(generateId());
       store.prependItem(path, val);
     },
-    insert: (index: number, val: T) => {
+    insert: (index: number, val: Item) => {
       ids.value.splice(index, 0, generateId());
       store.insertItem(path, index, val);
     },
@@ -78,7 +91,7 @@ export function useBitFieldArray<T = any>(path: string) {
       ids.value = currentIds;
       store.swapItems(path, a, b);
     },
-    replace: (items: T[]) => {
+    replace: (items: Item[]) => {
       ids.value = items.map(generateId);
       store.setField(path, items);
     },

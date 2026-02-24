@@ -20,6 +20,10 @@ export type {
   ValidatorFn,
   BitComputedFn,
   BitTransformFn,
+  BitPath,
+  BitPathValue,
+  BitArrayPath,
+  BitArrayItem,
 } from "./store/types";
 
 export { bitMasks } from "./mask/index";

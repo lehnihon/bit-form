@@ -6,17 +6,30 @@ import {
   useEffect,
 } from "react";
 import { useBitStore } from "./context";
-import { getDeepValue } from "../core";
+import {
+  getDeepValue,
+  BitArrayPath,
+  BitPathValue,
+  BitArrayItem,
+  BitPath,
+} from "../core";
 
 const generateId = () => Math.random().toString(36).substring(2, 9);
 
-export function useBitFieldArray<T = any>(path: string) {
-  const store = useBitStore();
+export function useBitFieldArray<
+  TForm extends object = any,
+  P extends BitArrayPath<TForm> = BitArrayPath<TForm>,
+>(path: P) {
+  const store = useBitStore<TForm>();
+
+  type Item = BitArrayItem<BitPathValue<TForm, P>>;
 
   const getSnapshot = useCallback(() => {
     const state = store.getState();
-    const value = getDeepValue(state.values, path);
-    return Array.isArray(value) ? value : [];
+    const value = getDeepValue(state.values, path as string) as
+      | BitPathValue<TForm, P>
+      | undefined;
+    return Array.isArray(value) ? (value as Item[]) : [];
   }, [store, path]);
 
   const data = useSyncExternalStore(
@@ -25,7 +38,9 @@ export function useBitFieldArray<T = any>(path: string) {
     getSnapshot,
   );
 
-  const [ids, setIds] = useState<string[]>(() => data.map(generateId));
+  const [ids, setIds] = useState<string[]>(() =>
+    (data as Item[]).map(generateId),
+  );
 
   useEffect(() => {
     if (data.length !== ids.length) {
@@ -41,15 +56,15 @@ export function useBitFieldArray<T = any>(path: string) {
 
   const methods = useMemo(
     () => ({
-      append: (value: T) => {
+      append: (value: Item) => {
         setIds((prev) => [...prev, generateId()]);
         store.pushItem(path, value);
       },
-      prepend: (value: T) => {
+      prepend: (value: Item) => {
         setIds((prev) => [generateId(), ...prev]);
         store.prependItem(path, value);
       },
-      insert: (index: number, value: T) => {
+      insert: (index: number, value: Item) => {
         setIds((prev) => {
           const newIds = [...prev];
           newIds.splice(index, 0, generateId());
@@ -78,13 +93,13 @@ export function useBitFieldArray<T = any>(path: string) {
         });
         store.swapItems(path, indexA, indexB);
       },
-      replace: (items: T[]) => {
+      replace: (items: Item[]) => {
         setIds(items.map(generateId));
-        store.setField(path, items);
+        store.setField(path as unknown as BitPath<TForm>, items as any);
       },
       clear: () => {
         setIds([]);
-        store.setField(path, []);
+        store.setField(path as unknown as BitPath<TForm>, [] as any);
       },
     }),
     [store, path],
@@ -92,7 +107,7 @@ export function useBitFieldArray<T = any>(path: string) {
 
   const fields = useMemo(
     () =>
-      data.map((item: T, index: number) => ({
+      (data as Item[]).map((item: Item, index: number) => ({
         key: ids[index] || `temp-${index}`,
         value: item,
         index,

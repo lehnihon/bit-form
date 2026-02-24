@@ -10,6 +10,10 @@ import {
   BitStoreAdapter,
   BitValidationAdapter,
   BitLifecycleAdapter,
+  BitPath,
+  BitPathValue,
+  BitArrayPath,
+  BitArrayItem,
 } from "./types";
 import { deepClone, deepEqual, getDeepValue } from "./utils";
 import { BitDependencyManager } from "./dependency-manager";
@@ -106,7 +110,7 @@ export class BitStore<T extends object = any>
     return this.state.isDirty;
   }
 
-  unregisterField(path: string) {
+  unregisterField<P extends BitPath<T>>(path: P) {
     this.deps.unregister(path);
 
     const newErrors = { ...this.state.errors };
@@ -142,11 +146,11 @@ export class BitStore<T extends object = any>
     }
   }
 
-  isHidden(path: string): boolean {
+  isHidden<P extends BitPath<T>>(path: P): boolean {
     return this.deps.isHidden(path);
   }
 
-  isRequired(path: string): boolean {
+  isRequired<P extends BitPath<T>>(path: P): boolean {
     return this.deps.isRequired(path, this.state.values);
   }
 
@@ -155,7 +159,10 @@ export class BitStore<T extends object = any>
     return () => this.listeners.delete(listener);
   }
 
-  watch(path: string, callback: (value: any) => void) {
+  watch<P extends BitPath<T>>(
+    path: P,
+    callback: (value: BitPathValue<T, P>) => void,
+  ) {
     let lastValue = deepClone(getDeepValue(this.state.values, path));
     return this.subscribe(() => {
       const newValue = getDeepValue(this.state.values, path);
@@ -166,7 +173,7 @@ export class BitStore<T extends object = any>
     });
   }
 
-  setField(path: string, value: any) {
+  setField<P extends BitPath<T>>(path: P, value: BitPathValue<T, P>) {
     const { visibilitiesChanged } = this.lifecycle.updateField(path, value);
 
     if (!this.config.resolver || visibilitiesChanged) {
@@ -174,7 +181,7 @@ export class BitStore<T extends object = any>
     }
   }
 
-  blurField(path: string) {
+  blurField<P extends BitPath<T>>(path: P) {
     this.internalSaveSnapshot();
 
     if (!this.state.touched[path as keyof typeof this.state.touched]) {
@@ -223,22 +230,36 @@ export class BitStore<T extends object = any>
     this.masks[name] = mask;
   }
 
-  pushItem(path: string, value: any) {
+  pushItem<P extends BitArrayPath<T>>(
+    path: P,
+    value: BitArrayItem<BitPathValue<T, P>>,
+  ) {
     this.arrays.pushItem(path, value);
   }
-  prependItem(path: string, value: any) {
+  prependItem<P extends BitArrayPath<T>>(
+    path: P,
+    value: BitArrayItem<BitPathValue<T, P>>,
+  ) {
     this.arrays.prependItem(path, value);
   }
-  insertItem(path: string, index: number, value: any) {
+  insertItem<P extends BitArrayPath<T>>(
+    path: P,
+    index: number,
+    value: BitArrayItem<BitPathValue<T, P>>,
+  ) {
     this.arrays.insertItem(path, index, value);
   }
-  removeItem(path: string, index: number) {
+  removeItem<P extends BitArrayPath<T>>(path: P, index: number) {
     this.arrays.removeItem(path, index);
   }
-  swapItems(path: string, indexA: number, indexB: number) {
+  swapItems<P extends BitArrayPath<T>>(
+    path: P,
+    indexA: number,
+    indexB: number,
+  ) {
     this.arrays.swapItems(path, indexA, indexB);
   }
-  moveItem(path: string, from: number, to: number) {
+  moveItem<P extends BitArrayPath<T>>(path: P, from: number, to: number) {
     this.arrays.moveItem(path, from, to);
   }
 

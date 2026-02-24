@@ -1,19 +1,27 @@
 import { DestroyRef, signal, computed, inject, untracked } from "@angular/core";
 import { BIT_STORE_TOKEN } from "./provider";
-import { getDeepValue } from "../core";
+import { getDeepValue, BitArrayPath, BitPathValue, BitArrayItem } from "../core";
 
 const generateId = () => Math.random().toString(36).substring(2, 9);
 
-export function injectBitFieldArray<T = any>(path: string) {
+export function injectBitFieldArray<
+  TForm extends object = any,
+  P extends BitArrayPath<TForm> = BitArrayPath<TForm>,
+>(path: P) {
   const store = inject(BIT_STORE_TOKEN);
   const destroyRef = inject(DestroyRef);
           
   const getRaw = () => {
-    const val = getDeepValue(store.getState().values, path);
-    return Array.isArray(val) ? (val as T[]) : [];
+    const val = getDeepValue(
+      store.getState().values,
+      path as string,
+    ) as BitPathValue<TForm, P>;
+    return Array.isArray(val)
+      ? (val as BitArrayItem<BitPathValue<TForm, P>>[])
+      : [];
   };
 
-  const valuesSig = signal<T[]>(getRaw());
+  const valuesSig = signal<BitArrayItem<BitPathValue<TForm, P>>[]>(getRaw());
   const idsSig = signal<string[]>(valuesSig().map(generateId));
 
   const unsub = store.subscribe(() => {
@@ -35,7 +43,7 @@ export function injectBitFieldArray<T = any>(path: string) {
 
   destroyRef.onDestroy(() => {
     unsub();
-    if (store.unregisterPrefix) store.unregisterPrefix(`${path}.`);
+    if (store.unregisterPrefix) store.unregisterPrefix(`${path as string}.`);
   });
 
   return {
@@ -46,11 +54,11 @@ export function injectBitFieldArray<T = any>(path: string) {
         index: i,
       })),
     ),
-    append: (v: T) => {
+    append: (v: BitArrayItem<BitPathValue<TForm, P>>) => {
       idsSig.update((ids) => [...ids, generateId()]);
       store.pushItem(path, v);
     },
-    prepend: (v: T) => {
+    prepend: (v: BitArrayItem<BitPathValue<TForm, P>>) => {
       idsSig.update((ids) => [generateId(), ...ids]);
       store.prependItem(path, v);
     },
@@ -67,7 +75,7 @@ export function injectBitFieldArray<T = any>(path: string) {
       });
       store.moveItem(path, f, t);
     },
-    replace: (items: T[]) => {
+    replace: (items: BitArrayItem<BitPathValue<TForm, P>>[]) => {
       idsSig.set(items.map(() => generateId()));
       store.setField(path, items);
     },

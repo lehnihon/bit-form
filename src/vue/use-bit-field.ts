@@ -2,15 +2,15 @@ import { computed, onUnmounted, shallowRef } from "vue";
 import { useBitStore } from "./context";
 import { BitFieldOptions, BitFieldConfig, getDeepValue } from "../core";
 
-export function useBitField<TValue = any, TForm extends object = any>(
+export function useBitField<TValue = any>(
   path: string,
-  config?: BitFieldConfig<TForm>,
+  config?: BitFieldConfig<any>,
   options?: BitFieldOptions,
 ) {
-  const store = useBitStore();
+  const store = useBitStore<any>();
 
   if (config) {
-    store.registerConfig(path, config as any);
+    store.registerConfig(path as string, config as any);
   }
 
   const resolvedMask = options?.mask
@@ -28,13 +28,13 @@ export function useBitField<TValue = any, TForm extends object = any>(
   onUnmounted(() => {
     unsubscribe();
     if (store.unregisterField) {
-      store.unregisterField(path);
+      store.unregisterField(path as string);
     }
   });
 
-  const rawValue = computed(() => {
-    return getDeepValue(state.value.values, path) as TValue;
-  });
+  const rawValue = computed(
+    () => getDeepValue(state.value.values, path as string) as TValue,
+  );
 
   const displayValue = computed(() => {
     const val = rawValue.value;
