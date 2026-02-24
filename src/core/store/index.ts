@@ -212,10 +212,7 @@ export class BitStore<T extends object = any>
         : (value as any);
     }
 
-    this.internalUpdateState({
-      errors: { ...this.state.errors, ...formattedErrors },
-      isValid: false,
-    });
+    this.setErrors(formattedErrors);
   }
 
   reset() {
