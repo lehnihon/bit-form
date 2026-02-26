@@ -6,6 +6,7 @@ import {
   injectBitField,
   injectBitForm,
   injectBitFieldArray,
+  injectBitStep,
   provideBitStore,
 } from "./index";
 
@@ -164,5 +165,49 @@ describe("Angular Integration (Signals)", () => {
 
     expect(app.userName.invalid()).toBe(true);
     expect(app.userName.error()).toBe("Obrigatório");
+  });
+
+  it("deve rastrear status do step com injectBitStep", () => {
+    const storeWithScopes = new BitStore<MyForm>({
+      initialValues: {
+        user: { name: "" },
+        salary: 0,
+        items: [],
+        hasBonus: false,
+        bonusValue: 0,
+      },
+      scopes: { step1: ["user.name"] },
+    });
+
+    @Component({ standalone: true, template: "" })
+    class StepHostComponent {
+      step = injectBitStep("step1");
+    }
+
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      imports: [StepHostComponent],
+      providers: [provideBitStore(storeWithScopes)],
+    });
+
+    const fixture = TestBed.createComponent(StepHostComponent);
+    const app = fixture.componentInstance;
+    fixture.detectChanges();
+
+    expect(app.step.status().hasErrors).toBe(false);
+    expect(app.step.status().isDirty).toBe(false);
+
+    storeWithScopes.setField("user.name", "Leo");
+    fixture.detectChanges();
+
+    expect(app.step.status().isDirty).toBe(true);
+    expect(app.step.isDirty()).toBe(true);
+
+    storeWithScopes.setError("user.name", "Erro");
+    fixture.detectChanges();
+
+    expect(app.step.status().hasErrors).toBe(true);
+    expect(app.step.status().errors["user.name"]).toBe("Erro");
+    expect(app.step.isValid()).toBe(false);
   });
 });

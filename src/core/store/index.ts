@@ -303,8 +303,23 @@ export class BitStore<T extends object = any>
       const initial = getDeepValue(this.config.initialValues, f);
       return !deepEqual(current, initial);
     });
+    const errors = this.getStepErrors(scopeName);
 
-    return { hasErrors, isDirty };
+    return { hasErrors, isDirty, errors };
+  }
+
+  getStepErrors(scopeName: string): Record<string, string> {
+    const fields = this.config.scopes?.[scopeName] || [];
+    const result: Record<string, string> = {};
+
+    for (const field of fields) {
+      const error = this.state.errors[field as keyof BitErrors<T>];
+      if (error) {
+        result[field] = error;
+      }
+    }
+
+    return result;
   }
 
   isFieldDirty(path: string): boolean {

@@ -1,39 +1,67 @@
-import { signal, DestroyRef, inject } from "@angular/core";
-import { BitStore } from "../core";
+import { signal, computed, DestroyRef, inject } from "@angular/core";
+import { useBitStore } from "./provider";
 
-export function injectBitStep<T extends object>(
-  store: BitStore<T>,
-  scopeName: string,
-) {
+export type StepStatus = {
+  hasErrors: boolean;
+  isDirty: boolean;
+  errors: Record<string, string>;
+};
+
+export type ValidateStepResult = {
+  valid: boolean;
+  errors: Record<string, string>;
+};
+
+function errorsEqual(
+  a: Record<string, string>,
+  b: Record<string, string>,
+): boolean {
+  const keysA = Object.keys(a);
+  const keysB = Object.keys(b);
+  if (keysA.length !== keysB.length) return false;
+  return keysA.every((k) => a[k] === b[k]);
+}
+
+export function injectBitStep(scopeName: string) {
+  const store = useBitStore();
   const initialStatus = store.getStepStatus(scopeName);
-  const hasErrors = signal(initialStatus.hasErrors);
-  const isDirty = signal(initialStatus.isDirty);
+
+  const status = signal<StepStatus>(initialStatus);
 
   const unsubscribe = store.subscribe(() => {
     const newStatus = store.getStepStatus(scopeName);
-    if (newStatus.hasErrors !== hasErrors()) {
-      hasErrors.set(newStatus.hasErrors);
-    }
-    if (newStatus.isDirty !== isDirty()) {
-      isDirty.set(newStatus.isDirty);
+    const current = status();
+    if (
+      newStatus.hasErrors !== current.hasErrors ||
+      newStatus.isDirty !== current.isDirty ||
+      !errorsEqual(newStatus.errors, current.errors)
+    ) {
+      status.set(newStatus);
     }
   });
 
   try {
     const destroyRef = inject(DestroyRef);
-    destroyRef.onDestroy(() => {
-      unsubscribe();
-    });
+    destroyRef.onDestroy(() => unsubscribe());
   } catch {}
 
-  const validate = async () => {
-    return await store.validate({ scope: scopeName });
+  const validateStep = async (): Promise<ValidateStepResult> => {
+    const valid = await store.validate({ scope: scopeName });
+    const errors = store.getStepErrors(scopeName);
+    return { valid, errors };
   };
 
+  const getStepErrors = () => store.getStepErrors(scopeName);
+
+  const isValid = computed(() => !status().hasErrors);
+  const isDirty = computed(() => status().isDirty);
+
   return {
-    hasErrors,
+    status,
+    validateStep,
+    getStepErrors,
+    isValid,
     isDirty,
-    validate,
     unsubscribe,
   };
 }

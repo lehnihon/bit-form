@@ -2,7 +2,12 @@ import { describe, it, expect, vi } from "vitest";
 import { mount } from "@vue/test-utils";
 import { defineComponent, nextTick } from "vue";
 import { BitStore } from "../core";
-import { useBitField, useBitForm, useBitFieldArray } from "./index";
+import {
+  useBitField,
+  useBitForm,
+  useBitFieldArray,
+  useBitStep,
+} from "./index";
 import { BIT_STORE_KEY } from "./context";
 
 describe("Vue Integration", () => {
@@ -162,5 +167,32 @@ describe("Vue Integration", () => {
     await nextTick();
 
     expect(wrapper.vm.form.getValues().count).toBe(0);
+  });
+
+  it("should track step status with useBitStep", async () => {
+    const store = new BitStore({
+      initialValues: { name: "", email: "" },
+      scopes: { step1: ["name", "email"] },
+    });
+
+    const wrapper = createWrapper(store, () => ({
+      step: useBitStep("step1"),
+    }));
+
+    expect(wrapper.vm.step.status.value.hasErrors).toBe(false);
+    expect(wrapper.vm.step.status.value.isDirty).toBe(false);
+
+    store.setField("name", "Leo");
+    await nextTick();
+
+    expect(wrapper.vm.step.status.value.isDirty).toBe(true);
+    expect(wrapper.vm.step.isDirty.value).toBe(true);
+
+    store.setError("name", "Erro");
+    await nextTick();
+
+    expect(wrapper.vm.step.status.value.hasErrors).toBe(true);
+    expect(wrapper.vm.step.status.value.errors.name).toBe("Erro");
+    expect(wrapper.vm.step.isValid.value).toBe(false);
   });
 });
