@@ -6,6 +6,7 @@ import {
   useBitField,
   useBitForm,
   useBitFieldArray,
+  useBitStep,
   useBitWatch,
 } from "../../src/react";
 
@@ -257,6 +258,54 @@ describe("React Integration (Context + Hooks)", () => {
 
       expect(mockEvent.preventDefault).toHaveBeenCalled();
       expect(onSubmit).toHaveBeenCalled();
+    });
+  });
+
+  describe("Step Validation (useBitStep)", () => {
+    it("deve rastrear status do step com reatividade e expor validateStep", async () => {
+      const store = new BitStore<MyForm>({
+        initialValues: {
+          salary: 10,
+          user: { firstName: "", lastName: "" },
+          skills: [],
+          hasBonus: false,
+          bonusValue: 0,
+        },
+        scopes: { step1: ["user.firstName", "user.lastName"] },
+        validationDelay: 0,
+        resolver: (vals) =>
+          !vals.user?.firstName ? { "user.firstName": "Erro no nome" } : {},
+      });
+
+      const { result } = renderHook(() => useBitStep("step1"), {
+        wrapper: (props) => wrapper({ ...props, store }),
+      });
+
+      expect(result.current.status.hasErrors).toBe(false);
+      expect(result.current.status.isDirty).toBe(false);
+      expect(result.current.isValid).toBe(true);
+
+      await act(() => {
+        store.setField("user.firstName", "Leo");
+      });
+
+      expect(result.current.status.isDirty).toBe(true);
+      expect(result.current.isDirty).toBe(true);
+
+      await act(async () => {
+        store.setField("user.firstName", "");
+      });
+
+      let validateResult: { valid: boolean; errors: Record<string, string> };
+      await act(async () => {
+        validateResult = await result.current.validateStep();
+      });
+
+      expect(result.current.status.hasErrors).toBe(true);
+      expect(result.current.status.errors["user.firstName"]).toBe("Erro no nome");
+      expect(result.current.isValid).toBe(false);
+      expect(validateResult!.valid).toBe(false);
+      expect(validateResult!.errors["user.firstName"]).toBe("Erro no nome");
     });
   });
 });
