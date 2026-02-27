@@ -103,14 +103,12 @@ const store = new BitStore({
 ## React Form Component
 
 ```tsx
-import { useState } from "react";
-import { useBitForm, useBitField, useBitScope } from "bit-form/react";
+import { useBitForm, useBitField, useBitSteps } from "bit-form/react";
 
 // Assumes store is created and provided via BitFormProvider
 export function RegistrationWizard() {
   const form = useBitForm();
-  const step1 = useBitScope("step1");
-  const step2 = useBitScope("step2");
+  const steps = useBitSteps(["step1", "step2"]);
 
   const companyType = useBitField("companyType");
   const cnpj = useBitField("cnpj");
@@ -118,14 +116,6 @@ export function RegistrationWizard() {
   const salary = useBitField("salary");
   const hasBonus = useBitField("hasBonus");
   const bonusValue = useBitField("bonusValue");
-
-  const [currentStep, setCurrentStep] = useState(1);
-
-  const handleNext = async () => {
-    const scope = currentStep === 1 ? step1 : step2;
-    const { valid } = await scope.validate();
-    if (valid) setCurrentStep((s) => Math.min(s + 1, 2));
-  };
 
   const handleSubmit = form.onSubmit(async (values) => {
     await api.register(values);
@@ -148,7 +138,7 @@ export function RegistrationWizard() {
         </button>
       </div>
 
-      {currentStep === 1 && (
+      {steps.step === 1 && (
         <div className="step">
           <h2>Step 1: Company</h2>
           <select {...companyType.props}>
@@ -172,13 +162,13 @@ export function RegistrationWizard() {
             {email.invalid && <span>{email.error}</span>}
           </div>
 
-          <button type="button" onClick={handleNext} disabled={!step1.isValid}>
+          <button type="button" onClick={steps.next} disabled={!steps.isValid}>
             Next
           </button>
         </div>
       )}
 
-      {currentStep === 2 && (
+      {steps.step === 2 && (
         <div className="step">
           <h2>Step 2: Salary</h2>
           <div>
@@ -197,7 +187,7 @@ export function RegistrationWizard() {
             </div>
           )}
 
-          <button type="button" onClick={() => setCurrentStep(1)}>
+          <button type="button" onClick={steps.prev}>
             Back
           </button>
           <button type="submit" disabled={!form.isValid || form.isSubmitting}>
@@ -217,7 +207,7 @@ export function RegistrationWizard() {
 | **Masks** | `brl`, `cnpj` on salary and CNPJ fields |
 | **asyncValidate** | Email and CNPJ availability check with debounce |
 | **Conditional logic** | CNPJ shown only when companyType is PJ; bonusValue shown when hasBonus is true |
-| **Scopes** | `useBitScope("step1")` and `step2` for per-step validation |
+| **Scopes** | `useBitSteps(["step1", "step2"])` for wizard navigation and per-step validation |
 | **History** | Undo/Redo in toolbar via `history: { enabled: true }` |
 | **DevTools** | Local inspector enabled in development |
 | **Transform** | `salary` and `cnpj` normalized before submit |
