@@ -1,12 +1,5 @@
 import { BitStoreAdapter } from "./types";
-import {
-  getDeepValue,
-  setDeepValue,
-  deepEqual,
-  shiftKeys,
-  swapKeys,
-  moveKeys,
-} from "./utils";
+import { getDeepValue, setDeepValue, shiftKeys, swapKeys, moveKeys } from "./utils";
 
 export class BitArrayManager<T extends object = any> {
   constructor(private store: BitStoreAdapter<T>) {}
@@ -42,11 +35,17 @@ export class BitArrayManager<T extends object = any> {
     const newArray = arr.filter((_, i) => i !== index);
     const newValues = setDeepValue(state.values, path, newArray);
 
+    const isDirty = (this.store as any).updateDirtyForPath(
+      path,
+      newValues,
+      this.store.getConfig().initialValues,
+    );
+
     this.store.internalUpdateState({
       values: newValues,
       errors: shiftKeys(state.errors, path, index),
       touched: shiftKeys(state.touched, path, index),
-      isDirty: !deepEqual(newValues, this.store.getConfig().initialValues),
+      isDirty,
     });
 
     this.store.internalSaveSnapshot();
@@ -60,10 +59,17 @@ export class BitArrayManager<T extends object = any> {
 
     const newValues = setDeepValue(state.values, path, arr);
 
+    const isDirty = (this.store as any).updateDirtyForPath(
+      path,
+      newValues,
+      this.store.getConfig().initialValues,
+    );
+
     this.store.internalUpdateState({
       values: newValues,
       errors: swapKeys(state.errors, path, indexA, indexB),
       touched: swapKeys(state.touched, path, indexA, indexB),
+      isDirty,
     });
 
     this.store.internalSaveSnapshot();
@@ -78,10 +84,17 @@ export class BitArrayManager<T extends object = any> {
 
     const newValues = setDeepValue(state.values, path, arr);
 
+    const isDirty = (this.store as any).updateDirtyForPath(
+      path,
+      newValues,
+      this.store.getConfig().initialValues,
+    );
+
     this.store.internalUpdateState({
       values: newValues,
       errors: moveKeys(state.errors, path, from, to),
       touched: moveKeys(state.touched, path, from, to),
+      isDirty,
     });
 
     this.store.internalSaveSnapshot();

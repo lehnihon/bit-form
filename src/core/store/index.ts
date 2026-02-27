@@ -15,7 +15,13 @@ import {
   BitArrayPath,
   BitArrayItem,
 } from "./types";
-import { deepClone, deepEqual, getDeepValue } from "./utils";
+import {
+  collectDirtyPaths,
+  deepClone,
+  deepEqual,
+  getDeepValue,
+  valueEqual,
+} from "./utils";
 import { BitDependencyManager } from "./dependency-manager";
 import { BitHistoryManager } from "./history-manager";
 import { BitArrayManager } from "./array-manager";
@@ -41,19 +47,25 @@ export class BitStore<T extends object = any>
   public masks: Record<string, BitMask>;
   public storeId: string;
 
+  private dirtyPaths: Set<string> = new Set();
+
   constructor(config: BitConfig<T> = {}) {
     const rawInitial = config.initialValues || ({} as T);
 
     this.config = {
       validationDelay: 300,
       enableHistory: false,
+      historyLimit: 15,
       ...config,
       initialValues: deepClone(rawInitial),
     };
 
     this.masks = config.masks ?? bitMasks;
     this.deps = new BitDependencyManager<T>();
-    this.history = new BitHistoryManager<T>(!!this.config.enableHistory, 15);
+    this.history = new BitHistoryManager<T>(
+      !!this.config.enableHistory,
+      this.config.historyLimit ?? 15,
+    );
     this.computeds = new BitComputedManager<T>(this.config);
     this.validator = new BitValidationManager<T>(this);
     this.arrays = new BitArrayManager<T>(this);
@@ -273,7 +285,11 @@ export class BitStore<T extends object = any>
   undo() {
     const prevState = this.history.undo();
     if (prevState) {
-      this.internalUpdateState({ values: prevState });
+      const isDirty = this.rebuildDirtyPaths(
+        prevState,
+        this.config.initialValues,
+      );
+      this.internalUpdateState({ values: prevState, isDirty });
       this.validator.validate();
     }
   }
@@ -281,7 +297,11 @@ export class BitStore<T extends object = any>
   redo() {
     const nextState = this.history.redo();
     if (nextState) {
-      this.internalUpdateState({ values: nextState });
+      const isDirty = this.rebuildDirtyPaths(
+        nextState,
+        this.config.initialValues,
+      );
+      this.internalUpdateState({ values: nextState, isDirty });
       this.validator.validate();
     }
   }
@@ -301,7 +321,7 @@ export class BitStore<T extends object = any>
     const isDirty = fields.some((f) => {
       const current = getDeepValue(this.state.values, f);
       const initial = getDeepValue(this.config.initialValues, f);
-      return !deepEqual(current, initial);
+      return !valueEqual(current, initial);
     });
     const errors = this.getStepErrors(scopeName);
 
@@ -326,7 +346,7 @@ export class BitStore<T extends object = any>
     const currentValue = getDeepValue(this.state.values, path);
     const initialValue = getDeepValue(this.config.initialValues, path);
 
-    return !deepEqual(currentValue, initialValue);
+    return !valueEqual(currentValue, initialValue);
   }
 
   isFieldValidating(path: string): boolean {
@@ -356,6 +376,31 @@ export class BitStore<T extends object = any>
 
   internalSaveSnapshot() {
     this.history.saveSnapshot(this.state.values);
+  }
+
+  /** Updates dirtyPaths for a single path change. Returns new isDirty. */
+  updateDirtyForPath(path: string, values: T, initialValues: T): boolean {
+    for (const p of this.dirtyPaths) {
+      if (p.startsWith(path + ".")) this.dirtyPaths.delete(p);
+    }
+    const current = getDeepValue(values, path);
+    const initial = getDeepValue(initialValues, path);
+    if (valueEqual(current, initial)) {
+      this.dirtyPaths.delete(path);
+    } else {
+      this.dirtyPaths.add(path);
+    }
+    return this.dirtyPaths.size > 0;
+  }
+
+  clearDirtyPaths(): void {
+    this.dirtyPaths.clear();
+  }
+
+  /** Rebuilds dirtyPaths from full values (used for undo/redo/updateAll). */
+  rebuildDirtyPaths(values: T, initialValues: T): boolean {
+    this.dirtyPaths = collectDirtyPaths(values, initialValues);
+    return this.dirtyPaths.size > 0;
   }
 
   cleanup() {

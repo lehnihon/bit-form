@@ -47,6 +47,7 @@ export interface BitConfig<T extends object = any> {
   validationDelay?: number;
   masks?: Record<string, BitMask>;
   enableHistory?: boolean;
+  historyLimit?: number;
   fields?: Record<string, BitFieldConfig<T>>;
   devTools?: boolean | DevToolsOptions;
 }
