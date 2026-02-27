@@ -21,7 +21,7 @@ import {
   deepEqual,
   getDeepValue,
   valueEqual,
-} from "./utils";
+} from "../utils";
 import { BitDependencyManager } from "./dependency-manager";
 import { BitHistoryManager } from "./history-manager";
 import { BitArrayManager } from "./array-manager";

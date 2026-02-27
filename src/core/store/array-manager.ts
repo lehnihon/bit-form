@@ -1,5 +1,5 @@
 import { BitStoreAdapter } from "./types";
-import { getDeepValue, setDeepValue, shiftKeys, swapKeys, moveKeys } from "./utils";
+import { getDeepValue, setDeepValue, shiftKeys, swapKeys, moveKeys } from "../utils";
 
 export class BitArrayManager<T extends object = any> {
   constructor(private store: BitStoreAdapter<T>) {}

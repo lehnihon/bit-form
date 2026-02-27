@@ -9,7 +9,9 @@ export {
   deepEqual,
   valueEqual,
   cleanPrefixedKeys,
-} from "./store/utils";
+  isValidationErrorShape,
+  extractServerErrors,
+} from "./utils";
 
 export type {
   BitConfig,

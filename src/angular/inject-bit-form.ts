@@ -1,6 +1,6 @@
 import { signal, computed, inject, DestroyRef } from "@angular/core";
 import { useBitStore } from "./provider";
-import { isValidationErrorShape, extractServerErrors } from "../core/form-helpers";
+import { isValidationErrorShape, extractServerErrors } from "../core/utils";
 
 export function injectBitForm<T extends object>() {
   const store = useBitStore<T>();

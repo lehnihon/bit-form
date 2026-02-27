@@ -1,6 +1,6 @@
 import { useCallback, useSyncExternalStore, useMemo, useRef, useState } from "react";
 import { useBitStore } from "./context";
-import { isValidationErrorShape, extractServerErrors } from "../core/form-helpers";
+import { isValidationErrorShape, extractServerErrors } from "../core/utils";
 
 export function useBitForm<T extends object>() {
   const store = useBitStore<T>();

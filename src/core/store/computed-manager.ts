@@ -1,4 +1,4 @@
-import { getDeepValue, setDeepValue, deepEqual } from "./utils";
+import { getDeepValue, setDeepValue, deepEqual } from "../utils";
 import { BitConfig } from "./types";
 
 export class BitComputedManager<T extends object> {
