@@ -1,13 +1,13 @@
 import { ref, computed, onMounted, onUnmounted } from "vue";
 import { useBitStore } from "./context";
 
-export type StepStatus = {
+export type ScopeStatus = {
   hasErrors: boolean;
   isDirty: boolean;
   errors: Record<string, string>;
 };
 
-export type ValidateStepResult = {
+export type ValidateScopeResult = {
   valid: boolean;
   errors: Record<string, string>;
 };
@@ -22,9 +22,9 @@ function errorsEqual(
   return keysA.every((k) => a[k] === b[k]);
 }
 
-export function useBitStep(scopeName: string) {
+export function useBitScope(scopeName: string) {
   const store = useBitStore();
-  const status = ref<StepStatus>(store.getStepStatus(scopeName));
+  const status = ref<ScopeStatus>(store.getStepStatus(scopeName));
   let unsubscribe: () => void;
 
   onMounted(() => {
@@ -44,21 +44,24 @@ export function useBitStep(scopeName: string) {
     unsubscribe?.();
   });
 
-  const validateStep = async (): Promise<ValidateStepResult> => {
+  const validate = async (): Promise<ValidateScopeResult> => {
     const valid = await store.validate({ scope: scopeName });
     const errors = store.getStepErrors(scopeName);
     return { valid, errors };
   };
 
-  const getStepErrors = () => store.getStepErrors(scopeName);
+  const getErrors = () => store.getStepErrors(scopeName);
 
   const isValid = computed(() => !status.value.hasErrors);
   const isDirty = computed(() => status.value.isDirty);
+  const errors = computed(() => status.value.errors);
 
   return {
+    scopeName,
     status,
-    validateStep,
-    getStepErrors,
+    errors,
+    validate,
+    getErrors,
     isValid,
     isDirty,
   };

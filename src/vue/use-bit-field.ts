@@ -81,6 +81,14 @@ export function useBitField<TValue = any>(
     return store.isRequired(path);
   });
 
+  const fieldMeta = computed(() => ({
+    isDirty: isDirty.value,
+    isValidating: isValidating.value,
+    isHidden: isHidden.value,
+    isRequired: isRequired.value,
+    hasError: !!error.value,
+  }));
+
   return {
     value,
     displayValue,
@@ -91,6 +99,7 @@ export function useBitField<TValue = any>(
     isDirty,
     isHidden,
     isRequired,
+    fieldMeta,
     setBlur: () => store.blurField(path),
     setValue: (val: any) => (value.value = val),
   };

@@ -5,8 +5,8 @@ import {
   BitFormProvider,
   useBitField,
   useBitForm,
-  useBitFieldArray,
-  useBitStep,
+  useBitArray,
+  useBitScope,
   useBitWatch,
 } from "../../src/react";
 
@@ -160,7 +160,7 @@ describe("React Integration (Context + Hooks)", () => {
       (store as any).validate = vi.fn();
       (store as any).triggerValidation = vi.fn();
 
-      const { result } = renderHook(() => useBitFieldArray("skills"), {
+      const { result } = renderHook(() => useBitArray("skills"), {
         wrapper: (props) => wrapper({ ...props, store }),
       });
 
@@ -185,7 +185,7 @@ describe("React Integration (Context + Hooks)", () => {
       (store as any).validate = vi.fn();
       (store as any).triggerValidation = vi.fn();
 
-      const { result } = renderHook(() => useBitFieldArray("skills"), {
+      const { result } = renderHook(() => useBitArray("skills"), {
         wrapper: (props) => wrapper({ ...props, store }),
       });
 
@@ -261,7 +261,7 @@ describe("React Integration (Context + Hooks)", () => {
     });
   });
 
-  describe("Step Validation (useBitStep)", () => {
+  describe("Scope Validation (useBitScope)", () => {
     it("deve rastrear status do step com reatividade e expor validateStep", async () => {
       const store = new BitStore<MyForm>({
         initialValues: {
@@ -277,7 +277,7 @@ describe("React Integration (Context + Hooks)", () => {
           !vals.user?.firstName ? { "user.firstName": "Erro no nome" } : {},
       });
 
-      const { result } = renderHook(() => useBitStep("step1"), {
+      const { result } = renderHook(() => useBitScope("step1"), {
         wrapper: (props) => wrapper({ ...props, store }),
       });
 
@@ -298,7 +298,7 @@ describe("React Integration (Context + Hooks)", () => {
 
       let validateResult: { valid: boolean; errors: Record<string, string> };
       await act(async () => {
-        validateResult = await result.current.validateStep();
+        validateResult = await result.current.validate();
       });
 
       expect(result.current.status.hasErrors).toBe(true);

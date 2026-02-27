@@ -1,13 +1,13 @@
 import { signal, computed, DestroyRef, inject } from "@angular/core";
 import { useBitStore } from "./provider";
 
-export type StepStatus = {
+export type ScopeStatus = {
   hasErrors: boolean;
   isDirty: boolean;
   errors: Record<string, string>;
 };
 
-export type ValidateStepResult = {
+export type ValidateScopeResult = {
   valid: boolean;
   errors: Record<string, string>;
 };
@@ -22,11 +22,11 @@ function errorsEqual(
   return keysA.every((k) => a[k] === b[k]);
 }
 
-export function injectBitStep(scopeName: string) {
+export function injectBitScope(scopeName: string) {
   const store = useBitStore();
   const initialStatus = store.getStepStatus(scopeName);
 
-  const status = signal<StepStatus>(initialStatus);
+  const status = signal<ScopeStatus>(initialStatus);
 
   const unsubscribe = store.subscribe(() => {
     const newStatus = store.getStepStatus(scopeName);
@@ -45,21 +45,24 @@ export function injectBitStep(scopeName: string) {
     destroyRef.onDestroy(() => unsubscribe());
   } catch {}
 
-  const validateStep = async (): Promise<ValidateStepResult> => {
+  const validate = async (): Promise<ValidateScopeResult> => {
     const valid = await store.validate({ scope: scopeName });
     const errors = store.getStepErrors(scopeName);
     return { valid, errors };
   };
 
-  const getStepErrors = () => store.getStepErrors(scopeName);
+  const getErrors = () => store.getStepErrors(scopeName);
 
   const isValid = computed(() => !status().hasErrors);
   const isDirty = computed(() => status().isDirty);
+  const errors = computed(() => status().errors);
 
   return {
+    scopeName,
     status,
-    validateStep,
-    getStepErrors,
+    errors,
+    validate,
+    getErrors,
     isValid,
     isDirty,
     unsubscribe,

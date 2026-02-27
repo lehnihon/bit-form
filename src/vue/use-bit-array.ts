@@ -10,7 +10,7 @@ import {
 
 const generateId = () => Math.random().toString(36).substring(2, 9);
 
-export function useBitFieldArray<
+export function useBitArray<
   TForm extends object = any,
   P extends BitArrayPath<TForm> = BitArrayPath<TForm>,
 >(path: P) {
@@ -61,8 +61,11 @@ export function useBitFieldArray<
     })),
   );
 
+  const length = computed(() => values.value.length);
+
   return {
     fields,
+    length,
     append: (val: Item) => {
       ids.value.push(generateId());
       store.pushItem(path, val);

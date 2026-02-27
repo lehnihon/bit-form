@@ -69,11 +69,11 @@ export class FormContentComponent {
 
 ## 3. Arrays with Signals
 
-For dynamic array fields, use `injectBitFieldArray`. The `fields()` signal automatically manages unique keys for track-by loops (`@for`).
+For dynamic array fields, use `injectBitArray`. The `fields()` signal automatically manages unique keys for track-by loops (`@for`).
 
 ```typescript
 import { Component } from "@angular/core";
-import { injectBitFieldArray } from "bit-form/angular";
+import { injectBitArray } from "bit-form/angular";
 
 @Component({
   selector: "app-tags",
@@ -93,6 +93,6 @@ import { injectBitFieldArray } from "bit-form/angular";
   `,
 })
 export class TagsComponent {
-  tags = injectBitFieldArray<string>("tags");
+  tags = injectBitArray<string>("tags");
 }
 ```

@@ -1,21 +1,21 @@
 import { useCallback, useSyncExternalStore, useRef } from "react";
 import { useBitStore } from "./context";
 
-export type StepStatus = {
+export type ScopeStatus = {
   hasErrors: boolean;
   isDirty: boolean;
   errors: Record<string, string>;
 };
 
-export type ValidateStepResult = {
+export type ValidateScopeResult = {
   valid: boolean;
   errors: Record<string, string>;
 };
 
-export function useBitStep(scopeName: string) {
+export function useBitScope(scopeName: string) {
   const store = useBitStore();
 
-  const lastStatus = useRef<StepStatus | null>(null);
+  const lastStatus = useRef<ScopeStatus | null>(null);
 
   const getStatusSnapshot = useCallback(() => {
     const nextStatus = store.getStepStatus(scopeName);
@@ -43,20 +43,22 @@ export function useBitStep(scopeName: string) {
     getStatusSnapshot,
   );
 
-  const validateStep = useCallback(async (): Promise<ValidateStepResult> => {
+  const validate = useCallback(async (): Promise<ValidateScopeResult> => {
     const valid = await store.validate({ scope: scopeName });
     const errors = store.getStepErrors(scopeName);
     return { valid, errors };
   }, [store, scopeName]);
 
-  const getStepErrors = useCallback(() => {
+  const getErrors = useCallback(() => {
     return store.getStepErrors(scopeName);
   }, [store, scopeName]);
 
   return {
+    scopeName,
     status,
-    validateStep,
-    getStepErrors,
+    errors: status.errors,
+    validate,
+    getErrors,
     isValid: !status.hasErrors,
     isDirty: status.isDirty,
   };

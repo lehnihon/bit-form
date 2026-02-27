@@ -93,6 +93,14 @@ export function injectBitField<
 
   const setBlur = () => store.blurField(path);
 
+  const fieldMeta = computed(() => ({
+    isDirty: isDirty(),
+    isValidating: isValidating(),
+    isHidden: isHidden(),
+    isRequired: isRequired(),
+    hasError: !!error(),
+  }));
+
   return {
     value,
     displayValue,
@@ -103,6 +111,7 @@ export function injectBitField<
     isValidating,
     isHidden,
     isRequired,
+    fieldMeta,
     setValue,
     setBlur,
     update: (e: any) => setValue(e?.target?.value ?? e),

@@ -10,13 +10,13 @@ import {
 
 const generateId = () => Math.random().toString(36).substring(2, 9);
 
-export function injectBitFieldArray<
+export function injectBitArray<
   TForm extends object = any,
   P extends BitArrayPath<TForm> = BitArrayPath<TForm>,
 >(path: P) {
   const store = inject(BIT_STORE_TOKEN);
   const destroyRef = inject(DestroyRef);
-          
+
   const getRaw = () => {
     const val = getDeepValue(
       store.getState().values,
@@ -60,6 +60,7 @@ export function injectBitFieldArray<
         index: i,
       })),
     ),
+    length: computed(() => valuesSig().length),
     append: (v: BitArrayItem<BitPathValue<TForm, P>>) => {
       idsSig.update((ids) => [...ids, generateId()]);
       store.pushItem(path, v);
@@ -71,6 +72,22 @@ export function injectBitFieldArray<
     remove: (i: number) => {
       idsSig.update((ids) => ids.filter((_, idx) => idx !== i));
       store.removeItem(path, i);
+    },
+    insert: (index: number, v: BitArrayItem<BitPathValue<TForm, P>>) => {
+      idsSig.update((ids) => {
+        const c = [...ids];
+        c.splice(index, 0, generateId());
+        return c;
+      });
+      store.insertItem(path, index, v);
+    },
+    swap: (a: number, b: number) => {
+      idsSig.update((ids) => {
+        const c = [...ids];
+        [c[a], c[b]] = [c[b], c[a]];
+        return c;
+      });
+      store.swapItems(path, a, b);
     },
     move: (f: number, t: number) => {
       idsSig.update((ids) => {
@@ -85,7 +102,6 @@ export function injectBitFieldArray<
       idsSig.set(items.map(() => generateId()));
       store.setField(path as unknown as BitPath<TForm>, items as any);
     },
-
     clear: () => {
       idsSig.set([]);
       store.setField(path as unknown as BitPath<TForm>, [] as any);
