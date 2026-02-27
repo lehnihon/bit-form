@@ -133,3 +133,5 @@ const handleNext = async () => {
 
 // step1.status, step1.isValid, step1.isDirty, step1.errors
 ```
+
+See [Scopes](../features/scopes.md) for full documentation and store configuration.
