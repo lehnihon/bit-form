@@ -5,8 +5,8 @@ import { BitStore } from "../core";
 import {
   useBitField,
   useBitForm,
-  useBitFieldArray,
-  useBitStep,
+  useBitArray,
+  useBitScope,
 } from "./index";
 import { BIT_STORE_KEY } from "./context";
 
@@ -95,7 +95,7 @@ describe("Vue Integration", () => {
     (store as any).triggerValidation = vi.fn();
 
     const wrapper = createWrapper(store, () => ({
-      list: useBitFieldArray("tags"),
+      list: useBitArray("tags"),
       form: useBitForm(),
     }));
 
@@ -116,7 +116,7 @@ describe("Vue Integration", () => {
     (store as any).triggerValidation = vi.fn();
 
     const wrapper = createWrapper(store, () => ({
-      list: useBitFieldArray("tags"),
+      list: useBitArray("tags"),
     }));
 
     store.setError("tags.0", "Error on A");
@@ -132,7 +132,7 @@ describe("Vue Integration", () => {
     const spy = vi.spyOn(store, "unregisterPrefix");
 
     const wrapper = createWrapper(store, () => ({
-      list: useBitFieldArray("tags"),
+      list: useBitArray("tags"),
     }));
     wrapper.unmount();
     expect(spy).toHaveBeenCalledWith("tags.");
@@ -169,14 +169,14 @@ describe("Vue Integration", () => {
     expect(wrapper.vm.form.getValues().count).toBe(0);
   });
 
-  it("should track step status with useBitStep", async () => {
+  it("should track scope status with useBitScope", async () => {
     const store = new BitStore({
       initialValues: { name: "", email: "" },
       scopes: { step1: ["name", "email"] },
     });
 
     const wrapper = createWrapper(store, () => ({
-      step: useBitStep("step1"),
+      step: useBitScope("step1"),
     }));
 
     expect(wrapper.vm.step.status.value.hasErrors).toBe(false);

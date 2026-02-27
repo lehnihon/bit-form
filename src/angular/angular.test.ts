@@ -5,8 +5,8 @@ import { BitStore } from "../core/store";
 import {
   injectBitField,
   injectBitForm,
-  injectBitFieldArray,
-  injectBitStep,
+  injectBitArray,
+  injectBitScope,
   provideBitStore,
 } from "./index";
 
@@ -23,7 +23,7 @@ class HostComponent {
   form = injectBitForm<MyForm>();
   userName = injectBitField<string>("user.name");
   salary = injectBitField<number>("salary", undefined, { mask: "brl" });
-  list = injectBitFieldArray<MyForm, "items">("items");
+  list = injectBitArray<MyForm, "items">("items");
   bonusValue = injectBitField<number>("bonusValue");
 }
 
@@ -167,7 +167,7 @@ describe("Angular Integration (Signals)", () => {
     expect(app.userName.error()).toBe("Obrigatório");
   });
 
-  it("deve rastrear status do step com injectBitStep", () => {
+  it("deve rastrear status do scope com injectBitScope", () => {
     const storeWithScopes = new BitStore<MyForm>({
       initialValues: {
         user: { name: "" },
@@ -181,7 +181,7 @@ describe("Angular Integration (Signals)", () => {
 
     @Component({ standalone: true, template: "" })
     class StepHostComponent {
-      step = injectBitStep("step1");
+      step = injectBitScope("step1");
     }
 
     TestBed.resetTestingModule();

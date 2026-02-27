@@ -40,18 +40,35 @@ export function useBitField<
     [resolvedMask, rawSetValue],
   );
 
-  const { isHidden, isRequired, value, error, touched } = fieldState;
+  const {
+    isHidden,
+    isRequired,
+    value,
+    error,
+    touched,
+    isDirty,
+    isValidating,
+  } = fieldState;
+
+  const invalid = !!(touched && error);
 
   return {
     value: value as BitPathValue<TForm, P>,
     displayValue,
     error: touched ? error : undefined,
     touched: touched,
-    invalid: !!(touched && error),
-    isValidating: store.isFieldValidating(path),
-    isDirty: store.isFieldDirty(path),
+    invalid,
+    isValidating,
+    isDirty,
     isHidden,
     isRequired,
+    fieldMeta: {
+      isDirty,
+      isValidating,
+      isHidden,
+      isRequired,
+      hasError: !!error,
+    },
     setValue,
     setBlur,
     props: {

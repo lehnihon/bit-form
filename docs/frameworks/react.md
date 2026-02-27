@@ -66,15 +66,15 @@ export function UsernameInput() {
 }
 ```
 
-## 4. Array Fields with `useBitFieldArray`
+## 4. Array Fields with `useBitArray`
 
-For dynamic lists, use `useBitFieldArray`. It provides array manipulation methods (`append`, `remove`, `move`, `swap`) and a stable `fields` array with unique keys.
+For dynamic lists, use `useBitArray`. It provides array manipulation methods (`append`, `remove`, `move`, `swap`, `insert`, `replace`, `clear`) and a stable `fields` array with unique keys.
 
 ```tsx
-import { useBitFieldArray } from "bit-form/react";
+import { useBitArray } from "bit-form/react";
 
 export function TagsList() {
-  const { fields, append, remove } = useBitFieldArray("tags");
+  const { fields, append, remove } = useBitArray("tags");
 
   return (
     <div>

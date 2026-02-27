@@ -14,6 +14,8 @@ export function useBitFieldBase<
     touched: boolean;
     isHidden: boolean;
     isRequired: boolean;
+    isDirty: boolean;
+    isValidating: boolean;
   } | null>(null);
 
   useEffect(() => {
@@ -39,6 +41,8 @@ export function useBitFieldBase<
 
     const isHidden = store.isHidden(path);
     const isRequired = store.isRequired(path);
+    const isDirty = store.isFieldDirty(path);
+    const isValidating = store.isFieldValidating(path);
 
     if (
       lastState.current &&
@@ -46,12 +50,22 @@ export function useBitFieldBase<
       lastState.current.error === error &&
       lastState.current.touched === touched &&
       lastState.current.isHidden === isHidden &&
-      lastState.current.isRequired === isRequired
+      lastState.current.isRequired === isRequired &&
+      lastState.current.isDirty === isDirty &&
+      lastState.current.isValidating === isValidating
     ) {
       return lastState.current;
     }
 
-    const newState = { value, error, touched, isHidden, isRequired };
+    const newState = {
+      value,
+      error,
+      touched,
+      isHidden,
+      isRequired,
+      isDirty,
+      isValidating,
+    };
     lastState.current = newState;
     return newState;
   }, [store, path]);

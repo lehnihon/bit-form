@@ -53,4 +53,4 @@ export function ProfileForm() {
 }
 ```
 
-Everything else, including `useBitFieldArray`, `useBitStore`, and `BitFormProvider`, works exactly the same as in the standard React integration.
+Everything else, including `useBitArray`, `useBitScope`, `useBitStore`, and `BitFormProvider`, works exactly the same as in the standard React integration.

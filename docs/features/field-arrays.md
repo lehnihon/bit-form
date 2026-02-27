@@ -4,7 +4,7 @@ Managing lists of inputs (like adding multiple emails or a list of skills) is no
 
 ## The Array Manager
 
-Instead of mutating the array directly, you should use the array methods provided by Bit-Form. These are available on the `BitStore` instance and automatically exported by hooks like `useBitFieldArray`.
+Instead of mutating the array directly, you should use the array methods provided by Bit-Form. These are available on the `BitStore` instance and automatically exported by hooks like `useBitArray`.
 
 ### Methods
 
@@ -23,10 +23,10 @@ Bit-Form's engine **automatically detects array mutations and shifts, swaps, or 
 
 ## Example (Framework Hook)
 
-If you are using React or Vue, the framework-specific `useBitFieldArray` handles unique key generation for you to prevent rendering bugs.
+If you are using React or Vue, the framework-specific `useBitArray` handles unique key generation for you to prevent rendering bugs.
 
 ```tsx
-const { fields, append, remove, move } = useBitFieldArray("skills");
+const { fields, append, remove, move } = useBitArray("skills");
 
 // fields = [{ key: 'xyz123', value: 'React', index: 0 }, ...]
 ```
