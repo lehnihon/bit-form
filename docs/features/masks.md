@@ -6,17 +6,6 @@ Bit-Form includes a highly advanced, zero-dependency masking engine. It parses u
 
 Bit-Form comes packed with standard presets that you can use instantly by passing their string identifiers.
 
-```tsx
-import { useBitField } from "bit-form/react"; // or vue, angular, etc.
-
-export function SalaryInput() {
-  // Uses the Brazilian Real currency preset automatically
-  const salary = useBitField("salary", { mask: "brl" });
-
-  return <input {...salary.props} />;
-}
-```
-
 ### Available String Presets
 
 - **Currencies**: `brl`, `usd`, `eur`, `gbp`, `jpy`
@@ -25,29 +14,69 @@ export function SalaryInput() {
 - **USA**: `usPhone`, `zipCode`, `dateUS`, `ssn`
 - **Global/Tech**: `cc` (Smart Credit Card), `cvv`, `dateISO`, `ip`, `ipv6`, `mac`, `color`
 
+## Defining Masks: fields vs Hook Options
+
+You can define masks in two ways:
+
+1. **In `fields.path.mask`** — declare the mask per field at store construction.
+2. **In the hook** — pass `mask` via `useBitField(path, { mask: "brl" })` to override or when not using `fields`.
+
+### Option 1: `fields.path.mask` (declarative)
+
+Define the mask directly on the field. Use built-in names (`"brl"`, `"cpf"`, etc.) or a BitMask instance. For custom masks, register them first with `store.registerMask()`:
+
+```tsx
+const store = new BitStore({
+  initialValues: { salary: 0 },
+  fields: {
+    salary: { mask: "brl" },
+  },
+});
+
+// No need to pass mask in the hook — it's read from the field config
+const salary = useBitField("salary");
+```
+
+### Option 2: Hook options (override or ad‑hoc)
+
+Pass `mask` in the hook when you need to override or don't use `fields`:
+
+```tsx
+const salary = useBitField("salary", { mask: "brl" });
+const plate = useBitField("licensePlate", { mask: myCustomMask });
+```
+
+Hook options take precedence over `fields.path.mask`.
+
 ## Custom Masks
 
-If you need a specific format, you can create a custom mask using our creators: `createPatternMask`, `createCurrencyMask`, and `createDateMask`.
+Create custom masks with `createPatternMask`, `createCurrencyMask`, and `createDateMask`.
 
 ### Pattern Masks
 
-Use standard tokens (`#` for numbers, `A` for letters, `U` for uppercase letters) to define shapes.
+Use tokens (`#` numbers, `A` letters, `U` uppercase):
 
 ```tsx
 import { createPatternMask } from "bit-form";
 
-const myCustomMask = createPatternMask("UUU-####");
+const plateMask = createPatternMask("UUU-####");
 
-// Apply it directly to the field
-const plate = useBitField("licensePlate", { mask: myCustomMask });
+// Via fields (or register first with store.registerMask("plate", plateMask))
+const store = new BitStore({
+  initialValues: { licensePlate: "" },
+  fields: { licensePlate: { mask: plateMask } },
+});
+
+// Or inline in hook
+const plate = useBitField("licensePlate", { mask: plateMask });
 ```
 
-You can also pass an array of patterns for dynamic switching (e.g., a phone number that adds a digit):
+Dynamic patterns (e.g. phone):
 
 ```tsx
 const phoneMask = createPatternMask([
-  "(##) ####-####", // 10 digits
-  "(##) #####-####", // 11 digits
+  "(##) ####-####",
+  "(##) #####-####",
 ]);
 ```
 
@@ -56,14 +85,22 @@ const phoneMask = createPatternMask([
 ```tsx
 import { createCurrencyMask } from "bit-form";
 
-const customCurrency = createCurrencyMask({
+const btcMask = createCurrencyMask({
   prefix: "₿ ",
   thousand: ",",
   decimal: ".",
   precision: 4,
 });
+
+// Pass instance in fields, or register and use by name
+const store = new BitStore({
+  initialValues: { balance: 0 },
+  fields: { balance: { mask: btcMask } },
+});
 ```
 
 ### Raw Value vs Display Value
 
-When you type `"R$ 1.500,50"` into an input using the `brl` mask, the `BitStore` parses it and saves the `float` number `1500.5` in its state. When you submit the form, you send clean data to your API, eliminating the need to parse strings manually before submitting.
+When you type `"R$ 1.500,50"` with the `brl` mask, the store saves the number `1500.5`. On submit you send clean data; no manual parsing needed.
+
+See the [Masks Example](../examples/masks-example.md) for a full working sample.

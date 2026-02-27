@@ -51,6 +51,7 @@ const store = new BitStore({
 
   fields: {
     cnpj: {
+      mask: "cnpj",
       conditional: {
         dependsOn: ["companyType"],
         showIf: (v) => v.companyType === "PJ",
@@ -81,11 +82,13 @@ const store = new BitStore({
       },
     },
     salary: {
+      mask: "brl",
       transform: (v) => unmaskCurrency(v),
       scope: "step2",
     },
     hasBonus: { scope: "step2" },
     bonusValue: {
+      mask: "brl",
       conditional: {
         dependsOn: ["hasBonus"],
         showIf: (v) => v.hasBonus === true,
@@ -110,11 +113,11 @@ export function RegistrationWizard() {
   const step2 = useBitScope("step2");
 
   const companyType = useBitField("companyType");
-  const cnpj = useBitField("cnpj", { mask: "cnpj" });
+  const cnpj = useBitField("cnpj");
   const email = useBitField("email");
-  const salary = useBitField("salary", { mask: "brl" });
+  const salary = useBitField("salary");
   const hasBonus = useBitField("hasBonus");
-  const bonusValue = useBitField("bonusValue", { mask: "brl" });
+  const bonusValue = useBitField("bonusValue");
 
   const [currentStep, setCurrentStep] = useState(1);
 

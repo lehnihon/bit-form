@@ -113,4 +113,5 @@ Now that you have your first form running, dive deeper into Bit-Form's powerful 
 - **[Validation & Resolvers](./features/validation.md)**: Learn how to connect schemas like Zod, Yup, or Joi to your forms.
 - **[Scopes](./features/scopes.md)**: Per-step validation for wizard forms with `useBitScope` / `injectBitScope`.
 - **[When to Use What](./guides/when-to-use-what.md)**: Quick reference for choosing the right feature (resolver, asyncValidate, setServerErrors, etc.).
+- **[Masks Example](./examples/masks-example.md)**: Define masks per field in `fields.path.mask`, with built-in presets.
 - **[Complete Example](./examples/complete-form-example.md)**: See masks, asyncValidate, conditional logic, scopes, history, and DevTools working together.

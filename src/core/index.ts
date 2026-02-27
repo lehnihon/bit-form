@@ -20,7 +20,6 @@ export type {
   BitState,
   BitErrors,
   BitTouched,
-  BitFieldConfig,
   BitFieldDefinition,
   BitFieldConditional,
   BitFieldValidation,

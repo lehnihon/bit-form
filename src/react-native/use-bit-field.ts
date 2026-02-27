@@ -13,12 +13,13 @@ export function useBitField<
   >(path);
 
   const resolvedMask = useMemo(() => {
-    const maskOption = options?.mask;
+    const maskOption =
+      options?.mask ?? store.config.fields?.[path as string]?.mask;
     if (!maskOption) return undefined;
     return typeof maskOption === "string"
       ? store.masks[maskOption]
       : maskOption;
-  }, [options?.mask, store.masks]);
+  }, [options?.mask, store.masks, store.config.fields, path]);
 
   const displayValue = useMemo(() => {
     const val = fieldState.value;
