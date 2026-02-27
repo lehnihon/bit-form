@@ -22,8 +22,10 @@ const schema = z.object({
 
 const store = new BitStore({
   initialValues: { email: "", password: "" },
-  resolver: zodResolver(schema),
-  validationDelay: 300, // Debounce delay in milliseconds before running validation while typing
+  validation: {
+    resolver: zodResolver(schema),
+    delay: 300, // Debounce delay in milliseconds before running validation while typing
+  },
 });
 ```
 

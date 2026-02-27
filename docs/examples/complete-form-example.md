@@ -36,23 +36,29 @@ const store = new BitStore({
     hasBonus: false,
     bonusValue: 0,
   },
-  resolver: zodResolver(schema),
-  validationDelay: 300,
-  enableHistory: true,
-  historyLimit: 20,
+
+  validation: {
+    resolver: zodResolver(schema),
+    delay: 300,
+  },
+
+  history: {
+    enabled: true,
+    limit: 20,
+  },
+
+  features: {
+    transform: {
+      salary: (v) => unmaskCurrency(v),
+      cnpj: (v) => (typeof v === "string" ? v.replace(/\D/g, "") : v),
+    },
+    scopes: {
+      step1: ["companyType", "cnpj", "email"],
+      step2: ["salary", "hasBonus", "bonusValue"],
+    },
+  },
+
   devTools: process.env.NODE_ENV !== "production",
-
-  // Transform masked values before submit
-  transform: {
-    salary: (v) => unmaskCurrency(v),
-    cnpj: (v) => (typeof v === "string" ? v.replace(/\D/g, "") : v),
-  },
-
-  // Group fields by wizard step for per-step validation
-  scopes: {
-    step1: ["companyType", "cnpj", "email"],
-    step2: ["salary", "hasBonus", "bonusValue"],
-  },
 
   fields: {
     cnpj: {
@@ -201,7 +207,7 @@ export function RegistrationWizard() {
 | **asyncValidate** | Email and CNPJ availability check with debounce |
 | **Conditional logic** | CNPJ shown only when companyType is PJ; bonusValue shown when hasBonus is true |
 | **Scopes** | `useBitScope("step1")` and `step2` for per-step validation |
-| **History** | Undo/Redo in toolbar via `enableHistory: true` |
+| **History** | Undo/Redo in toolbar via `history: { enabled: true }` |
 | **DevTools** | Local inspector enabled in development |
 | **Transform** | `salary` and `cnpj` normalized before submit |
 | **onSubmit** | Handles API call, `submitError`, and `lastResponse` automatically |

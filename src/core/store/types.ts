@@ -39,26 +39,66 @@ export interface DevToolsOptions {
   url?: string;
 }
 
+/** Validation config. */
+export interface BitValidationConfig<T> {
+  resolver?: ValidatorFn<T>;
+  delay?: number;
+  defaultRequiredMessage?: string;
+}
+
+/** History config. */
+export interface BitHistoryConfig {
+  enabled?: boolean;
+  limit?: number;
+}
+
+/** Features config (computed, transform, scopes, masks). */
+export interface BitFeaturesConfig<T> {
+  computed?: Record<string, BitComputedFn<T>>;
+  transform?: Partial<Record<string, BitTransformFn<T>>>;
+  scopes?: Record<string, string[]>;
+  masks?: Record<string, BitMask>;
+}
+
+/**
+ * BitConfig - store configuration (nested structure).
+ * @see CHANGELOG for migration from flat format in 1.x.
+ */
 export interface BitConfig<T extends object = any> {
+  /** Core - essential */
   name?: string;
   initialValues?: T;
-  resolver?: ValidatorFn<T>;
-  computed?: Record<string, BitComputedFn<T>>;
-  scopes?: Record<string, string[]>;
-  transform?: Partial<Record<string, BitTransformFn<T>>>;
-  validationDelay?: number;
-  masks?: Record<string, BitMask>;
-  enableHistory?: boolean;
-  historyLimit?: number;
-  /** Default message for required-but-empty fields when requiredMessage is not set per field. */
-  defaultRequiredMessage?: string;
   fields?: Record<string, BitFieldConfig<T>>;
+
+  /** Validation */
+  validation?: BitValidationConfig<T>;
+
+  /** History (undo/redo) */
+  history?: BitHistoryConfig;
+
+  /** Features (computed, transform, scopes, masks) */
+  features?: BitFeaturesConfig<T>;
+
+  /** DevTools */
   devTools?: boolean | DevToolsOptions;
 }
 
-export type BitResolvedConfig<T extends object> = BitConfig<T> & {
+/** Internal flat config produced by normalizeConfig from BitConfig. */
+export interface BitResolvedConfig<T extends object> {
+  name?: string;
   initialValues: T;
-};
+  resolver?: ValidatorFn<T>;
+  validationDelay: number;
+  defaultRequiredMessage?: string;
+  enableHistory: boolean;
+  historyLimit: number;
+  computed?: Record<string, BitComputedFn<T>>;
+  transform?: Partial<Record<string, BitTransformFn<T>>>;
+  scopes?: Record<string, string[]>;
+  masks?: Record<string, BitMask>;
+  fields?: Record<string, BitFieldConfig<T>>;
+  devTools?: boolean | DevToolsOptions;
+}
 
 export interface BitFieldOptions {
   mask?: BitMask | string;

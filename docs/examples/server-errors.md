@@ -30,7 +30,7 @@ const schema = z.object({
 
 const store = new BitStore({
   initialValues: { email: "", password: "" },
-  resolver: zodResolver(schema),
+  validation: { resolver: zodResolver(schema) },
 });
 ```
 
@@ -141,8 +141,7 @@ const schema = z.object({
 
 const store = new BitStore({
   initialValues: { email: "", name: "" },
-  resolver: zodResolver(schema),
-  validationDelay: 300,
+  validation: { resolver: zodResolver(schema), delay: 300 },
 });
 
 function UserForm() {

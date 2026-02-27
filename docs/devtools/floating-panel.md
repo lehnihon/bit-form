@@ -11,7 +11,7 @@ import { BitStore } from "bit-form";
 
 const store = new BitStore({
   initialValues: { email: "", theme: "dark" },
-  enableHistory: true,
+  history: { enabled: true },
   devTools: process.env.NODE_ENV !== "production",
 });
 ```
@@ -20,7 +20,7 @@ const store = new BitStore({
 
 - **State inspector**: JSON tree of `values`, `errors`, and `touched`
 - **Validation status**: Which fields fail validation and their messages
-- **History controls**: Undo/Redo buttons when `enableHistory` is enabled
+- **History controls**: Undo/Redo buttons when `history: { enabled: true }` is set
 
 ## Production Safety
 

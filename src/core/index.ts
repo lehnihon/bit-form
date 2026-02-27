@@ -15,6 +15,9 @@ export {
 
 export type {
   BitConfig,
+  BitValidationConfig,
+  BitHistoryConfig,
+  BitFeaturesConfig,
   BitState,
   BitErrors,
   BitTouched,

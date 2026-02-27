@@ -141,8 +141,10 @@ describe("Vue Integration", () => {
   it("should track isSubmitting and validation state", async () => {
     const store = new BitStore({
       initialValues: { email: "" },
-      validationDelay: 0,
-      resolver: (vals: any) => (!vals.email ? { email: "Erro" } : {}),
+      validation: {
+        delay: 0,
+        resolver: (vals: any) => (!vals.email ? { email: "Erro" } : {}),
+      },
     });
 
     const onSubmit = vi.fn();
@@ -172,7 +174,7 @@ describe("Vue Integration", () => {
   it("should track scope status with useBitScope", async () => {
     const store = new BitStore({
       initialValues: { name: "", email: "" },
-      scopes: { step1: ["name", "email"] },
+      features: { scopes: { step1: ["name", "email"] } },
     });
 
     const wrapper = createWrapper(store, () => ({

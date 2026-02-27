@@ -16,9 +16,11 @@ const store = new BitStore({
     address: "",
     city: "",
   },
-  scopes: {
-    step1: ["name", "email"],
-    step2: ["address", "city"],
+  features: {
+    scopes: {
+      step1: ["name", "email"],
+      step2: ["address", "city"],
+    },
   },
 });
 ```
