@@ -46,9 +46,11 @@ describe("Cross-Framework Consistency", () => {
     const store = new BitStore({ initialValues: { type: "A", detail: "" } });
 
     store.registerField("detail", {
-      dependsOn: ["type"],
-      showIf: (v: any) => v.type === "B",
-      requiredIf: (v: any) => v.type === "B",
+      conditional: {
+        dependsOn: ["type"],
+        showIf: (v: any) => v.type === "B",
+        requiredIf: (v: any) => v.type === "B",
+      },
     });
 
     expect(store.isHidden("detail")).toBe(true);
@@ -59,7 +61,7 @@ describe("Cross-Framework Consistency", () => {
   it("should apply transforms consistently before submission", async () => {
     const store = new BitStore({
       initialValues: { count: 10 },
-      features: { transform: { count: (v) => v * 2 } },
+      fields: { count: { transform: (v) => v * 2 } },
     });
 
     let result: any;

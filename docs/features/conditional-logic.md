@@ -14,9 +14,11 @@ const store = new BitStore({
   },
   fields: {
     documentNumber: {
-      dependsOn: ["documentType"], // Tell Bit-Form to watch this field
-      showIf: (values) => values.documentType === "CNPJ",
-      requiredIf: (values) => values.documentType === "CNPJ",
+      conditional: {
+        dependsOn: ["documentType"],
+        showIf: (values) => values.documentType === "CNPJ",
+        requiredIf: (values) => values.documentType === "CNPJ",
+      },
     },
   },
 });

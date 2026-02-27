@@ -46,9 +46,11 @@ describe("Vue Integration", () => {
   it("should react to isHidden and isRequired changes", async () => {
     const store = new BitStore({ initialValues: { type: "PF", cnpj: "" } });
     store.registerField("cnpj", {
-      dependsOn: ["type"],
-      showIf: (v: any) => v.type === "PJ",
-      requiredIf: (v: any) => v.type === "PJ",
+      conditional: {
+        dependsOn: ["type"],
+        showIf: (v: any) => v.type === "PJ",
+        requiredIf: (v: any) => v.type === "PJ",
+      },
     });
 
     const wrapper = createWrapper(store, () => ({
@@ -174,7 +176,10 @@ describe("Vue Integration", () => {
   it("should track scope status with useBitScope", async () => {
     const store = new BitStore({
       initialValues: { name: "", email: "" },
-      features: { scopes: { step1: ["name", "email"] } },
+      fields: {
+        name: { scope: "step1" },
+        email: { scope: "step1" },
+      },
     });
 
     const wrapper = createWrapper(store, () => ({

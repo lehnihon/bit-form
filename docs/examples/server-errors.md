@@ -40,12 +40,14 @@ Runs after the user stops typing (debounced). Ideal for "username/email taken" c
 
 ```tsx
 store.registerField("email", {
-  asyncValidate: async (value) => {
-    if (!value) return null;
-    const { available } = await api.checkEmail(value);
-    return available ? null : "E-mail já está em uso";
+  validation: {
+    asyncValidate: async (value) => {
+      if (!value) return null;
+      const { available } = await api.checkEmail(value);
+      return available ? null : "E-mail já está em uso";
+    },
+    asyncValidateDelay: 500,
   },
-  asyncValidateDelay: 500,
 });
 ```
 

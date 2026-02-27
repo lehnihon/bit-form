@@ -13,11 +13,12 @@ export class BitValidationManager<T extends object> {
     const config =
       this.store.deps.fieldConfigs.get(path) ||
       this.store.config.fields?.[path];
-    if (!config?.asyncValidate) return;
+    const asyncValidate = config?.validation?.asyncValidate;
+    if (!asyncValidate) return;
 
     if (this.asyncTimers[path]) clearTimeout(this.asyncTimers[path]);
 
-    const delay = config.asyncValidateDelay ?? 500;
+    const delay = config.validation?.asyncValidateDelay ?? 500;
 
     this.asyncTimers[path] = setTimeout(async () => {
       const currentRequestId = (this.asyncRequests[path] || 0) + 1;
@@ -28,7 +29,7 @@ export class BitValidationManager<T extends object> {
       });
 
       try {
-        const errorMessage = await config.asyncValidate!(
+        const errorMessage = await asyncValidate(
           value,
           this.store.getState().values,
         );

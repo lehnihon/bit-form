@@ -19,12 +19,16 @@ describe("Form Lifecycle Flow", () => {
         secretKey: "HIDDEN",
       },
       validation: { resolver: mockResolver },
-      features: { transform: { price: (v) => unmaskCurrency(v) } },
+      fields: {
+        price: { transform: (v) => unmaskCurrency(v) },
+      },
     });
 
     store.registerField("secretKey", {
-      dependsOn: ["showAdvanced"],
-      showIf: (v: any) => v.showAdvanced === true,
+      conditional: {
+        dependsOn: ["showAdvanced"],
+        showIf: (v: any) => v.showAdvanced === true,
+      },
     });
 
     store.setField("coupon", createPatternMask("UUUU-##").format("save20"));

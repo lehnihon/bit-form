@@ -78,7 +78,7 @@ Represents a function that derives a computed value from the current `values`.
 type BitComputedFn<T> = (values: T) => any;
 ```
 
-Used in the `BitConfig.computed` map.
+Used in `BitFieldDefinition.computed`.
 
 ---
 
@@ -90,32 +90,43 @@ Represents a transformation applied to a field before submission.
 type BitTransformFn<T> = (value: any, allValues: T) => any;
 ```
 
-Used in the `BitConfig.transform` map (per-field transforms).
+Used in `BitFieldDefinition.transform` (per-field transforms).
 
 ---
 
-## `BitFieldConfig<T>`
+## `BitFieldDefinition<T>`
 
-Configuration for an individual field, used either in `BitConfig.fields` or at runtime via `store.registerField`.
+Configuration for an individual field, used in `BitConfig.fields` or at runtime via `store.registerField`. All field-level config (conditional, validation, transform, computed, mask, scope) lives here.
 
 ```ts
-interface BitFieldConfig<T extends object = any> {
-  // Dependencies & Conditional Logic
+interface BitFieldConditional<T> {
   dependsOn?: string[];
   showIf?: (values: T) => boolean;
   requiredIf?: (values: T) => boolean;
+}
 
-  // Asynchronous Validation
+interface BitFieldValidation<T> {
+  requiredMessage?: string;
   asyncValidate?: (value: any, values: T) => Promise<string | null | undefined>;
   asyncValidateDelay?: number;
 }
+
+interface BitFieldDefinition<T> {
+  conditional?: BitFieldConditional<T>;
+  validation?: BitFieldValidation<T>;
+  transform?: (value: any, allValues: T) => any;
+  computed?: (values: T) => any;
+  mask?: BitMask | string;
+  scope?: string;
+}
 ```
 
-- **`dependsOn`** — list of field paths that influence visibility/requirement logic.
-- **`showIf`** — returns `true` when the field should be visible.
-- **`requiredIf`** — returns `true` when the field should be considered required.
-- **`asyncValidate`** — field-level async validation; should resolve to an error message or `null`/`undefined` when valid.
-- **`asyncValidateDelay`** — debounce delay in milliseconds for `asyncValidate`.
+- **`conditional`** — visibility and dynamic required logic (`dependsOn`, `showIf`, `requiredIf`).
+- **`validation`** — async validation and required message.
+- **`transform`** — applied before submit.
+- **`computed`** — derives value from other fields.
+- **`mask`** — mask name or instance.
+- **`scope`** — scope name (e.g. wizard step).
 
 ---
 
@@ -137,39 +148,22 @@ These options are used via the `BitConfig.devTools` property.
 
 ## `BitConfig<T>`
 
-Primary configuration object passed to the `BitStore` constructor.
-
-### Nested structure (recommended)
+Primary configuration object passed to the `BitStore` constructor. `fields` is the central prop for all field-level config.
 
 ```ts
 interface BitConfig<T extends object = any> {
-  // Core
   name?: string;
   initialValues?: T;
-  fields?: Record<string, BitFieldConfig<T>>;
-
-  // Validation - nested
+  fields?: Record<string, BitFieldDefinition<T>>;
   validation?: {
     resolver?: ValidatorFn<T>;
     delay?: number;
     defaultRequiredMessage?: string;
   };
-
-  // History - nested
   history?: {
     enabled?: boolean;
     limit?: number;
   };
-
-  // Features - nested
-  features?: {
-    computed?: Record<string, BitComputedFn<T>>;
-    transform?: Partial<Record<string, BitTransformFn<T>>>;
-    scopes?: Record<string, string[]>;
-    masks?: Record<string, BitMask>;
-  };
-
-  // DevTools
   devTools?: boolean | DevToolsOptions;
 }
 ```
@@ -181,9 +175,11 @@ const store = new BitStore({
   initialValues: { email: "" },
   validation: { resolver: zodResolver(schema), delay: 300 },
   history: { enabled: true, limit: 20 },
-  features: {
-    scopes: { step1: ["email"] },
-    transform: { email: (v) => v?.toLowerCase() },
+  fields: {
+    email: {
+      transform: (v) => v?.toLowerCase(),
+      scope: "step1",
+    },
   },
 });
 ```
@@ -191,11 +187,8 @@ const store = new BitStore({
 Key points:
 
 - `initialValues` is optional at the type level, but the resolved config will always have a non-null `initialValues`.
-- `fields` lets you register field configs (`showIf`, `requiredIf`, `asyncValidate`, etc.) in batch at construction. Equivalent to calling `store.registerField(path, config)` for each entry. Prefer this when all fields are known upfront; use `registerField` for dynamic or component-driven config.
-- `features.scopes` allows grouping fields (e.g. by wizard step) for per-scope validation.
-- `features.transform` lets you normalize values before `submit` calls your handler.
-- `features.masks` lets you override or extend the global mask registry.
-- `devTools` can be a simple boolean or an object with fine-grained options.
+- `fields` is the single source for field config: conditional, validation, transform, computed, mask, scope. Equivalent to calling `store.registerField(path, config)` for each entry.
+- Custom masks are registered via `store.registerMask()`.
 
 ---
 

@@ -6,6 +6,7 @@ import {
   BitErrors,
   BitState,
   BitFieldConfig,
+  BitFieldDefinition,
   BitResolvedConfig,
   BitStoreAdapter,
   BitValidationAdapter,
@@ -82,7 +83,7 @@ export class BitStore<T extends object = any>
       Object.entries(this.config.fields).forEach(([path, fieldConfig]) => {
         this.deps.register(
           path,
-          fieldConfig as BitFieldConfig<T>,
+          fieldConfig as BitFieldDefinition<T>,
           initialValues,
         );
       });
@@ -144,7 +145,7 @@ export class BitStore<T extends object = any>
     this.deps.unregisterPrefix(prefix);
   }
 
-  registerField(path: string, config: BitFieldConfig<T>) {
+  registerField(path: string, config: BitFieldDefinition<T>) {
     this.deps.register(path, config, this.state.values);
     if (this.deps.isHidden(path)) {
       this.notify();

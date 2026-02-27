@@ -37,19 +37,15 @@ Sometimes you need to validate a field against a backend API (e.g., checking if 
 
 ```tsx
 store.registerField("username", {
-  asyncValidate: async (value, allValues) => {
-    if (!value) return null;
-
-    // Simulating an API call
-    const response = await checkUsernameAvailability(value);
-
-    // Return a string if there is an error, or null if valid
-    if (!response.available) {
-      return "This username is already taken";
-    }
-    return null;
+  validation: {
+    asyncValidate: async (value, allValues) => {
+      if (!value) return null;
+      const response = await checkUsernameAvailability(value);
+      if (!response.available) return "This username is already taken";
+      return null;
+    },
+    asyncValidateDelay: 500,
   },
-  asyncValidateDelay: 500, // Wait 500ms after the user stops typing before calling the API
 });
 ```
 

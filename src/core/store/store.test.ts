@@ -80,10 +80,8 @@ describe("BitStore Core", () => {
     it("should calculate fields on initialization", () => {
       const store = new BitStore({
         initialValues: { price: 10, qty: 2, total: 0 },
-        features: {
-          computed: {
-            total: (vals) => vals.price * vals.qty,
-          },
+        fields: {
+          total: { computed: (vals) => vals.price * vals.qty },
         },
       });
 
@@ -97,9 +95,9 @@ describe("BitStore Core", () => {
           lastName: "Ishikawa",
           fullName: "",
         },
-        features: {
-          computed: {
-            fullName: (vals) => `${vals.firstName} ${vals.lastName}`,
+        fields: {
+          fullName: {
+            computed: (vals) => `${vals.firstName} ${vals.lastName}`,
           },
         },
       });
@@ -111,11 +109,9 @@ describe("BitStore Core", () => {
     it("should handle cascading computed fields (double pass)", () => {
       const store = new BitStore({
         initialValues: { netPrice: 100, tax: 0, finalPrice: 0 },
-        features: {
-          computed: {
-            tax: (vals) => vals.netPrice * 0.1,
-            finalPrice: (vals) => vals.netPrice + vals.tax,
-          },
+        fields: {
+          tax: { computed: (vals) => vals.netPrice * 0.1 },
+          finalPrice: { computed: (vals) => vals.netPrice + vals.tax },
         },
       });
 
@@ -132,8 +128,10 @@ describe("BitStore Core", () => {
         initialValues: { country: "US", state: "" },
       });
       store.registerField("state", {
-        dependsOn: ["country"],
-        showIf: (values) => values.country === "BR",
+        conditional: {
+          dependsOn: ["country"],
+          showIf: (values) => values.country === "BR",
+        },
       });
 
       expect(store.isHidden("state")).toBe(true);
@@ -147,8 +145,10 @@ describe("BitStore Core", () => {
       store.subscribe(listener);
 
       store.registerField("state", {
-        dependsOn: ["country"],
-        showIf: (values) => values.country === "BR",
+        conditional: {
+          dependsOn: ["country"],
+          showIf: (values) => values.country === "BR",
+        },
       });
 
       store.setField("country", "BR");
@@ -162,8 +162,10 @@ describe("BitStore Core", () => {
         initialValues: { type: "company", cnpj: "" },
       });
       store.registerField("cnpj", {
-        dependsOn: ["type"],
-        showIf: (values) => values.type === "company",
+        conditional: {
+          dependsOn: ["type"],
+          showIf: (values) => values.type === "company",
+        },
       });
 
       store.setError("cnpj", "Required");
@@ -180,8 +182,10 @@ describe("BitStore Core", () => {
       });
 
       store.registerField("state", {
-        dependsOn: ["country"],
-        showIf: (v) => v.country === "BR",
+        conditional: {
+          dependsOn: ["country"],
+          showIf: (v) => v.country === "BR",
+        },
       });
 
       expect(store.isHidden("state")).toBe(false);
@@ -216,7 +220,10 @@ describe("BitStore Core", () => {
     it("should evaluate step status correctly", () => {
       const store = new BitStore({
         initialValues: { p1: "", p2: "" },
-        features: { scopes: { step1: ["p1", "p2"] } },
+        fields: {
+          p1: { scope: "step1" },
+          p2: { scope: "step1" },
+        },
       });
 
       store.setError("p1", "Error");
@@ -246,8 +253,10 @@ describe("BitStore Core", () => {
       });
 
       store.registerField("licenseNumber", {
-        dependsOn: ["hasLicense"],
-        requiredIf: (v) => v.hasLicense === true,
+        conditional: {
+          dependsOn: ["hasLicense"],
+          requiredIf: (v) => v.hasLicense === true,
+        },
       });
 
       const isValid = await store.validate();
@@ -311,16 +320,15 @@ describe("BitStore Core", () => {
     it("should remove hidden fields and apply transforms on submit", async () => {
       const store = new BitStore({
         initialValues: { newsletter: false, email: "test@test.com", price: 10 },
-        features: {
-          transform: {
-            price: (val) => val * 2,
+        fields: {
+          price: { transform: (val) => val * 2 },
+          email: {
+            conditional: {
+              dependsOn: ["newsletter"],
+              showIf: (values) => values.newsletter === true,
+            },
           },
         },
-      });
-
-      store.registerField("email", {
-        dependsOn: ["newsletter"],
-        showIf: (values) => values.newsletter === true,
       });
 
       let submittedData: any;
@@ -426,8 +434,10 @@ describe("BitStore Core", () => {
       });
 
       store.registerField("username", {
-        asyncValidate: mockApi,
-        asyncValidateDelay: 500,
+        validation: {
+          asyncValidate: mockApi,
+          asyncValidateDelay: 500,
+        },
       });
 
       store.setField("username", "lea");
@@ -468,8 +478,10 @@ describe("BitStore Core", () => {
       });
 
       store.registerField("email", {
-        asyncValidate: mockApi,
-        asyncValidateDelay: 100,
+        validation: {
+          asyncValidate: mockApi,
+          asyncValidateDelay: 100,
+        },
       });
 
       store.setField("email", "dev@");
@@ -500,8 +512,10 @@ describe("BitStore Core", () => {
       });
 
       store.registerField("username", {
-        asyncValidate: async () => "API: Username ocupado",
-        asyncValidateDelay: 0,
+        validation: {
+          asyncValidate: async () => "API: Username ocupado",
+          asyncValidateDelay: 0,
+        },
       });
 
       store.setField("username", "leandro");
@@ -524,10 +538,14 @@ describe("BitStore Core", () => {
       });
 
       store.registerField("cnpj", {
-        dependsOn: ["hasCnpj"],
-        showIf: (v) => v.hasCnpj,
-        asyncValidate: async () => "API: CNPJ Inválido",
-        asyncValidateDelay: 0,
+        conditional: {
+          dependsOn: ["hasCnpj"],
+          showIf: (v) => v.hasCnpj,
+        },
+        validation: {
+          asyncValidate: async () => "API: CNPJ Inválido",
+          asyncValidateDelay: 0,
+        },
       });
 
       store.setField("cnpj", "111");
