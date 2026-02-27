@@ -1,5 +1,5 @@
 import { BitErrors, BitLifecycleAdapter } from "./types";
-import { deepClone, deepEqual, getDeepValue, setDeepValue } from "./utils";
+import { deepClone, getDeepValue, setDeepValue } from "./utils";
 
 export class BitLifecycleManager<T extends object> {
   constructor(private store: BitLifecycleAdapter<T>) {}
@@ -21,11 +21,17 @@ export class BitLifecycleManager<T extends object> {
       }
     });
 
+    const isDirty = (this.store as any).updateDirtyForPath(
+      path,
+      newValues,
+      this.store.config.initialValues,
+    );
+
     this.store.internalUpdateState({
       values: newValues,
       errors: newErrors,
       isValid: Object.keys(newErrors).length === 0,
-      isDirty: !deepEqual(newValues, this.store.config.initialValues),
+      isDirty,
     });
 
     if (this.store.config.resolver) {
@@ -44,6 +50,8 @@ export class BitLifecycleManager<T extends object> {
 
     this.store.validator.cancelAll();
     this.store.deps.evaluateAll(clonedValues);
+
+    (this.store as any).clearDirtyPaths();
 
     this.store.internalUpdateState({
       values: clonedValues,
@@ -116,6 +124,8 @@ export class BitLifecycleManager<T extends object> {
     const initialCloned = deepClone(this.store.config.initialValues);
 
     this.store.deps.evaluateAll(initialCloned);
+
+    (this.store as any).clearDirtyPaths();
 
     this.store.internalUpdateState({
       values: initialCloned,

@@ -23,6 +23,23 @@ export function deepClone<T>(obj: T): T {
   return clone as T;
 }
 
+/**
+ * Fast equality for single values. Uses === for primitives, deepEqual for objects/arrays.
+ * Prefer over deepEqual when comparing a single field value (e.g. isFieldDirty, getStepStatus).
+ */
+export function valueEqual(a: any, b: any): boolean {
+  if (a === b) return true;
+  if (
+    a === null ||
+    typeof a !== "object" ||
+    b === null ||
+    typeof b !== "object"
+  ) {
+    return false;
+  }
+  return deepEqual(a, b);
+}
+
 export function deepEqual(a: any, b: any): boolean {
   if (a === b) return true;
   if (
@@ -54,6 +71,40 @@ export function deepEqual(a: any, b: any): boolean {
   }
 
   return true;
+}
+
+/**
+ * Collects all paths where obj differs from initial. Used to rebuild dirtyPaths after full state replacement.
+ */
+export function collectDirtyPaths(
+  obj: any,
+  initial: any,
+  prefix = "",
+  result: Set<string> = new Set(),
+): Set<string> {
+  if (valueEqual(obj, initial)) return result;
+  if (
+    obj === null ||
+    typeof obj !== "object" ||
+    initial === null ||
+    typeof initial !== "object"
+  ) {
+    if (prefix) result.add(prefix);
+    return result;
+  }
+  if (Array.isArray(obj) || Array.isArray(initial)) {
+    if (!valueEqual(obj, initial) && prefix) result.add(prefix);
+    return result;
+  }
+  const allKeys = new Set([
+    ...Object.keys(obj || {}),
+    ...Object.keys(initial || {}),
+  ]);
+  for (const k of allKeys) {
+    const p = prefix ? `${prefix}.${k}` : k;
+    collectDirtyPaths((obj as any)?.[k], (initial as any)?.[k], p, result);
+  }
+  return result;
 }
 
 const pathCache = new Map<string, string[]>();

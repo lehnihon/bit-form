@@ -7,6 +7,7 @@ export {
   setDeepValue,
   deepClone,
   deepEqual,
+  valueEqual,
   cleanPrefixedKeys,
 } from "./store/utils";
 
