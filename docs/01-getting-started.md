@@ -111,5 +111,6 @@ Now that you have your first form running, dive deeper into Bit-Form's powerful 
 - **[Core Concepts](./02-core-concepts.md)**: Learn how the `BitStore` handles state and lifecycle under the hood.
 - **[Framework Guides](./frameworks/react.md)**: Check out specific guides for React, React Native, Vue, or Angular.
 - **[Validation & Resolvers](./features/validation.md)**: Learn how to connect schemas like Zod, Yup, or Joi to your forms.
+- **[Scopes](./features/scopes.md)**: Per-step validation for wizard forms with `useBitScope` / `injectBitScope`.
 - **[When to Use What](./guides/when-to-use-what.md)**: Quick reference for choosing the right feature (resolver, asyncValidate, setServerErrors, etc.).
 - **[Complete Example](./examples/complete-form-example.md)**: See masks, asyncValidate, conditional logic, scopes, history, and DevTools working together.

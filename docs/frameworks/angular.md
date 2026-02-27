@@ -96,3 +96,30 @@ export class TagsComponent {
   tags = injectBitArray<string>("tags");
 }
 ```
+
+## 4. Scoped Validation with `injectBitScope`
+
+For multi-step or wizard forms, define `scopes` in your store and use `injectBitScope` to validate and track status per step.
+
+```typescript
+import { injectBitScope } from "bit-form/angular";
+
+@Component({...})
+export class WizardStep1Component {
+  // Store config: scopes: { step1: ["name", "email"], step2: ["address"] }
+  step1 = injectBitScope("step1");
+
+  async handleNext() {
+    const { valid } = await this.step1.validate();
+    if (valid) this.goToStep(2);
+  }
+}
+```
+
+```html
+<button (click)="handleNext()" [disabled]="!step1.isValid()">
+  Próximo
+</button>
+```
+
+See [Scopes](../features/scopes.md) for full documentation.
