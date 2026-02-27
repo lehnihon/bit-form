@@ -5,7 +5,6 @@ import {
   BitConfig,
   BitErrors,
   BitState,
-  BitFieldConfig,
   BitFieldDefinition,
   BitResolvedConfig,
   BitStoreAdapter,

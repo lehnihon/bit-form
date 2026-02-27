@@ -1,7 +1,7 @@
 import { inject, DestroyRef, computed, signal } from "@angular/core";
 import { BIT_STORE_TOKEN } from "./provider";
 import {
-  BitFieldConfig,
+  BitFieldDefinition,
   BitFieldOptions,
   getDeepValue,
   BitPath,
@@ -12,7 +12,7 @@ export function injectBitField<
   TValue = any,
   TForm extends object = any,
   P extends BitPath<TForm> = BitPath<TForm>,
->(path: P, config?: BitFieldConfig<TForm>, options?: BitFieldOptions) {
+>(path: P, config?: BitFieldDefinition<TForm>, options?: BitFieldOptions) {
   const store = inject(BIT_STORE_TOKEN);
 
   const stateSignal = signal(store.getState());
@@ -68,10 +68,12 @@ export function injectBitField<
 
   const invalid = computed(() => touched() && !!error());
 
-  const resolvedMask = options?.mask
-    ? typeof options.mask === "string"
-      ? store.masks[options.mask]
-      : options.mask
+  const maskOption =
+    options?.mask ?? store.config.fields?.[path as string]?.mask;
+  const resolvedMask = maskOption
+    ? typeof maskOption === "string"
+      ? store.masks[maskOption]
+      : maskOption
     : undefined;
 
   const displayValue = computed(() => {

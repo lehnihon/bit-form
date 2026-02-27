@@ -1,12 +1,12 @@
 import { useCallback, useSyncExternalStore, useRef, useEffect } from "react";
 import { useBitStore } from "./context";
-import { getDeepValue, BitFieldConfig, BitPath, BitPathValue } from "../core";
+import { getDeepValue, BitFieldDefinition, BitPath, BitPathValue } from "../core";
 
 export function useBitFieldBase<
   TValue = any,
   TForm extends object = any,
   P extends BitPath<TForm> = BitPath<TForm>,
->(path: P, config?: BitFieldConfig<TForm>) {
+>(path: P, config?: BitFieldDefinition<TForm>) {
   const store = useBitStore<TForm>();
   const lastState = useRef<{
     value: BitPathValue<TForm, P>;

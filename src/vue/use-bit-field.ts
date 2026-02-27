@@ -1,10 +1,10 @@
 import { computed, onUnmounted, shallowRef } from "vue";
 import { useBitStore } from "./context";
-import { BitFieldOptions, BitFieldConfig, getDeepValue } from "../core";
+import { BitFieldOptions, BitFieldDefinition, getDeepValue } from "../core";
 
 export function useBitField<TValue = any>(
   path: string,
-  config?: BitFieldConfig<any>,
+  config?: BitFieldDefinition<any>,
   options?: BitFieldOptions,
 ) {
   const store = useBitStore<any>();
@@ -13,10 +13,12 @@ export function useBitField<TValue = any>(
     store.registerField(path as string, config as any);
   }
 
-  const resolvedMask = options?.mask
-    ? typeof options.mask === "string"
-      ? store.masks?.[options.mask]
-      : options.mask
+  const maskOption =
+    options?.mask ?? store.config.fields?.[path as string]?.mask;
+  const resolvedMask = maskOption
+    ? typeof maskOption === "string"
+      ? store.masks?.[maskOption]
+      : maskOption
     : undefined;
 
   const state = shallowRef(store.getState());

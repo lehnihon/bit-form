@@ -50,9 +50,6 @@ export interface BitFieldDefinition<T extends object = any> {
   scope?: string;
 }
 
-/** @deprecated Use BitFieldDefinition */
-export type BitFieldConfig<T extends object = any> = BitFieldDefinition<T>;
-
 export interface DevToolsOptions {
   enabled?: boolean;
   mode?: "local" | "remote";
