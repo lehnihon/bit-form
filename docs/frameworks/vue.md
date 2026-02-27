@@ -59,21 +59,29 @@ const ageField = useBitField("age");
 
 ## 3. Submitting the Form
 
-Use `useBitForm` to access form metadata and the `submit` wrapper.
+Use `useBitForm` to access form metadata, the `submit` wrapper, and the recommended `onSubmit` helper (which handles API calls and 422 server errors automatically).
 
 ```vue
 <script setup lang="ts">
 import { useBitForm } from "bit-form/vue";
 
-const { submit, isSubmitting, isValid } = useBitForm();
+const { submit, onSubmit, submitError, isSubmitting, isValid } = useBitForm();
 
-const onSubmit = submit((values) => {
+// Simple submit
+const handleSubmit = submit((values) => {
   console.log("Vue Form Submitted:", values);
+});
+
+// Or use onSubmit for API + server errors
+const handleApiSubmit = onSubmit(async (values) => {
+  const res = await api.createUser(values);
+  return res.data;
 });
 </script>
 
 <template>
-  <form @submit="onSubmit">
+  <form @submit="handleSubmit">
+    <p v-if="submitError">{{ submitError.message }}</p>
     <button type="submit" :disabled="!isValid.value || isSubmitting.value">
       Submit
     </button>

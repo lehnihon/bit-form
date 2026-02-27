@@ -79,6 +79,12 @@ The complete documentation is available in the `/docs` folder. Explore the guide
 - **[Field Arrays](./docs/features/field-arrays.md)**: Managing dynamic lists of fields.
 - **[History & Time Travel](./docs/features/history-and-time-travel.md)**: Using Undo/Redo features.
 
+### 📖 Guides & Examples
+
+- **[When to Use What](./docs/guides/when-to-use-what.md)**: Quick reference for resolver vs asyncValidate vs setServerErrors, computed vs transform, and conditional fields.
+- **[Complete Form Example](./docs/examples/complete-form-example.md)**: End-to-end example with masks, asyncValidate, conditional logic, scopes, history, and DevTools.
+- **[Server Errors](./docs/examples/server-errors.md)**: Client validation (resolver/asyncValidate) vs API 422 handling (setServerErrors, onSubmit).
+
 ### 🔍 DevTools
 
 - **[Remote Inspector CLI](./docs/devtools/remote-inspector.md)**: Debugging via `bit-form devtools`.
