@@ -61,3 +61,9 @@ if (isValidating) return <Spinner />;
 ```
 
 Bit-Form safely merges synchronous schema errors with asynchronous API errors, avoiding race conditions if the user types quickly.
+
+## Server Errors (422 / 400)
+
+When your API returns validation errors after submit (e.g. 422 Unprocessable Entity), use `setServerErrors` to map them to fields. The `onSubmit` helper in `useBitForm` / `injectBitForm` does this automatically: if your handler throws an object like `{ errors: { email: ["Taken"] } }`, it calls `setServerErrors` for you.
+
+See the [Server Errors Example](../examples/server-errors.md) for the full pattern.

@@ -26,7 +26,9 @@ export default function App() {
 
 ## 2. Using `useBitForm`
 
-The `useBitForm` hook gives you access to the form's metadata, such as `isValid`, `isSubmitting`, and the `submit` wrapper function.
+The `useBitForm` hook gives you access to the form's metadata, such as `isValid`, `isSubmitting`, the `submit` wrapper, and the recommended `onSubmit` helper.
+
+### Basic `submit`
 
 ```tsx
 import { useBitForm } from "bit-form/react";
@@ -45,6 +47,26 @@ export function SubmitButton() {
   );
 }
 ```
+
+### Recommended `onSubmit` (API + server errors)
+
+Use `onSubmit` when your form calls an API. It handles `preventDefault`, calls the API, maps 422 validation errors to fields via `setServerErrors`, and exposes `submitError` and `lastResponse` for UI feedback.
+
+```tsx
+const { onSubmit, submitError, lastResponse, isSubmitting } = useBitForm();
+
+const handleSubmit = onSubmit(async (values) => {
+  const res = await api.createUser(values);
+  return res.data;
+});
+
+<form onSubmit={handleSubmit}>
+  {submitError && <p>{submitError.message}</p>}
+  <button disabled={isSubmitting}>Submit</button>
+</form>
+```
+
+See [Server Errors Example](../examples/server-errors.md) for the full pattern.
 
 ## 3. Connecting Fields with `useBitField`
 
@@ -92,4 +114,22 @@ export function TagsList() {
     </div>
   );
 }
+```
+
+## 5. Scoped Validation with `useBitScope`
+
+For multi-step or wizard forms, define `scopes` in your store config and use `useBitScope` to validate and track status per step.
+
+```tsx
+import { useBitScope } from "bit-form/react";
+
+// Store config: scopes: { step1: ["name", "email"], step2: ["address"] }
+const step1 = useBitScope("step1");
+
+const handleNext = async () => {
+  const { valid } = await step1.validate();
+  if (valid) goToStep(2);
+};
+
+// step1.status, step1.isValid, step1.isDirty, step1.errors
 ```

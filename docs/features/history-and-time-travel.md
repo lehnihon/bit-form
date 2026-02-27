@@ -15,7 +15,15 @@ const store = new BitStore({
 
 ## How it works
 
-Every time a user finishes interacting with a field (specifically, when `blurField` is triggered), Bit-Form takes a deep clone snapshot of the current values and saves it to the history stack (up to a default limit of 15 steps).
+Every time a user finishes interacting with a field (specifically, when `blurField` is triggered), Bit-Form takes a deep clone snapshot of the current values and saves it to the history stack. You can configure the limit:
+
+```tsx
+const store = new BitStore({
+  initialValues: { documentText: "" },
+  enableHistory: true,
+  historyLimit: 30, // Default is 15
+});
+```
 
 ## Using Undo / Redo
 
