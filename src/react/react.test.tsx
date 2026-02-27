@@ -32,7 +32,7 @@ describe("React Integration (Context + Hooks)", () => {
         bonusValue: 0,
         ...initialValues,
       },
-      validationDelay: 0,
+      validation: { delay: 0 },
     });
 
   const wrapper = ({ children, store }: any) => (
@@ -271,10 +271,12 @@ describe("React Integration (Context + Hooks)", () => {
           hasBonus: false,
           bonusValue: 0,
         },
-        scopes: { step1: ["user.firstName", "user.lastName"] },
-        validationDelay: 0,
-        resolver: (vals) =>
-          !vals.user?.firstName ? { "user.firstName": "Erro no nome" } : {},
+        features: { scopes: { step1: ["user.firstName", "user.lastName"] } },
+        validation: {
+          delay: 0,
+          resolver: (vals) =>
+            !vals.user?.firstName ? { "user.firstName": "Erro no nome" } : {},
+        },
       });
 
       const { result } = renderHook(() => useBitScope("step1"), {

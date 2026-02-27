@@ -22,6 +22,7 @@ import {
   getDeepValue,
   valueEqual,
 } from "../utils";
+import { normalizeConfig } from "./config";
 import { BitDependencyManager } from "./dependency-manager";
 import { BitHistoryManager } from "./history-manager";
 import { BitArrayManager } from "./array-manager";
@@ -50,17 +51,9 @@ export class BitStore<T extends object = any>
   private dirtyPaths: Set<string> = new Set();
 
   constructor(config: BitConfig<T> = {}) {
-    const rawInitial = config.initialValues || ({} as T);
+    this.config = normalizeConfig(config);
 
-    this.config = {
-      validationDelay: 300,
-      enableHistory: false,
-      historyLimit: 15,
-      ...config,
-      initialValues: deepClone(rawInitial),
-    };
-
-    this.masks = config.masks ?? bitMasks;
+    this.masks = this.config.masks ?? bitMasks;
     this.deps = new BitDependencyManager<T>();
     this.history = new BitHistoryManager<T>(
       !!this.config.enableHistory,
@@ -98,7 +91,7 @@ export class BitStore<T extends object = any>
     this.internalSaveSnapshot();
 
     this.storeId =
-      config.name || `bit-form-${Math.random().toString(36).substring(2, 9)}`;
+      this.config.name || `bit-form-${Math.random().toString(36).substring(2, 9)}`;
     bitBus.stores[this.storeId] = this;
   }
 

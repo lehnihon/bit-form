@@ -65,5 +65,5 @@ Use UI-only hide only if you have very custom rendering logic and are comfortabl
 | Submit "R$ 1.500" as 1500 | `transform` |
 | Show CNPJ only when type=PJ | `showIf` + `dependsOn` |
 | Validate step before "Next" | `scopes` + `useBitScope` / `injectBitScope` |
-| Undo/Redo | `enableHistory`, `undo()`, `redo()` |
+| Undo/Redo | `history: { enabled: true }`, `undo()`, `redo()` |
 | Debug form state | `devTools: true` |

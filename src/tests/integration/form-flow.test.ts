@@ -18,8 +18,8 @@ describe("Form Lifecycle Flow", () => {
         showAdvanced: false,
         secretKey: "HIDDEN",
       },
-      resolver: mockResolver,
-      transform: { price: (v) => unmaskCurrency(v) },
+      validation: { resolver: mockResolver },
+      features: { transform: { price: (v) => unmaskCurrency(v) } },
     });
 
     store.registerConfig("secretKey", {

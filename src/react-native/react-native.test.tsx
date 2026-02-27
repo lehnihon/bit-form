@@ -7,7 +7,7 @@ describe("React Native Integration (bit-form/react-native)", () => {
   const createTestStore = (initialValues: any) =>
     new BitStore({
       initialValues,
-      validationDelay: 0,
+      validation: { delay: 0 },
     });
 
   const wrapper = ({ children, store }: any) => (

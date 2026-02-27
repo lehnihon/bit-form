@@ -80,8 +80,10 @@ describe("BitStore Core", () => {
     it("should calculate fields on initialization", () => {
       const store = new BitStore({
         initialValues: { price: 10, qty: 2, total: 0 },
-        computed: {
-          total: (vals) => vals.price * vals.qty,
+        features: {
+          computed: {
+            total: (vals) => vals.price * vals.qty,
+          },
         },
       });
 
@@ -95,8 +97,10 @@ describe("BitStore Core", () => {
           lastName: "Ishikawa",
           fullName: "",
         },
-        computed: {
-          fullName: (vals) => `${vals.firstName} ${vals.lastName}`,
+        features: {
+          computed: {
+            fullName: (vals) => `${vals.firstName} ${vals.lastName}`,
+          },
         },
       });
 
@@ -107,9 +111,11 @@ describe("BitStore Core", () => {
     it("should handle cascading computed fields (double pass)", () => {
       const store = new BitStore({
         initialValues: { netPrice: 100, tax: 0, finalPrice: 0 },
-        computed: {
-          tax: (vals) => vals.netPrice * 0.1,
-          finalPrice: (vals) => vals.netPrice + vals.tax,
+        features: {
+          computed: {
+            tax: (vals) => vals.netPrice * 0.1,
+            finalPrice: (vals) => vals.netPrice + vals.tax,
+          },
         },
       });
 
@@ -210,7 +216,7 @@ describe("BitStore Core", () => {
     it("should evaluate step status correctly", () => {
       const store = new BitStore({
         initialValues: { p1: "", p2: "" },
-        scopes: { step1: ["p1", "p2"] },
+        features: { scopes: { step1: ["p1", "p2"] } },
       });
 
       store.setError("p1", "Error");
@@ -260,7 +266,7 @@ describe("BitStore Core", () => {
     it("should track history correctly", () => {
       const store = new BitStore({
         initialValues: { name: "Leo" },
-        enableHistory: true,
+        history: { enabled: true },
       });
 
       store.setField("name", "Leandro");
@@ -305,8 +311,10 @@ describe("BitStore Core", () => {
     it("should remove hidden fields and apply transforms on submit", async () => {
       const store = new BitStore({
         initialValues: { newsletter: false, email: "test@test.com", price: 10 },
-        transform: {
-          price: (val) => val * 2,
+        features: {
+          transform: {
+            price: (val) => val * 2,
+          },
         },
       });
 
@@ -488,8 +496,7 @@ describe("BitStore Core", () => {
 
       const store = new BitStore({
         initialValues: { username: "leandro", password: "" },
-        resolver: mockResolver,
-        validationDelay: 0,
+        validation: { resolver: mockResolver, delay: 0 },
       });
 
       store.registerConfig("username", {

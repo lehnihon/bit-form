@@ -12,10 +12,12 @@ const store = new BitStore<MyFormValues>({
     name: "",
     email: "",
   },
-  resolver: async (values) => {
-    const errors: Record<string, string | undefined> = {};
-    if (!values.email) errors.email = "Email is required";
-    return errors;
+  validation: {
+    resolver: async (values) => {
+      const errors: Record<string, string | undefined> = {};
+      if (!values.email) errors.email = "Email is required";
+      return errors;
+    },
   },
 });
 ```
@@ -274,7 +276,7 @@ store.moveItem("items", 0, 1);
 
 ## History & Time‑Travel
 
-History is enabled by setting `enableHistory: true` in the `BitConfig`. The store will save snapshots at key points (such as `blurField` and other lifecycle events).
+History is enabled by setting `history: { enabled: true }` in the `BitConfig`. The store will save snapshots at key points (such as `blurField` and other lifecycle events).
 
 ### `canUndo: boolean` / `canRedo: boolean`
 

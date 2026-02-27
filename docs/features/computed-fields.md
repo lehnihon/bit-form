@@ -14,9 +14,11 @@ const store = new BitStore({
     total: 0,
     discountedTotal: 0,
   },
-  computed: {
-    total: (values) => values.price * values.quantity,
-    discountedTotal: (values) => values.total * 0.9, // 10% discount
+  features: {
+    computed: {
+      total: (values) => values.price * values.quantity,
+      discountedTotal: (values) => values.total * 0.9, // 10% discount
+    },
   },
 });
 ```

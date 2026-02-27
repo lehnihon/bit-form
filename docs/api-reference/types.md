@@ -137,47 +137,63 @@ These options are used via the `BitConfig.devTools` property.
 
 ## `BitConfig<T>`
 
-Primary configuration object passed to the `BitStore` constructor.
+Primary configuration object passed to the `BitStore` constructor. Supports both **flat** (legacy) and **nested** (recommended) options. Nested options take precedence when both are present.
+
+### Nested structure (recommended)
 
 ```ts
 interface BitConfig<T extends object = any> {
-  // Identification
+  // Core
   name?: string;
-
-  // Values
   initialValues?: T;
-
-  // Validation
-  resolver?: ValidatorFn<T>;
-  validationDelay?: number;
-
-  // Computed & scopes
-  computed?: Record<string, BitComputedFn<T>>;
-  scopes?: Record<string, string[]>;
-
-  // Transforms
-  transform?: Partial<Record<string, BitTransformFn<T>>>;
-
-  // Masks
-  masks?: Record<string, BitMask>;
-
-  // History
-  enableHistory?: boolean;
-
-  // Per-field configs
   fields?: Record<string, BitFieldConfig<T>>;
+
+  // Validation - nested
+  validation?: {
+    resolver?: ValidatorFn<T>;
+    delay?: number;
+    defaultRequiredMessage?: string;
+  };
+
+  // History - nested
+  history?: {
+    enabled?: boolean;
+    limit?: number;
+  };
+
+  // Features - nested
+  features?: {
+    computed?: Record<string, BitComputedFn<T>>;
+    transform?: Partial<Record<string, BitTransformFn<T>>>;
+    scopes?: Record<string, string[]>;
+    masks?: Record<string, BitMask>;
+  };
 
   // DevTools
   devTools?: boolean | DevToolsOptions;
 }
 ```
 
+### Example
+
+```ts
+const store = new BitStore({
+  initialValues: { email: "" },
+  validation: { resolver: zodResolver(schema), delay: 300 },
+  history: { enabled: true, limit: 20 },
+  features: {
+    scopes: { step1: ["email"] },
+    transform: { email: (v) => v?.toLowerCase() },
+  },
+});
+```
+
 Key points:
 
 - `initialValues` is optional at the type level, but the resolved config will always have a non-null `initialValues`.
-- `scopes` allows grouping fields (e.g. by wizard step) for per-scope validation and status.
-- `transform` lets you normalize values before `submit` calls your handler.
-- `masks` lets you override or extend the global mask registry.
+- `features.scopes` allows grouping fields (e.g. by wizard step) for per-scope validation.
+- `features.transform` lets you normalize values before `submit` calls your handler.
+- `features.masks` lets you override or extend the global mask registry.
 - `devTools` can be a simple boolean or an object with fine-grained options.
 
 ---

@@ -9,7 +9,7 @@ By default, history tracking is disabled for maximum performance. You can enable
 ```tsx
 const store = new BitStore({
   initialValues: { documentText: "" },
-  enableHistory: true, // Turns on the Time-Travel machine
+  history: { enabled: true }, // Turns on the Time-Travel machine
 });
 ```
 
@@ -20,8 +20,7 @@ Every time a user finishes interacting with a field (specifically, when `blurFie
 ```tsx
 const store = new BitStore({
   initialValues: { documentText: "" },
-  enableHistory: true,
-  historyLimit: 30, // Default is 15
+  history: { enabled: true, limit: 30 }, // Default limit is 15
 });
 ```
 

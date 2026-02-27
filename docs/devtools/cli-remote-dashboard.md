@@ -41,5 +41,5 @@ const storeCustom = new BitStore({
 
 - **Live state tree**: `values`, `errors`, `touched`
 - **Action timeline**: Field updates, blur, validation, submit
-- **Time-travel**: Undo/Redo when `enableHistory` is enabled
+- **Time-travel**: Undo/Redo when `history: { enabled: true }` is set
 - **Payload preview**: Data that would be sent on submit (including transforms, hidden fields stripped)

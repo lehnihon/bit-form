@@ -39,7 +39,7 @@ describe("Angular Integration (Signals)", () => {
         hasBonus: false,
         bonusValue: 0,
       },
-      validationDelay: 0,
+      validation: { delay: 0 },
     });
 
     TestBed.configureTestingModule({
@@ -145,9 +145,11 @@ describe("Angular Integration (Signals)", () => {
         hasBonus: false,
         bonusValue: 0,
       },
-      validationDelay: 0,
-      resolver: (vals) =>
-        !vals.user.name ? { "user.name": "Obrigatório" } : {},
+      validation: {
+        delay: 0,
+        resolver: (vals) =>
+          !vals.user.name ? { "user.name": "Obrigatório" } : {},
+      },
     });
 
     TestBed.resetTestingModule();
@@ -176,7 +178,7 @@ describe("Angular Integration (Signals)", () => {
         hasBonus: false,
         bonusValue: 0,
       },
-      scopes: { step1: ["user.name"] },
+      features: { scopes: { step1: ["user.name"] } },
     });
 
     @Component({ standalone: true, template: "" })
