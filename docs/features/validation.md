@@ -36,7 +36,7 @@ Whenever the form changes or a field loses focus, Bit-Form will run the resolver
 Sometimes you need to validate a field against a backend API (e.g., checking if a username is available). You can define `asyncValidate` on a field's configuration. Bit-Form automatically manages the loading state (`isValidating`) and debounces the requests to avoid spamming your API.
 
 ```tsx
-store.registerConfig("username", {
+store.registerField("username", {
   asyncValidate: async (value, allValues) => {
     if (!value) return null;
 

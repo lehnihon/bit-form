@@ -87,7 +87,7 @@ describe("Angular Integration (Signals)", () => {
     const fixture = TestBed.createComponent(HostComponent);
     const app = fixture.componentInstance;
 
-    store.registerConfig("bonusValue", {
+    store.registerField("bonusValue", {
       dependsOn: ["hasBonus"],
       showIf: (v) => v.hasBonus === true,
       requiredIf: (v) => v.hasBonus === true,

@@ -96,7 +96,7 @@ Used in the `BitConfig.transform` map (per-field transforms).
 
 ## `BitFieldConfig<T>`
 
-Configuration for an individual field, used either in `BitConfig.fields` or at runtime via `store.registerConfig`.
+Configuration for an individual field, used either in `BitConfig.fields` or at runtime via `store.registerField`.
 
 ```ts
 interface BitFieldConfig<T extends object = any> {
@@ -137,7 +137,7 @@ These options are used via the `BitConfig.devTools` property.
 
 ## `BitConfig<T>`
 
-Primary configuration object passed to the `BitStore` constructor. Supports both **flat** (legacy) and **nested** (recommended) options. Nested options take precedence when both are present.
+Primary configuration object passed to the `BitStore` constructor.
 
 ### Nested structure (recommended)
 
@@ -191,6 +191,7 @@ const store = new BitStore({
 Key points:
 
 - `initialValues` is optional at the type level, but the resolved config will always have a non-null `initialValues`.
+- `fields` lets you register field configs (`showIf`, `requiredIf`, `asyncValidate`, etc.) in batch at construction. Equivalent to calling `store.registerField(path, config)` for each entry. Prefer this when all fields are known upfront; use `registerField` for dynamic or component-driven config.
 - `features.scopes` allows grouping fields (e.g. by wizard step) for per-scope validation.
 - `features.transform` lets you normalize values before `submit` calls your handler.
 - `features.masks` lets you override or extend the global mask registry.

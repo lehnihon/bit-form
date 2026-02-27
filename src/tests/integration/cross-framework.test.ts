@@ -45,7 +45,7 @@ describe("Cross-Framework Consistency", () => {
   it("should evaluate conditional visibility and requirement consistently", () => {
     const store = new BitStore({ initialValues: { type: "A", detail: "" } });
 
-    store.registerConfig("detail", {
+    store.registerField("detail", {
       dependsOn: ["type"],
       showIf: (v: any) => v.type === "B",
       requiredIf: (v: any) => v.type === "B",

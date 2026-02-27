@@ -22,7 +22,7 @@ describe("Form Lifecycle Flow", () => {
       features: { transform: { price: (v) => unmaskCurrency(v) } },
     });
 
-    store.registerConfig("secretKey", {
+    store.registerField("secretKey", {
       dependsOn: ["showAdvanced"],
       showIf: (v: any) => v.showAdvanced === true,
     });

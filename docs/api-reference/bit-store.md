@@ -223,12 +223,45 @@ Returns `true` if the field is currently required due to `requiredIf` or other c
 const required = store.isRequired("company.taxId");
 ```
 
-### `registerConfig(path: string, config: BitFieldConfig<T>): void`
+### Field configuration: `fields` vs `registerField`
 
-Registers or updates the configuration for a single field path after the store has been created.
+There are two ways to configure field behavior (e.g. `showIf`, `requiredIf`, `asyncValidate`):
+
+| Approach | When to use |
+|----------|-------------|
+| **`fields`** (in `BitConfig`) | Form structure is known at store creation. Register all fields upfront in one place. |
+| **`registerField`** | Fields are dynamic (array items, lazy-loaded) or config comes from components. Used internally by `useBitField` / `injectBitField`. |
+
+**Example with `fields` (declarative, at construction):**
 
 ```ts
-store.registerConfig("company.taxId", {
+const store = new BitStore({
+  initialValues: { documentType: "CPF", documentNumber: "" },
+  fields: {
+    documentNumber: {
+      dependsOn: ["documentType"],
+      showIf: (values) => values.documentType === "CNPJ",
+      requiredIf: (values) => values.documentType === "CNPJ",
+    },
+  },
+});
+```
+
+**Example with `registerField` (imperative, at runtime):**
+
+```ts
+store.registerField("company.taxId", {
+  dependsOn: ["company.country"],
+  showIf: (values) => values.company?.country === "BR",
+});
+```
+
+### `registerField(path: string, config: BitFieldConfig<T>): void`
+
+Registers or updates the configuration for a single field path after the store has been created. Ideal for dynamic fields or when passing config from a component.
+
+```ts
+store.registerField("company.taxId", {
   dependsOn: ["company.country"],
   showIf: (values) => values.company?.country === "BR",
 });

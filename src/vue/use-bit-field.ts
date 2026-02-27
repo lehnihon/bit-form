@@ -10,7 +10,7 @@ export function useBitField<TValue = any>(
   const store = useBitStore<any>();
 
   if (config) {
-    store.registerConfig(path as string, config as any);
+    store.registerField(path as string, config as any);
   }
 
   const resolvedMask = options?.mask

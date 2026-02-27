@@ -131,7 +131,7 @@ describe("BitStore Core", () => {
       const store = new BitStore({
         initialValues: { country: "US", state: "" },
       });
-      store.registerConfig("state", {
+      store.registerField("state", {
         dependsOn: ["country"],
         showIf: (values) => values.country === "BR",
       });
@@ -146,7 +146,7 @@ describe("BitStore Core", () => {
       const listener = vi.fn();
       store.subscribe(listener);
 
-      store.registerConfig("state", {
+      store.registerField("state", {
         dependsOn: ["country"],
         showIf: (values) => values.country === "BR",
       });
@@ -161,7 +161,7 @@ describe("BitStore Core", () => {
       const store = new BitStore({
         initialValues: { type: "company", cnpj: "" },
       });
-      store.registerConfig("cnpj", {
+      store.registerField("cnpj", {
         dependsOn: ["type"],
         showIf: (values) => values.type === "company",
       });
@@ -179,7 +179,7 @@ describe("BitStore Core", () => {
         initialValues: { country: "BR", state: "" },
       });
 
-      store.registerConfig("state", {
+      store.registerField("state", {
         dependsOn: ["country"],
         showIf: (v) => v.country === "BR",
       });
@@ -245,7 +245,7 @@ describe("BitStore Core", () => {
         initialValues: { hasLicense: true, licenseNumber: "" },
       });
 
-      store.registerConfig("licenseNumber", {
+      store.registerField("licenseNumber", {
         dependsOn: ["hasLicense"],
         requiredIf: (v) => v.hasLicense === true,
       });
@@ -318,7 +318,7 @@ describe("BitStore Core", () => {
         },
       });
 
-      store.registerConfig("email", {
+      store.registerField("email", {
         dependsOn: ["newsletter"],
         showIf: (values) => values.newsletter === true,
       });
@@ -425,7 +425,7 @@ describe("BitStore Core", () => {
         });
       });
 
-      store.registerConfig("username", {
+      store.registerField("username", {
         asyncValidate: mockApi,
         asyncValidateDelay: 500,
       });
@@ -467,7 +467,7 @@ describe("BitStore Core", () => {
         });
       });
 
-      store.registerConfig("email", {
+      store.registerField("email", {
         asyncValidate: mockApi,
         asyncValidateDelay: 100,
       });
@@ -499,7 +499,7 @@ describe("BitStore Core", () => {
         validation: { resolver: mockResolver, delay: 0 },
       });
 
-      store.registerConfig("username", {
+      store.registerField("username", {
         asyncValidate: async () => "API: Username ocupado",
         asyncValidateDelay: 0,
       });
@@ -523,7 +523,7 @@ describe("BitStore Core", () => {
         initialValues: { hasCnpj: true, cnpj: "111" },
       });
 
-      store.registerConfig("cnpj", {
+      store.registerField("cnpj", {
         dependsOn: ["hasCnpj"],
         showIf: (v) => v.hasCnpj,
         asyncValidate: async () => "API: CNPJ Inválido",

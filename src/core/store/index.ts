@@ -144,7 +144,7 @@ export class BitStore<T extends object = any>
     this.deps.unregisterPrefix(prefix);
   }
 
-  registerConfig(path: string, config: BitFieldConfig<T>) {
+  registerField(path: string, config: BitFieldConfig<T>) {
     this.deps.register(path, config, this.state.values);
     if (this.deps.isHidden(path)) {
       this.notify();

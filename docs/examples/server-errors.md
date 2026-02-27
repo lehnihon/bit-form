@@ -39,7 +39,7 @@ const store = new BitStore({
 Runs after the user stops typing (debounced). Ideal for "username/email taken" checks.
 
 ```tsx
-store.registerConfig("email", {
+store.registerField("email", {
   asyncValidate: async (value) => {
     if (!value) return null;
     const { available } = await api.checkEmail(value);
