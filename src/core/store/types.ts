@@ -27,6 +27,8 @@ export interface BitFieldConfig<T extends object = any> {
   dependsOn?: string[];
   showIf?: (values: T) => boolean;
   requiredIf?: (values: T) => boolean;
+  /** Custom message when field is required but empty. Falls back to defaultRequiredMessage or "Este campo é obrigatório". */
+  requiredMessage?: string;
   asyncValidate?: (value: any, values: T) => Promise<string | null | undefined>;
   asyncValidateDelay?: number;
 }
@@ -48,6 +50,8 @@ export interface BitConfig<T extends object = any> {
   masks?: Record<string, BitMask>;
   enableHistory?: boolean;
   historyLimit?: number;
+  /** Default message for required-but-empty fields when requiredMessage is not set per field. */
+  defaultRequiredMessage?: string;
   fields?: Record<string, BitFieldConfig<T>>;
   devTools?: boolean | DevToolsOptions;
 }
