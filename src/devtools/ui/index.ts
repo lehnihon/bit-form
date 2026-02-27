@@ -1,10 +1,7 @@
 import { getDevToolsCSS } from "./styles";
+import type { DevToolsActions } from "../types";
 
-export interface DevToolsActions {
-  onUndo: (storeId: string) => void;
-  onRedo: (storeId: string) => void;
-  onReset: (storeId: string) => void;
-}
+export type { DevToolsActions };
 
 export class BitFormDevToolsUI {
   private container: HTMLElement;

@@ -4,4 +4,4 @@ export { useBitArray } from "../react/use-bit-array";
 export { useBitScope } from "../react/use-bit-scope";
 export { useBitWatch } from "../react/use-bit-watch";
 export { useBitField } from "./use-bit-field";
-export type { ScopeStatus, ValidateScopeResult } from "../react/use-bit-scope";
+export type { ScopeStatus, ValidateScopeResult } from "../core";

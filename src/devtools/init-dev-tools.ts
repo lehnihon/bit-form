@@ -1,11 +1,8 @@
 import { setupLocalDevTools } from "./adapters/local";
 import { setupRemoteDevTools } from "./adapters/remote";
+import type { BitDevToolsOptions } from "./types";
 
-export interface BitDevToolsOptions {
-  container?: HTMLElement | string;
-  mode?: "local" | "remote";
-  url?: string;
-}
+export type { BitDevToolsOptions };
 
 export function initDevTools(options: BitDevToolsOptions = {}) {
   const { mode = "local", url } = options;

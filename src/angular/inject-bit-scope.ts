@@ -1,16 +1,8 @@
 import { signal, computed, DestroyRef, inject } from "@angular/core";
+import type { ScopeStatus, ValidateScopeResult } from "../core";
 import { useBitStore } from "./provider";
 
-export type ScopeStatus = {
-  hasErrors: boolean;
-  isDirty: boolean;
-  errors: Record<string, string>;
-};
-
-export type ValidateScopeResult = {
-  valid: boolean;
-  errors: Record<string, string>;
-};
+export type { ScopeStatus, ValidateScopeResult };
 
 function errorsEqual(
   a: Record<string, string>,

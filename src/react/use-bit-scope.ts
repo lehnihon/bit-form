@@ -1,16 +1,8 @@
 import { useCallback, useSyncExternalStore, useRef } from "react";
+import type { ScopeStatus, ValidateScopeResult } from "../core";
 import { useBitStore } from "./context";
 
-export type ScopeStatus = {
-  hasErrors: boolean;
-  isDirty: boolean;
-  errors: Record<string, string>;
-};
-
-export type ValidateScopeResult = {
-  valid: boolean;
-  errors: Record<string, string>;
-};
+export type { ScopeStatus, ValidateScopeResult };
 
 export function useBitScope(scopeName: string) {
   const store = useBitStore();

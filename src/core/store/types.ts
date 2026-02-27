@@ -64,6 +64,19 @@ export interface BitFieldOptions {
   mask?: BitMask | string;
 }
 
+/** Return type of BitStore.getStepStatus, used by useBitScope/injectBitScope. */
+export interface ScopeStatus {
+  hasErrors: boolean;
+  isDirty: boolean;
+  errors: Record<string, string>;
+}
+
+/** Return type of validateStep, used by useBitScope/injectBitScope. */
+export interface ValidateScopeResult {
+  valid: boolean;
+  errors: Record<string, string>;
+}
+
 export interface BitLifecycleAdapter<T extends object> {
   getState: () => BitState<T>;
   internalUpdateState: (partial: Partial<BitState<T>>) => void;
