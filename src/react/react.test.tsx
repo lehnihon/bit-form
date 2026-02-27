@@ -87,7 +87,7 @@ describe("React Integration (Context + Hooks)", () => {
     it("deve reagir a mudanças de isHidden e isRequired via DependencyManager", async () => {
       const store = createTestStore();
 
-      store.registerConfig("bonusValue", {
+      store.registerField("bonusValue", {
         dependsOn: ["hasBonus"],
         showIf: (v) => v.hasBonus === true,
         requiredIf: (v) => v.hasBonus === true,

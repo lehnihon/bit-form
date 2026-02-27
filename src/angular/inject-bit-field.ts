@@ -29,7 +29,7 @@ export function injectBitField<
   });
 
   if (config) {
-    store.registerConfig(path as string, config as any);
+    store.registerField(path as string, config as any);
   }
 
   const value = computed(

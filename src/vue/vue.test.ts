@@ -45,7 +45,7 @@ describe("Vue Integration", () => {
 
   it("should react to isHidden and isRequired changes", async () => {
     const store = new BitStore({ initialValues: { type: "PF", cnpj: "" } });
-    store.registerConfig("cnpj", {
+    store.registerField("cnpj", {
       dependsOn: ["type"],
       showIf: (v: any) => v.type === "PJ",
       requiredIf: (v: any) => v.type === "PJ",

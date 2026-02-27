@@ -20,7 +20,7 @@ export function useBitFieldBase<
 
   useEffect(() => {
     if (config) {
-      store.registerConfig(path, config as any);
+      store.registerField(path, config as any);
     }
 
     return () => {

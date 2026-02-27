@@ -61,7 +61,7 @@ describe("React Native Integration (bit-form/react-native)", () => {
 
   it("deve reagir a isHidden e isRequired no mobile", () => {
     const store = createTestStore({ type: "PF", cnpj: "" });
-    store.registerConfig("cnpj", {
+    store.registerField("cnpj", {
       dependsOn: ["type"],
       showIf: (v: any) => v.type === "PJ",
     });
