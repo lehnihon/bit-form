@@ -9,8 +9,8 @@ const formatStoreState = (instance: any) => {
     _meta: {
       canUndo: instance.canUndo,
       canRedo: instance.canRedo,
-      totalSteps: instance.history?.history?.length || 0,
-      currentIndex: instance.history?.historyIndex ?? -1,
+      totalSteps: instance.historyMg?.history?.length || 0,
+      currentIndex: instance.historyMg?.historyIndex ?? -1,
     },
   };
 };
