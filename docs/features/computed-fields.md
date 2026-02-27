@@ -4,7 +4,7 @@ Computed fields are form values derived from other values. When a dependency cha
 
 ## Setup
 
-Define your calculations in the `computed` property of the `BitStore` config.
+Define computed fields in `fields` via the `computed` property per field.
 
 ```tsx
 const store = new BitStore({
@@ -14,11 +14,9 @@ const store = new BitStore({
     total: 0,
     discountedTotal: 0,
   },
-  features: {
-    computed: {
-      total: (values) => values.price * values.quantity,
-      discountedTotal: (values) => values.total * 0.9, // 10% discount
-    },
+  fields: {
+    total: { computed: (values) => values.price * values.quantity },
+    discountedTotal: { computed: (values) => values.total * 0.9 }, // 10% discount
   },
 });
 ```

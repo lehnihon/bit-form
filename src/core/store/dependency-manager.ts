@@ -1,16 +1,17 @@
-import { BitFieldConfig } from "./types";
+import { BitFieldDefinition } from "./types";
 import { getDeepValue } from "../utils";
 
 export class BitDependencyManager<T extends object = any> {
-  public fieldConfigs: Map<string, BitFieldConfig<T>> = new Map();
+  public fieldConfigs: Map<string, BitFieldDefinition<T>> = new Map();
   public dependencies: Map<string, Set<string>> = new Map();
   public hiddenFields: Set<string> = new Set();
 
-  register(path: string, config: BitFieldConfig<T>, currentValues: T) {
+  register(path: string, config: BitFieldDefinition<T>, currentValues: T) {
     this.fieldConfigs.set(path, config);
 
-    if (config.dependsOn) {
-      config.dependsOn.forEach((dep) => {
+    const dependsOn = config.conditional?.dependsOn;
+    if (dependsOn) {
+      dependsOn.forEach((dep) => {
         if (!this.dependencies.has(dep)) {
           this.dependencies.set(dep, new Set());
         }
@@ -28,7 +29,7 @@ export class BitDependencyManager<T extends object = any> {
   isRequired(path: string, values: T): boolean {
     const config = this.fieldConfigs.get(path);
     if (!config || this.isHidden(path)) return false;
-    return !!config.requiredIf?.(values);
+    return !!config.conditional?.requiredIf?.(values);
   }
 
   getRequiredErrors(
@@ -41,7 +42,7 @@ export class BitDependencyManager<T extends object = any> {
       if (this.isRequired(path, values)) {
         const val = getDeepValue(values, path);
         if (this.isEmpty(val)) {
-          errors[path] = config.requiredMessage ?? defaultMessage;
+          errors[path] = config.validation?.requiredMessage ?? defaultMessage;
         }
       }
     });
@@ -98,9 +99,10 @@ export class BitDependencyManager<T extends object = any> {
 
   private evaluateFieldCondition(path: string, values: T) {
     const config = this.fieldConfigs.get(path);
-    if (!config?.showIf) return;
+    const showIf = config?.conditional?.showIf;
+    if (!showIf) return;
 
-    if (config.showIf(values)) {
+    if (showIf(values)) {
       this.hiddenFields.delete(path);
     } else {
       this.hiddenFields.add(path);

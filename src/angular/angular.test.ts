@@ -88,9 +88,11 @@ describe("Angular Integration (Signals)", () => {
     const app = fixture.componentInstance;
 
     store.registerField("bonusValue", {
-      dependsOn: ["hasBonus"],
-      showIf: (v) => v.hasBonus === true,
-      requiredIf: (v) => v.hasBonus === true,
+      conditional: {
+        dependsOn: ["hasBonus"],
+        showIf: (v) => v.hasBonus === true,
+        requiredIf: (v) => v.hasBonus === true,
+      },
     });
     fixture.detectChanges();
     expect(app.bonusValue.isHidden()).toBe(true);
@@ -178,7 +180,7 @@ describe("Angular Integration (Signals)", () => {
         hasBonus: false,
         bonusValue: 0,
       },
-      features: { scopes: { step1: ["user.name"] } },
+      fields: { "user.name": { scope: "step1" } },
     });
 
     @Component({ standalone: true, template: "" })

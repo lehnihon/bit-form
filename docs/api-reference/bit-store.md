@@ -239,9 +239,11 @@ const store = new BitStore({
   initialValues: { documentType: "CPF", documentNumber: "" },
   fields: {
     documentNumber: {
-      dependsOn: ["documentType"],
-      showIf: (values) => values.documentType === "CNPJ",
-      requiredIf: (values) => values.documentType === "CNPJ",
+      conditional: {
+        dependsOn: ["documentType"],
+        showIf: (values) => values.documentType === "CNPJ",
+        requiredIf: (values) => values.documentType === "CNPJ",
+      },
     },
   },
 });
@@ -251,19 +253,23 @@ const store = new BitStore({
 
 ```ts
 store.registerField("company.taxId", {
-  dependsOn: ["company.country"],
-  showIf: (values) => values.company?.country === "BR",
+  conditional: {
+    dependsOn: ["company.country"],
+    showIf: (values) => values.company?.country === "BR",
+  },
 });
 ```
 
-### `registerField(path: string, config: BitFieldConfig<T>): void`
+### `registerField(path: string, config: BitFieldDefinition<T>): void`
 
 Registers or updates the configuration for a single field path after the store has been created. Ideal for dynamic fields or when passing config from a component.
 
 ```ts
 store.registerField("company.taxId", {
-  dependsOn: ["company.country"],
-  showIf: (values) => values.company?.country === "BR",
+  conditional: {
+    dependsOn: ["company.country"],
+    showIf: (values) => values.company?.country === "BR",
+  },
 });
 ```
 

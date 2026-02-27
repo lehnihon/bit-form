@@ -23,15 +23,35 @@ export type ValidatorFn<T> = (
   options?: { scopeFields?: string[] },
 ) => Promise<BitErrors<T>> | BitErrors<T>;
 
-export interface BitFieldConfig<T extends object = any> {
+/** Conditional logic: visibility and dynamic required. */
+export interface BitFieldConditional<T extends object = any> {
   dependsOn?: string[];
   showIf?: (values: T) => boolean;
   requiredIf?: (values: T) => boolean;
+}
+
+/** Field-level validation: async and required message. */
+export interface BitFieldValidation<T extends object = any> {
   /** Custom message when field is required but empty. Falls back to defaultRequiredMessage or "Este campo é obrigatório". */
   requiredMessage?: string;
   asyncValidate?: (value: any, values: T) => Promise<string | null | undefined>;
   asyncValidateDelay?: number;
 }
+
+/** Full field definition: conditional, validation, transform, computed, mask, scope. */
+export interface BitFieldDefinition<T extends object = any> {
+  conditional?: BitFieldConditional<T>;
+  validation?: BitFieldValidation<T>;
+  transform?: BitTransformFn<T>;
+  computed?: BitComputedFn<T>;
+  /** Mask name (from registry) or BitMask instance. */
+  mask?: BitMask | string;
+  /** Scope name (e.g. wizard step). */
+  scope?: string;
+}
+
+/** @deprecated Use BitFieldDefinition */
+export type BitFieldConfig<T extends object = any> = BitFieldDefinition<T>;
 
 export interface DevToolsOptions {
   enabled?: boolean;
@@ -52,38 +72,29 @@ export interface BitHistoryConfig {
   limit?: number;
 }
 
-/** Features config (computed, transform, scopes, masks). */
-export interface BitFeaturesConfig<T> {
-  computed?: Record<string, BitComputedFn<T>>;
-  transform?: Partial<Record<string, BitTransformFn<T>>>;
-  scopes?: Record<string, string[]>;
-  masks?: Record<string, BitMask>;
-}
-
 /**
- * BitConfig - store configuration (nested structure).
- * @see CHANGELOG for migration from flat format in 1.x.
+ * BitConfig - store configuration.
+ * @see CHANGELOG for migration from features to fields in 2.0.
  */
 export interface BitConfig<T extends object = any> {
-  /** Core - essential */
+  /** Core */
   name?: string;
   initialValues?: T;
-  fields?: Record<string, BitFieldConfig<T>>;
 
-  /** Validation */
+  /** Central field config: conditional, validation, transform, computed, mask, scope. */
+  fields?: Record<string, BitFieldDefinition<T>>;
+
+  /** Schema-level validation */
   validation?: BitValidationConfig<T>;
 
   /** History (undo/redo) */
   history?: BitHistoryConfig;
 
-  /** Features (computed, transform, scopes, masks) */
-  features?: BitFeaturesConfig<T>;
-
   /** DevTools */
   devTools?: boolean | DevToolsOptions;
 }
 
-/** Internal flat config produced by normalizeConfig from BitConfig. */
+/** Internal config produced by normalizeConfig from BitConfig. */
 export interface BitResolvedConfig<T extends object> {
   name?: string;
   initialValues: T;
@@ -92,11 +103,14 @@ export interface BitResolvedConfig<T extends object> {
   defaultRequiredMessage?: string;
   enableHistory: boolean;
   historyLimit: number;
+  /** Derived from fields where field.computed exists. */
   computed?: Record<string, BitComputedFn<T>>;
+  /** Derived from fields where field.transform exists. */
   transform?: Partial<Record<string, BitTransformFn<T>>>;
+  /** Derived from fields where field.scope exists. */
   scopes?: Record<string, string[]>;
   masks?: Record<string, BitMask>;
-  fields?: Record<string, BitFieldConfig<T>>;
+  fields?: Record<string, BitFieldDefinition<T>>;
   devTools?: boolean | DevToolsOptions;
 }
 

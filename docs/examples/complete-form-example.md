@@ -47,43 +47,51 @@ const store = new BitStore({
     limit: 20,
   },
 
-  features: {
-    transform: {
-      salary: (v) => unmaskCurrency(v),
-      cnpj: (v) => (typeof v === "string" ? v.replace(/\D/g, "") : v),
-    },
-    scopes: {
-      step1: ["companyType", "cnpj", "email"],
-      step2: ["salary", "hasBonus", "bonusValue"],
-    },
-  },
-
   devTools: process.env.NODE_ENV !== "production",
 
   fields: {
     cnpj: {
-      dependsOn: ["companyType"],
-      showIf: (v) => v.companyType === "PJ",
-      requiredIf: (v) => v.companyType === "PJ",
-      asyncValidate: async (value) => {
-        if (!value || value.replace(/\D/g, "").length < 14) return null;
-        const ok = await api.checkCnpjAvailable(value);
-        return ok ? null : "CNPJ já cadastrado";
+      conditional: {
+        dependsOn: ["companyType"],
+        showIf: (v) => v.companyType === "PJ",
+        requiredIf: (v) => v.companyType === "PJ",
       },
-      asyncValidateDelay: 500,
+      transform: (v) =>
+        typeof v === "string" ? v.replace(/\D/g, "") : v,
+      scope: "step1",
+      validation: {
+        asyncValidate: async (value) => {
+          if (!value || value.replace(/\D/g, "").length < 14) return null;
+          const ok = await api.checkCnpjAvailable(value);
+          return ok ? null : "CNPJ já cadastrado";
+        },
+        asyncValidateDelay: 500,
+      },
     },
+    companyType: { scope: "step1" },
     email: {
-      asyncValidate: async (value) => {
-        if (!value) return null;
-        const ok = await api.checkEmailAvailable(value);
-        return ok ? null : "E-mail já está em uso";
+      scope: "step1",
+      validation: {
+        asyncValidate: async (value) => {
+          if (!value) return null;
+          const ok = await api.checkEmailAvailable(value);
+          return ok ? null : "E-mail já está em uso";
+        },
+        asyncValidateDelay: 400,
       },
-      asyncValidateDelay: 400,
     },
+    salary: {
+      transform: (v) => unmaskCurrency(v),
+      scope: "step2",
+    },
+    hasBonus: { scope: "step2" },
     bonusValue: {
-      dependsOn: ["hasBonus"],
-      showIf: (v) => v.hasBonus === true,
-      requiredIf: (v) => v.hasBonus === true,
+      conditional: {
+        dependsOn: ["hasBonus"],
+        showIf: (v) => v.hasBonus === true,
+        requiredIf: (v) => v.hasBonus === true,
+      },
+      scope: "step2",
     },
   },
 });

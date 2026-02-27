@@ -4,7 +4,7 @@ Scopes let you group form fields (e.g. by wizard step) for **per-step validation
 
 ## Store Configuration
 
-Define scopes in your `BitStore` config via the `scopes` property. Each scope maps a name to an array of field paths:
+Define scopes by setting `scope` on each field in `fields`:
 
 ```tsx
 import { BitStore } from "bit-form";
@@ -16,11 +16,11 @@ const store = new BitStore({
     address: "",
     city: "",
   },
-  features: {
-    scopes: {
-      step1: ["name", "email"],
-      step2: ["address", "city"],
-    },
+  fields: {
+    name: { scope: "step1" },
+    email: { scope: "step1" },
+    address: { scope: "step2" },
+    city: { scope: "step2" },
   },
 });
 ```

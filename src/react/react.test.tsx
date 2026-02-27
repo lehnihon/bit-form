@@ -88,9 +88,11 @@ describe("React Integration (Context + Hooks)", () => {
       const store = createTestStore();
 
       store.registerField("bonusValue", {
-        dependsOn: ["hasBonus"],
-        showIf: (v) => v.hasBonus === true,
-        requiredIf: (v) => v.hasBonus === true,
+        conditional: {
+          dependsOn: ["hasBonus"],
+          showIf: (v) => v.hasBonus === true,
+          requiredIf: (v) => v.hasBonus === true,
+        },
       });
 
       const { result } = renderHook(
@@ -271,7 +273,10 @@ describe("React Integration (Context + Hooks)", () => {
           hasBonus: false,
           bonusValue: 0,
         },
-        features: { scopes: { step1: ["user.firstName", "user.lastName"] } },
+        fields: {
+          "user.firstName": { scope: "step1" },
+          "user.lastName": { scope: "step1" },
+        },
         validation: {
           delay: 0,
           resolver: (vals) =>
