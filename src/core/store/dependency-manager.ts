@@ -31,14 +31,17 @@ export class BitDependencyManager<T extends object = any> {
     return !!config.requiredIf?.(values);
   }
 
-  getRequiredErrors(values: T): Record<string, string> {
+  getRequiredErrors(
+    values: T,
+    defaultMessage = "Este campo é obrigatório",
+  ): Record<string, string> {
     const errors: Record<string, string> = {};
 
     this.fieldConfigs.forEach((config, path) => {
       if (this.isRequired(path, values)) {
         const val = getDeepValue(values, path);
         if (this.isEmpty(val)) {
-          errors[path] = "Este campo é obrigatório";
+          errors[path] = config.requiredMessage ?? defaultMessage;
         }
       }
     });
