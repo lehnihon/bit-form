@@ -17,7 +17,7 @@ export function useBitField<TValue = any>(
     options?.mask ?? store.config.fields?.[path as string]?.mask;
   const resolvedMask = maskOption
     ? typeof maskOption === "string"
-      ? store.masks?.[maskOption]
+      ? store.config.masks?.[maskOption]
       : maskOption
     : undefined;
 

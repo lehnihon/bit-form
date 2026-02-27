@@ -354,7 +354,7 @@ store.registerMask("customCurrency", {
 });
 ```
 
-The store also exposes a `masks` record that contains all available masks (including built-in ones).
+Masks are available via `store.getConfig().masks` (includes built-in and any registered via `registerMask`).
 
 ---
 

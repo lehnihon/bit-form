@@ -15,7 +15,7 @@ export function setupLocalDevTools(container: HTMLElement) {
       const storeInstance = instance as any;
       const state = storeInstance.getState();
 
-      const historyManager = storeInstance?.history;
+      const historyManager = storeInstance?.historyMg;
       const historyArray = historyManager?.history || [];
       const currentIndex = historyManager?.historyIndex ?? -1;
 

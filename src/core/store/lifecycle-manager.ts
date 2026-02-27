@@ -10,14 +10,14 @@ export class BitLifecycleManager<T extends object> {
     const newErrors = { ...state.errors };
 
     delete newErrors[path as keyof BitErrors<T>];
-    this.store.validator.clear(path);
+    this.store.validatorMg.clear(path);
 
-    const toggledFields = this.store.deps.updateDependencies(path, newValues);
+    const toggledFields = this.store.depsMg.updateDependencies(path, newValues);
 
     toggledFields.forEach((depPath) => {
-      if (this.store.deps.isHidden(depPath)) {
+      if (this.store.depsMg.isHidden(depPath)) {
         delete newErrors[depPath as keyof BitErrors<T>];
-        this.store.validator.clear(depPath);
+        this.store.validatorMg.clear(depPath);
       }
     });
 
@@ -35,10 +35,10 @@ export class BitLifecycleManager<T extends object> {
     });
 
     if (this.store.config.resolver) {
-      this.store.validator.trigger([path]);
+      this.store.validatorMg.trigger([path]);
     }
 
-    this.store.validator.handleAsync(path, value);
+    this.store.validatorMg.handleAsync(path, value);
 
     return { visibilitiesChanged: toggledFields.length > 0 };
   }
@@ -48,8 +48,8 @@ export class BitLifecycleManager<T extends object> {
 
     this.store.config.initialValues = deepClone(clonedValues);
 
-    this.store.validator.cancelAll();
-    this.store.deps.evaluateAll(clonedValues);
+    this.store.validatorMg.cancelAll();
+    this.store.depsMg.evaluateAll(clonedValues);
 
     (this.store as any).clearDirtyPaths();
 
@@ -64,7 +64,7 @@ export class BitLifecycleManager<T extends object> {
     });
 
     this.store.internalSaveSnapshot();
-    this.store.validator.validate();
+    this.store.validatorMg.validate();
   }
 
   async submit(onSuccess: (values: T) => void | Promise<void>) {
@@ -72,17 +72,17 @@ export class BitLifecycleManager<T extends object> {
 
     if (currentState.isSubmitting) return;
 
-    this.store.validator.cancelAll();
+    this.store.validatorMg.cancelAll();
 
     this.store.internalUpdateState({ isSubmitting: true });
 
-    const isValid = await this.store.validator.validate();
+    const isValid = await this.store.validatorMg.validate();
 
     if (isValid) {
       try {
         let valuesToSubmit = deepClone(this.store.getState().values);
 
-        this.store.deps.hiddenFields.forEach((hiddenPath) => {
+        this.store.depsMg.hiddenFields.forEach((hiddenPath) => {
           valuesToSubmit = setDeepValue(valuesToSubmit, hiddenPath, undefined);
         });
 
@@ -119,11 +119,11 @@ export class BitLifecycleManager<T extends object> {
   }
 
   reset() {
-    this.store.validator.cancelAll();
+    this.store.validatorMg.cancelAll();
 
     const initialCloned = deepClone(this.store.config.initialValues);
 
-    this.store.deps.evaluateAll(initialCloned);
+    this.store.depsMg.evaluateAll(initialCloned);
 
     (this.store as any).clearDirtyPaths();
 
@@ -137,6 +137,6 @@ export class BitLifecycleManager<T extends object> {
       isSubmitting: false,
     });
 
-    this.store.history.reset(initialCloned);
+    this.store.historyMg.reset(initialCloned);
   }
 }

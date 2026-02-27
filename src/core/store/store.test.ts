@@ -409,7 +409,7 @@ describe("BitStore Core", () => {
         format: (val) => `X-${val}`,
       });
 
-      expect(store.masks["custom"]).toBeDefined();
+      expect(store.config.masks!["custom"]).toBeDefined();
     });
   });
 
@@ -556,7 +556,7 @@ describe("BitStore Core", () => {
       await vi.advanceTimersByTimeAsync(10);
 
       expect(store.getState().errors.cnpj).toBeUndefined();
-      expect((store as any).validator.asyncErrors.cnpj).toBeUndefined();
+      expect((store as any).validatorMg.asyncErrors.cnpj).toBeUndefined();
     });
   });
 });

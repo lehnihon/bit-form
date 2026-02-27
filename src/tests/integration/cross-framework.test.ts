@@ -17,7 +17,7 @@ describe("Cross-Framework Consistency", () => {
 
   it("should exhibit identical behavior for currency between frameworks", () => {
     const store = new BitStore({ initialValues: { balance: 10 } });
-    const brl = store.masks.brl;
+    const brl = store.config.masks!.brl;
 
     const display = brl.format(store.getState().values.balance);
     expect(display).toBe("R$ 10,00");

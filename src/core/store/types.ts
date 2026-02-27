@@ -133,9 +133,9 @@ export interface BitLifecycleAdapter<T extends object> {
   internalUpdateState: (partial: Partial<BitState<T>>) => void;
   internalSaveSnapshot: () => void;
   config: BitResolvedConfig<T>;
-  deps: BitDependencyManager<T>;
-  validator: BitValidationManager<T>;
-  history: BitHistoryManager<T>;
+  depsMg: BitDependencyManager<T>;
+  validatorMg: BitValidationManager<T>;
+  historyMg: BitHistoryManager<T>;
 }
 
 export interface BitStoreAdapter<T extends object = any> {
@@ -153,7 +153,7 @@ export interface BitValidationAdapter<T extends object> {
   internalUpdateState: (partial: Partial<BitState<T>>) => void;
   setError: (path: string, message: string | undefined) => void;
   config: BitResolvedConfig<T>;
-  deps: BitDependencyManager<T>;
+  depsMg: BitDependencyManager<T>;
 }
 
 /**

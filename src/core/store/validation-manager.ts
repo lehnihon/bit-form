@@ -11,7 +11,7 @@ export class BitValidationManager<T extends object> {
 
   handleAsync(path: string, value: any) {
     const config =
-      this.store.deps.fieldConfigs.get(path) ||
+      this.store.depsMg.fieldConfigs.get(path) ||
       this.store.config.fields?.[path];
     const asyncValidate = config?.validation?.asyncValidate;
     if (!asyncValidate) return;
@@ -95,13 +95,13 @@ export class BitValidationManager<T extends object> {
         })
       : {};
 
-    const dynamicRequiredErrors = this.store.deps.getRequiredErrors(
+    const dynamicRequiredErrors = this.store.depsMg.getRequiredErrors(
       currentState.values,
       this.store.config.defaultRequiredMessage,
     );
     allErrors = { ...allErrors, ...dynamicRequiredErrors };
 
-    this.store.deps.hiddenFields.forEach((hiddenPath: string) => {
+    this.store.depsMg.hiddenFields.forEach((hiddenPath: string) => {
       delete allErrors[hiddenPath];
       delete this.asyncErrors[hiddenPath];
     });
