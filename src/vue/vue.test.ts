@@ -7,6 +7,7 @@ import {
   useBitForm,
   useBitArray,
   useBitScope,
+  useBitSteps,
 } from "./index";
 import { BIT_STORE_KEY } from "./context";
 
@@ -182,9 +183,7 @@ describe("Vue Integration", () => {
       },
     });
 
-    const wrapper = createWrapper(store, () => ({
-      step: useBitScope("step1"),
-    }));
+    const wrapper = createWrapper(store, () => ({ step: useBitScope("step1") }));
 
     expect(wrapper.vm.step.status.value.hasErrors).toBe(false);
     expect(wrapper.vm.step.status.value.isDirty).toBe(false);
@@ -201,5 +200,36 @@ describe("Vue Integration", () => {
     expect(wrapper.vm.step.status.value.hasErrors).toBe(true);
     expect(wrapper.vm.step.status.value.errors.name).toBe("Erro");
     expect(wrapper.vm.step.isValid.value).toBe(false);
+  });
+
+  it("should navigate steps with useBitSteps", async () => {
+    const store = new BitStore({
+      initialValues: { name: "", email: "" },
+      fields: {
+        name: { scope: "step1" },
+        email: { scope: "step2" },
+      },
+      validation: { delay: 0 },
+    });
+
+    const wrapper = createWrapper(store, () => ({
+      steps: useBitSteps(["step1", "step2"]),
+    }));
+
+    expect(wrapper.vm.steps.step.value).toBe(1);
+    expect(wrapper.vm.steps.scope.value).toBe("step1");
+
+    store.setField("name", "Leo");
+    await nextTick();
+
+    const advanced = await wrapper.vm.steps.next();
+    expect(advanced).toBe(true);
+    expect(wrapper.vm.steps.step.value).toBe(2);
+    expect(wrapper.vm.steps.scope.value).toBe("step2");
+
+    wrapper.vm.steps.prev();
+    await nextTick();
+
+    expect(wrapper.vm.steps.step.value).toBe(1);
   });
 });

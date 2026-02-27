@@ -7,6 +7,7 @@ import {
   injectBitForm,
   injectBitArray,
   injectBitScope,
+  injectBitSteps,
   provideBitStore,
 } from "./index";
 
@@ -213,5 +214,53 @@ describe("Angular Integration (Signals)", () => {
     expect(app.step.status().hasErrors).toBe(true);
     expect(app.step.status().errors["user.name"]).toBe("Erro");
     expect(app.step.isValid()).toBe(false);
+  });
+
+  it("deve navegar entre steps com injectBitSteps", async () => {
+    const storeWithScopes = new BitStore<MyForm>({
+      initialValues: {
+        user: { name: "" },
+        salary: 0,
+        items: [],
+        hasBonus: false,
+        bonusValue: 0,
+      },
+      fields: {
+        "user.name": { scope: "step1" },
+        salary: { scope: "step2" },
+      },
+      validation: { delay: 0 },
+    });
+
+    @Component({ standalone: true, template: "" })
+    class StepsHostComponent {
+      steps = injectBitSteps(["step1", "step2"]);
+    }
+
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      imports: [StepsHostComponent],
+      providers: [provideBitStore(storeWithScopes)],
+    });
+
+    const fixture = TestBed.createComponent(StepsHostComponent);
+    const app = fixture.componentInstance;
+    fixture.detectChanges();
+
+    expect(app.steps.step()).toBe(1);
+    expect(app.steps.scope()).toBe("step1");
+
+    storeWithScopes.setField("user.name", "Leo");
+    fixture.detectChanges();
+
+    const advanced = await app.steps.next();
+    expect(advanced).toBe(true);
+    expect(app.steps.step()).toBe(2);
+    expect(app.steps.scope()).toBe("step2");
+
+    app.steps.prev();
+    fixture.detectChanges();
+
+    expect(app.steps.step()).toBe(1);
   });
 });

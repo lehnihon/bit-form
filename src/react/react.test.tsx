@@ -7,6 +7,7 @@ import {
   useBitForm,
   useBitArray,
   useBitScope,
+  useBitSteps,
   useBitWatch,
 } from "../../src/react";
 
@@ -313,6 +314,62 @@ describe("React Integration (Context + Hooks)", () => {
       expect(result.current.isValid).toBe(false);
       expect(validateResult!.valid).toBe(false);
       expect(validateResult!.errors["user.firstName"]).toBe("Erro no nome");
+    });
+  });
+
+  describe("Wizard Steps (useBitSteps)", () => {
+    it("deve navegar entre steps e validar antes de avançar", async () => {
+      const store = new BitStore<MyForm>({
+        initialValues: {
+          salary: 10,
+          user: { firstName: "", lastName: "" },
+          skills: [],
+          hasBonus: false,
+          bonusValue: 0,
+        },
+        fields: {
+          "user.firstName": { scope: "step1" },
+          "user.lastName": { scope: "step1" },
+          salary: { scope: "step2" },
+        },
+        validation: {
+          delay: 0,
+          resolver: (vals) =>
+            !vals.user?.firstName ? { "user.firstName": "Nome obrigatório" } : {},
+        },
+      });
+
+      const { result } = renderHook(() => useBitSteps(["step1", "step2"]), {
+        wrapper: (props) => wrapper({ ...props, store }),
+      });
+
+      expect(result.current.step).toBe(1);
+      expect(result.current.scope).toBe("step1");
+      expect(result.current.isFirst).toBe(true);
+      expect(result.current.isLast).toBe(false);
+
+      let advanced: boolean;
+      await act(async () => {
+        advanced = await result.current.next();
+      });
+      expect(advanced).toBe(false);
+      expect(result.current.step).toBe(1);
+
+      await act(() => {
+        store.setField("user.firstName", "Leo");
+      });
+
+      await act(async () => {
+        advanced = await result.current.next();
+      });
+      expect(advanced).toBe(true);
+      expect(result.current.step).toBe(2);
+      expect(result.current.scope).toBe("step2");
+      expect(result.current.isFirst).toBe(false);
+      expect(result.current.isLast).toBe(true);
+
+      act(() => result.current.prev());
+      expect(result.current.step).toBe(1);
     });
   });
 });
