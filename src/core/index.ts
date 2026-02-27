@@ -27,6 +27,8 @@ export type {
   BitPathValue,
   BitArrayPath,
   BitArrayItem,
+  ScopeStatus,
+  ValidateScopeResult,
 } from "./store/types";
 
 export { bitMasks } from "./mask/index";
