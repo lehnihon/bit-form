@@ -1,9 +1,12 @@
-import { computed, onUnmounted, shallowRef } from "vue";
+import { computed, onUnmounted, shallowRef, ref } from "vue";
 import { useBitStore } from "./context";
+import { isValidationErrorShape, extractServerErrors } from "../core/form-helpers";
 
 export function useBitForm<T extends object>() {
   const store = useBitStore<T>();
   const state = shallowRef(store.getState());
+  const submitError = ref<Error | null>(null);
+  const lastResponse = ref<unknown>(null);
 
   const unsubscribe = store.subscribe(() => {
     state.value = { ...store.getState() };
@@ -29,6 +32,33 @@ export function useBitForm<T extends object>() {
     return store.canRedo;
   });
 
+  const onSubmit = (handler: (values: T) => Promise<unknown>) => {
+    return (e?: Event) => {
+      e?.preventDefault?.();
+      submitError.value = null;
+      return store.submit(async (values) => {
+        try {
+          const result = await handler(values);
+          lastResponse.value = result;
+          submitError.value = null;
+        } catch (err) {
+          if (isValidationErrorShape(err)) {
+            store.setServerErrors(extractServerErrors(err));
+          } else {
+            submitError.value =
+              err instanceof Error ? err : new Error(String(err));
+          }
+        }
+      });
+    };
+  };
+
+  const reset = () => {
+    store.reset();
+    submitError.value = null;
+    lastResponse.value = null;
+  };
+
   return {
     store,
     isValid,
@@ -45,7 +75,10 @@ export function useBitForm<T extends object>() {
         return store.submit(onSuccess);
       };
     },
-    reset: store.reset.bind(store),
+    onSubmit,
+    submitError,
+    lastResponse,
+    reset,
     validate: store.validate.bind(store),
     setValues: store.setValues.bind(store),
     setError: store.setError.bind(store),

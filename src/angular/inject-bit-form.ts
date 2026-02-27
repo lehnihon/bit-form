@@ -1,10 +1,13 @@
 import { signal, computed, inject, DestroyRef } from "@angular/core";
 import { useBitStore } from "./provider";
+import { isValidationErrorShape, extractServerErrors } from "../core/form-helpers";
 
 export function injectBitForm<T extends object>() {
   const store = useBitStore<T>();
   const destroyRef = inject(DestroyRef);
   const stateSignal = signal(store.getState());
+  const submitError = signal<Error | null>(null);
+  const lastResponse = signal<unknown>(null);
 
   const sub = store.subscribe(() => {
     stateSignal.set(store.getState());
@@ -38,6 +41,35 @@ export function injectBitForm<T extends object>() {
     };
   };
 
+  const onSubmit = (handler: (values: T) => Promise<unknown>) => {
+    return (event?: Event) => {
+      event?.preventDefault();
+      event?.stopPropagation();
+      submitError.set(null);
+      return store.submit(async (values) => {
+        try {
+          const result = await handler(values);
+          lastResponse.set(result);
+          submitError.set(null);
+        } catch (err) {
+          if (isValidationErrorShape(err)) {
+            store.setServerErrors(extractServerErrors(err));
+          } else {
+            submitError.set(
+              err instanceof Error ? err : new Error(String(err)),
+            );
+          }
+        }
+      });
+    };
+  };
+
+  const reset = () => {
+    store.reset();
+    submitError.set(null);
+    lastResponse.set(null);
+  };
+
   return {
     store,
     isValid,
@@ -49,7 +81,10 @@ export function injectBitForm<T extends object>() {
     getErrors,
     getTouched,
     submit,
-    reset: store.reset.bind(store),
+    onSubmit,
+    submitError,
+    lastResponse,
+    reset,
     validate: store.validate.bind(store),
     setValues: store.setValues.bind(store),
     setError: store.setError.bind(store),

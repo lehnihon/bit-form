@@ -1,8 +1,12 @@
-import { useCallback, useSyncExternalStore, useMemo, useRef } from "react";
+import { useCallback, useSyncExternalStore, useMemo, useRef, useState } from "react";
 import { useBitStore } from "./context";
+import { isValidationErrorShape, extractServerErrors } from "../core/form-helpers";
 
 export function useBitForm<T extends object>() {
   const store = useBitStore<T>();
+
+  const [submitError, setSubmitError] = useState<Error | null>(null);
+  const [lastResponse, setLastResponse] = useState<unknown>(null);
 
   const lastMeta = useRef<{
     isValid: boolean;
@@ -50,6 +54,38 @@ export function useBitForm<T extends object>() {
     [store],
   );
 
+  const onSubmit = useCallback(
+    (handler: (values: T) => Promise<unknown>) => {
+      return (e?: { preventDefault: () => void }) => {
+        e?.preventDefault?.();
+        setSubmitError(null);
+
+        return store.submit(async (values) => {
+          try {
+            const result = await handler(values);
+            setLastResponse(result);
+            setSubmitError(null);
+          } catch (err) {
+            if (isValidationErrorShape(err)) {
+              store.setServerErrors(extractServerErrors(err));
+            } else {
+              setSubmitError(
+                err instanceof Error ? err : new Error(String(err)),
+              );
+            }
+          }
+        });
+      };
+    },
+    [store],
+  );
+
+  const reset = useCallback(() => {
+    store.reset();
+    setSubmitError(null);
+    setLastResponse(null);
+  }, [store]);
+
   const getValues = useCallback(() => store.getState().values, [store]);
   const getErrors = useCallback(() => store.getState().errors, [store]);
   const getTouched = useCallback(() => store.getState().touched, [store]);
@@ -62,7 +98,7 @@ export function useBitForm<T extends object>() {
       setError: store.setError.bind(store),
       setErrors: store.setErrors.bind(store),
       setServerErrors: store.setServerErrors.bind(store),
-      reset: store.reset.bind(store),
+      reset,
       validate: store.validate.bind(store),
       registerMask: store.registerMask.bind(store),
       pushItem: store.pushItem.bind(store),
@@ -74,7 +110,7 @@ export function useBitForm<T extends object>() {
       undo: store.undo.bind(store),
       redo: store.redo.bind(store),
     }),
-    [store],
+    [store, reset],
   );
 
   return {
@@ -83,7 +119,11 @@ export function useBitForm<T extends object>() {
     getErrors,
     getTouched,
     submit,
+    onSubmit,
+    submitError,
+    lastResponse,
     ...actions,
+    reset,
     store,
   };
 }
