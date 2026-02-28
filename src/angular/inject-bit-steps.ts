@@ -78,6 +78,12 @@ export function injectBitSteps(scopeNames: string[]): InjectBitStepsResult {
       const newIndex = Math.min(stepIndex() + 1, scopeNames.length - 1);
       stepIndex.set(newIndex);
       status.set(store.getStepStatus(scopeNames[newIndex] ?? ""));
+    } else {
+      const errors = store.getStepErrors(scopeName);
+      const pathsWithErrors = Object.keys(errors);
+      if (pathsWithErrors.length > 0) {
+        store.markFieldsTouched(pathsWithErrors);
+      }
     }
     return valid;
   };
