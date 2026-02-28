@@ -1,7 +1,10 @@
 {
-  "name": "bit-form",
+  "name": "@lehnihon/bit-form",
   "version": "1.0.0",
   "description": "Gerenciamento de estado de formulários agnóstico e performático",
+  "publishConfig": {
+    "access": "public"
+  },
   "license": "MIT",
   "repository": {
     "type": "git",

@@ -11,11 +11,11 @@ Bit-Form is available as a single package that includes the core logic and bindi
 Install it using your preferred package manager:
 
 ```bash
-npm install bit-form
+npm install @lehnihon/bit-form
 # or
-yarn add bit-form
+yarn add @lehnihon/bit-form
 # or
-pnpm add bit-form
+pnpm add @lehnihon/bit-form
 ```
 
 ## Quick Start (React Example)
