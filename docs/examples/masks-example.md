@@ -5,7 +5,7 @@ This example shows how to use Bit-Form masks: built-in presets and field-level `
 ## Store with fields.mask
 
 ```tsx
-import { BitStore, createPatternMask, createCurrencyMask } from "bit-form";
+import { BitStore, createPatternMask, createCurrencyMask } from "@lehnihon/bit-form";
 
 const plateMask = createPatternMask("UUU-####");
 const btcMask = createCurrencyMask({
@@ -32,7 +32,7 @@ const store = new BitStore({
 ## React usage
 
 ```tsx
-import { useBitForm, useBitField } from "bit-form/react";
+import { useBitForm, useBitField } from "@lehnihon/bit-form/react";
 
 export function MasksForm() {
   const form = useBitForm();

@@ -7,8 +7,8 @@ Bit-Form provides first-class support for React through custom hooks and a Conte
 Wrap your application or form component with `BitFormProvider`. This allows any nested components to access the store via hooks.
 
 ```tsx
-import { BitStore } from "bit-form";
-import { BitFormProvider } from "bit-form/react";
+import { BitStore } from "@lehnihon/bit-form";
+import { BitFormProvider } from "@lehnihon/bit-form/react";
 import MyForm from "./MyForm";
 
 const store = new BitStore({
@@ -31,7 +31,7 @@ The `useBitForm` hook gives you access to the form's metadata, such as `isValid`
 ### Basic `submit`
 
 ```tsx
-import { useBitForm } from "bit-form/react";
+import { useBitForm } from "@lehnihon/bit-form/react";
 
 export function SubmitButton() {
   const { isValid, isSubmitting, submit } = useBitForm();
@@ -73,7 +73,7 @@ See [Server Errors Example](../examples/server-errors.md) for the full pattern.
 The `useBitField` hook binds an input to a specific path in your store. It returns a `props` object containing `value`, `onChange`, and `onBlur`, which you can spread directly onto your native HTML inputs.
 
 ```tsx
-import { useBitField } from "bit-form/react";
+import { useBitField } from "@lehnihon/bit-form/react";
 
 export function UsernameInput() {
   const field = useBitField("username");
@@ -93,7 +93,7 @@ export function UsernameInput() {
 For dynamic lists, use `useBitArray`. It provides array manipulation methods (`append`, `remove`, `move`, `swap`, `insert`, `replace`, `clear`) and a stable `fields` array with unique keys.
 
 ```tsx
-import { useBitArray } from "bit-form/react";
+import { useBitArray } from "@lehnihon/bit-form/react";
 
 export function TagsList() {
   const { fields, append, remove } = useBitArray("tags");
@@ -121,7 +121,7 @@ export function TagsList() {
 For multi-step or wizard forms, define `scopes` in your store config and use `useBitScope` to validate and track status per step.
 
 ```tsx
-import { useBitScope } from "bit-form/react";
+import { useBitScope } from "@lehnihon/bit-form/react";
 
 // Store config: scopes: { step1: ["name", "email"], step2: ["address"] }
 const step1 = useBitScope("step1");

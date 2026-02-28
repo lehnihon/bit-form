@@ -57,7 +57,7 @@ Create custom masks with `createPatternMask`, `createCurrencyMask`, and `createD
 Use tokens (`#` numbers, `A` letters, `U` uppercase):
 
 ```tsx
-import { createPatternMask } from "bit-form";
+import { createPatternMask } from "@lehnihon/bit-form";
 
 const plateMask = createPatternMask("UUU-####");
 
@@ -83,7 +83,7 @@ const phoneMask = createPatternMask([
 ### Currency Masks
 
 ```tsx
-import { createCurrencyMask } from "bit-form";
+import { createCurrencyMask } from "@lehnihon/bit-form";
 
 const btcMask = createCurrencyMask({
   prefix: "₿ ",

@@ -29,7 +29,7 @@ const store = new BitStore({
 The store exposes properties and methods to interact with the history stack. These are also available in `useBitForm`.
 
 ```tsx
-import { useBitForm } from "bit-form/react";
+import { useBitForm } from "@lehnihon/bit-form/react";
 
 export function FormToolbar() {
   const { undo, redo, canUndo, canRedo } = useBitForm();

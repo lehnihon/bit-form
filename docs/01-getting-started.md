@@ -29,7 +29,7 @@ Here is a quick example using React:
 First, instantiate a `BitStore` with your initial values. You can define this outside of your component lifecycle or inside a stable reference to prevent unnecessary re-renders.
 
 ```tsx
-import { BitStore } from "bit-form";
+import { BitStore } from "@lehnihon/bit-form";
 
 // Define your initial state
 const myStore = new BitStore({
@@ -45,7 +45,7 @@ const myStore = new BitStore({
 Wrap your form component with the `BitFormProvider` to make the store context available to all nested hooks.
 
 ```tsx
-import { BitFormProvider } from "bit-form/react";
+import { BitFormProvider } from "@lehnihon/bit-form/react";
 import MyFormContent from "./MyFormContent";
 
 export default function App() {
@@ -62,7 +62,7 @@ export default function App() {
 Inside your components, use the `useBitField` hook to bind inputs to the store state seamlessly. The hook provides a `props` object that you can spread directly into your input elements.
 
 ```tsx
-import { useBitField, useBitForm } from "bit-form/react";
+import { useBitField, useBitForm } from "@lehnihon/bit-form/react";
 
 export default function MyFormContent() {
   // Connect the fields using their paths

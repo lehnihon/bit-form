@@ -4,14 +4,14 @@ Bit-Form is fully compatible with React Native. The core API is identical to Rea
 
 ## Installation Note
 
-Make sure to import your hooks from `bit-form/react-native` instead of `bit-form/react`.
+Make sure to import your hooks from `@lehnihon/bit-form/react-native` instead of `@lehnihon/bit-form/react`.
 
 ```tsx
 // ❌ Wrong for Mobile
-import { useBitField } from "bit-form/react";
+import { useBitField } from "@lehnihon/bit-form/react";
 
 // ✅ Correct for Mobile
-import { useBitField, BitFormProvider } from "bit-form/react-native";
+import { useBitField, BitFormProvider } from "@lehnihon/bit-form/react-native";
 ```
 
 ## `useBitField` and `TextInput`
@@ -21,7 +21,7 @@ In React Native, inputs use `onChangeText` instead of `onChange`, and they stric
 ```tsx
 import React from "react";
 import { View, TextInput, Text, Button } from "react-native";
-import { useBitField, useBitForm } from "bit-form/react-native";
+import { useBitField, useBitForm } from "@lehnihon/bit-form/react-native";
 
 export function ProfileForm() {
   // Connect field to store

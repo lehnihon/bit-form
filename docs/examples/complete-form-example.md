@@ -13,8 +13,8 @@ A wizard-style form with:
 ## Store Configuration
 
 ```tsx
-import { BitStore, unmaskCurrency } from "bit-form";
-import { zodResolver } from "bit-form/resolvers/zod";
+import { BitStore, unmaskCurrency } from "@lehnihon/bit-form";
+import { zodResolver } from "@lehnihon/bit-form/resolvers/zod";
 import { z } from "zod";
 
 const schema = z.object({
@@ -103,12 +103,20 @@ const store = new BitStore({
 ## React Form Component
 
 ```tsx
-import { useBitForm, useBitField, useBitSteps } from "bit-form/react";
+import { useState } from "react";
+import { useBitForm, useBitField, useBitSteps } from "@lehnihon/bit-form/react";
 
 // Assumes store is created and provided via BitFormProvider
 export function RegistrationWizard() {
   const form = useBitForm();
   const steps = useBitSteps(["step1", "step2"]);
+  const [isValidatingNext, setIsValidatingNext] = useState(false);
+
+  const handleNext = async () => {
+    setIsValidatingNext(true);
+    await steps.next(); // valida o step atual antes de avançar; só avança se válido
+    setIsValidatingNext(false);
+  };
 
   const companyType = useBitField("companyType");
   const cnpj = useBitField("cnpj");
@@ -162,8 +170,8 @@ export function RegistrationWizard() {
             {email.invalid && <span>{email.error}</span>}
           </div>
 
-          <button type="button" onClick={steps.next} disabled={!steps.isValid}>
-            Next
+          <button type="button" onClick={handleNext} disabled={isValidatingNext}>
+            {isValidatingNext ? "Validando..." : "Next"}
           </button>
         </div>
       )}
@@ -207,7 +215,7 @@ export function RegistrationWizard() {
 | **Masks** | `brl`, `cnpj` on salary and CNPJ fields |
 | **asyncValidate** | Email and CNPJ availability check with debounce |
 | **Conditional logic** | CNPJ shown only when companyType is PJ; bonusValue shown when hasBonus is true |
-| **Scopes** | `useBitSteps(["step1", "step2"])` for wizard navigation and per-step validation |
+| **Scopes** | `useBitSteps(["step1", "step2"])` for wizard navigation. `steps.next()` runs validation before advancing (only advances if valid). Do not use `steps.isValid` to disable the Next button — it is `true` initially; validation runs on click. |
 | **History** | Undo/Redo in toolbar via `history: { enabled: true }` |
 | **DevTools** | Local inspector enabled in development |
 | **Transform** | `salary` and `cnpj` normalized before submit |

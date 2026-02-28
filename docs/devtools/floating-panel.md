@@ -7,7 +7,7 @@ A collapsible panel injected directly into your app. It appears as a floating bu
 Enable it by setting `devTools: true` or `devTools: { mode: "local" }`:
 
 ```tsx
-import { BitStore } from "bit-form";
+import { BitStore } from "@lehnihon/bit-form";
 
 const store = new BitStore({
   initialValues: { email: "", theme: "dark" },
