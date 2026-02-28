@@ -7,17 +7,7 @@ export const zodResolver = <T extends object>(schema: ZodSchema<T>) => {
     options?: { scopeFields?: string[] },
   ): Promise<BitErrors<T>> => {
     try {
-      let targetSchema = schema;
-
-      if (options?.scopeFields && options.scopeFields.length > 0) {
-        const mask: any = {};
-        options.scopeFields.forEach((field) => (mask[field] = true));
-        if ((schema as any).pick) {
-          targetSchema = (schema as any).pick(mask);
-        }
-      }
-
-      await targetSchema.parseAsync(values);
+      await schema.parseAsync(values);
       return {};
     } catch (err: any) {
       const errors: BitErrors<T> = {};
@@ -29,6 +19,15 @@ export const zodResolver = <T extends object>(schema: ZodSchema<T>) => {
             errors[path] = issue.message;
           }
         });
+      }
+
+      if (options?.scopeFields && options.scopeFields.length > 0) {
+        const scopeSet = new Set(options.scopeFields);
+        const filtered: BitErrors<T> = {};
+        for (const [key, msg] of Object.entries(errors)) {
+          if (scopeSet.has(key) && msg) filtered[key as keyof BitErrors<T>] = msg;
+        }
+        return filtered;
       }
 
       return errors;
