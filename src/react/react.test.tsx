@@ -348,7 +348,7 @@ describe("React Integration (Context + Hooks)", () => {
       expect(result.current.isFirst).toBe(true);
       expect(result.current.isLast).toBe(false);
 
-      let advanced: boolean;
+      let advanced = false;
       await act(async () => {
         advanced = await result.current.next();
       });
