@@ -2,6 +2,27 @@
   "name": "bit-form",
   "version": "1.0.0",
   "description": "Gerenciamento de estado de formulários agnóstico e performático",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/lehnihon/bit-form.git"
+  },
+  "homepage": "https://github.com/lehnihon/bit-form#readme",
+  "bugs": {
+    "url": "https://github.com/lehnihon/bit-form/issues"
+  },
+  "keywords": [
+    "form",
+    "validation",
+    "react",
+    "vue",
+    "angular",
+    "react-native",
+    "form-state",
+    "form-validation",
+    "mask",
+    "framework-agnostic"
+  ],
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
@@ -53,7 +74,8 @@
   },
   "files": [
     "dist",
-    "README.md"
+    "README.md",
+    "LICENSE"
   ],
   "scripts": {
     "sync": "npm run build && yalc push",
