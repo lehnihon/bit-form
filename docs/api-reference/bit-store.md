@@ -5,7 +5,7 @@ The `BitStore` is the core engine of Bit-Form. It is a framework-agnostic class 
 All framework bindings (`useBitForm`, `injectBitForm`, etc.) are thin adapters on top of `BitStore`.
 
 ```ts
-import { BitStore } from "bit-form";
+import { BitStore } from "@lehnihon/bit-form";
 
 const store = new BitStore<MyFormValues>({
   initialValues: {

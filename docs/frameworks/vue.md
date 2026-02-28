@@ -8,8 +8,8 @@ In your parent component, instantiate the `BitStore` and provide it using `provi
 
 ```vue
 <script setup lang="ts">
-import { BitStore } from "bit-form";
-import { provideBitStore } from "bit-form/vue";
+import { BitStore } from "@lehnihon/bit-form";
+import { provideBitStore } from "@lehnihon/bit-form/vue";
 import UserForm from "./UserForm.vue";
 
 const store = new BitStore({
@@ -31,7 +31,7 @@ Inside your child components, use `useBitField` to connect your inputs. You can 
 
 ```vue
 <script setup lang="ts">
-import { useBitField } from "bit-form/vue";
+import { useBitField } from "@lehnihon/bit-form/vue";
 
 const emailField = useBitField("email");
 const ageField = useBitField("age");
@@ -63,7 +63,7 @@ Use `useBitForm` to access form metadata, the `submit` wrapper, and the recommen
 
 ```vue
 <script setup lang="ts">
-import { useBitForm } from "bit-form/vue";
+import { useBitForm } from "@lehnihon/bit-form/vue";
 
 const { submit, onSubmit, submitError, isSubmitting, isValid } = useBitForm();
 
@@ -95,7 +95,7 @@ For multi-step or wizard forms, define `scopes` in your store and use `useBitSco
 
 ```vue
 <script setup lang="ts">
-import { useBitScope } from "bit-form/vue";
+import { useBitScope } from "@lehnihon/bit-form/vue";
 
 // Store config: scopes: { step1: ["name", "email"], step2: ["address"] }
 const step1 = useBitScope("step1");

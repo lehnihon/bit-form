@@ -20,7 +20,7 @@ Use these for validation that runs **before** or **while** the user fills the fo
 Runs on blur and before submit. Ideal for format checks, required fields, min/max length.
 
 ```tsx
-import { zodResolver } from "bit-form/resolvers/zod";
+import { zodResolver } from "@lehnihon/bit-form/resolvers/zod";
 import { z } from "zod";
 
 const schema = z.object({
@@ -131,9 +131,9 @@ async function createUser(values: UserForm) {
 ## Complete Example
 
 ```tsx
-import { useBitForm, useBitField } from "bit-form/react";
-import { BitStore } from "bit-form";
-import { zodResolver } from "bit-form/resolvers/zod";
+import { useBitForm, useBitField } from "@lehnihon/bit-form/react";
+import { BitStore } from "@lehnihon/bit-form";
+import { zodResolver } from "@lehnihon/bit-form/resolvers/zod";
 import { z } from "zod";
 
 const schema = z.object({

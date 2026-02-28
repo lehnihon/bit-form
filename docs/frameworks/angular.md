@@ -8,8 +8,8 @@ Create your `BitStore` instance and provide it to your component or application 
 
 ```typescript
 import { Component } from "@angular/core";
-import { BitStore } from "bit-form";
-import { provideBitStore } from "bit-form/angular";
+import { BitStore } from "@lehnihon/bit-form";
+import { provideBitStore } from "@lehnihon/bit-form/angular";
 import { FormContentComponent } from "./form-content.component";
 
 const myStore = new BitStore({
@@ -32,7 +32,7 @@ Use `injectBitForm` and `injectBitField` inside your child components. Since the
 
 ```typescript
 import { Component } from "@angular/core";
-import { injectBitForm, injectBitField } from "bit-form/angular";
+import { injectBitForm, injectBitField } from "@lehnihon/bit-form/angular";
 
 @Component({
   selector: "app-form-content",
@@ -73,7 +73,7 @@ For dynamic array fields, use `injectBitArray`. The `fields()` signal automatica
 
 ```typescript
 import { Component } from "@angular/core";
-import { injectBitArray } from "bit-form/angular";
+import { injectBitArray } from "@lehnihon/bit-form/angular";
 
 @Component({
   selector: "app-tags",
@@ -102,7 +102,7 @@ export class TagsComponent {
 For multi-step or wizard forms, define `scopes` in your store and use `injectBitScope` to validate and track status per step.
 
 ```typescript
-import { injectBitScope } from "bit-form/angular";
+import { injectBitScope } from "@lehnihon/bit-form/angular";
 
 @Component({...})
 export class WizardStep1Component {

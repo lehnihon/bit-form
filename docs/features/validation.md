@@ -9,11 +9,11 @@ Bit-Form uses the `resolver` pattern. You define your schema using your favorite
 First, import the resolver for your library:
 
 ```tsx
-import { zodResolver } from "bit-form/resolvers/zod";
-// import { yupResolver } from "bit-form/resolvers/yup";
-// import { joiResolver } from "bit-form/resolvers/joi";
+import { zodResolver } from "@lehnihon/bit-form/resolvers/zod";
+// import { yupResolver } from "@lehnihon/bit-form/resolvers/yup";
+// import { joiResolver } from "@lehnihon/bit-form/resolvers/joi";
 import { z } from "zod";
-import { BitStore } from "bit-form";
+import { BitStore } from "@lehnihon/bit-form";
 
 const schema = z.object({
   email: z.string().email("Invalid email format"),

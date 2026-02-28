@@ -23,7 +23,7 @@ npx bit-form devtools -p 3333
 Configure your `BitStore` to use remote mode:
 
 ```tsx
-import { BitStore } from "bit-form";
+import { BitStore } from "@lehnihon/bit-form";
 
 const store = new BitStore({
   initialValues: { username: "", password: "" },

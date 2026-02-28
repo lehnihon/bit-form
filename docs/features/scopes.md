@@ -7,7 +7,7 @@ Scopes let you group form fields (e.g. by wizard step) for **per-step validation
 Define scopes by setting `scope` on each field in `fields`:
 
 ```tsx
-import { BitStore } from "bit-form";
+import { BitStore } from "@lehnihon/bit-form";
 
 const store = new BitStore({
   initialValues: {
@@ -35,7 +35,7 @@ You can use these scope names with the framework integrations (`useBitSteps`, `u
 For **linear step-by-step wizards** (one step visible at a time), use `useBitSteps` (React/Vue) or `injectBitSteps` (Angular). It replaces manual `useState` + `useBitScope` by centralizing navigation and the current step's status:
 
 ```tsx
-import { useBitSteps } from "bit-form/react";
+import { useBitSteps } from "@lehnihon/bit-form/react";
 
 export function Wizard() {
   const steps = useBitSteps(["step1", "step2", "step3"]);
@@ -77,7 +77,7 @@ export function Wizard() {
 ## Per-scope: `useBitScope` / `injectBitScope`
 
 ```tsx
-import { useBitScope } from "bit-form/react";
+import { useBitScope } from "@lehnihon/bit-form/react";
 
 export function WizardStep1() {
   const step1 = useBitScope("step1");
@@ -117,7 +117,7 @@ export function WizardStep1() {
 
 ```vue
 <script setup lang="ts">
-import { useBitScope } from "bit-form/vue";
+import { useBitScope } from "@lehnihon/bit-form/vue";
 
 const step1 = useBitScope("step1");
 
@@ -142,7 +142,7 @@ Vue returns the same shape as React, but `status` and `errors` are refs, and `is
 ## Angular: `injectBitScope`
 
 ```ts
-import { injectBitScope } from "bit-form/angular";
+import { injectBitScope } from "@lehnihon/bit-form/angular";
 
 @Component({...})
 export class WizardStep1Component {
