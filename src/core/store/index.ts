@@ -195,6 +195,13 @@ export class BitStore<T extends object = any>
     this.validatorMg.trigger([path]);
   }
 
+  markFieldsTouched(paths: string[]) {
+    if (paths.length === 0) return;
+    const newTouched = { ...this.state.touched };
+    paths.forEach((path) => (newTouched[path] = true));
+    this.internalUpdateState({ touched: newTouched });
+  }
+
   setValues(newValues: T) {
     this.lifecycleMg.updateAll(newValues);
   }

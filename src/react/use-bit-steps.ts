@@ -66,6 +66,12 @@ export function useBitSteps(scopeNames: string[]): UseBitStepsResult {
     const valid = await store.validate({ scope });
     if (valid) {
       setStepIndex((s) => Math.min(s + 1, scopeNames.length - 1));
+    } else {
+      const errors = store.getStepErrors(scope);
+      const pathsWithErrors = Object.keys(errors);
+      if (pathsWithErrors.length > 0) {
+        store.markFieldsTouched(pathsWithErrors);
+      }
     }
     return valid;
   }, [store, scope, scopeNames.length]);
