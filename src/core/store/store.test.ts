@@ -195,6 +195,29 @@ describe("BitStore Core", () => {
       expect(store.isHidden("state")).toBe(false);
       store.setField("country", "US");
     });
+
+    it("should NOT unregister fields from config.fields (keeps them for validation)", () => {
+      const store = new BitStore({
+        initialValues: { bonus: false, bonusValue: 0 },
+        fields: {
+          bonus: { scope: "step1" },
+          bonusValue: {
+            scope: "step1",
+            conditional: {
+              dependsOn: ["bonus"],
+              showIf: (v: any) => v.bonus === true,
+              requiredIf: (v: any) => v.bonus === true,
+            },
+          },
+        },
+      });
+
+      expect(store.depsMg.fieldConfigs.has("bonusValue")).toBe(true);
+
+      store.unregisterField("bonusValue");
+
+      expect(store.depsMg.fieldConfigs.has("bonusValue")).toBe(true);
+    });
   });
 
   describe("Validation & Scopes", () => {
