@@ -41,13 +41,19 @@ export class BitValidationManager<T extends object> {
           this.store.setError(path, errorMessage);
         } else {
           delete this.asyncErrors[path];
-          const newErrors = { ...this.store.getState().errors };
-          delete newErrors[path as keyof BitErrors<T>];
-
-          this.store.internalUpdateState({
-            errors: newErrors,
-            isValid: Object.keys(newErrors).length === 0,
-          });
+          const storeWithValidate = this.store as {
+            validate?: (opts: { scopeFields?: string[] }) => Promise<boolean>;
+          };
+          if (storeWithValidate.validate) {
+            await storeWithValidate.validate({ scopeFields: [path] });
+          } else {
+            const newErrors = { ...this.store.getState().errors };
+            delete newErrors[path as keyof BitErrors<T>];
+            this.store.internalUpdateState({
+              errors: newErrors,
+              isValid: Object.keys(newErrors).length === 0,
+            });
+          }
         }
       } finally {
         if (this.asyncRequests[path] === currentRequestId) {

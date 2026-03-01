@@ -532,6 +532,36 @@ describe("BitStore Core", () => {
       });
     });
 
+    it("deve manter erro do resolver quando asyncValidate passa (não limpar erro Zod)", async () => {
+      const store = new BitStore({
+        initialValues: { email: "invalido" },
+        validation: {
+          resolver: (values) =>
+            Promise.resolve(
+              /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(values.email ?? "")
+                ? {}
+                : { email: "E-mail inválido" },
+            ),
+          delay: 0,
+        },
+      });
+
+      store.registerField("email", {
+        validation: {
+          asyncValidate: async () => null,
+          asyncValidateDelay: 0,
+        },
+      });
+
+      store.setField("email", "invalido");
+      store.blurField("email");
+      await vi.advanceTimersByTimeAsync(50);
+      expect(store.getState().errors.email).toBe("E-mail inválido");
+
+      await vi.advanceTimersByTimeAsync(50);
+      expect(store.getState().errors.email).toBe("E-mail inválido");
+    });
+
     it("deve limpar a memória do erro Assíncrono se o campo for ocultado (showIf)", async () => {
       const store = new BitStore({
         initialValues: { hasCnpj: true, cnpj: "111" },
