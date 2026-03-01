@@ -5,6 +5,9 @@ on:
     tags:
       - "v*" # Dispara o fluxo sempre que uma tag começando com 'v' for enviada
 
+permissions:
+  contents: write
+
 jobs:
   build_and_publish:
     runs-on: ubuntu-latest
@@ -35,6 +38,6 @@ jobs:
       - name: Criar GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          generate_release_notes: true # Gera automaticamente a lista de commits
+          generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
