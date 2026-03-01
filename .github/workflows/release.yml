@@ -20,20 +20,19 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "24"
 
       - name: Instalar dependências
         run: npm install
 
-      # - name: Rodar Testes
-      #   run: npm test (descomente se tiver testes configurados)
+      - name: Rodar Testes
+        run: npm test
 
       - name: Build do Projeto
         run: npm run build
 
       - name: Publicar no NPM (Sem Token!)
-        run: npm publish --provenance --access public
-        # Removi o env: NODE_AUTH_TOKEN daqui!
+        run: npm publish
 
       - name: Criar GitHub Release
         uses: softprops/action-gh-release@v2
