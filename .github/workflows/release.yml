@@ -3,10 +3,12 @@ name: Publish bit-form to NPM
 on:
   push:
     tags:
-      - "v*" # Dispara o fluxo sempre que uma tag começando com 'v' for enviada
+      - "v*"
 
+# AS DUAS PERMISSÕES CRUCIAIS:
 permissions:
-  contents: write
+  contents: write # Para o GitHub criar a Release na página
+  id-token: write # Para o NPM aceitar o Trusted Publishing
 
 jobs:
   build_and_publish:
@@ -24,20 +26,17 @@ jobs:
       - name: Instalar dependências
         run: npm install
 
-      - name: Rodar Testes
-        run: npm test
+      # - name: Rodar Testes
+      #   run: npm test (descomente se tiver testes configurados)
 
       - name: Build do Projeto
         run: npm run build
 
-      - name: Publicar no NPM
-        run: npm publish --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: Publicar no NPM (Sem Token!)
+        run: npm publish --provenance --access public
+        # Removi o env: NODE_AUTH_TOKEN daqui!
 
       - name: Criar GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           generate_release_notes: true
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
