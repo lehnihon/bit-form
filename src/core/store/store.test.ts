@@ -284,13 +284,29 @@ describe("BitStore Core", () => {
 
       const isValid = await store.validate();
       expect(isValid).toBe(false);
-      expect(store.getState().errors.licenseNumber).toBe(
-        "Este campo é obrigatório",
-      );
+      expect(store.getState().errors.licenseNumber).toBe("required field");
 
       store.setField("hasLicense", false);
       const isValidNow = await store.validate();
       expect(isValidNow).toBe(true);
+    });
+
+    it("should use conditional.requiredMessage when defined", async () => {
+      const store = new BitStore({
+        initialValues: { hasBonus: true, bonusValue: "" },
+      });
+
+      store.registerField("bonusValue", {
+        conditional: {
+          dependsOn: ["hasBonus"],
+          requiredIf: (v: any) => v.hasBonus === true,
+          requiredMessage: "Bonus amount is required",
+        },
+      });
+
+      const isValid = await store.validate();
+      expect(isValid).toBe(false);
+      expect(store.getState().errors.bonusValue).toBe("Bonus amount is required");
     });
   });
 

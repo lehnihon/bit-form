@@ -103,7 +103,6 @@ export class BitValidationManager<T extends object> {
 
     const dynamicRequiredErrors = this.store.depsMg.getRequiredErrors(
       currentState.values,
-      this.store.config.defaultRequiredMessage,
     );
     allErrors = { ...allErrors, ...dynamicRequiredErrors };
 

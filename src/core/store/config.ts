@@ -49,7 +49,6 @@ export function normalizeConfig<T extends object>(
     initialValues: deepClone(rawInitial),
     resolver: validation?.resolver,
     validationDelay: validation?.delay ?? 300,
-    defaultRequiredMessage: validation?.defaultRequiredMessage,
     enableHistory: history?.enabled ?? false,
     historyLimit: history?.limit ?? 15,
     computed,
