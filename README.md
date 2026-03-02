@@ -149,6 +149,7 @@ The complete documentation is available in the `/docs` folder. Explore the guide
 ### 🖼 Framework Guides
 
 - **[React](./docs/frameworks/react.md)**: Using hooks and Context Provider.
+- **[React + shadcn/ui](./docs/frameworks/react-shadcn.md)**: Generate form wrappers with `bit-form add shadcn` (Input, Textarea, Select, Checkbox, Switch, RadioGroup).
 - **[React Native](./docs/frameworks/react-native.md)**: Mobile specifics and `onChangeText` mapping.
 - **[Vue](./docs/frameworks/vue.md)**: Using composables and InjectionKeys.
 - **[Angular](./docs/frameworks/angular.md)**: Reactive forms via Signals.
@@ -169,11 +170,12 @@ The complete documentation is available in the `/docs` folder. Explore the guide
 - **[Complete Form Example](./docs/examples/complete-form-example.md)**: End-to-end example with masks, asyncValidate, conditional logic, scopes, history, and DevTools.
 - **[Server Errors](./docs/examples/server-errors.md)**: Client validation (resolver/asyncValidate) vs API 422 handling (setServerErrors, onSubmit).
 
-### 🔍 DevTools
+### 🔍 DevTools & CLI
 
 - **[DevTools Overview](./docs/devtools/index.md)**: Configuration (`devTools: true` or `{ mode: "remote" }`).
 - **[Floating Panel](./docs/devtools/floating-panel.md)**: In-app inspector (local mode).
 - **[CLI & Remote Dashboard](./docs/devtools/cli-remote-dashboard.md)**: `bit-form devtools` + WebSocket for React Native / remote debugging.
+- **CLI `add`**: Generate Bit-Form + shadcn/ui wrappers with `bit-form add shadcn [input|textarea|select|checkbox|switch|radio-group]` — see [React + shadcn](./docs/frameworks/react-shadcn.md).
 
 ### 📑 Reference
 
