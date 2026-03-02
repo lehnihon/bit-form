@@ -18,6 +18,12 @@ import { useBitField, BitFormProvider } from "@lehnihon/bit-form/react-native";
 
 In React Native, inputs use `onChangeText` instead of `onChange`, and they strictly require the value to be a `string`. The `useBitField` hook from the `react-native` entry point automatically handles this mapping for you in its `props` object.
 
+The hook returns:
+
+- `field`: value + handlers (`setValue`, `setBlur`, `onChangeText`, `onBlur`)
+- `meta`: UI/validation state (`invalid`, `error`, `touched`, `isDirty`, etc.)
+- `props`: `TextInput` helper (`value`, `onChangeText`, `onBlur`)
+
 ```tsx
 import React from "react";
 import { View, TextInput, Text, Button } from "react-native";
@@ -39,12 +45,12 @@ export function ProfileForm() {
         {...nameField.props} // Automatically injects value, onChangeText, and onBlur
         style={{
           borderWidth: 1,
-          borderColor: nameField.invalid ? "red" : "gray",
+          borderColor: nameField.meta.invalid ? "red" : "gray",
         }}
         placeholder="Enter your name"
       />
-      {nameField.invalid && (
-        <Text style={{ color: "red" }}>{nameField.error}</Text>
+      {nameField.meta.invalid && (
+        <Text style={{ color: "red" }}>{nameField.meta.error}</Text>
       )}
 
       <Button title="Save Profile" onPress={handleSave} />

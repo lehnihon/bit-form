@@ -37,7 +37,7 @@ describe("Vue Integration", () => {
 
     expect(wrapper.vm.form.isDirty.value).toBe(false);
 
-    wrapper.vm.field.setValue("Leandro");
+    wrapper.vm.field.field.setValue("Leandro");
     await nextTick();
 
     expect(wrapper.vm.form.getValues().user.info.name).toBe("Leandro");
@@ -59,12 +59,12 @@ describe("Vue Integration", () => {
       cnpj: useBitField("cnpj"),
     }));
 
-    expect(wrapper.vm.cnpj.isHidden.value).toBe(true);
+    expect(wrapper.vm.cnpj.meta.isHidden.value).toBe(true);
 
-    wrapper.vm.type.setValue("PJ");
+    wrapper.vm.type.field.setValue("PJ");
     await nextTick();
 
-    expect(wrapper.vm.cnpj.isHidden.value).toBe(false);
+    expect(wrapper.vm.cnpj.meta.isHidden.value).toBe(false);
   });
 
   it("should call unregisterField on unmount", async () => {
@@ -84,9 +84,9 @@ describe("Vue Integration", () => {
       salary: useBitField("salary", undefined, { mask: "brl" }),
     }));
 
-    expect(wrapper.vm.salary.displayValue.value).toBe("R$ 10,00");
+    expect(wrapper.vm.salary.field.displayValue.value).toBe("R$ 10,00");
 
-    wrapper.vm.salary.setValue("R$ 2.500,50");
+    wrapper.vm.salary.field.setValue("R$ 2.500,50");
     await nextTick();
 
     expect(store.getState().values.salary).toBe(2500.5);
@@ -183,7 +183,9 @@ describe("Vue Integration", () => {
       },
     });
 
-    const wrapper = createWrapper(store, () => ({ step: useBitScope("step1") }));
+    const wrapper = createWrapper(store, () => ({
+      step: useBitScope("step1"),
+    }));
 
     expect(wrapper.vm.step.status.value.hasErrors).toBe(false);
     expect(wrapper.vm.step.status.value.isDirty).toBe(false);

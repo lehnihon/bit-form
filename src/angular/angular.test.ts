@@ -96,11 +96,11 @@ describe("Angular Integration (Signals)", () => {
       },
     });
     fixture.detectChanges();
-    expect(app.bonusValue.isHidden()).toBe(true);
+    expect(app.bonusValue.meta.isHidden()).toBe(true);
 
     store.setField("hasBonus", true);
     fixture.detectChanges();
-    expect(app.bonusValue.isHidden()).toBe(false);
+    expect(app.bonusValue.meta.isHidden()).toBe(false);
   });
 
   it("deve aplicar máscara no displayValue e manter valor numérico na store", () => {
@@ -108,7 +108,7 @@ describe("Angular Integration (Signals)", () => {
     const app = fixture.componentInstance;
     fixture.detectChanges();
 
-    app.salary.setValue("R$ 2.500,50");
+    app.salary.field.setValue("R$ 2.500,50");
     fixture.detectChanges();
 
     expect(app.form.getValues().salary).toBe(2500.5);
@@ -130,7 +130,7 @@ describe("Angular Integration (Signals)", () => {
     const app = fixture.componentInstance;
     fixture.detectChanges();
 
-    app.userName.setValue("Mudou");
+    app.userName.field.setValue("Mudou");
     fixture.detectChanges();
     expect(app.form.isDirty()).toBe(true);
 
@@ -168,8 +168,8 @@ describe("Angular Integration (Signals)", () => {
     storeWithResolver.blurField("user.name");
     fixture.detectChanges();
 
-    expect(app.userName.invalid()).toBe(true);
-    expect(app.userName.error()).toBe("Obrigatório");
+    expect(app.userName.meta.invalid()).toBe(true);
+    expect(app.userName.meta.error()).toBe("Obrigatório");
   });
 
   it("deve rastrear status do scope com injectBitScope", () => {

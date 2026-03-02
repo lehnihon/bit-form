@@ -59,7 +59,7 @@ export default function App() {
 
 ### 3. Connect your Fields
 
-Inside your components, use the `useBitField` hook to bind inputs to the store state seamlessly. The hook provides a `props` object that you can spread directly into your input elements.
+Inside your components, use the `useBitField` hook to bind inputs to the store state seamlessly. The hook provides a `props` helper for native inputs and a `meta` object for validation/UI state.
 
 ```tsx
 import { useBitField, useBitForm } from "@lehnihon/bit-form/react";
@@ -83,16 +83,16 @@ export default function MyFormContent() {
         <label>Name</label>
         {/* Spread the props (value, onChange, onBlur) directly */}
         <input {...nameField.props} placeholder="Enter your name" />
-        {nameField.invalid && (
-          <span style={{ color: "red" }}>{nameField.error}</span>
+        {nameField.meta.invalid && (
+          <span style={{ color: "red" }}>{nameField.meta.error}</span>
         )}
       </div>
 
       <div>
         <label>Email</label>
         <input {...emailField.props} placeholder="Enter your email" />
-        {emailField.invalid && (
-          <span style={{ color: "red" }}>{emailField.error}</span>
+        {emailField.meta.invalid && (
+          <span style={{ color: "red" }}>{emailField.meta.error}</span>
         )}
       </div>
 

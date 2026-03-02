@@ -28,7 +28,12 @@ export class AppComponent {}
 
 ## 2. Connect Fields and Form Logic
 
-Use `injectBitForm` and `injectBitField` inside your child components. Since they return Signals, you execute them like functions `()` in your templates.
+Use `injectBitForm` and `injectBitField` inside your child components. `injectBitField` now returns:
+
+- `field`: value + handlers (`displayValue`, `setValue`, `setBlur`, `update`)
+- `meta`: state signals (`invalid`, `error`, `touched`, `isDirty`, `isValidating`, `isHidden`, `isRequired`)
+
+Since they are Signals, execute them like functions `()` in templates.
 
 ```typescript
 import { Component } from "@angular/core";
@@ -42,12 +47,12 @@ import { injectBitForm, injectBitField } from "@lehnihon/bit-form/angular";
       <div>
         <label>Name</label>
         <input
-          [value]="nameField.displayValue()"
-          (input)="nameField.update($event)"
-          (blur)="nameField.setBlur()"
+          [value]="nameField.field.displayValue()"
+          (input)="nameField.field.update($event)"
+          (blur)="nameField.field.setBlur()"
         />
-        @if (nameField.invalid()) {
-          <span style="color: red">{{ nameField.error() }}</span>
+        @if (nameField.meta.invalid()) {
+          <span style="color: red">{{ nameField.meta.error() }}</span>
         }
       </div>
 
@@ -117,9 +122,7 @@ export class WizardStep1Component {
 ```
 
 ```html
-<button (click)="handleNext()" [disabled]="!step1.isValid()">
-  Próximo
-</button>
+<button (click)="handleNext()" [disabled]="!step1.isValid()">Próximo</button>
 ```
 
 See [Scopes](../features/scopes.md) for full documentation.

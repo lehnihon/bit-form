@@ -1,6 +1,6 @@
 # Bit-Form + shadcn/ui (React)
 
-You can use Bit-Form with [shadcn/ui](https://ui.shadcn.com/) by generating ready-to-use form field wrappers with the Bit-Form CLI. Each wrapper uses `useBitField` for value/blur binding and forwards `isRequired`, `invalid`, and `error` for accessibility and styling.
+You can use Bit-Form with [shadcn/ui](https://ui.shadcn.com/) by generating ready-to-use form field wrappers with the Bit-Form CLI. Each wrapper uses `useBitField` (`field` + `meta`) and forwards accessibility/validation state for styling.
 
 ## 1. Prerequisites
 
@@ -30,12 +30,12 @@ npx bit-form add shadcn input --overwrite
 
 ### Flags
 
-| Flag         | Description                                      |
-| ------------ | ------------------------------------------------- |
-| `--path`     | Directory where wrapper files are written (default: `.`) |
-| `--ui-path`  | Import path for shadcn components (default: `@/components/ui`) |
-| `--overwrite`| Replace existing wrapper files                    |
-| `--yes` / `-y` | Non-interactive (no prompts)                   |
+| Flag           | Description                                                    |
+| -------------- | -------------------------------------------------------------- |
+| `--path`       | Directory where wrapper files are written (default: `.`)       |
+| `--ui-path`    | Import path for shadcn components (default: `@/components/ui`) |
+| `--overwrite`  | Replace existing wrapper files                                 |
+| `--yes` / `-y` | Non-interactive (no prompts)                                   |
 
 If `components.json` is not found in the project root, the CLI warns you to run `npx shadcn@latest init` or to pass `--ui-path` to match your setup.
 
@@ -89,20 +89,20 @@ export function MyForm() {
 
 Each wrapper:
 
-- Uses `useBitField(path)` for value, `setValue`, and `setBlur`.
+- Uses `useBitField(path)` with `field` handlers and `meta` state.
 - Supports optional `label` and `description`.
 - Sets `aria-invalid` and `data-invalid` when the field is invalid.
 - Renders the validation error message when present.
 
 ## 5. Available wrappers
 
-| Component    | File                     | shadcn dependency   |
-| ------------ | ------------------------- | ------------------- |
-| Input        | `bit-form-input.tsx`      | `input`             |
-| Textarea     | `bit-form-textarea.tsx`   | `textarea`         |
-| Select       | `bit-form-select.tsx`     | `select`           |
-| Checkbox     | `bit-form-checkbox.tsx`   | `checkbox`         |
-| Switch       | `bit-form-switch.tsx`     | `switch`           |
-| RadioGroup   | `bit-form-radio-group.tsx`| `radio-group`       |
+| Component  | File                       | shadcn dependency |
+| ---------- | -------------------------- | ----------------- |
+| Input      | `bit-form-input.tsx`       | `input`           |
+| Textarea   | `bit-form-textarea.tsx`    | `textarea`        |
+| Select     | `bit-form-select.tsx`      | `select`          |
+| Checkbox   | `bit-form-checkbox.tsx`    | `checkbox`        |
+| Switch     | `bit-form-switch.tsx`      | `switch`          |
+| RadioGroup | `bit-form-radio-group.tsx` | `radio-group`     |
 
 You can extend or edit the generated files to match your design system or add custom props.

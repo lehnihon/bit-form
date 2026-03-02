@@ -55,21 +55,21 @@ describe("React Integration (Context + Hooks)", () => {
       expect(result.current.form.isDirty).toBe(false);
 
       await act(() => {
-        result.current.field.setValue("Kenji");
+        result.current.field.field.setValue("Kenji");
       });
 
-      expect(result.current.field.value).toBe("Kenji");
+      expect(result.current.field.field.value).toBe("Kenji");
       expect(result.current.form.isDirty).toBe(true);
 
       await act(() => {
-        result.current.field.setBlur();
+        result.current.field.field.setBlur();
       });
 
       await act(() => {
         store.setError("user.firstName", "Erro");
       });
 
-      expect(result.current.field.invalid).toBe(true);
+      expect(result.current.field.meta.invalid).toBe(true);
     });
 
     it("deve chamar unregisterField ao desmontar o componente", () => {
@@ -107,15 +107,15 @@ describe("React Integration (Context + Hooks)", () => {
         },
       );
 
-      expect(result.current.value.isHidden).toBe(true);
-      expect(result.current.value.isRequired).toBe(false);
+      expect(result.current.value.meta.isHidden).toBe(true);
+      expect(result.current.value.meta.isRequired).toBe(false);
 
       await act(() => {
-        result.current.bonus.setValue(true);
+        result.current.bonus.field.setValue(true);
       });
 
-      expect(result.current.value.isHidden).toBe(false);
-      expect(result.current.value.isRequired).toBe(true);
+      expect(result.current.value.meta.isHidden).toBe(false);
+      expect(result.current.value.meta.isRequired).toBe(true);
     });
   });
 
@@ -130,7 +130,7 @@ describe("React Integration (Context + Hooks)", () => {
       expect(result.current.props.value).toBe("R$ 10,00");
 
       await act(() => {
-        result.current.setValue("R$ 2.500,50");
+        result.current.field.setValue("R$ 2.500,50");
       });
 
       expect(result.current.props.value).toBe("R$ 2.500,50");
@@ -150,7 +150,7 @@ describe("React Integration (Context + Hooks)", () => {
       );
 
       await act(() => {
-        result.current.setValue("12345678901");
+        result.current.field.setValue("12345678901");
       });
 
       expect(result.current.props.value).toBe("123.456.789-01");
@@ -230,8 +230,8 @@ describe("React Integration (Context + Hooks)", () => {
       );
 
       await act(() => {
-        result.current.field.setValue("Novo Nome");
-        result.current.field.setBlur();
+        result.current.field.field.setValue("Novo Nome");
+        result.current.field.field.setBlur();
       });
 
       await act(() => {
@@ -242,8 +242,8 @@ describe("React Integration (Context + Hooks)", () => {
         result.current.form.reset();
       });
 
-      expect(result.current.field.value).toBe("Leandro");
-      expect(result.current.field.error).toBeUndefined();
+      expect(result.current.field.field.value).toBe("Leandro");
+      expect(result.current.field.meta.error).toBeUndefined();
       expect(result.current.form.isDirty).toBe(false);
     });
 
@@ -311,7 +311,9 @@ describe("React Integration (Context + Hooks)", () => {
       });
 
       expect(result.current.status.hasErrors).toBe(true);
-      expect(result.current.status.errors["user.firstName"]).toBe("Erro no nome");
+      expect(result.current.status.errors["user.firstName"]).toBe(
+        "Erro no nome",
+      );
       expect(result.current.isValid).toBe(false);
       expect(validateResult!.valid).toBe(false);
       expect(validateResult!.errors["user.firstName"]).toBe("Erro no nome");
@@ -336,7 +338,9 @@ describe("React Integration (Context + Hooks)", () => {
         validation: {
           delay: 0,
           resolver: (vals) =>
-            !vals.user?.firstName ? { "user.firstName": "Nome obrigatório" } : {},
+            !vals.user?.firstName
+              ? { "user.firstName": "Nome obrigatório" }
+              : {},
         },
       });
 

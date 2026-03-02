@@ -2,11 +2,35 @@ import { computed, onUnmounted, shallowRef } from "vue";
 import { useBitStore } from "./context";
 import { BitFieldOptions, BitFieldDefinition, getDeepValue } from "../core";
 
+export interface UseBitFieldVueMeta {
+  error: Readonly<any>;
+  touched: Readonly<any>;
+  invalid: Readonly<any>;
+  isValidating: Readonly<any>;
+  isDirty: Readonly<any>;
+  isHidden: Readonly<any>;
+  isRequired: Readonly<any>;
+  hasError: Readonly<any>;
+}
+
+export interface UseBitFieldVueResult<TValue = any> {
+  field: {
+    value: Readonly<any>;
+    displayValue: Readonly<any>;
+    modelValue: any;
+    setValue: (val: any) => void;
+    setBlur: () => void;
+    onInput: (val: any) => void;
+    onBlur: () => void;
+  };
+  meta: UseBitFieldVueMeta;
+}
+
 export function useBitField<TValue = any>(
   path: string,
   config?: BitFieldDefinition<any>,
   options?: BitFieldOptions,
-) {
+): UseBitFieldVueResult<TValue> {
   const store = useBitStore<any>();
 
   if (config) {
@@ -45,7 +69,7 @@ export function useBitField<TValue = any>(
     return resolvedMask ? resolvedMask.format(val as any) : String(val);
   });
 
-  const value = computed({
+  const modelValue = computed({
     get: () => displayValue.value,
     set: (val: any) => {
       if (!resolvedMask) {
@@ -57,6 +81,7 @@ export function useBitField<TValue = any>(
     },
   });
 
+  const rawError = computed(() => state.value.errors[path]);
   const error = computed(() =>
     state.value.touched[path] ? state.value.errors[path] : undefined,
   );
@@ -83,26 +108,41 @@ export function useBitField<TValue = any>(
     return store.isRequired(path);
   });
 
-  const fieldMeta = computed(() => ({
-    isDirty: isDirty.value,
-    isValidating: isValidating.value,
-    isHidden: isHidden.value,
-    isRequired: isRequired.value,
-    hasError: !!error.value,
-  }));
+  const hasError = computed(() => !!rawError.value);
+
+  const setValue = (val: any) => {
+    modelValue.value = val;
+  };
+
+  const setBlur = () => store.blurField(path);
+
+  const onInput = (val: any) => {
+    setValue(val);
+  };
+
+  const onBlur = () => {
+    setBlur();
+  };
 
   return {
-    value,
-    displayValue,
-    error,
-    touched,
-    invalid,
-    isValidating,
-    isDirty,
-    isHidden,
-    isRequired,
-    fieldMeta,
-    setBlur: () => store.blurField(path),
-    setValue: (val: any) => (value.value = val),
+    field: {
+      value: rawValue,
+      displayValue,
+      modelValue,
+      setValue,
+      setBlur,
+      onInput,
+      onBlur,
+    },
+    meta: {
+      error,
+      touched,
+      invalid,
+      isValidating,
+      isDirty,
+      isHidden,
+      isRequired,
+      hasError,
+    },
   };
 }
