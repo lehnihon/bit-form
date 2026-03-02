@@ -16,8 +16,14 @@
   <a href="https://www.npmjs.com/package/@lehnihon/bit-form">
     <img src="https://img.shields.io/npm/dm/@lehnihon/bit-form?style=flat-square" alt="npm downloads" />
   </a>
-  <a href="https://bundlephobia.com/package/@lehnihon/bit-form">
-    <img src="https://img.shields.io/bundlephobia/minzip/@lehnihon/bit-form?style=flat-square" alt="bundle size" />
+  <a href="https://github.com/lehnihon/bit-form/stargazers">
+    <img src="https://img.shields.io/github/stars/lehnihon/bit-form?style=flat-square" alt="stars" />
+  </a>
+  <a href="https://github.com/lehnihon/bit-form/network/members">
+    <img src="https://img.shields.io/github/forks/lehnihon/bit-form?style=flat-square" alt="forks" />
+  </a>
+  <a href="https://github.com/lehnihon/bit-form/issues">
+    <img src="https://img.shields.io/github/issues/lehnihon/bit-form?style=flat-square" alt="issues" />
   </a>
   <a href="https://github.com/lehnihon/bit-form/blob/main/LICENSE">
     <img src="https://img.shields.io/npm/l/@lehnihon/bit-form?style=flat-square" alt="license" />
