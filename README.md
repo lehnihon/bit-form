@@ -8,7 +8,10 @@
 
 <p align="center">
   <a href="https://github.com/lehnihon/bit-form/actions/workflows/ci.yml">
-    <img src="https://img.shields.io/github/actions/workflow/status/lehnihon/bit-form/ci.yml?branch=main&style=flat-square" alt="CI" />
+    <img src="https://img.shields.io/github/actions/workflow/status/lehnihon/bit-form/ci.yml?branch=main&label=tests&style=flat-square" alt="tests" />
+  </a>
+  <a href="https://github.com/lehnihon/bit-form/actions/workflows/ci.yml">
+    <img src="https://img.shields.io/github/actions/workflow/status/lehnihon/bit-form/ci.yml?branch=main&label=build&style=flat-square" alt="build" />
   </a>
   <a href="https://www.npmjs.com/package/@lehnihon/bit-form">
     <img src="https://img.shields.io/npm/v/@lehnihon/bit-form?style=flat-square" alt="npm version" />
@@ -29,6 +32,7 @@
     <img src="https://img.shields.io/npm/l/@lehnihon/bit-form?style=flat-square" alt="license" />
   </a>
   <img src="https://img.shields.io/badge/TypeScript-007ACC?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript" />
+  <img src="https://img.shields.io/badge/Vitest-6E9F18?style=flat-square&logo=vitest&logoColor=white" alt="Vitest" />
 </p>
 
 ---
