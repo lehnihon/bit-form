@@ -28,12 +28,12 @@ export interface BitFieldConditional<T extends object = any> {
   dependsOn?: string[];
   showIf?: (values: T) => boolean;
   requiredIf?: (values: T) => boolean;
+  /** Custom message when field is required but empty. Fallback: "required field". */
+  requiredMessage?: string;
 }
 
-/** Field-level validation: async and required message. */
+/** Field-level validation: async validation only. */
 export interface BitFieldValidation<T extends object = any> {
-  /** Custom message when field is required but empty. Falls back to defaultRequiredMessage or "Este campo é obrigatório". */
-  requiredMessage?: string;
   asyncValidate?: (value: any, values: T) => Promise<string | null | undefined>;
   asyncValidateDelay?: number;
 }
@@ -60,7 +60,6 @@ export interface DevToolsOptions {
 export interface BitValidationConfig<T> {
   resolver?: ValidatorFn<T>;
   delay?: number;
-  defaultRequiredMessage?: string;
 }
 
 /** History config. */
@@ -97,7 +96,6 @@ export interface BitResolvedConfig<T extends object> {
   initialValues: T;
   resolver?: ValidatorFn<T>;
   validationDelay: number;
-  defaultRequiredMessage?: string;
   enableHistory: boolean;
   historyLimit: number;
   /** Derived from fields where field.computed exists. */

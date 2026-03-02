@@ -103,10 +103,11 @@ interface BitFieldConditional<T> {
   dependsOn?: string[];
   showIf?: (values: T) => boolean;
   requiredIf?: (values: T) => boolean;
+  /** Custom message when field is required but empty. Fallback: "required field". */
+  requiredMessage?: string;
 }
 
 interface BitFieldValidation<T> {
-  requiredMessage?: string;
   asyncValidate?: (value: any, values: T) => Promise<string | null | undefined>;
   asyncValidateDelay?: number;
 }
@@ -121,8 +122,8 @@ interface BitFieldDefinition<T> {
 }
 ```
 
-- **`conditional`** — visibility and dynamic required logic (`dependsOn`, `showIf`, `requiredIf`).
-- **`validation`** — async validation and required message.
+- **`conditional`** — visibility and dynamic required logic (`dependsOn`, `showIf`, `requiredIf`, `requiredMessage`).
+- **`validation`** — async validation only.
 - **`transform`** — applied before submit.
 - **`computed`** — derives value from other fields.
 - **`mask`** — mask name or instance.
@@ -158,7 +159,6 @@ interface BitConfig<T extends object = any> {
   validation?: {
     resolver?: ValidatorFn<T>;
     delay?: number;
-    defaultRequiredMessage?: string;
   };
   history?: {
     enabled?: boolean;
