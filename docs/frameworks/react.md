@@ -63,26 +63,47 @@ const handleSubmit = onSubmit(async (values) => {
 <form onSubmit={handleSubmit}>
   {submitError && <p>{submitError.message}</p>}
   <button disabled={isSubmitting}>Submit</button>
-</form>
+</form>;
 ```
 
 See [Server Errors Example](../examples/server-errors.md) for the full pattern.
 
 ## 3. Connecting Fields with `useBitField`
 
-The `useBitField` hook binds an input to a specific path in your store. It returns a `props` object containing `value`, `onChange`, and `onBlur`, which you can spread directly onto your native HTML inputs.
+The `useBitField` hook binds an input to a specific path in your store. It now returns:
+
+- `field`: value + handlers (`setValue`, `setBlur`, `onChange`, `onBlur`)
+- `meta`: UI state (`invalid`, `error`, `touched`, `isDirty`, `isValidating`, `isHidden`, `isRequired`)
+- `props`: HTML helper (`value`, `onChange`, `onBlur`) for native inputs
+
+You can also register field config directly in React with the second argument (`BitFieldDefinition`) and keep mask options as the third argument.
 
 ```tsx
 import { useBitField } from "@lehnihon/bit-form/react";
 
 export function UsernameInput() {
-  const field = useBitField("username");
+  const username = useBitField("username");
+  const age = useBitField(
+    "age",
+    {
+      validation: {
+        asyncValidate: async (value) =>
+          Number(value) < 18 ? "Must be 18+" : undefined,
+      },
+    },
+    { mask: "integer" },
+  );
 
   return (
     <div>
       <label>Username</label>
-      <input {...field.props} placeholder="Enter username" />
-      {field.invalid && <span className="error">{field.error}</span>}
+      <input {...username.props} placeholder="Enter username" />
+      {username.meta.invalid && (
+        <span className="error">{username.meta.error}</span>
+      )}
+
+      <label>Age</label>
+      <input {...age.props} />
     </div>
   );
 }

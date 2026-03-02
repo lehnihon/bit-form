@@ -1,16 +1,81 @@
 import { useMemo, useCallback } from "react";
 import { useBitFieldBase } from "../react/use-bit-field-base";
-import { BitFieldOptions, BitPath, BitPathValue } from "../core";
+import {
+  BitFieldDefinition,
+  BitFieldOptions,
+  BitPath,
+  BitPathValue,
+} from "../core";
+
+export interface UseBitFieldNativeMeta {
+  error: string | undefined;
+  touched: boolean;
+  invalid: boolean;
+  isValidating: boolean;
+  isDirty: boolean;
+  isHidden: boolean;
+  isRequired: boolean;
+  hasError: boolean;
+}
+
+export interface UseBitFieldNativeBindProps {
+  value: string;
+  onChangeText: (value: string) => void;
+  onBlur: () => void;
+}
+
+export interface UseBitFieldNativeResult<
+  TForm extends object = any,
+  P extends BitPath<TForm> = BitPath<TForm>,
+> {
+  field: {
+    value: BitPathValue<TForm, P>;
+    displayValue: string;
+    setValue: (val: any) => void;
+    setBlur: () => void;
+    onChangeText: (text: string) => void;
+    onBlur: () => void;
+  };
+  meta: UseBitFieldNativeMeta;
+  props: UseBitFieldNativeBindProps;
+}
+
+function isMaskOnlyOptions(
+  value: BitFieldDefinition<any> | BitFieldOptions | undefined,
+): value is BitFieldOptions {
+  if (!value || typeof value !== "object") return false;
+  const keys = Object.keys(value);
+  return keys.length === 1 && keys[0] === "mask";
+}
 
 export function useBitField<
   TForm extends object = any,
   P extends BitPath<TForm> = BitPath<TForm>,
->(path: P, options?: BitFieldOptions) {
-  const { fieldState, setValue, setBlur, store } = useBitFieldBase<
-    BitPathValue<TForm, P>,
-    TForm,
-    P
-  >(path);
+>(
+  path: P,
+  configOrOptions?: BitFieldDefinition<TForm> | BitFieldOptions,
+  maybeOptions?: BitFieldOptions,
+): UseBitFieldNativeResult<TForm, P> {
+  const config =
+    maybeOptions !== undefined
+      ? (configOrOptions as BitFieldDefinition<TForm> | undefined)
+      : isMaskOnlyOptions(configOrOptions)
+        ? undefined
+        : (configOrOptions as BitFieldDefinition<TForm> | undefined);
+
+  const options =
+    maybeOptions !== undefined
+      ? maybeOptions
+      : isMaskOnlyOptions(configOrOptions)
+        ? configOrOptions
+        : undefined;
+
+  const {
+    fieldState,
+    setValue: rawSetValue,
+    setBlur,
+    store,
+  } = useBitFieldBase<BitPathValue<TForm, P>, TForm, P>(path, config);
 
   const resolvedMask = useMemo(() => {
     const maskOption =
@@ -31,33 +96,59 @@ export function useBitField<
   const handleChange = useCallback(
     (text: string) => {
       if (!resolvedMask) {
-        setValue(text as any);
+        rawSetValue(text as any);
         return;
       }
 
-      setValue(resolvedMask.parse(String(text ?? "")) as any);
+      rawSetValue(resolvedMask.parse(String(text ?? "")) as any);
     },
-    [resolvedMask, setValue],
+    [resolvedMask, rawSetValue],
   );
 
-  const { isHidden, isRequired, value, error, touched } = fieldState;
+  const setValue = useCallback(
+    (val: any) => {
+      if (!resolvedMask) {
+        rawSetValue(val);
+        return;
+      }
+
+      rawSetValue(resolvedMask.parse(String(val ?? "")) as any);
+    },
+    [resolvedMask, rawSetValue],
+  );
+
+  const { isHidden, isRequired, value, error, touched, isDirty, isValidating } =
+    fieldState;
+  const invalid = !!(touched && error);
+  const visibleError = touched ? error : undefined;
+
+  const onBlur = useCallback(() => {
+    setBlur();
+  }, [setBlur]);
 
   return {
-    value: value as BitPathValue<TForm, P>,
-    displayValue,
-    error: touched ? error : undefined,
-    touched: touched,
-    invalid: !!(touched && error),
-    isValidating: store.isFieldValidating(path),
-    isDirty: store.isFieldDirty(path),
-    isHidden,
-    isRequired,
-    setValue,
-    setBlur,
+    field: {
+      value: value as BitPathValue<TForm, P>,
+      displayValue,
+      setValue,
+      setBlur,
+      onChangeText: handleChange,
+      onBlur,
+    },
+    meta: {
+      error: visibleError,
+      touched,
+      invalid,
+      isValidating,
+      isDirty,
+      isHidden,
+      isRequired,
+      hasError: !!error,
+    },
     props: {
       value: displayValue,
       onChangeText: handleChange,
-      onBlur: setBlur,
+      onBlur,
     },
   };
 }

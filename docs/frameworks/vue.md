@@ -27,7 +27,12 @@ provideBitStore(store);
 
 ## 2. Using `useBitField`
 
-Inside your child components, use `useBitField` to connect your inputs. You can bind the field value directly using `v-model`.
+Inside your child components, use `useBitField` to connect your inputs. It now returns:
+
+- `field`: value helpers (`value`, `displayValue`, `modelValue`, `setValue`, `setBlur`)
+- `meta`: UI/validation refs (`invalid`, `error`, `touched`, `isDirty`, `isValidating`, `isHidden`, `isRequired`)
+
+For native inputs, bind `v-model` to `field.modelValue`.
 
 ```vue
 <script setup lang="ts">
@@ -41,16 +46,18 @@ const ageField = useBitField("age");
   <div>
     <label>Email</label>
     <input
-      v-model="emailField.value.value"
-      @blur="emailField.setBlur()"
+      v-model="emailField.field.modelValue.value"
+      @blur="emailField.field.setBlur()"
       type="email"
     />
-    <span v-if="emailField.invalid.value">{{ emailField.error.value }}</span>
+    <span v-if="emailField.meta.invalid.value">{{
+      emailField.meta.error.value
+    }}</span>
 
     <label>Age</label>
     <input
-      v-model="ageField.value.value"
-      @blur="ageField.setBlur()"
+      v-model="ageField.field.modelValue.value"
+      @blur="ageField.field.setBlur()"
       type="number"
     />
   </div>
@@ -107,9 +114,7 @@ const handleNext = async () => {
 </script>
 
 <template>
-  <button @click="handleNext" :disabled="!step1.isValid.value">
-    Próximo
-  </button>
+  <button @click="handleNext" :disabled="!step1.isValid.value">Próximo</button>
 </template>
 ```
 

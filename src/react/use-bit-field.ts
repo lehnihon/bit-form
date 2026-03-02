@@ -1,17 +1,81 @@
 import { useMemo, useCallback } from "react";
 import { useBitFieldBase } from "./use-bit-field-base";
-import { BitFieldOptions, BitPath, BitPathValue } from "../core";
+import {
+  BitFieldDefinition,
+  BitFieldOptions,
+  BitPath,
+  BitPathValue,
+} from "../core";
+
+export interface UseBitFieldMeta {
+  error: string | undefined;
+  touched: boolean;
+  invalid: boolean;
+  isValidating: boolean;
+  isDirty: boolean;
+  isHidden: boolean;
+  isRequired: boolean;
+  hasError: boolean;
+}
+
+export interface UseBitFieldBindProps {
+  value: string;
+  onChange: (e: any) => void;
+  onBlur: () => void;
+}
+
+export interface UseBitFieldResult<
+  TForm extends object = any,
+  P extends BitPath<TForm> = BitPath<TForm>,
+> {
+  field: {
+    value: BitPathValue<TForm, P>;
+    displayValue: string;
+    setValue: (val: any) => void;
+    setBlur: () => void;
+    onChange: (e: any) => void;
+    onBlur: () => void;
+  };
+  meta: UseBitFieldMeta;
+  props: UseBitFieldBindProps;
+}
+
+function isMaskOnlyOptions(
+  value: BitFieldDefinition<any> | BitFieldOptions | undefined,
+): value is BitFieldOptions {
+  if (!value || typeof value !== "object") return false;
+  const keys = Object.keys(value);
+  return keys.length === 1 && keys[0] === "mask";
+}
 
 export function useBitField<
   TForm extends object = any,
   P extends BitPath<TForm> = BitPath<TForm>,
->(path: P, options?: BitFieldOptions) {
+>(
+  path: P,
+  configOrOptions?: BitFieldDefinition<TForm> | BitFieldOptions,
+  maybeOptions?: BitFieldOptions,
+): UseBitFieldResult<TForm, P> {
+  const config =
+    maybeOptions !== undefined
+      ? (configOrOptions as BitFieldDefinition<TForm> | undefined)
+      : isMaskOnlyOptions(configOrOptions)
+        ? undefined
+        : (configOrOptions as BitFieldDefinition<TForm> | undefined);
+
+  const options =
+    maybeOptions !== undefined
+      ? maybeOptions
+      : isMaskOnlyOptions(configOrOptions)
+        ? configOrOptions
+        : undefined;
+
   const {
     fieldState,
     setValue: rawSetValue,
     setBlur,
     store,
-  } = useBitFieldBase<BitPathValue<TForm, P>, TForm, P>(path);
+  } = useBitFieldBase<BitPathValue<TForm, P>, TForm, P>(path, config);
 
   const resolvedMask = useMemo(() => {
     const maskOption =
@@ -41,44 +105,47 @@ export function useBitField<
     [resolvedMask, rawSetValue],
   );
 
-  const {
-    isHidden,
-    isRequired,
-    value,
-    error,
-    touched,
-    isDirty,
-    isValidating,
-  } = fieldState;
+  const { isHidden, isRequired, value, error, touched, isDirty, isValidating } =
+    fieldState;
 
   const invalid = !!(touched && error);
+  const visibleError = touched ? error : undefined;
+
+  const onChange = useCallback(
+    (e: any) => {
+      const val = e?.target ? e.target.value : e;
+      setValue(val);
+    },
+    [setValue],
+  );
+
+  const onBlur = useCallback(() => {
+    setBlur();
+  }, [setBlur]);
 
   return {
-    value: value as BitPathValue<TForm, P>,
-    displayValue,
-    error: touched ? error : undefined,
-    touched: touched,
-    invalid,
-    isValidating,
-    isDirty,
-    isHidden,
-    isRequired,
-    fieldMeta: {
+    field: {
+      value: value as BitPathValue<TForm, P>,
+      displayValue,
+      setValue,
+      setBlur,
+      onChange,
+      onBlur,
+    },
+    meta: {
+      error: visibleError,
+      touched,
+      invalid,
       isDirty,
       isValidating,
       isHidden,
       isRequired,
       hasError: !!error,
     },
-    setValue,
-    setBlur,
     props: {
       value: displayValue,
-      onChange: (e: any) => {
-        const val = e?.target ? e.target.value : e;
-        setValue(val);
-      },
-      onBlur: setBlur,
+      onChange,
+      onBlur,
     },
   };
 }

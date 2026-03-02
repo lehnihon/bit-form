@@ -8,11 +8,40 @@ import {
   BitPathValue,
 } from "../core";
 
+export interface InjectBitFieldMeta {
+  error: () => string | undefined;
+  touched: () => boolean;
+  invalid: () => boolean;
+  isDirty: () => boolean;
+  isValidating: () => boolean;
+  isHidden: () => boolean;
+  isRequired: () => boolean;
+  hasError: () => boolean;
+}
+
+export interface InjectBitFieldResult<
+  TForm extends object = any,
+  P extends BitPath<TForm> = BitPath<TForm>,
+> {
+  field: {
+    value: () => BitPathValue<TForm, P>;
+    displayValue: () => string;
+    setValue: (val: any) => void;
+    setBlur: () => void;
+    update: (e: any) => void;
+  };
+  meta: InjectBitFieldMeta;
+}
+
 export function injectBitField<
   TValue = any,
   TForm extends object = any,
   P extends BitPath<TForm> = BitPath<TForm>,
->(path: P, config?: BitFieldDefinition<TForm>, options?: BitFieldOptions) {
+>(
+  path: P,
+  config?: BitFieldDefinition<TForm>,
+  options?: BitFieldOptions,
+): InjectBitFieldResult<TForm, P> {
   const store = inject(BIT_STORE_TOKEN);
 
   const stateSignal = signal(store.getState());
@@ -34,17 +63,19 @@ export function injectBitField<
 
   const value = computed(
     () =>
-      getDeepValue(
-        stateSignal().values,
-        path as string,
-      ) as BitPathValue<TForm, P>,
+      getDeepValue(stateSignal().values, path as string) as BitPathValue<
+        TForm,
+        P
+      >,
   );
-  const error = computed(
-    () => (stateSignal().errors as Record<string, any>)[path],
+  const rawError = computed(
+    () =>
+      (stateSignal().errors as Record<string, any>)[path] as string | undefined,
   );
   const touched = computed(
     () => !!(stateSignal().touched as Record<string, any>)[path],
   );
+  const error = computed(() => (touched() ? rawError() : undefined));
 
   const isDirty = computed(() => {
     stateSignal();
@@ -66,7 +97,7 @@ export function injectBitField<
     return store.isRequired(path);
   });
 
-  const invalid = computed(() => touched() && !!error());
+  const invalid = computed(() => touched() && !!rawError());
 
   const maskOption =
     options?.mask ?? store.config.fields?.[path as string]?.mask;
@@ -95,27 +126,27 @@ export function injectBitField<
 
   const setBlur = () => store.blurField(path);
 
-  const fieldMeta = computed(() => ({
-    isDirty: isDirty(),
-    isValidating: isValidating(),
-    isHidden: isHidden(),
-    isRequired: isRequired(),
-    hasError: !!error(),
-  }));
+  const hasError = computed(() => !!rawError());
+
+  const update = (e: any) => setValue(e?.target?.value ?? e);
 
   return {
-    value,
-    displayValue,
-    error,
-    touched,
-    invalid,
-    isDirty,
-    isValidating,
-    isHidden,
-    isRequired,
-    fieldMeta,
-    setValue,
-    setBlur,
-    update: (e: any) => setValue(e?.target?.value ?? e),
+    field: {
+      value,
+      displayValue,
+      setValue,
+      setBlur,
+      update,
+    },
+    meta: {
+      error,
+      touched,
+      invalid,
+      isDirty,
+      isValidating,
+      isHidden,
+      isRequired,
+      hasError,
+    },
   };
 }

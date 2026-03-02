@@ -27,27 +27,28 @@ export function BitFormRadioGroup({
   id,
 }: BitFormRadioGroupProps) {
   const field = useBitField(path);
+  const { field: valueField, meta } = field;
 
-  if (field.isHidden) return null;
+  if (meta.isHidden) return null;
 
   const inputId = id ?? path;
 
   return (
-    <div className="space-y-2" data-invalid={field.invalid || undefined}>
+    <div className="space-y-2" data-invalid={meta.invalid || undefined}>
       {label && (
         <label
           className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
         >
           {label}
-          {field.isRequired && <span className="text-destructive ml-1">*</span>}
+          {meta.isRequired && <span className="text-destructive ml-1">*</span>}
         </label>
       )}
       <RadioGroup
-        value={field.value ?? ""}
-        onValueChange={(val) => field.setValue(val)}
+        value={valueField.value ?? ""}
+        onValueChange={(val) => valueField.setValue(val)}
         className={className}
-        aria-invalid={field.invalid || undefined}
-        aria-required={field.isRequired || undefined}
+        aria-invalid={meta.invalid || undefined}
+        aria-required={meta.isRequired || undefined}
       >
         {options.map((opt) => (
           <div key={opt.value} className="flex items-center space-x-2">
@@ -64,8 +65,8 @@ export function BitFormRadioGroup({
       {description && (
         <p className="text-sm text-muted-foreground">{description}</p>
       )}
-      {field.error && (
-        <p className="text-sm text-destructive">{field.error}</p>
+      {meta.error && (
+        <p className="text-sm text-destructive">{meta.error}</p>
       )}
     </div>
   );

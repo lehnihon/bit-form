@@ -20,21 +20,22 @@ export function BitFormSwitch({
   id,
 }: BitFormSwitchProps) {
   const field = useBitField(path);
+  const { field: valueField, meta } = field;
 
-  if (field.isHidden) return null;
+  if (meta.isHidden) return null;
 
   const inputId = id ?? path;
-  const checked = Boolean(field.value);
+  const checked = Boolean(valueField.value);
 
   return (
-    <div className="space-y-2" data-invalid={field.invalid || undefined}>
+    <div className="space-y-2" data-invalid={meta.invalid || undefined}>
       <div className="flex items-center space-x-2">
         <Switch
           id={inputId}
           checked={checked}
-          onCheckedChange={(checked) => field.setValue(!!checked)}
-          aria-invalid={field.invalid || undefined}
-          aria-required={field.isRequired || undefined}
+          onCheckedChange={(checked) => valueField.setValue(!!checked)}
+          aria-invalid={meta.invalid || undefined}
+          aria-required={meta.isRequired || undefined}
           className={className}
         />
         {label && (
@@ -43,15 +44,15 @@ export function BitFormSwitch({
             className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
           >
             {label}
-            {field.isRequired && <span className="text-destructive ml-1">*</span>}
+            {meta.isRequired && <span className="text-destructive ml-1">*</span>}
           </label>
         )}
       </div>
       {description && (
         <p className="text-sm text-muted-foreground">{description}</p>
       )}
-      {field.error && (
-        <p className="text-sm text-destructive">{field.error}</p>
+      {meta.error && (
+        <p className="text-sm text-destructive">{meta.error}</p>
       )}
     </div>
   );

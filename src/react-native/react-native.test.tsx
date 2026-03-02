@@ -42,7 +42,7 @@ describe("React Native Integration (bit-form/react-native)", () => {
       result.current.props.onChangeText("Desenvolvedor BitForm");
     });
 
-    expect(result.current.value).toBe("Desenvolvedor BitForm");
+    expect(result.current.field.value).toBe("Desenvolvedor BitForm");
     expect(store.getState().values.bio).toBe("Desenvolvedor BitForm");
   });
 
@@ -56,7 +56,7 @@ describe("React Native Integration (bit-form/react-native)", () => {
       result.current.props.onBlur();
     });
 
-    expect(result.current.touched).toBe(true);
+    expect(result.current.meta.touched).toBe(true);
   });
 
   it("deve reagir a isHidden e isRequired no mobile", () => {
@@ -78,13 +78,13 @@ describe("React Native Integration (bit-form/react-native)", () => {
       },
     );
 
-    expect(result.current.cnpj.isHidden).toBe(true);
+    expect(result.current.cnpj.meta.isHidden).toBe(true);
 
     act(() => {
-      result.current.type.setValue("PJ");
+      result.current.type.field.setValue("PJ");
     });
 
-    expect(result.current.cnpj.isHidden).toBe(false);
+    expect(result.current.cnpj.meta.isHidden).toBe(false);
   });
 
   it("deve limpar config ao desmontar o hook no mobile", () => {
