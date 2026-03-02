@@ -1,3 +1,32 @@
+<div align="center">
+  <img src="logo.png" alt="Bit-Form" width="280" />
+</div>
+
+<p align="center">
+  <i>Made with ❤️ by <a href="https://github.com/lehnihon">lehnihon</a> & contributors</i>
+</p>
+
+<p align="center">
+  <a href="https://github.com/lehnihon/bit-form/actions/workflows/ci.yml">
+    <img src="https://img.shields.io/github/actions/workflow/status/lehnihon/bit-form/ci.yml?branch=main&style=flat-square" alt="CI" />
+  </a>
+  <a href="https://www.npmjs.com/package/@lehnihon/bit-form">
+    <img src="https://img.shields.io/npm/v/@lehnihon/bit-form?style=flat-square" alt="npm version" />
+  </a>
+  <a href="https://www.npmjs.com/package/@lehnihon/bit-form">
+    <img src="https://img.shields.io/npm/dm/@lehnihon/bit-form?style=flat-square" alt="npm downloads" />
+  </a>
+  <a href="https://bundlephobia.com/package/@lehnihon/bit-form">
+    <img src="https://img.shields.io/bundlephobia/minzip/@lehnihon/bit-form?style=flat-square" alt="bundle size" />
+  </a>
+  <a href="https://github.com/lehnihon/bit-form/blob/main/LICENSE">
+    <img src="https://img.shields.io/npm/l/@lehnihon/bit-form?style=flat-square" alt="license" />
+  </a>
+  <img src="https://img.shields.io/badge/TypeScript-007ACC?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript" />
+</p>
+
+---
+
 # 🛠 Bit-Form
 
 **Agnostic and performant form state management**.
