@@ -52,14 +52,14 @@ describe("React Integration (Context + Hooks)", () => {
         { wrapper: (props) => wrapper({ ...props, store }) },
       );
 
-      expect(result.current.form.isDirty).toBe(false);
+      expect(result.current.form.meta.isDirty).toBe(false);
 
       await act(() => {
         result.current.field.field.setValue("Kenji");
       });
 
       expect(result.current.field.field.value).toBe("Kenji");
-      expect(result.current.form.isDirty).toBe(true);
+      expect(result.current.form.meta.isDirty).toBe(true);
 
       await act(() => {
         result.current.field.field.setBlur();
@@ -244,7 +244,7 @@ describe("React Integration (Context + Hooks)", () => {
 
       expect(result.current.field.field.value).toBe("Leandro");
       expect(result.current.field.meta.error).toBeUndefined();
-      expect(result.current.form.isDirty).toBe(false);
+      expect(result.current.form.meta.isDirty).toBe(false);
     });
 
     it("deve lidar com submissão e preventDefault", async () => {

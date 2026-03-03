@@ -132,16 +132,16 @@ export function RegistrationWizard() {
 
   return (
     <form onSubmit={handleSubmit}>
-      {form.submitError && (
-        <p className="error">{form.submitError.message}</p>
+      {form.meta.submitError && (
+        <p className="error">{form.meta.submitError.message}</p>
       )}
 
       {/* Toolbar: Undo / Redo */}
       <div className="toolbar">
-        <button type="button" onClick={form.undo} disabled={!form.canUndo}>
+        <button type="button" onClick={form.undo} disabled={!form.meta.canUndo}>
           ↺ Undo
         </button>
-        <button type="button" onClick={form.redo} disabled={!form.canRedo}>
+        <button type="button" onClick={form.redo} disabled={!form.meta.canRedo}>
           ↻ Redo
         </button>
       </div>
@@ -198,8 +198,8 @@ export function RegistrationWizard() {
           <button type="button" onClick={steps.prev}>
             Back
           </button>
-          <button type="submit" disabled={!form.isValid || form.isSubmitting}>
-            {form.isSubmitting ? "Enviando..." : "Cadastrar"}
+          <button type="submit" disabled={!form.meta.isValid || form.meta.isSubmitting}>
+            {form.meta.isSubmitting ? "Enviando..." : "Cadastrar"}
           </button>
         </div>
       )}

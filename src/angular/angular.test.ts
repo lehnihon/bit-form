@@ -132,11 +132,11 @@ describe("Angular Integration (Signals)", () => {
 
     app.userName.field.setValue("Mudou");
     fixture.detectChanges();
-    expect(app.form.isDirty()).toBe(true);
+    expect(app.form.meta.isDirty()).toBe(true);
 
     app.form.reset();
     fixture.detectChanges();
-    expect(app.form.isDirty()).toBe(false);
+    expect(app.form.meta.isDirty()).toBe(false);
   });
 
   it("deve validar campos dinamicamente com Signals e resolver", async () => {

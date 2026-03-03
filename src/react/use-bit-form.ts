@@ -90,40 +90,38 @@ export function useBitForm<T extends object>() {
   const getErrors = useCallback(() => store.getState().errors, [store]);
   const getTouched = useCallback(() => store.getState().touched, [store]);
 
-  const actions = useMemo(
+  const meta = useMemo(
     () => ({
-      setField: store.setField.bind(store),
-      blurField: store.blurField.bind(store),
-      setValues: store.setValues.bind(store),
-      setError: store.setError.bind(store),
-      setErrors: store.setErrors.bind(store),
-      setServerErrors: store.setServerErrors.bind(store),
-      reset,
-      validate: store.validate.bind(store),
-      registerMask: store.registerMask.bind(store),
-      pushItem: store.pushItem.bind(store),
-      removeItem: store.removeItem.bind(store),
-      prependItem: store.prependItem.bind(store),
-      insertItem: store.insertItem.bind(store),
-      moveItem: store.moveItem.bind(store),
-      swapItems: store.swapItems.bind(store),
-      undo: store.undo.bind(store),
-      redo: store.redo.bind(store),
+      ...metaState,
+      submitError,
+      lastResponse,
     }),
-    [store, reset],
+    [metaState, submitError, lastResponse],
   );
 
   return {
-    ...metaState,
+    meta,
     getValues,
     getErrors,
     getTouched,
     submit,
     onSubmit,
-    submitError,
-    lastResponse,
-    ...actions,
+    setField: store.setField.bind(store),
+    blurField: store.blurField.bind(store),
+    setValues: store.setValues.bind(store),
+    setError: store.setError.bind(store),
+    setErrors: store.setErrors.bind(store),
+    setServerErrors: store.setServerErrors.bind(store),
     reset,
-    store,
+    validate: store.validate.bind(store),
+    registerMask: store.registerMask.bind(store),
+    pushItem: store.pushItem.bind(store),
+    removeItem: store.removeItem.bind(store),
+    prependItem: store.prependItem.bind(store),
+    insertItem: store.insertItem.bind(store),
+    moveItem: store.moveItem.bind(store),
+    swapItems: store.swapItems.bind(store),
+    undo: store.undo.bind(store),
+    redo: store.redo.bind(store),
   };
 }

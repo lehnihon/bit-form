@@ -59,13 +59,18 @@ export function useBitForm<T extends object>() {
     lastResponse.value = null;
   };
 
-  return {
-    store,
+  const meta = {
     isValid,
-    isSubmitting,
     isDirty,
+    isSubmitting,
     canUndo,
     canRedo,
+    submitError,
+    lastResponse,
+  };
+
+  return {
+    meta,
     getValues,
     getErrors,
     getTouched,
@@ -76,8 +81,6 @@ export function useBitForm<T extends object>() {
       };
     },
     onSubmit,
-    submitError,
-    lastResponse,
     reset,
     validate: store.validate.bind(store),
     setValues: store.setValues.bind(store),

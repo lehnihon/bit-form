@@ -26,7 +26,29 @@ export default function App() {
 
 ## 2. Using `useBitForm`
 
-The `useBitForm` hook gives you access to the form's metadata, such as `isValid`, `isSubmitting`, the `submit` wrapper, and the recommended `onSubmit` helper.
+The `useBitForm` hook gives you access to the form's metadata and actions. All readonly state is grouped under `meta` for better organization.
+
+### Form Structure
+
+```tsx
+const form = useBitForm();
+
+// Readonly state under meta
+form.meta.isValid;         // boolean
+form.meta.isDirty;         // boolean
+form.meta.isSubmitting;    // boolean
+form.meta.canUndo;         // boolean
+form.meta.canRedo;         // boolean
+form.meta.submitError;     // Error | null
+form.meta.lastResponse;    // unknown
+
+// Actions remain flat
+form.submit();
+form.onSubmit();
+form.reset();
+form.setField();
+// ... etc
+```
 
 ### Basic `submit`
 
@@ -34,15 +56,15 @@ The `useBitForm` hook gives you access to the form's metadata, such as `isValid`
 import { useBitForm } from "@lehnihon/bit-form/react";
 
 export function SubmitButton() {
-  const { isValid, isSubmitting, submit } = useBitForm();
+  const form = useBitForm();
 
-  const onSubmit = submit((values) => {
+  const onSubmit = form.submit((values) => {
     console.log("Payload:", values);
   });
 
   return (
-    <button onClick={onSubmit} disabled={!isValid || isSubmitting}>
-      {isSubmitting ? "Loading..." : "Submit"}
+    <button onClick={onSubmit} disabled={!form.meta.isValid || form.meta.isSubmitting}>
+      {form.meta.isSubmitting ? "Loading..." : "Submit"}
     </button>
   );
 }
@@ -53,16 +75,16 @@ export function SubmitButton() {
 Use `onSubmit` when your form calls an API. It handles `preventDefault`, calls the API, maps 422 validation errors to fields via `setServerErrors`, and exposes `submitError` and `lastResponse` for UI feedback.
 
 ```tsx
-const { onSubmit, submitError, lastResponse, isSubmitting } = useBitForm();
+const form = useBitForm();
 
-const handleSubmit = onSubmit(async (values) => {
+const handleSubmit = form.onSubmit(async (values) => {
   const res = await api.createUser(values);
   return res.data;
 });
 
 <form onSubmit={handleSubmit}>
-  {submitError && <p>{submitError.message}</p>}
-  <button disabled={isSubmitting}>Submit</button>
+  {form.meta.submitError && <p>{form.meta.submitError.message}</p>}
+  <button disabled={form.meta.isSubmitting}>Submit</button>
 </form>;
 ```
 

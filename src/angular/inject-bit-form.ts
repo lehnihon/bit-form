@@ -70,20 +70,23 @@ export function injectBitForm<T extends object>() {
     lastResponse.set(null);
   };
 
-  return {
-    store,
+  const meta = {
     isValid,
-    isSubmitting,
     isDirty,
+    isSubmitting,
     canUndo,
     canRedo,
+    submitError: submitError.asReadonly(),
+    lastResponse: lastResponse.asReadonly(),
+  };
+
+  return {
+    meta,
     getValues,
     getErrors,
     getTouched,
     submit,
     onSubmit,
-    submitError,
-    lastResponse,
     reset,
     validate: store.validate.bind(store),
     setValues: store.setValues.bind(store),

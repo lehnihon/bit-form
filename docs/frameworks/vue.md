@@ -66,21 +66,44 @@ const ageField = useBitField("age");
 
 ## 3. Submitting the Form
 
-Use `useBitForm` to access form metadata, the `submit` wrapper, and the recommended `onSubmit` helper (which handles API calls and 422 server errors automatically).
+Use `useBitForm` to access form metadata and actions. All readonly state is grouped under `meta` (as computed refs).
+
+### Form Structure
+
+```ts
+const form = useBitForm();
+
+// Readonly state under meta (all ComputedRef or Ref)
+form.meta.isValid;         // ComputedRef<boolean>
+form.meta.isDirty;         // ComputedRef<boolean>
+form.meta.isSubmitting;    // ComputedRef<boolean>
+form.meta.canUndo;         // ComputedRef<boolean>
+form.meta.canRedo;         // ComputedRef<boolean>
+form.meta.submitError;     // Ref<Error | null>
+form.meta.lastResponse;    // Ref<unknown>
+
+// Actions remain flat
+form.submit();
+form.onSubmit();
+form.reset();
+// ... etc
+```
+
+### Usage Example
 
 ```vue
 <script setup lang="ts">
 import { useBitForm } from "@lehnihon/bit-form/vue";
 
-const { submit, onSubmit, submitError, isSubmitting, isValid } = useBitForm();
+const form = useBitForm();
 
 // Simple submit
-const handleSubmit = submit((values) => {
+const handleSubmit = form.submit((values) => {
   console.log("Vue Form Submitted:", values);
 });
 
 // Or use onSubmit for API + server errors
-const handleApiSubmit = onSubmit(async (values) => {
+const handleApiSubmit = form.onSubmit(async (values) => {
   const res = await api.createUser(values);
   return res.data;
 });
@@ -88,8 +111,8 @@ const handleApiSubmit = onSubmit(async (values) => {
 
 <template>
   <form @submit="handleSubmit">
-    <p v-if="submitError">{{ submitError.message }}</p>
-    <button type="submit" :disabled="!isValid.value || isSubmitting.value">
+    <p v-if="form.meta.submitError.value">{{ form.meta.submitError.value.message }}</p>
+    <button type="submit" :disabled="!form.meta.isValid.value || form.meta.isSubmitting.value">
       Submit
     </button>
   </form>
