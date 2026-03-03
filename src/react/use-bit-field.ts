@@ -28,16 +28,17 @@ export interface UseBitFieldResult<
   TForm extends object = any,
   P extends BitPath<TForm> = BitPath<TForm>,
 > {
-  field: {
-    value: BitPathValue<TForm, P>;
-    displayValue: string;
-    setValue: (val: any) => void;
-    setBlur: () => void;
-    onChange: (e: any) => void;
-    onBlur: () => void;
-  };
-  meta: UseBitFieldMeta;
+  // Main handlers and values (flat)
+  value: BitPathValue<TForm, P>;
+  displayValue: string;
+  setValue: (val: any) => void;
+  setBlur: () => void;
+  onChange: (e: any) => void;
+  onBlur: () => void;
+  // Props helper for native inputs
   props: UseBitFieldBindProps;
+  // Readonly metadata (grouped)
+  meta: UseBitFieldMeta;
 }
 
 function isMaskOnlyOptions(
@@ -124,14 +125,20 @@ export function useBitField<
   }, [setBlur]);
 
   return {
-    field: {
-      value: value as BitPathValue<TForm, P>,
-      displayValue,
-      setValue,
-      setBlur,
+    // Main handlers and values (flat)
+    value: value as BitPathValue<TForm, P>,
+    displayValue,
+    setValue,
+    setBlur,
+    onChange,
+    onBlur,
+    // Props helper
+    props: {
+      value: displayValue,
       onChange,
       onBlur,
     },
+    // Metadata (grouped)
     meta: {
       error: visibleError,
       touched,
@@ -141,11 +148,6 @@ export function useBitField<
       isHidden,
       isRequired,
       hasError: !!error,
-    },
-    props: {
-      value: displayValue,
-      onChange,
-      onBlur,
     },
   };
 }

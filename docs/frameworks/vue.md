@@ -29,10 +29,10 @@ provideBitStore(store);
 
 Inside your child components, use `useBitField` to connect your inputs. It now returns:
 
-- `field`: value helpers (`value`, `displayValue`, `modelValue`, `setValue`, `setBlur`)
+- Value helpers at root level: `value`, `displayValue`, `modelValue`, `setValue()`, `setBlur()`
 - `meta`: UI/validation refs (`invalid`, `error`, `touched`, `isDirty`, `isValidating`, `isHidden`, `isRequired`)
 
-For native inputs, bind `v-model` to `field.modelValue`.
+For native inputs, bind `v-model` to `modelValue`.
 
 ```vue
 <script setup lang="ts">
@@ -46,8 +46,8 @@ const ageField = useBitField("age");
   <div>
     <label>Email</label>
     <input
-      v-model="emailField.field.modelValue.value"
-      @blur="emailField.field.setBlur()"
+      v-model="emailField.modelValue.value"
+      @blur="emailField.setBlur()"
       type="email"
     />
     <span v-if="emailField.meta.invalid.value">{{
@@ -56,8 +56,8 @@ const ageField = useBitField("age");
 
     <label>Age</label>
     <input
-      v-model="ageField.field.modelValue.value"
-      @blur="ageField.field.setBlur()"
+      v-model="ageField.modelValue.value"
+      @blur="ageField.setBlur()"
       type="number"
     />
   </div>
@@ -82,11 +82,17 @@ form.meta.canRedo; // ComputedRef<boolean>
 form.meta.submitError; // Ref<Error | null>
 form.meta.lastResponse; // Ref<unknown>
 
-// Actions remain flat
+// Main actions remain flat
 form.submit();
 form.onSubmit();
 form.reset();
 // ... etc
+
+// Secondary actions grouped by semantic meaning
+form.mutations.pushItem(); // for array operations
+form.mutations.removeItem();
+form.history.undo(); // for history/time-travel
+form.history.redo();
 ```
 
 ### Usage Example

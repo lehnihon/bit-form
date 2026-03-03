@@ -108,7 +108,7 @@ describe("Angular Integration (Signals)", () => {
     const app = fixture.componentInstance;
     fixture.detectChanges();
 
-    app.salary.field.setValue("R$ 2.500,50");
+    app.salary.setValue("R$ 2.500,50");
     fixture.detectChanges();
 
     expect(app.form.getValues().salary).toBe(2500.5);
@@ -130,7 +130,7 @@ describe("Angular Integration (Signals)", () => {
     const app = fixture.componentInstance;
     fixture.detectChanges();
 
-    app.userName.field.setValue("Mudou");
+    app.userName.setValue("Mudou");
     fixture.detectChanges();
     expect(app.form.meta.isDirty()).toBe(true);
 

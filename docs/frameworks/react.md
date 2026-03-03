@@ -26,7 +26,7 @@ export default function App() {
 
 ## 2. Using `useBitForm`
 
-The `useBitForm` hook gives you access to the form's metadata and actions. All readonly state is grouped under `meta` for better organization.
+The `useBitForm` hook gives you access to the form's metadata and actions. All readonly state is grouped under `meta`, main actions are flat, and secondary actions are grouped.
 
 ### Form Structure
 
@@ -42,12 +42,18 @@ form.meta.canRedo; // boolean
 form.meta.submitError; // Error | null
 form.meta.lastResponse; // unknown
 
-// Actions remain flat
+// Main actions remain flat
 form.submit();
 form.onSubmit();
 form.reset();
 form.setField();
 // ... etc
+
+// Secondary actions grouped by semantic meaning
+form.mutations.pushItem(); // for array operations
+form.mutations.removeItem();
+form.history.undo(); // for history/time-travel
+form.history.redo();
 ```
 
 ### Basic `submit`
@@ -97,7 +103,7 @@ See [Server Errors Example](../examples/server-errors.md) for the full pattern.
 
 The `useBitField` hook binds an input to a specific path in your store. It now returns:
 
-- `field`: value + handlers (`setValue`, `setBlur`, `onChange`, `onBlur`)
+- Value + handlers at root level: `value`, `displayValue`, `setValue()`, `setBlur()`, `onChange()`, `onBlur()`
 - `meta`: UI state (`invalid`, `error`, `touched`, `isDirty`, `isValidating`, `isHidden`, `isRequired`)
 - `props`: HTML helper (`value`, `onChange`, `onBlur`) for native inputs
 

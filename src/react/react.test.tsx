@@ -55,14 +55,14 @@ describe("React Integration (Context + Hooks)", () => {
       expect(result.current.form.meta.isDirty).toBe(false);
 
       await act(() => {
-        result.current.field.field.setValue("Kenji");
+        result.current.field.setValue("Kenji");
       });
 
-      expect(result.current.field.field.value).toBe("Kenji");
+      expect(result.current.field.value).toBe("Kenji");
       expect(result.current.form.meta.isDirty).toBe(true);
 
       await act(() => {
-        result.current.field.field.setBlur();
+        result.current.field.setBlur();
       });
 
       await act(() => {
@@ -111,7 +111,7 @@ describe("React Integration (Context + Hooks)", () => {
       expect(result.current.value.meta.isRequired).toBe(false);
 
       await act(() => {
-        result.current.bonus.field.setValue(true);
+        result.current.bonus.setValue(true);
       });
 
       expect(result.current.value.meta.isHidden).toBe(false);
@@ -130,7 +130,7 @@ describe("React Integration (Context + Hooks)", () => {
       expect(result.current.props.value).toBe("R$ 10,00");
 
       await act(() => {
-        result.current.field.setValue("R$ 2.500,50");
+        result.current.setValue("R$ 2.500,50");
       });
 
       expect(result.current.props.value).toBe("R$ 2.500,50");
@@ -150,7 +150,7 @@ describe("React Integration (Context + Hooks)", () => {
       );
 
       await act(() => {
-        result.current.field.setValue("12345678901");
+        result.current.setValue("12345678901");
       });
 
       expect(result.current.props.value).toBe("123.456.789-01");
@@ -230,8 +230,8 @@ describe("React Integration (Context + Hooks)", () => {
       );
 
       await act(() => {
-        result.current.field.field.setValue("Novo Nome");
-        result.current.field.field.setBlur();
+        result.current.field.setValue("Novo Nome");
+        result.current.field.setBlur();
       });
 
       await act(() => {
@@ -242,7 +242,7 @@ describe("React Integration (Context + Hooks)", () => {
         result.current.form.reset();
       });
 
-      expect(result.current.field.field.value).toBe("Leandro");
+      expect(result.current.field.value).toBe("Leandro");
       expect(result.current.field.meta.error).toBeUndefined();
       expect(result.current.form.meta.isDirty).toBe(false);
     });

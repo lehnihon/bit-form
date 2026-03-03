@@ -138,10 +138,10 @@ export function RegistrationWizard() {
 
       {/* Toolbar: Undo / Redo */}
       <div className="toolbar">
-        <button type="button" onClick={form.undo} disabled={!form.meta.canUndo}>
+        <button type="button" onClick={form.history.undo} disabled={!form.meta.canUndo}>
           ↺ Undo
         </button>
-        <button type="button" onClick={form.redo} disabled={!form.meta.canRedo}>
+        <button type="button" onClick={form.history.redo} disabled={!form.meta.canRedo}>
           ↻ Redo
         </button>
       </div>
