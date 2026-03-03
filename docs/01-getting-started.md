@@ -96,7 +96,10 @@ export default function MyFormContent() {
         )}
       </div>
 
-      <button type="submit" disabled={!form.meta.isValid || form.meta.isSubmitting}>
+      <button
+        type="submit"
+        disabled={!form.meta.isValid || form.meta.isSubmitting}
+      >
         Submit
       </button>
     </form>

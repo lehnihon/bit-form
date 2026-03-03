@@ -74,13 +74,13 @@ Use `useBitForm` to access form metadata and actions. All readonly state is grou
 const form = useBitForm();
 
 // Readonly state under meta (all ComputedRef or Ref)
-form.meta.isValid;         // ComputedRef<boolean>
-form.meta.isDirty;         // ComputedRef<boolean>
-form.meta.isSubmitting;    // ComputedRef<boolean>
-form.meta.canUndo;         // ComputedRef<boolean>
-form.meta.canRedo;         // ComputedRef<boolean>
-form.meta.submitError;     // Ref<Error | null>
-form.meta.lastResponse;    // Ref<unknown>
+form.meta.isValid; // ComputedRef<boolean>
+form.meta.isDirty; // ComputedRef<boolean>
+form.meta.isSubmitting; // ComputedRef<boolean>
+form.meta.canUndo; // ComputedRef<boolean>
+form.meta.canRedo; // ComputedRef<boolean>
+form.meta.submitError; // Ref<Error | null>
+form.meta.lastResponse; // Ref<unknown>
 
 // Actions remain flat
 form.submit();
@@ -111,8 +111,13 @@ const handleApiSubmit = form.onSubmit(async (values) => {
 
 <template>
   <form @submit="handleSubmit">
-    <p v-if="form.meta.submitError.value">{{ form.meta.submitError.value.message }}</p>
-    <button type="submit" :disabled="!form.meta.isValid.value || form.meta.isSubmitting.value">
+    <p v-if="form.meta.submitError.value">
+      {{ form.meta.submitError.value.message }}
+    </p>
+    <button
+      type="submit"
+      :disabled="!form.meta.isValid.value || form.meta.isSubmitting.value"
+    >
       Submit
     </button>
   </form>

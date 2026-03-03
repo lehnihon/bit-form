@@ -71,7 +71,10 @@ import { injectBitForm, injectBitField } from "@lehnihon/bit-form/angular";
         }
       </div>
 
-      <button type="submit" [disabled]="!form.meta.isValid() || form.meta.isSubmitting()">
+      <button
+        type="submit"
+        [disabled]="!form.meta.isValid() || form.meta.isSubmitting()"
+      >
         Save
       </button>
     </form>

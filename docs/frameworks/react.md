@@ -34,13 +34,13 @@ The `useBitForm` hook gives you access to the form's metadata and actions. All r
 const form = useBitForm();
 
 // Readonly state under meta
-form.meta.isValid;         // boolean
-form.meta.isDirty;         // boolean
-form.meta.isSubmitting;    // boolean
-form.meta.canUndo;         // boolean
-form.meta.canRedo;         // boolean
-form.meta.submitError;     // Error | null
-form.meta.lastResponse;    // unknown
+form.meta.isValid; // boolean
+form.meta.isDirty; // boolean
+form.meta.isSubmitting; // boolean
+form.meta.canUndo; // boolean
+form.meta.canRedo; // boolean
+form.meta.submitError; // Error | null
+form.meta.lastResponse; // unknown
 
 // Actions remain flat
 form.submit();
@@ -63,7 +63,10 @@ export function SubmitButton() {
   });
 
   return (
-    <button onClick={onSubmit} disabled={!form.meta.isValid || form.meta.isSubmitting}>
+    <button
+      onClick={onSubmit}
+      disabled={!form.meta.isValid || form.meta.isSubmitting}
+    >
       {form.meta.isSubmitting ? "Loading..." : "Submit"}
     </button>
   );
