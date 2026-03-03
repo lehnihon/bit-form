@@ -28,12 +28,31 @@ export class AppComponent {}
 
 ## 2. Connect Fields and Form Logic
 
-Use `injectBitForm` and `injectBitField` inside your child components. `injectBitField` now returns:
+Use `injectBitForm` and `injectBitField` inside your child components.
 
-- `field`: value + handlers (`displayValue`, `setValue`, `setBlur`, `update`)
-- `meta`: state signals (`invalid`, `error`, `touched`, `isDirty`, `isValidating`, `isHidden`, `isRequired`)
+### Form Structure
+
+`injectBitForm` returns an object with:
+
+- `meta`: readonly state signals (execute with `()` in templates)
+  - `isValid()`, `isDirty()`, `isSubmitting()`, `canUndo()`, `canRedo()`
+  - `submitError()`, `lastResponse()`
+- Main actions: `submit`, `onSubmit`, `reset`, `setField`, etc. (remain flat)
+- `mutations`: secondary actions for array operations
+  - `pushItem()`, `removeItem()`, etc.
+- `history`: time-travel operations
+  - `undo()`, `redo()`
+
+### Field Structure
+
+`injectBitField` returns:
+
+- Value + handlers at root level: `displayValue()`, `setValue()`, `setBlur()`, `update()`
+- `meta`: state signals (`invalid()`, `error()`, `touched()`, `isDirty()`, `isValidating()`, `isHidden()`, `isRequired()`)
 
 Since they are Signals, execute them like functions `()` in templates.
+
+### Example
 
 ```typescript
 import { Component } from "@angular/core";
@@ -47,16 +66,19 @@ import { injectBitForm, injectBitField } from "@lehnihon/bit-form/angular";
       <div>
         <label>Name</label>
         <input
-          [value]="nameField.field.displayValue()"
-          (input)="nameField.field.update($event)"
-          (blur)="nameField.field.setBlur()"
+          [value]="nameField.displayValue()"
+          (input)="nameField.update($event)"
+          (blur)="nameField.setBlur()"
         />
         @if (nameField.meta.invalid()) {
           <span style="color: red">{{ nameField.meta.error() }}</span>
         }
       </div>
 
-      <button type="submit" [disabled]="!form.isValid() || form.isSubmitting()">
+      <button
+        type="submit"
+        [disabled]="!form.meta.isValid() || form.meta.isSubmitting()"
+      >
         Save
       </button>
     </form>

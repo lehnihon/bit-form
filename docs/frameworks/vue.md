@@ -29,10 +29,10 @@ provideBitStore(store);
 
 Inside your child components, use `useBitField` to connect your inputs. It now returns:
 
-- `field`: value helpers (`value`, `displayValue`, `modelValue`, `setValue`, `setBlur`)
+- Value helpers at root level: `value`, `displayValue`, `modelValue`, `setValue()`, `setBlur()`
 - `meta`: UI/validation refs (`invalid`, `error`, `touched`, `isDirty`, `isValidating`, `isHidden`, `isRequired`)
 
-For native inputs, bind `v-model` to `field.modelValue`.
+For native inputs, bind `v-model` to `modelValue`.
 
 ```vue
 <script setup lang="ts">
@@ -46,8 +46,8 @@ const ageField = useBitField("age");
   <div>
     <label>Email</label>
     <input
-      v-model="emailField.field.modelValue.value"
-      @blur="emailField.field.setBlur()"
+      v-model="emailField.modelValue.value"
+      @blur="emailField.setBlur()"
       type="email"
     />
     <span v-if="emailField.meta.invalid.value">{{
@@ -56,8 +56,8 @@ const ageField = useBitField("age");
 
     <label>Age</label>
     <input
-      v-model="ageField.field.modelValue.value"
-      @blur="ageField.field.setBlur()"
+      v-model="ageField.modelValue.value"
+      @blur="ageField.setBlur()"
       type="number"
     />
   </div>
@@ -66,21 +66,50 @@ const ageField = useBitField("age");
 
 ## 3. Submitting the Form
 
-Use `useBitForm` to access form metadata, the `submit` wrapper, and the recommended `onSubmit` helper (which handles API calls and 422 server errors automatically).
+Use `useBitForm` to access form metadata and actions. All readonly state is grouped under `meta` (as computed refs).
+
+### Form Structure
+
+```ts
+const form = useBitForm();
+
+// Readonly state under meta (all ComputedRef or Ref)
+form.meta.isValid; // ComputedRef<boolean>
+form.meta.isDirty; // ComputedRef<boolean>
+form.meta.isSubmitting; // ComputedRef<boolean>
+form.meta.canUndo; // ComputedRef<boolean>
+form.meta.canRedo; // ComputedRef<boolean>
+form.meta.submitError; // Ref<Error | null>
+form.meta.lastResponse; // Ref<unknown>
+
+// Main actions remain flat
+form.submit();
+form.onSubmit();
+form.reset();
+// ... etc
+
+// Secondary actions grouped by semantic meaning
+form.mutations.pushItem(); // for array operations
+form.mutations.removeItem();
+form.history.undo(); // for history/time-travel
+form.history.redo();
+```
+
+### Usage Example
 
 ```vue
 <script setup lang="ts">
 import { useBitForm } from "@lehnihon/bit-form/vue";
 
-const { submit, onSubmit, submitError, isSubmitting, isValid } = useBitForm();
+const form = useBitForm();
 
 // Simple submit
-const handleSubmit = submit((values) => {
+const handleSubmit = form.submit((values) => {
   console.log("Vue Form Submitted:", values);
 });
 
 // Or use onSubmit for API + server errors
-const handleApiSubmit = onSubmit(async (values) => {
+const handleApiSubmit = form.onSubmit(async (values) => {
   const res = await api.createUser(values);
   return res.data;
 });
@@ -88,8 +117,13 @@ const handleApiSubmit = onSubmit(async (values) => {
 
 <template>
   <form @submit="handleSubmit">
-    <p v-if="submitError">{{ submitError.message }}</p>
-    <button type="submit" :disabled="!isValid.value || isSubmitting.value">
+    <p v-if="form.meta.submitError.value">
+      {{ form.meta.submitError.value.message }}
+    </p>
+    <button
+      type="submit"
+      :disabled="!form.meta.isValid.value || form.meta.isSubmitting.value"
+    >
       Submit
     </button>
   </form>

@@ -70,36 +70,48 @@ export function injectBitForm<T extends object>() {
     lastResponse.set(null);
   };
 
-  return {
-    store,
+  const meta = {
     isValid,
-    isSubmitting,
     isDirty,
+    isSubmitting,
     canUndo,
     canRedo,
+    submitError: submitError.asReadonly(),
+    lastResponse: lastResponse.asReadonly(),
+  };
+
+  return {
+    // Metadata (grouped)
+    meta,
+    // Getters
     getValues,
     getErrors,
     getTouched,
+    // Main actions (frequent use - flat)
     submit,
     onSubmit,
-    submitError,
-    lastResponse,
     reset,
-    validate: store.validate.bind(store),
     setValues: store.setValues.bind(store),
     setError: store.setError.bind(store),
     setErrors: store.setErrors.bind(store),
     setServerErrors: store.setServerErrors.bind(store),
     setField: store.setField.bind(store),
     blurField: store.blurField.bind(store),
+    validate: store.validate.bind(store),
     registerMask: store.registerMask.bind(store),
-    pushItem: store.pushItem.bind(store),
-    prependItem: store.prependItem.bind(store),
-    removeItem: store.removeItem.bind(store),
-    insertItem: store.insertItem.bind(store),
-    moveItem: store.moveItem.bind(store),
-    swapItems: store.swapItems.bind(store),
-    undo: store.undo.bind(store),
-    redo: store.redo.bind(store),
+    // Array mutations (grouped)
+    mutations: {
+      pushItem: store.pushItem.bind(store),
+      prependItem: store.prependItem.bind(store),
+      removeItem: store.removeItem.bind(store),
+      insertItem: store.insertItem.bind(store),
+      moveItem: store.moveItem.bind(store),
+      swapItems: store.swapItems.bind(store),
+    },
+    // History (grouped)
+    history: {
+      undo: store.undo.bind(store),
+      redo: store.redo.bind(store),
+    },
   };
 }

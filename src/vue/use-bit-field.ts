@@ -14,15 +14,15 @@ export interface UseBitFieldVueMeta {
 }
 
 export interface UseBitFieldVueResult<TValue = any> {
-  field: {
-    value: Readonly<any>;
-    displayValue: Readonly<any>;
-    modelValue: any;
-    setValue: (val: any) => void;
-    setBlur: () => void;
-    onInput: (val: any) => void;
-    onBlur: () => void;
-  };
+  // Main handlers and values (flat)
+  value: Readonly<any>;
+  displayValue: Readonly<any>;
+  modelValue: any;
+  setValue: (val: any) => void;
+  setBlur: () => void;
+  onInput: (val: any) => void;
+  onBlur: () => void;
+  // Metadata (grouped)
   meta: UseBitFieldVueMeta;
 }
 
@@ -125,15 +125,15 @@ export function useBitField<TValue = any>(
   };
 
   return {
-    field: {
-      value: rawValue,
-      displayValue,
-      modelValue,
-      setValue,
-      setBlur,
-      onInput,
-      onBlur,
-    },
+    // Main handlers and values (flat)
+    value: rawValue,
+    displayValue,
+    modelValue,
+    setValue,
+    setBlur,
+    onInput,
+    onBlur,
+    // Metadata (grouped)
     meta: {
       error,
       touched,

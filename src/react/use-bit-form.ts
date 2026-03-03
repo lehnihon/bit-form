@@ -1,4 +1,10 @@
-import { useCallback, useSyncExternalStore, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useSyncExternalStore,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useBitStore } from "./context";
 import { isValidationErrorShape, extractServerErrors } from "../core/utils";
 
@@ -90,40 +96,47 @@ export function useBitForm<T extends object>() {
   const getErrors = useCallback(() => store.getState().errors, [store]);
   const getTouched = useCallback(() => store.getState().touched, [store]);
 
-  const actions = useMemo(
+  const meta = useMemo(
     () => ({
-      setField: store.setField.bind(store),
-      blurField: store.blurField.bind(store),
-      setValues: store.setValues.bind(store),
-      setError: store.setError.bind(store),
-      setErrors: store.setErrors.bind(store),
-      setServerErrors: store.setServerErrors.bind(store),
-      reset,
-      validate: store.validate.bind(store),
-      registerMask: store.registerMask.bind(store),
+      ...metaState,
+      submitError,
+      lastResponse,
+    }),
+    [metaState, submitError, lastResponse],
+  );
+
+  return {
+    // Metadata (grouped)
+    meta,
+    // Getters
+    getValues,
+    getErrors,
+    getTouched,
+    // Main actions (frequent use - flat)
+    submit,
+    onSubmit,
+    reset,
+    setField: store.setField.bind(store),
+    blurField: store.blurField.bind(store),
+    setValues: store.setValues.bind(store),
+    setError: store.setError.bind(store),
+    setErrors: store.setErrors.bind(store),
+    setServerErrors: store.setServerErrors.bind(store),
+    validate: store.validate.bind(store),
+    registerMask: store.registerMask.bind(store),
+    // Array mutations (grouped)
+    mutations: {
       pushItem: store.pushItem.bind(store),
       removeItem: store.removeItem.bind(store),
       prependItem: store.prependItem.bind(store),
       insertItem: store.insertItem.bind(store),
       moveItem: store.moveItem.bind(store),
       swapItems: store.swapItems.bind(store),
+    },
+    // History (grouped)
+    history: {
       undo: store.undo.bind(store),
       redo: store.redo.bind(store),
-    }),
-    [store, reset],
-  );
-
-  return {
-    ...metaState,
-    getValues,
-    getErrors,
-    getTouched,
-    submit,
-    onSubmit,
-    submitError,
-    lastResponse,
-    ...actions,
-    reset,
-    store,
+    },
   };
 }

@@ -23,13 +23,13 @@ export interface InjectBitFieldResult<
   TForm extends object = any,
   P extends BitPath<TForm> = BitPath<TForm>,
 > {
-  field: {
-    value: () => BitPathValue<TForm, P>;
-    displayValue: () => string;
-    setValue: (val: any) => void;
-    setBlur: () => void;
-    update: (e: any) => void;
-  };
+  // Main handlers and values (flat)
+  value: () => BitPathValue<TForm, P>;
+  displayValue: () => string;
+  setValue: (val: any) => void;
+  setBlur: () => void;
+  update: (e: any) => void;
+  // Metadata (grouped)
   meta: InjectBitFieldMeta;
 }
 
@@ -131,13 +131,13 @@ export function injectBitField<
   const update = (e: any) => setValue(e?.target?.value ?? e);
 
   return {
-    field: {
-      value,
-      displayValue,
-      setValue,
-      setBlur,
-      update,
-    },
+    // Main handlers and values (flat)
+    value,
+    displayValue,
+    setValue,
+    setBlur,
+    update,
+    // Metadata (grouped)
     meta: {
       error,
       touched,

@@ -70,10 +70,10 @@ export default function MyFormContent() {
   const emailField = useBitField("email");
 
   // Access form-level actions and metadata
-  const { submit, isValid, isSubmitting } = useBitForm();
+  const form = useBitForm();
 
   // The submit wrapper automatically calls preventDefault()
-  const onSubmit = submit((values) => {
+  const onSubmit = form.submit((values) => {
     console.log("Form submitted with:", values);
   });
 
@@ -96,7 +96,10 @@ export default function MyFormContent() {
         )}
       </div>
 
-      <button type="submit" disabled={!isValid || isSubmitting}>
+      <button
+        type="submit"
+        disabled={!form.meta.isValid || form.meta.isSubmitting}
+      >
         Submit
       </button>
     </form>

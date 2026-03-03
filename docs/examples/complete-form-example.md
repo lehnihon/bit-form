@@ -5,6 +5,7 @@ This example showcases **all major Bit-Form features** working together: masks, 
 ## Scenario
 
 A wizard-style form with:
+
 - **Step 1**: Company type (PF/PJ), CNPJ (only if PJ) with mask, email with async availability check
 - **Step 2**: Salary (currency mask BRL), optional bonus (conditional field)
 - **History**: Undo/Redo enabled for step navigation
@@ -57,8 +58,7 @@ const store = new BitStore({
         showIf: (v) => v.companyType === "PJ",
         requiredIf: (v) => v.companyType === "PJ",
       },
-      transform: (v) =>
-        typeof v === "string" ? v.replace(/\D/g, "") : v,
+      transform: (v) => (typeof v === "string" ? v.replace(/\D/g, "") : v),
       scope: "step1",
       validation: {
         asyncValidate: async (value) => {
@@ -132,16 +132,24 @@ export function RegistrationWizard() {
 
   return (
     <form onSubmit={handleSubmit}>
-      {form.submitError && (
-        <p className="error">{form.submitError.message}</p>
+      {form.meta.submitError && (
+        <p className="error">{form.meta.submitError.message}</p>
       )}
 
       {/* Toolbar: Undo / Redo */}
       <div className="toolbar">
-        <button type="button" onClick={form.undo} disabled={!form.canUndo}>
+        <button
+          type="button"
+          onClick={form.history.undo}
+          disabled={!form.meta.canUndo}
+        >
           ↺ Undo
         </button>
-        <button type="button" onClick={form.redo} disabled={!form.canRedo}>
+        <button
+          type="button"
+          onClick={form.history.redo}
+          disabled={!form.meta.canRedo}
+        >
           ↻ Redo
         </button>
       </div>
@@ -170,7 +178,11 @@ export function RegistrationWizard() {
             {email.invalid && <span>{email.error}</span>}
           </div>
 
-          <button type="button" onClick={handleNext} disabled={isValidatingNext}>
+          <button
+            type="button"
+            onClick={handleNext}
+            disabled={isValidatingNext}
+          >
             {isValidatingNext ? "Validando..." : "Next"}
           </button>
         </div>
@@ -198,8 +210,11 @@ export function RegistrationWizard() {
           <button type="button" onClick={steps.prev}>
             Back
           </button>
-          <button type="submit" disabled={!form.isValid || form.isSubmitting}>
-            {form.isSubmitting ? "Enviando..." : "Cadastrar"}
+          <button
+            type="submit"
+            disabled={!form.meta.isValid || form.meta.isSubmitting}
+          >
+            {form.meta.isSubmitting ? "Enviando..." : "Cadastrar"}
           </button>
         </div>
       )}
@@ -210,13 +225,13 @@ export function RegistrationWizard() {
 
 ## What This Example Demonstrates
 
-| Feature | Usage |
-|--------|--------|
-| **Masks** | `brl`, `cnpj` on salary and CNPJ fields |
-| **asyncValidate** | Email and CNPJ availability check with debounce |
-| **Conditional logic** | CNPJ shown only when companyType is PJ; bonusValue shown when hasBonus is true |
-| **Scopes** | `useBitSteps(["step1", "step2"])` for wizard navigation. `steps.next()` runs validation before advancing (only advances if valid). Do not use `steps.isValid` to disable the Next button — it is `true` initially; validation runs on click. |
-| **History** | Undo/Redo in toolbar via `history: { enabled: true }` |
-| **DevTools** | Local inspector enabled in development |
-| **Transform** | `salary` and `cnpj` normalized before submit |
-| **onSubmit** | Handles API call, `submitError`, and `lastResponse` automatically |
+| Feature               | Usage                                                                                                                                                                                                                                        |
+| --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Masks**             | `brl`, `cnpj` on salary and CNPJ fields                                                                                                                                                                                                      |
+| **asyncValidate**     | Email and CNPJ availability check with debounce                                                                                                                                                                                              |
+| **Conditional logic** | CNPJ shown only when companyType is PJ; bonusValue shown when hasBonus is true                                                                                                                                                               |
+| **Scopes**            | `useBitSteps(["step1", "step2"])` for wizard navigation. `steps.next()` runs validation before advancing (only advances if valid). Do not use `steps.isValid` to disable the Next button — it is `true` initially; validation runs on click. |
+| **History**           | Undo/Redo in toolbar via `history: { enabled: true }`                                                                                                                                                                                        |
+| **DevTools**          | Local inspector enabled in development                                                                                                                                                                                                       |
+| **Transform**         | `salary` and `cnpj` normalized before submit                                                                                                                                                                                                 |
+| **onSubmit**          | Handles API call, `submitError`, and `lastResponse` automatically                                                                                                                                                                            |

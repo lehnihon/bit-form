@@ -35,13 +35,13 @@ describe("Vue Integration", () => {
       form: useBitForm(),
     }));
 
-    expect(wrapper.vm.form.isDirty.value).toBe(false);
+    expect(wrapper.vm.form.meta.isDirty.value).toBe(false);
 
-    wrapper.vm.field.field.setValue("Leandro");
+    wrapper.vm.field.setValue("Leandro");
     await nextTick();
 
     expect(wrapper.vm.form.getValues().user.info.name).toBe("Leandro");
-    expect(wrapper.vm.form.isDirty.value).toBe(true);
+    expect(wrapper.vm.form.meta.isDirty.value).toBe(true);
   });
 
   it("should react to isHidden and isRequired changes", async () => {
@@ -61,7 +61,7 @@ describe("Vue Integration", () => {
 
     expect(wrapper.vm.cnpj.meta.isHidden.value).toBe(true);
 
-    wrapper.vm.type.field.setValue("PJ");
+    wrapper.vm.type.setValue("PJ");
     await nextTick();
 
     expect(wrapper.vm.cnpj.meta.isHidden.value).toBe(false);
@@ -84,9 +84,9 @@ describe("Vue Integration", () => {
       salary: useBitField("salary", undefined, { mask: "brl" }),
     }));
 
-    expect(wrapper.vm.salary.field.displayValue.value).toBe("R$ 10,00");
+    expect(wrapper.vm.salary.displayValue.value).toBe("R$ 10,00");
 
-    wrapper.vm.salary.field.setValue("R$ 2.500,50");
+    wrapper.vm.salary.setValue("R$ 2.500,50");
     await nextTick();
 
     expect(store.getState().values.salary).toBe(2500.5);
@@ -155,10 +155,10 @@ describe("Vue Integration", () => {
 
     const submitFn = wrapper.vm.form.submit(onSubmit);
     const promise = submitFn();
-    expect(wrapper.vm.form.isSubmitting.value).toBe(true);
+    expect(wrapper.vm.form.meta.isSubmitting.value).toBe(true);
 
     await promise;
-    expect(wrapper.vm.form.isValid.value).toBe(false);
+    expect(wrapper.vm.form.meta.isValid.value).toBe(false);
   });
 
   it("should reset form to initial values", async () => {

@@ -26,20 +26,20 @@ const store = new BitStore({
 
 ## Using Undo / Redo
 
-The store exposes properties and methods to interact with the history stack. These are also available in `useBitForm`.
+The store exposes properties and methods to interact with the history stack. These are wrapped in the `useBitForm` hook under `history` and `meta`:
 
 ```tsx
 import { useBitForm } from "@lehnihon/bit-form/react";
 
 export function FormToolbar() {
-  const { undo, redo, canUndo, canRedo } = useBitForm();
+  const form = useBitForm();
 
   return (
     <div className="toolbar">
-      <button onClick={() => undo()} disabled={!canUndo}>
+      <button onClick={() => form.history.undo()} disabled={!form.meta.canUndo}>
         ↺ Undo
       </button>
-      <button onClick={() => redo()} disabled={!canRedo}>
+      <button onClick={() => form.history.redo()} disabled={!form.meta.canRedo}>
         ↻ Redo
       </button>
     </div>
@@ -47,6 +47,6 @@ export function FormToolbar() {
 }
 ```
 
-When you trigger `undo()`, Bit-Form replaces the current form values with the previous snapshot and automatically re-runs validation to ensure the UI stays consistent.
+When you trigger `form.history.undo()`, Bit-Form replaces the current form values with the previous snapshot and automatically re-runs validation to ensure the UI stays consistent.
 
 _Note: For debugging your history stack visually, check out the **DevTools** documentation!_
