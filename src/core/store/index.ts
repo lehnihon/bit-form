@@ -24,39 +24,104 @@ import { BitValidationManager } from "./validation-manager";
 import { BitLifecycleManager } from "./lifecycle-manager";
 import { BitDevtoolsManager } from "./devtools-manager";
 import { BitDirtyManager } from "./dirty-manager";
+import { BitScopeManager } from "./scope-manager";
+import { BitFieldQueryManager } from "./field-query-manager";
+import { BitErrorManager } from "./error-manager";
 
+/**
+ * BitStore
+ *
+ * The core orchestrator of form state management.
+ *
+ * This store coordinates multiple managers to provide comprehensive form handling:
+ * - Core managers handle essential state and validation
+ * - Feature managers provide optional enhancements (history, arrays, scopes)
+ * - Query/mutation managers organize domain-specific operations
+ */
 export class BitStore<T extends object = any>
   implements BitStoreAdapter<T>, BitValidationAdapter<T>, BitLifecycleAdapter<T>
 {
+  // ============================================================================
+  // PRIVATE PROPERTIES
+  // ============================================================================
+
   private state: BitState<T>;
   private listeners: Set<() => void> = new Set();
 
+  // ============================================================================
+  // PUBLIC PROPERTIES
+  // ============================================================================
+
   public config: BitResolvedConfig<T>;
+  public storeId: string;
+
+  // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  // Core Managers
+  // Managers for essential form state management
+  // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
   public depsMg: BitDependencyManager<T>;
-  public historyMg: BitHistoryManager<T>;
   public validatorMg: BitValidationManager<T>;
   public computedMg: BitComputedManager<T>;
-  public lifecycleMg: BitLifecycleManager<T>;
-  public arraysMg: BitArrayManager<T>;
-  public devtoolsMg: BitDevtoolsManager<T>;
   public dirtyMg: BitDirtyManager<T>;
-  public storeId: string;
+  public lifecycleMg: BitLifecycleManager<T>;
+
+  // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  // Feature Managers
+  // Managers for optional features like history, arrays, and scopes
+  // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+  public historyMg: BitHistoryManager<T>;
+  public arraysMg: BitArrayManager<T>;
+  public scopeMg: BitScopeManager<T>;
+  public devtoolsMg: BitDevtoolsManager<T>;
+
+  // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  // Query & Mutation Managers
+  // Dedicated managers for specific operations
+  // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+  public queryMg: BitFieldQueryManager<T>;
+  public errorMg: BitErrorManager<T>;
+
+  // ============================================================================
+  // CONSTRUCTOR
+  // ============================================================================
 
   constructor(config: BitConfig<T> = {}) {
     this.config = normalizeConfig(config);
 
+    // Initialize core managers
     this.depsMg = new BitDependencyManager<T>();
+    this.computedMg = new BitComputedManager<T>(this.config);
+    this.validatorMg = new BitValidationManager<T>(this);
+    this.dirtyMg = new BitDirtyManager<T>();
+    this.lifecycleMg = new BitLifecycleManager<T>(this);
+
+    // Initialize feature managers
     this.historyMg = new BitHistoryManager<T>(
       !!this.config.enableHistory,
       this.config.historyLimit ?? 15,
     );
-    this.computedMg = new BitComputedManager<T>(this.config);
-    this.validatorMg = new BitValidationManager<T>(this);
     this.arraysMg = new BitArrayManager<T>(this);
-    this.lifecycleMg = new BitLifecycleManager<T>(this);
     this.devtoolsMg = new BitDevtoolsManager<T>(this);
-    this.dirtyMg = new BitDirtyManager<T>();
 
+    // Initialize query/mutation managers with state access
+    this.scopeMg = new BitScopeManager<T>(
+      () => this.state,
+      () => this.config,
+    );
+    this.queryMg = new BitFieldQueryManager<T>(
+      this.depsMg,
+      () => this.state,
+      () => this.config,
+    );
+    this.errorMg = new BitErrorManager<T>(
+      () => this.state,
+      (partial) => this.internalUpdateState(partial),
+    );
+
+    // Initialize form state
     const initialValues = deepClone(this.config.initialValues);
     const valuesWithComputeds = this.computedMg.apply(initialValues);
 
@@ -70,6 +135,7 @@ export class BitStore<T extends object = any>
       isDirty: false,
     };
 
+    // Register initial fields from config
     if (this.config.fields) {
       Object.entries(this.config.fields).forEach(([path, fieldConfig]) => {
         this.depsMg.register(
@@ -82,11 +148,16 @@ export class BitStore<T extends object = any>
 
     this.internalSaveSnapshot();
 
+    // Register store in global bus
     this.storeId =
       this.config.name ||
       `bit-form-${Math.random().toString(36).substring(2, 9)}`;
     bitBus.stores[this.storeId] = this;
   }
+
+  // ============================================================================
+  // STATE ACCESS
+  // ============================================================================
 
   getConfig() {
     return this.config;
@@ -108,8 +179,19 @@ export class BitStore<T extends object = any>
     return this.state.isDirty;
   }
 
+  // ============================================================================
+  // FIELD REGISTRATION & CLEANUP
+  // ============================================================================
+
+  registerField(path: string, config: BitFieldDefinition<T>) {
+    this.depsMg.register(path, config, this.state.values);
+    if (this.depsMg.isHidden(path)) {
+      this.notify();
+    }
+  }
+
   unregisterField<P extends BitPath<T>>(path: P) {
-    // Campos do config inicial nunca são desregistrados
+    // Fields from initial config are never unregistered
     if (this.config.fields?.[path as string]) {
       return;
     }
@@ -141,20 +223,29 @@ export class BitStore<T extends object = any>
     this.depsMg.unregisterPrefix(prefix);
   }
 
-  registerField(path: string, config: BitFieldDefinition<T>) {
-    this.depsMg.register(path, config, this.state.values);
-    if (this.depsMg.isHidden(path)) {
-      this.notify();
-    }
-  }
+  // ============================================================================
+  // FIELD QUERIES (Delegated to queryMg)
+  // ============================================================================
 
   isHidden<P extends BitPath<T>>(path: P): boolean {
-    return this.depsMg.isHidden(path);
+    return this.queryMg.isHidden(path);
   }
 
   isRequired<P extends BitPath<T>>(path: P): boolean {
-    return this.depsMg.isRequired(path, this.state.values);
+    return this.queryMg.isRequired(path);
   }
+
+  isFieldDirty(path: string): boolean {
+    return this.queryMg.isFieldDirty(path);
+  }
+
+  isFieldValidating(path: string): boolean {
+    return this.queryMg.isFieldValidating(path);
+  }
+
+  // ============================================================================
+  // SUBSCRIPTIONS & WATCHERS
+  // ============================================================================
 
   subscribe(listener: () => void): () => void {
     this.listeners.add(listener);
@@ -174,6 +265,10 @@ export class BitStore<T extends object = any>
       }
     });
   }
+
+  // ============================================================================
+  // FIELD VALUE MUTATIONS
+  // ============================================================================
 
   setField<P extends BitPath<T>>(path: P, value: BitPathValue<T, P>) {
     const { visibilitiesChanged } = this.lifecycleMg.updateField(path, value);
@@ -206,38 +301,41 @@ export class BitStore<T extends object = any>
     this.lifecycleMg.updateAll(newValues);
   }
 
-  setError(path: string, message: string | undefined) {
-    const newErrors = { ...this.state.errors, [path]: message };
-    if (!message) delete (newErrors as any)[path];
+  // ============================================================================
+  // ERROR MANAGEMENT (Delegated to errorMg)
+  // ============================================================================
 
-    this.internalUpdateState({ errors: newErrors });
+  setError(path: string, message: string | undefined) {
+    this.errorMg.setError(path, message);
   }
 
   setErrors(errors: BitErrors<T>) {
-    this.internalUpdateState({
-      errors: { ...this.state.errors, ...errors },
-    });
+    this.errorMg.setErrors(errors);
   }
 
   setServerErrors(serverErrors: Record<string, string[] | string>) {
-    const formattedErrors: BitErrors<T> = {};
-
-    for (const [key, value] of Object.entries(serverErrors)) {
-      formattedErrors[key as keyof BitErrors<T>] = Array.isArray(value)
-        ? value[0]
-        : (value as any);
-    }
-
-    this.setErrors(formattedErrors);
+    this.errorMg.setServerErrors(serverErrors);
   }
+
+  // ============================================================================
+  // FORM-LEVEL OPERATIONS
+  // ============================================================================
 
   reset() {
     this.lifecycleMg.reset();
   }
 
+  async submit(onSuccess: (values: T) => void | Promise<void>) {
+    return this.lifecycleMg.submit(onSuccess);
+  }
+
   registerMask(name: string, mask: BitMask) {
     this.config.masks![name] = mask;
   }
+
+  // ============================================================================
+  // ARRAY OPERATIONS (Delegated to arraysMg)
+  // ============================================================================
 
   pushItem<P extends BitArrayPath<T>>(
     path: P,
@@ -245,12 +343,14 @@ export class BitStore<T extends object = any>
   ) {
     this.arraysMg.pushItem(path, value);
   }
+
   prependItem<P extends BitArrayPath<T>>(
     path: P,
     value: BitArrayItem<BitPathValue<T, P>>,
   ) {
     this.arraysMg.prependItem(path, value);
   }
+
   insertItem<P extends BitArrayPath<T>>(
     path: P,
     index: number,
@@ -258,9 +358,11 @@ export class BitStore<T extends object = any>
   ) {
     this.arraysMg.insertItem(path, index, value);
   }
+
   removeItem<P extends BitArrayPath<T>>(path: P, index: number) {
     this.arraysMg.removeItem(path, index);
   }
+
   swapItems<P extends BitArrayPath<T>>(
     path: P,
     indexA: number,
@@ -268,13 +370,19 @@ export class BitStore<T extends object = any>
   ) {
     this.arraysMg.swapItems(path, indexA, indexB);
   }
+
   moveItem<P extends BitArrayPath<T>>(path: P, from: number, to: number) {
     this.arraysMg.moveItem(path, from, to);
   }
 
+  // ============================================================================
+  // HISTORY & TIME-TRAVEL (Delegated to historyMg)
+  // ============================================================================
+
   get canUndo(): boolean {
     return this.historyMg.canUndo;
   }
+
   get canRedo(): boolean {
     return this.historyMg.canRedo;
   }
@@ -303,6 +411,10 @@ export class BitStore<T extends object = any>
     }
   }
 
+  // ============================================================================
+  // VALIDATION & SCOPES
+  // ============================================================================
+
   validate(options?: {
     scope?: string;
     scopeFields?: string[];
@@ -311,48 +423,16 @@ export class BitStore<T extends object = any>
   }
 
   getStepStatus(scopeName: string) {
-    const fields = this.config.scopes?.[scopeName] || [];
-    const hasErrors = fields.some(
-      (f) => !!this.state.errors[f as keyof BitErrors<T>],
-    );
-    const isDirty = fields.some((f) => {
-      const current = getDeepValue(this.state.values, f);
-      const initial = getDeepValue(this.config.initialValues, f);
-      return !valueEqual(current, initial);
-    });
-    const errors = this.getStepErrors(scopeName);
-
-    return { hasErrors, isDirty, errors };
+    return this.scopeMg.getStepStatus(scopeName);
   }
 
   getStepErrors(scopeName: string): Record<string, string> {
-    const fields = this.config.scopes?.[scopeName] || [];
-    const result: Record<string, string> = {};
-
-    for (const field of fields) {
-      const error = this.state.errors[field as keyof BitErrors<T>];
-      if (error) {
-        result[field] = error;
-      }
-    }
-
-    return result;
+    return this.scopeMg.getStepErrors(scopeName);
   }
 
-  isFieldDirty(path: string): boolean {
-    const currentValue = getDeepValue(this.state.values, path);
-    const initialValue = getDeepValue(this.config.initialValues, path);
-
-    return !valueEqual(currentValue, initialValue);
-  }
-
-  isFieldValidating(path: string): boolean {
-    return !!this.getState().isValidating[path];
-  }
-
-  async submit(onSuccess: (values: T) => void | Promise<void>) {
-    return this.lifecycleMg.submit(onSuccess);
-  }
+  // ============================================================================
+  // INTERNAL OPERATIONS
+  // ============================================================================
 
   internalUpdateState(partialState: Partial<BitState<T>>) {
     let nextState = { ...this.state, ...partialState };
