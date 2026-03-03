@@ -47,8 +47,6 @@ export class BitStore<T extends object = any>
   public storeId: string;
 
   private dirtyPaths: Set<string> = new Set();
-  /** Paths from config.fields — never unregistered when components unmount */
-  private configFields: Set<string> = new Set();
 
   constructor(config: BitConfig<T> = {}) {
     this.config = normalizeConfig(config);
@@ -79,7 +77,6 @@ export class BitStore<T extends object = any>
 
     if (this.config.fields) {
       Object.entries(this.config.fields).forEach(([path, fieldConfig]) => {
-        this.configFields.add(path);
         this.depsMg.register(
           path,
           fieldConfig as BitFieldDefinition<T>,
@@ -91,7 +88,8 @@ export class BitStore<T extends object = any>
     this.internalSaveSnapshot();
 
     this.storeId =
-      this.config.name || `bit-form-${Math.random().toString(36).substring(2, 9)}`;
+      this.config.name ||
+      `bit-form-${Math.random().toString(36).substring(2, 9)}`;
     bitBus.stores[this.storeId] = this;
   }
 
@@ -116,7 +114,8 @@ export class BitStore<T extends object = any>
   }
 
   unregisterField<P extends BitPath<T>>(path: P) {
-    if (this.configFields.has(path as string)) {
+    // Campos do config inicial nunca são desregistrados
+    if (this.config.fields?.[path as string]) {
       return;
     }
     this.depsMg.unregister(path);
