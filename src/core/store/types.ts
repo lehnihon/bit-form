@@ -2,6 +2,7 @@ import { BitMask } from "../mask/types";
 import { BitDependencyManager } from "./dependency-manager";
 import { BitHistoryManager } from "./history-manager";
 import { BitValidationManager } from "./validation-manager";
+import { BitDirtyManager } from "./dirty-manager";
 
 export type BitErrors<T> = { [key: string]: string | undefined };
 export type BitTouched<T> = { [key: string]: boolean | undefined };
@@ -134,6 +135,7 @@ export interface BitLifecycleAdapter<T extends object> {
   depsMg: BitDependencyManager<T>;
   validatorMg: BitValidationManager<T>;
   historyMg: BitHistoryManager<T>;
+  dirtyMg: BitDirtyManager<T>;
 }
 
 export interface BitStoreAdapter<T extends object = any> {
@@ -144,6 +146,7 @@ export interface BitStoreAdapter<T extends object = any> {
   internalSaveSnapshot(): void;
   unregisterPrefix?: (prefix: string) => void;
   validate?: () => Promise<boolean>;
+  dirtyMg: BitDirtyManager<T>;
 }
 
 export interface BitValidationAdapter<T extends object> {

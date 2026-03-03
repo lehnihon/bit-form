@@ -21,7 +21,7 @@ export class BitLifecycleManager<T extends object> {
       }
     });
 
-    const isDirty = (this.store as any).updateDirtyForPath(
+    const isDirty = this.store.dirtyMg.updateForPath(
       path,
       newValues,
       this.store.config.initialValues,
@@ -51,7 +51,7 @@ export class BitLifecycleManager<T extends object> {
     this.store.validatorMg.cancelAll();
     this.store.depsMg.evaluateAll(clonedValues);
 
-    (this.store as any).clearDirtyPaths();
+    this.store.dirtyMg.clear();
 
     this.store.internalUpdateState({
       values: clonedValues,
@@ -125,7 +125,7 @@ export class BitLifecycleManager<T extends object> {
 
     this.store.depsMg.evaluateAll(initialCloned);
 
-    (this.store as any).clearDirtyPaths();
+    this.store.dirtyMg.clear();
 
     this.store.internalUpdateState({
       values: initialCloned,
