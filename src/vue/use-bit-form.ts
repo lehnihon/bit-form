@@ -17,6 +17,7 @@ export function useBitForm<T extends object>() {
   const getValues = () => state.value.values;
   const getErrors = () => state.value.errors;
   const getTouched = () => state.value.touched;
+  const getDirtyValues = () => store.getDirtyValues();
 
   const isValid = computed(() => state.value.isValid);
   const isSubmitting = computed(() => state.value.isSubmitting);
@@ -32,13 +33,15 @@ export function useBitForm<T extends object>() {
     return store.canRedo;
   });
 
-  const onSubmit = (handler: (values: T) => Promise<unknown>) => {
+  const onSubmit = (
+    handler: (values: T, dirtyValues?: Partial<T>) => Promise<unknown>,
+  ) => {
     return (e?: Event) => {
       e?.preventDefault?.();
       submitError.value = null;
-      return store.submit(async (values) => {
+      return store.submit(async (values, dirtyValues) => {
         try {
-          const result = await handler(values);
+          const result = await handler(values, dirtyValues);
           lastResponse.value = result;
           submitError.value = null;
         } catch (err) {
@@ -76,8 +79,11 @@ export function useBitForm<T extends object>() {
     getValues,
     getErrors,
     getTouched,
+    getDirtyValues,
     // Main actions (frequent use - flat)
-    submit: (onSuccess: (values: T) => void | Promise<void>) => {
+    submit: (
+      onSuccess: (values: T, dirtyValues?: Partial<T>) => void | Promise<void>,
+    ) => {
       return (e?: Event) => {
         e?.preventDefault?.();
         return store.submit(onSuccess);
@@ -92,7 +98,6 @@ export function useBitForm<T extends object>() {
     setField: store.setField.bind(store),
     blurField: store.blurField.bind(store),
     validate: store.validate.bind(store),
-    registerMask: store.registerMask.bind(store),
     // Array mutations (grouped)
     mutations: {
       pushItem: store.pushItem.bind(store),

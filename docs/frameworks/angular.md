@@ -37,11 +37,14 @@ Use `injectBitForm` and `injectBitField` inside your child components.
 - `meta`: readonly state signals (execute with `()` in templates)
   - `isValid()`, `isDirty()`, `isSubmitting()`, `canUndo()`, `canRedo()`
   - `submitError()`, `lastResponse()`
+- Getters: `getValues()`, `getErrors()`, `getTouched()`, `getDirtyValues()`
 - Main actions: `submit`, `onSubmit`, `reset`, `setField`, etc. (remain flat)
 - `mutations`: secondary actions for array operations
   - `pushItem()`, `removeItem()`, etc.
 - `history`: time-travel operations
   - `undo()`, `redo()`
+
+Custom mask registration is done directly on the store (`store.registerMask(...)`), not on `injectBitForm`.
 
 ### Field Structure
 
@@ -88,8 +91,9 @@ export class FormContentComponent {
   form = injectBitForm();
   nameField = injectBitField("name");
 
-  onSubmit = this.form.submit((values) => {
+  onSubmit = this.form.submit((values, dirtyValues) => {
     console.log("Angular Data:", values);
+    console.log("Only changed:", dirtyValues);
   });
 }
 ```

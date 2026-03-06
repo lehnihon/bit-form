@@ -139,6 +139,61 @@ describe("Angular Integration (Signals)", () => {
     expect(app.form.meta.isDirty()).toBe(false);
   });
 
+  it("não deve expor registerMask no injectBitForm", () => {
+    const fixture = TestBed.createComponent(HostComponent);
+    const app = fixture.componentInstance;
+    fixture.detectChanges();
+
+    expect("registerMask" in app.form).toBe(false);
+  });
+
+  it("deve expor getDirtyValues e retornar apenas valores alterados", () => {
+    const fixture = TestBed.createComponent(HostComponent);
+    const app = fixture.componentInstance;
+    fixture.detectChanges();
+
+    expect(app.form.getDirtyValues()).toEqual({});
+
+    app.userName.setValue("Changed");
+    fixture.detectChanges();
+
+    expect(app.form.getDirtyValues()).toEqual({ user: { name: "Changed" } });
+  });
+
+  it("deve passar dirtyValues como segundo parâmetro no submit", async () => {
+    const submitHandler = vi.fn();
+    const fixture = TestBed.createComponent(HostComponent);
+    const app = fixture.componentInstance;
+
+    store.setField("user.name", "Updated");
+    fixture.detectChanges();
+
+    const submitFn = app.form.submit(submitHandler);
+    await submitFn();
+
+    expect(submitHandler).toHaveBeenCalled();
+    const [values, dirtyValues] = submitHandler.mock.calls[0];
+    expect(values.user.name).toBe("Updated");
+    expect(dirtyValues).toEqual({ user: { name: "Updated" } });
+  });
+
+  it("deve passar dirtyValues como segundo parâmetro no onSubmit", async () => {
+    const apiHandler = vi.fn().mockResolvedValue({ success: true });
+    const fixture = TestBed.createComponent(HostComponent);
+    const app = fixture.componentInstance;
+
+    store.setField("salary", 5000);
+    fixture.detectChanges();
+
+    const submitFn = app.form.onSubmit(apiHandler);
+    await submitFn();
+
+    expect(apiHandler).toHaveBeenCalled();
+    const [values, dirtyValues] = apiHandler.mock.calls[0];
+    expect(values.salary).toBe(5000);
+    expect(dirtyValues).toEqual({ salary: 5000 });
+  });
+
   it("deve validar campos dinamicamente com Signals e resolver", async () => {
     const storeWithResolver = new BitStore<MyForm>({
       initialValues: {

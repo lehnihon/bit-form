@@ -74,6 +74,49 @@ describe("BitStore Core", () => {
       expect(store.isDirty).toBe(false);
       expect(store.isFieldDirty("name")).toBe(false);
     });
+
+    it("should return only dirty values", () => {
+      const store = new BitStore({
+        initialValues: { name: "Leo", age: 30, city: "Tokyo" },
+      });
+
+      expect(store.getDirtyValues()).toEqual({});
+
+      store.setField("name", "Leandro");
+      expect(store.getDirtyValues()).toEqual({ name: "Leandro" });
+
+      store.setField("age", 31);
+      expect(store.getDirtyValues()).toEqual({ name: "Leandro", age: 31 });
+
+      store.setField("name", "Leo");
+      expect(store.getDirtyValues()).toEqual({ age: 31 });
+    });
+
+    it("should return dirty values for nested objects", () => {
+      const store = new BitStore({
+        initialValues: { user: { name: "Leo", profile: { bio: "Dev" } } },
+      });
+
+      store.setField("user.name", "Leandro");
+      expect(store.getDirtyValues()).toEqual({ user: { name: "Leandro" } });
+
+      store.setField("user.profile.bio", "Developer");
+      expect(store.getDirtyValues()).toEqual({
+        user: { name: "Leandro", profile: { bio: "Developer" } },
+      });
+    });
+
+    it("should return full array when any index changes", () => {
+      const store = new BitStore({
+        initialValues: { tags: ["react", "vue"], count: 0 },
+      });
+
+      store.setField("tags.1", "angular");
+      const dirty = store.getDirtyValues();
+
+      expect(dirty.tags).toEqual(["react", "angular"]);
+      expect(dirty.count).toBeUndefined();
+    });
   });
 
   describe("Computed Fields", () => {
@@ -306,7 +349,9 @@ describe("BitStore Core", () => {
 
       const isValid = await store.validate();
       expect(isValid).toBe(false);
-      expect(store.getState().errors.bonusValue).toBe("Bonus amount is required");
+      expect(store.getState().errors.bonusValue).toBe(
+        "Bonus amount is required",
+      );
     });
   });
 
@@ -378,6 +423,49 @@ describe("BitStore Core", () => {
       expect(submittedData.email).toBeUndefined();
       expect(submittedData.price).toBe(20);
       expect(store.isSubmitting).toBe(false);
+    });
+
+    it("should pass dirtyValues as second parameter to submit callback", async () => {
+      const store = new BitStore({
+        initialValues: { name: "Leo", age: 30, city: "Tokyo" },
+      });
+
+      store.setField("name", "Leandro");
+      store.setField("age", 31);
+
+      let receivedValues: any;
+      let receivedDirtyValues: any;
+
+      await store.submit((values, dirtyValues) => {
+        receivedValues = values;
+        receivedDirtyValues = dirtyValues;
+      });
+
+      expect(receivedValues).toEqual({
+        name: "Leandro",
+        age: 31,
+        city: "Tokyo",
+      });
+      expect(receivedDirtyValues).toEqual({ name: "Leandro", age: 31 });
+    });
+
+    it("should calculate dirtyValues after transforms on submit", async () => {
+      const store = new BitStore({
+        initialValues: { price: 10, discount: 0 },
+        fields: {
+          price: { transform: (val) => val * 2 },
+        },
+      });
+
+      store.setField("price", 20);
+
+      let receivedDirtyValues: any;
+
+      await store.submit((values, dirtyValues) => {
+        receivedDirtyValues = dirtyValues;
+      });
+
+      expect(receivedDirtyValues).toEqual({ price: 40 });
     });
   });
 

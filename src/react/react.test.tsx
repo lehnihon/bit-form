@@ -204,6 +204,15 @@ describe("React Integration (Context + Hooks)", () => {
   });
 
   describe("Watchers & Helpers", () => {
+    it("não deve expor registerMask no useBitForm", () => {
+      const store = createTestStore();
+      const { result } = renderHook(() => useBitForm<MyForm>(), {
+        wrapper: (props) => wrapper({ ...props, store }),
+      });
+
+      expect("registerMask" in result.current).toBe(false);
+    });
+
     it("deve observar campos específicos com useBitWatch", async () => {
       const store = createTestStore();
       const { result } = renderHook(() => useBitWatch("user.firstName"), {
@@ -262,6 +271,65 @@ describe("React Integration (Context + Hooks)", () => {
 
       expect(mockEvent.preventDefault).toHaveBeenCalled();
       expect(onSubmit).toHaveBeenCalled();
+    });
+
+    it("deve expor getDirtyValues e retornar apenas valores alterados", async () => {
+      const store = createTestStore();
+      const { result } = renderHook(() => useBitForm<MyForm>(), {
+        wrapper: (props) => wrapper({ ...props, store }),
+      });
+
+      expect(result.current.getDirtyValues()).toEqual({});
+
+      await act(() => {
+        store.setField("user.firstName", "Kenji");
+      });
+
+      expect(result.current.getDirtyValues()).toEqual({
+        user: { firstName: "Kenji" },
+      });
+    });
+
+    it("deve passar dirtyValues como segundo parâmetro no submit", async () => {
+      const store = createTestStore();
+      const submitHandler = vi.fn();
+      const { result } = renderHook(() => useBitForm<MyForm>(), {
+        wrapper: (props) => wrapper({ ...props, store }),
+      });
+
+      await act(() => {
+        store.setField("user.firstName", "Updated");
+      });
+
+      await act(() => {
+        result.current.submit(submitHandler)();
+      });
+
+      expect(submitHandler).toHaveBeenCalled();
+      const [values, dirtyValues] = submitHandler.mock.calls[0];
+      expect(values.user.firstName).toBe("Updated");
+      expect(dirtyValues).toEqual({ user: { firstName: "Updated" } });
+    });
+
+    it("deve passar dirtyValues como segundo parâmetro no onSubmit", async () => {
+      const store = createTestStore();
+      const apiHandler = vi.fn().mockResolvedValue({ success: true });
+      const { result } = renderHook(() => useBitForm<MyForm>(), {
+        wrapper: (props) => wrapper({ ...props, store }),
+      });
+
+      await act(() => {
+        store.setField("salary", 5000);
+      });
+
+      await act(() => {
+        result.current.onSubmit(apiHandler)();
+      });
+
+      expect(apiHandler).toHaveBeenCalled();
+      const [values, dirtyValues] = apiHandler.mock.calls[0];
+      expect(values.salary).toBe(5000);
+      expect(dirtyValues).toEqual({ salary: 5000 });
     });
   });
 

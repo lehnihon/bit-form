@@ -65,4 +65,65 @@ export class BitDirtyManager<T extends object = any> {
   getDirtyPaths(): ReadonlySet<string> {
     return this.dirtyPaths;
   }
+
+  /**
+   * Builds a partial object containing only dirty values.
+   * For arrays, returns the entire array if any index changed.
+   * @param values - current form values (already cleaned/transformed)
+   */
+  buildDirtyValues<T extends object>(values: T): Partial<T> {
+    if (this.dirtyPaths.size === 0) return {};
+
+    const result: any = {};
+    const processedArrays = new Set<string>();
+
+    for (const path of this.dirtyPaths) {
+      // Check if this path is part of an array
+      const arrayMatch = path.match(/^(.+)\.(\d+)/);
+
+      if (arrayMatch) {
+        const arrayPath = arrayMatch[1];
+
+        // Skip if we already processed this array
+        if (processedArrays.has(arrayPath)) continue;
+
+        processedArrays.add(arrayPath);
+        this.setNestedValue(
+          result,
+          arrayPath,
+          this.getNestedValue(values, arrayPath),
+        );
+      } else {
+        // Regular field or array reference itself
+        this.setNestedValue(result, path, this.getNestedValue(values, path));
+      }
+    }
+
+    return result;
+  }
+
+  private getNestedValue(obj: any, path: string): any {
+    const keys = path.split(".");
+    let current = obj;
+    for (const key of keys) {
+      if (current === null || current === undefined) return undefined;
+      current = current[key];
+    }
+    return current;
+  }
+
+  private setNestedValue(obj: any, path: string, value: any): void {
+    const keys = path.split(".");
+    let current = obj;
+
+    for (let i = 0; i < keys.length - 1; i++) {
+      const key = keys[i];
+      if (!(key in current)) {
+        current[key] = {};
+      }
+      current = current[key];
+    }
+
+    current[keys[keys.length - 1]] = value;
+  }
 }

@@ -174,6 +174,59 @@ describe("Vue Integration", () => {
     expect(wrapper.vm.form.getValues().count).toBe(0);
   });
 
+  it("should not expose registerMask on useBitForm", () => {
+    const store = new BitStore({ initialValues: { name: "" } });
+    const wrapper = createWrapper(store, () => ({ form: useBitForm() }));
+
+    expect("registerMask" in wrapper.vm.form).toBe(false);
+  });
+
+  it("should expose getDirtyValues and return only changed values", async () => {
+    const store = new BitStore({ initialValues: { name: "Leo", age: 30 } });
+    const wrapper = createWrapper(store, () => ({ form: useBitForm() }));
+
+    expect(wrapper.vm.form.getDirtyValues()).toEqual({});
+
+    store.setField("name", "Leandro");
+    await nextTick();
+
+    expect(wrapper.vm.form.getDirtyValues()).toEqual({ name: "Leandro" });
+  });
+
+  it("should pass dirtyValues as second parameter in submit", async () => {
+    const store = new BitStore({ initialValues: { name: "Leo", age: 30 } });
+    const submitHandler = vi.fn();
+    const wrapper = createWrapper(store, () => ({ form: useBitForm() }));
+
+    store.setField("name", "Updated");
+    await nextTick();
+
+    const submitFn = wrapper.vm.form.submit(submitHandler);
+    await submitFn();
+
+    expect(submitHandler).toHaveBeenCalled();
+    const [values, dirtyValues] = submitHandler.mock.calls[0];
+    expect(values.name).toBe("Updated");
+    expect(dirtyValues).toEqual({ name: "Updated" });
+  });
+
+  it("should pass dirtyValues as second parameter in onSubmit", async () => {
+    const store = new BitStore({ initialValues: { email: "old@test.com" } });
+    const apiHandler = vi.fn().mockResolvedValue({ success: true });
+    const wrapper = createWrapper(store, () => ({ form: useBitForm() }));
+
+    store.setField("email", "new@test.com");
+    await nextTick();
+
+    const submitFn = wrapper.vm.form.onSubmit(apiHandler);
+    await submitFn();
+
+    expect(apiHandler).toHaveBeenCalled();
+    const [values, dirtyValues] = apiHandler.mock.calls[0];
+    expect(values.email).toBe("new@test.com");
+    expect(dirtyValues).toEqual({ email: "new@test.com" });
+  });
+
   it("should track scope status with useBitScope", async () => {
     const store = new BitStore({
       initialValues: { name: "", email: "" },

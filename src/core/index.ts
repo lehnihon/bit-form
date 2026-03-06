@@ -33,6 +33,7 @@ export type {
   BitArrayItem,
   ScopeStatus,
   ValidateScopeResult,
+  DeepPartial,
 } from "./store/types";
 
 export { bitMasks } from "./mask/index";
