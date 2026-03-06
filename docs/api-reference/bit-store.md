@@ -439,7 +439,7 @@ const onSubmit = store.submit(async (values, dirtyValues) => {
 
 // Or ignore dirtyValues if not needed
 const onSubmit = store.submit(async (values) => {
-  await api.post('/users', values);
+  await api.post("/users", values);
 });
 ```
 
