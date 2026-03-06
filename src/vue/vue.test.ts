@@ -174,6 +174,13 @@ describe("Vue Integration", () => {
     expect(wrapper.vm.form.getValues().count).toBe(0);
   });
 
+  it("should not expose registerMask on useBitForm", () => {
+    const store = new BitStore({ initialValues: { name: "" } });
+    const wrapper = createWrapper(store, () => ({ form: useBitForm() }));
+
+    expect("registerMask" in wrapper.vm.form).toBe(false);
+  });
+
   it("should track scope status with useBitScope", async () => {
     const store = new BitStore({
       initialValues: { name: "", email: "" },

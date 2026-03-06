@@ -139,6 +139,14 @@ describe("Angular Integration (Signals)", () => {
     expect(app.form.meta.isDirty()).toBe(false);
   });
 
+  it("não deve expor registerMask no injectBitForm", () => {
+    const fixture = TestBed.createComponent(HostComponent);
+    const app = fixture.componentInstance;
+    fixture.detectChanges();
+
+    expect("registerMask" in app.form).toBe(false);
+  });
+
   it("deve validar campos dinamicamente com Signals e resolver", async () => {
     const storeWithResolver = new BitStore<MyForm>({
       initialValues: {

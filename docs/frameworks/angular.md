@@ -43,6 +43,8 @@ Use `injectBitForm` and `injectBitField` inside your child components.
 - `history`: time-travel operations
   - `undo()`, `redo()`
 
+Custom mask registration is done directly on the store (`store.registerMask(...)`), not on `injectBitForm`.
+
 ### Field Structure
 
 `injectBitField` returns:

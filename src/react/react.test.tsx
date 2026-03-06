@@ -204,6 +204,15 @@ describe("React Integration (Context + Hooks)", () => {
   });
 
   describe("Watchers & Helpers", () => {
+    it("não deve expor registerMask no useBitForm", () => {
+      const store = createTestStore();
+      const { result } = renderHook(() => useBitForm<MyForm>(), {
+        wrapper: (props) => wrapper({ ...props, store }),
+      });
+
+      expect("registerMask" in result.current).toBe(false);
+    });
+
     it("deve observar campos específicos com useBitWatch", async () => {
       const store = createTestStore();
       const { result } = renderHook(() => useBitWatch("user.firstName"), {

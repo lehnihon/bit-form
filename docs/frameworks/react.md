@@ -54,6 +54,9 @@ form.mutations.pushItem(); // for array operations
 form.mutations.removeItem();
 form.history.undo(); // for history/time-travel
 form.history.redo();
+
+// Custom mask registration is done on the store
+store.registerMask("myMask", myMask);
 ```
 
 ### Basic `submit`

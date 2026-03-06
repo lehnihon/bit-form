@@ -98,7 +98,6 @@ export function injectBitForm<T extends object>() {
     setField: store.setField.bind(store),
     blurField: store.blurField.bind(store),
     validate: store.validate.bind(store),
-    registerMask: store.registerMask.bind(store),
     // Array mutations (grouped)
     mutations: {
       pushItem: store.pushItem.bind(store),

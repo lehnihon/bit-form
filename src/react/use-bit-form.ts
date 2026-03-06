@@ -123,7 +123,6 @@ export function useBitForm<T extends object>() {
     setErrors: store.setErrors.bind(store),
     setServerErrors: store.setServerErrors.bind(store),
     validate: store.validate.bind(store),
-    registerMask: store.registerMask.bind(store),
     // Array mutations (grouped)
     mutations: {
       pushItem: store.pushItem.bind(store),
