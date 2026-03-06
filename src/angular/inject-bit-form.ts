@@ -34,7 +34,9 @@ export function injectBitForm<T extends object>() {
   const getTouched = () => stateSignal().touched;
   const getDirtyValues = () => store.getDirtyValues();
 
-  const submit = (onSuccess: (values: T, dirtyValues: Partial<T>) => void | Promise<void>) => {
+  const submit = (
+    onSuccess: (values: T, dirtyValues?: Partial<T>) => void | Promise<void>,
+  ) => {
     return (event?: Event) => {
       event?.preventDefault();
       event?.stopPropagation();
@@ -42,7 +44,9 @@ export function injectBitForm<T extends object>() {
     };
   };
 
-  const onSubmit = (handler: (values: T, dirtyValues: Partial<T>) => Promise<unknown>) => {
+  const onSubmit = (
+    handler: (values: T, dirtyValues?: Partial<T>) => Promise<unknown>,
+  ) => {
     return (event?: Event) => {
       event?.preventDefault();
       event?.stopPropagation();

@@ -253,10 +253,10 @@ const required = store.isRequired("company.taxId");
 
 There are two ways to configure field behavior (e.g. `showIf`, `requiredIf`, `asyncValidate`):
 
-| Approach | When to use |
-|----------|-------------|
-| **`fields`** (in `BitConfig`) | Form structure is known at store creation. Register all fields upfront in one place. |
-| **`registerField`** | Fields are dynamic (array items, lazy-loaded) or config comes from components. Used internally by `useBitField` / `injectBitField`. |
+| Approach                      | When to use                                                                                                                         |
+| ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| **`fields`** (in `BitConfig`) | Form structure is known at store creation. Register all fields upfront in one place.                                                |
+| **`registerField`**           | Fields are dynamic (array items, lazy-loaded) or config comes from components. Used internally by `useBitField` / `injectBitField`. |
 
 **Example with `fields` (declarative, at construction):**
 
@@ -412,7 +412,7 @@ if (store.isFieldDirty("address.zip")) {
 
 ## Submission Lifecycle
 
-### `submit(onSuccess: (values: T, dirtyValues: Partial<T>) => void | Promise<void>): Promise<void>`
+### `submit(onSuccess: (values: T, dirtyValues?: Partial<T>) => void | Promise<void>): Promise<void>`
 
 Runs the full submission lifecycle through the internal `BitLifecycleManager`:
 
@@ -425,18 +425,21 @@ Runs the full submission lifecycle through the internal `BitLifecycleManager`:
 7. Marks `isSubmitting` as `false`.
 
 The callback receives two parameters:
+
 - **`values`**: The full form values after transforms/hidden cleanup.
-- **`dirtyValues`**: A partial object containing only changed fields (calculated after transforms).
+- **`dirtyValues`** (optional): A partial object containing only changed fields (calculated after transforms).
 
 ```ts
+// Using dirtyValues for PATCH
 const onSubmit = store.submit(async (values, dirtyValues) => {
-  // Full update
-  await api.put(`/users/${id}`, values);
-  
-  // Or partial update (PATCH)
-  if (Object.keys(dirtyValues).length > 0) {
+  if (dirtyValues && Object.keys(dirtyValues).length > 0) {
     await api.patch(`/users/${id}`, dirtyValues);
   }
+});
+
+// Or ignore dirtyValues if not needed
+const onSubmit = store.submit(async (values) => {
+  await api.post('/users', values);
 });
 ```
 

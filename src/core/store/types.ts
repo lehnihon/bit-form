@@ -182,39 +182,44 @@ export type BitPath<T, Prefix extends string = ""> = T extends Primitive
             ? `${K & (string | number)}`
             : `${Prefix}.${K & (string | number)}`
           : Prefix extends ""
-            ? | `${K & (string | number)}`
-              | `${K & (string | number)}.${BitPath<T[K]>}`
-            : | `${Prefix}.${K & (string | number)}`
-              | `${Prefix}.${K & (string | number)}.${BitPath<T[K]>}`;
+            ?
+                | `${K & (string | number)}`
+                | `${K & (string | number)}.${BitPath<T[K]>}`
+            :
+                | `${Prefix}.${K & (string | number)}`
+                | `${Prefix}.${K & (string | number)}.${BitPath<T[K]>}`;
       }[keyof T & (string | number)];
 
 // Resolves the value type at a given dot-separated path.
-export type BitPathValue<T, P extends string> =
-  P extends `${infer K}.${infer Rest}`
-    ? K extends `${number}`
-      ? T extends readonly (infer U)[]
-        ? BitPathValue<U, Rest>
-        : never
-      : K extends keyof T
-        ? BitPathValue<T[K], Rest>
-        : never
-    : P extends `${number}`
-      ? T extends readonly (infer U)[]
-        ? U
-        : never
-      : P extends keyof T
-        ? T[P]
-        : never;
+export type BitPathValue<
+  T,
+  P extends string,
+> = P extends `${infer K}.${infer Rest}`
+  ? K extends `${number}`
+    ? T extends readonly (infer U)[]
+      ? BitPathValue<U, Rest>
+      : never
+    : K extends keyof T
+      ? BitPathValue<T[K], Rest>
+      : never
+  : P extends `${number}`
+    ? T extends readonly (infer U)[]
+      ? U
+      : never
+    : P extends keyof T
+      ? T[P]
+      : never;
 
 // Filters BitPath<T> to only those paths that resolve to array types.
 // Distributive over union so each path is checked individually.
-export type BitArrayPath<T> = BitPath<T> extends infer P
-  ? P extends string
-    ? BitPathValue<T, P> extends readonly any[]
-      ? P
+export type BitArrayPath<T> =
+  BitPath<T> extends infer P
+    ? P extends string
+      ? BitPathValue<T, P> extends readonly any[]
+        ? P
+        : never
       : never
-    : never
-  : never;
+    : never;
 
 // Extracts the element type of an array.
 export type BitArrayItem<A> = A extends readonly (infer U)[]
@@ -222,4 +227,3 @@ export type BitArrayItem<A> = A extends readonly (infer U)[]
   : A extends (infer U)[]
     ? U
     : never;
-

@@ -33,7 +33,9 @@ export function useBitForm<T extends object>() {
     return store.canRedo;
   });
 
-  const onSubmit = (handler: (values: T, dirtyValues: Partial<T>) => Promise<unknown>) => {
+  const onSubmit = (
+    handler: (values: T, dirtyValues?: Partial<T>) => Promise<unknown>,
+  ) => {
     return (e?: Event) => {
       e?.preventDefault?.();
       submitError.value = null;
@@ -79,7 +81,9 @@ export function useBitForm<T extends object>() {
     getTouched,
     getDirtyValues,
     // Main actions (frequent use - flat)
-    submit: (onSuccess: (values: T, dirtyValues: Partial<T>) => void | Promise<void>) => {
+    submit: (
+      onSuccess: (values: T, dirtyValues?: Partial<T>) => void | Promise<void>,
+    ) => {
       return (e?: Event) => {
         e?.preventDefault?.();
         return store.submit(onSuccess);

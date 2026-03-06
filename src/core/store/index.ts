@@ -325,7 +325,9 @@ export class BitStore<T extends object = any>
     this.lifecycleMg.reset();
   }
 
-  async submit(onSuccess: (values: T, dirtyValues: Partial<T>) => void | Promise<void>) {
+  async submit(
+    onSuccess: (values: T, dirtyValues?: Partial<T>) => void | Promise<void>,
+  ) {
     return this.lifecycleMg.submit(onSuccess);
   }
 

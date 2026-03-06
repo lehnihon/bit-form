@@ -51,7 +51,9 @@ export function useBitForm<T extends object>() {
   );
 
   const submit = useCallback(
-    (onSuccess: (values: T, dirtyValues: Partial<T>) => void | Promise<void>) => {
+    (
+      onSuccess: (values: T, dirtyValues?: Partial<T>) => void | Promise<void>,
+    ) => {
       return (e?: { preventDefault: () => void }) => {
         e?.preventDefault?.();
         return store.submit(onSuccess);
@@ -61,7 +63,7 @@ export function useBitForm<T extends object>() {
   );
 
   const onSubmit = useCallback(
-    (handler: (values: T, dirtyValues: Partial<T>) => Promise<unknown>) => {
+    (handler: (values: T, dirtyValues?: Partial<T>) => Promise<unknown>) => {
       return (e?: { preventDefault: () => void }) => {
         e?.preventDefault?.();
         setSubmitError(null);

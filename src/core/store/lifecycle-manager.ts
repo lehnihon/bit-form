@@ -67,7 +67,9 @@ export class BitLifecycleManager<T extends object> {
     this.store.validatorMg.validate();
   }
 
-  async submit(onSuccess: (values: T, dirtyValues: Partial<T>) => void | Promise<void>) {
+  async submit(
+    onSuccess: (values: T, dirtyValues?: Partial<T>) => void | Promise<void>,
+  ) {
     const currentState = this.store.getState();
 
     if (currentState.isSubmitting) return;

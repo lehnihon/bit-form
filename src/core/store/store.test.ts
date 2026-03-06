@@ -349,7 +349,9 @@ describe("BitStore Core", () => {
 
       const isValid = await store.validate();
       expect(isValid).toBe(false);
-      expect(store.getState().errors.bonusValue).toBe("Bonus amount is required");
+      expect(store.getState().errors.bonusValue).toBe(
+        "Bonus amount is required",
+      );
     });
   });
 
@@ -439,7 +441,11 @@ describe("BitStore Core", () => {
         receivedDirtyValues = dirtyValues;
       });
 
-      expect(receivedValues).toEqual({ name: "Leandro", age: 31, city: "Tokyo" });
+      expect(receivedValues).toEqual({
+        name: "Leandro",
+        age: 31,
+        city: "Tokyo",
+      });
       expect(receivedDirtyValues).toEqual({ name: "Leandro", age: 31 });
     });
 

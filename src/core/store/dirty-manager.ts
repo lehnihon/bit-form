@@ -80,15 +80,19 @@ export class BitDirtyManager<T extends object = any> {
     for (const path of this.dirtyPaths) {
       // Check if this path is part of an array
       const arrayMatch = path.match(/^(.+)\.(\d+)/);
-      
+
       if (arrayMatch) {
         const arrayPath = arrayMatch[1];
-        
+
         // Skip if we already processed this array
         if (processedArrays.has(arrayPath)) continue;
-        
+
         processedArrays.add(arrayPath);
-        this.setNestedValue(result, arrayPath, this.getNestedValue(values, arrayPath));
+        this.setNestedValue(
+          result,
+          arrayPath,
+          this.getNestedValue(values, arrayPath),
+        );
       } else {
         // Regular field or array reference itself
         this.setNestedValue(result, path, this.getNestedValue(values, path));
@@ -99,7 +103,7 @@ export class BitDirtyManager<T extends object = any> {
   }
 
   private getNestedValue(obj: any, path: string): any {
-    const keys = path.split('.');
+    const keys = path.split(".");
     let current = obj;
     for (const key of keys) {
       if (current === null || current === undefined) return undefined;
@@ -109,9 +113,9 @@ export class BitDirtyManager<T extends object = any> {
   }
 
   private setNestedValue(obj: any, path: string, value: any): void {
-    const keys = path.split('.');
+    const keys = path.split(".");
     let current = obj;
-    
+
     for (let i = 0; i < keys.length - 1; i++) {
       const key = keys[i];
       if (!(key in current)) {
@@ -119,7 +123,7 @@ export class BitDirtyManager<T extends object = any> {
       }
       current = current[key];
     }
-    
+
     current[keys[keys.length - 1]] = value;
   }
 }
