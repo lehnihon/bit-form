@@ -325,12 +325,16 @@ export class BitStore<T extends object = any>
     this.lifecycleMg.reset();
   }
 
-  async submit(onSuccess: (values: T) => void | Promise<void>) {
+  async submit(onSuccess: (values: T, dirtyValues: Partial<T>) => void | Promise<void>) {
     return this.lifecycleMg.submit(onSuccess);
   }
 
   registerMask(name: string, mask: BitMask) {
     this.config.masks![name] = mask;
+  }
+
+  getDirtyValues(): Partial<T> {
+    return this.dirtyMg.buildDirtyValues(this.state.values);
   }
 
   // ============================================================================

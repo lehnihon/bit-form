@@ -4,6 +4,10 @@ import { BitHistoryManager } from "./history-manager";
 import { BitValidationManager } from "./validation-manager";
 import { BitDirtyManager } from "./dirty-manager";
 
+export type DeepPartial<T> = T extends object
+  ? { [P in keyof T]?: DeepPartial<T[P]> }
+  : T;
+
 export type BitErrors<T> = { [key: string]: string | undefined };
 export type BitTouched<T> = { [key: string]: boolean | undefined };
 export type BitComputedFn<T> = (values: T) => any;

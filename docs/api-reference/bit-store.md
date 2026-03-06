@@ -89,6 +89,32 @@ const stopWatching = store.watch("user.address.city", (city) => {
 
 Use this for side-effects like analytics, autosave, or cross-form coordination.
 
+### `getDirtyValues(): Partial<T>`
+
+Returns an object containing only the fields that have changed from their initial values.
+
+- For nested objects, returns a partial structure maintaining the hierarchy.
+- For arrays, returns the entire array if any element changed.
+- Returns an empty object `{}` if no fields are dirty.
+
+```ts
+// Initial: { name: "Leo", age: 30, city: "Tokyo" }
+store.setField("name", "Leandro");
+store.setField("age", 31);
+
+const dirty = store.getDirtyValues();
+// { name: "Leandro", age: 31 }
+```
+
+Useful for PATCH requests that only send modified fields:
+
+```ts
+const dirtyValues = store.getDirtyValues();
+if (Object.keys(dirtyValues).length > 0) {
+  await api.patch(`/users/${id}`, dirtyValues);
+}
+```
+
 ---
 
 ## Field & Value Management
@@ -386,7 +412,7 @@ if (store.isFieldDirty("address.zip")) {
 
 ## Submission Lifecycle
 
-### `submit(onSuccess: (values: T) => void | Promise<void>): Promise<void>`
+### `submit(onSuccess: (values: T, dirtyValues: Partial<T>) => void | Promise<void>): Promise<void>`
 
 Runs the full submission lifecycle through the internal `BitLifecycleManager`:
 
@@ -395,18 +421,26 @@ Runs the full submission lifecycle through the internal `BitLifecycleManager`:
 3. Runs full validation.
 4. Strips values for hidden fields.
 5. Applies any `transform` functions from the config.
-6. Calls `onSuccess(cleanValues)`.
+6. Calls `onSuccess(cleanValues, dirtyValues)`.
 7. Marks `isSubmitting` as `false`.
 
-In frameworks, you typically use this as a wrapper around a submit handler:
+The callback receives two parameters:
+- **`values`**: The full form values after transforms/hidden cleanup.
+- **`dirtyValues`**: A partial object containing only changed fields (calculated after transforms).
 
 ```ts
-const onSubmit = store.submit(async (values) => {
-  await api.saveForm(values);
+const onSubmit = store.submit(async (values, dirtyValues) => {
+  // Full update
+  await api.put(`/users/${id}`, values);
+  
+  // Or partial update (PATCH)
+  if (Object.keys(dirtyValues).length > 0) {
+    await api.patch(`/users/${id}`, dirtyValues);
+  }
 });
 ```
 
-In React, the `useBitForm` hook wraps this to automatically prevent the default submit event.
+In frameworks, the `useBitForm` hook wraps this to automatically prevent the default submit event.
 
 ---
 

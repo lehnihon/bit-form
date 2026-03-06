@@ -32,8 +32,9 @@ export function injectBitForm<T extends object>() {
   const getValues = () => stateSignal().values;
   const getErrors = () => stateSignal().errors;
   const getTouched = () => stateSignal().touched;
+  const getDirtyValues = () => store.getDirtyValues();
 
-  const submit = (onSuccess: (values: T) => void | Promise<void>) => {
+  const submit = (onSuccess: (values: T, dirtyValues: Partial<T>) => void | Promise<void>) => {
     return (event?: Event) => {
       event?.preventDefault();
       event?.stopPropagation();
@@ -41,14 +42,14 @@ export function injectBitForm<T extends object>() {
     };
   };
 
-  const onSubmit = (handler: (values: T) => Promise<unknown>) => {
+  const onSubmit = (handler: (values: T, dirtyValues: Partial<T>) => Promise<unknown>) => {
     return (event?: Event) => {
       event?.preventDefault();
       event?.stopPropagation();
       submitError.set(null);
-      return store.submit(async (values) => {
+      return store.submit(async (values, dirtyValues) => {
         try {
-          const result = await handler(values);
+          const result = await handler(values, dirtyValues);
           lastResponse.set(result);
           submitError.set(null);
         } catch (err) {
@@ -87,6 +88,7 @@ export function injectBitForm<T extends object>() {
     getValues,
     getErrors,
     getTouched,
+    getDirtyValues,
     // Main actions (frequent use - flat)
     submit,
     onSubmit,

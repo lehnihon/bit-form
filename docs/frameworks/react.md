@@ -42,6 +42,12 @@ form.meta.canRedo; // boolean
 form.meta.submitError; // Error | null
 form.meta.lastResponse; // unknown
 
+// Getters
+form.getValues(); // T
+form.getErrors(); // BitErrors<T>
+form.getTouched(); // BitTouched<T>
+form.getDirtyValues(); // Partial<T> - only changed fields
+
 // Main actions remain flat
 form.submit();
 form.onSubmit();
@@ -67,8 +73,9 @@ import { useBitForm } from "@lehnihon/bit-form/react";
 export function SubmitButton() {
   const form = useBitForm();
 
-  const onSubmit = form.submit((values) => {
-    console.log("Payload:", values);
+  const onSubmit = form.submit((values, dirtyValues) => {
+    console.log("Full payload:", values);
+    console.log("Only changed:", dirtyValues);
   });
 
   return (
@@ -89,8 +96,9 @@ Use `onSubmit` when your form calls an API. It handles `preventDefault`, calls t
 ```tsx
 const form = useBitForm();
 
-const handleSubmit = form.onSubmit(async (values) => {
-  const res = await api.createUser(values);
+const handleSubmit = form.onSubmit(async (values, dirtyValues) => {
+  // Use dirtyValues for PATCH requests
+  const res = await api.patchUser(userId, dirtyValues);
   return res.data;
 });
 

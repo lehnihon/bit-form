@@ -82,6 +82,12 @@ form.meta.canRedo; // ComputedRef<boolean>
 form.meta.submitError; // Ref<Error | null>
 form.meta.lastResponse; // Ref<unknown>
 
+// Getters
+form.getValues(); // T
+form.getErrors(); // BitErrors<T>
+form.getTouched(); // BitTouched<T>
+form.getDirtyValues(); // Partial<T> - only changed fields
+
 // Main actions remain flat
 form.submit();
 form.onSubmit();
@@ -107,13 +113,15 @@ import { useBitForm } from "@lehnihon/bit-form/vue";
 const form = useBitForm();
 
 // Simple submit
-const handleSubmit = form.submit((values) => {
+const handleSubmit = form.submit((values, dirtyValues) => {
   console.log("Vue Form Submitted:", values);
+  console.log("Only changed:", dirtyValues);
 });
 
 // Or use onSubmit for API + server errors
-const handleApiSubmit = form.onSubmit(async (values) => {
-  const res = await api.createUser(values);
+const handleApiSubmit = form.onSubmit(async (values, dirtyValues) => {
+  // Use dirtyValues for PATCH
+  const res = await api.patchUser(userId, dirtyValues);
   return res.data;
 });
 </script>

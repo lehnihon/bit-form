@@ -51,7 +51,7 @@ export function useBitForm<T extends object>() {
   );
 
   const submit = useCallback(
-    (onSuccess: (values: T) => void | Promise<void>) => {
+    (onSuccess: (values: T, dirtyValues: Partial<T>) => void | Promise<void>) => {
       return (e?: { preventDefault: () => void }) => {
         e?.preventDefault?.();
         return store.submit(onSuccess);
@@ -61,14 +61,14 @@ export function useBitForm<T extends object>() {
   );
 
   const onSubmit = useCallback(
-    (handler: (values: T) => Promise<unknown>) => {
+    (handler: (values: T, dirtyValues: Partial<T>) => Promise<unknown>) => {
       return (e?: { preventDefault: () => void }) => {
         e?.preventDefault?.();
         setSubmitError(null);
 
-        return store.submit(async (values) => {
+        return store.submit(async (values, dirtyValues) => {
           try {
-            const result = await handler(values);
+            const result = await handler(values, dirtyValues);
             setLastResponse(result);
             setSubmitError(null);
           } catch (err) {
@@ -95,6 +95,7 @@ export function useBitForm<T extends object>() {
   const getValues = useCallback(() => store.getState().values, [store]);
   const getErrors = useCallback(() => store.getState().errors, [store]);
   const getTouched = useCallback(() => store.getState().touched, [store]);
+  const getDirtyValues = useCallback(() => store.getDirtyValues(), [store]);
 
   const meta = useMemo(
     () => ({
@@ -112,6 +113,7 @@ export function useBitForm<T extends object>() {
     getValues,
     getErrors,
     getTouched,
+    getDirtyValues,
     // Main actions (frequent use - flat)
     submit,
     onSubmit,
