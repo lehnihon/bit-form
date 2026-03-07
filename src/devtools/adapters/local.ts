@@ -1,4 +1,5 @@
-import { bitBus, BitStore } from "../../core";
+import { bitBus } from "../../core";
+import type { BitStore } from "../../core/store";
 import { BitFormDevToolsUI } from "../ui";
 
 export function setupLocalDevTools(container: HTMLElement) {

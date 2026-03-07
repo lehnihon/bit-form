@@ -1,9 +1,39 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { BitStore } from "../../core";
+import { createBitStore } from "../../core";
+import { BitStore } from "../../core/store";
 
 describe("BitStore Core", () => {
   beforeEach(() => {
     vi.useRealTimers();
+  });
+
+  describe("Public Store Facade", () => {
+    it("should create a public facade with core operations", async () => {
+      const store = createBitStore({ initialValues: { name: "Leo", age: 30 } });
+
+      store.setField("name", "Leandro");
+
+      let submittedValues: any;
+      let submittedDirtyValues: any;
+
+      await store.submit((values, dirtyValues) => {
+        submittedValues = values;
+        submittedDirtyValues = dirtyValues;
+      });
+
+      expect(submittedValues).toEqual({ name: "Leandro", age: 30 });
+      expect(submittedDirtyValues).toEqual({ name: "Leandro" });
+    });
+
+    it("should not expose internal history methods in facade", () => {
+      const store = createBitStore({ initialValues: { name: "Leo" } }) as any;
+
+      expect("undo" in store).toBe(false);
+      expect("redo" in store).toBe(false);
+      expect("canUndo" in store).toBe(false);
+      expect("canRedo" in store).toBe(false);
+      expect("historyMg" in store).toBe(false);
+    });
   });
 
   describe("Basic State and Getters", () => {

@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
-import { BitStore, createPatternMask, unmaskCurrency } from "../../core";
+import { createPatternMask, unmaskCurrency } from "../../core";
+import { BitStore } from "../../core/store";
 
 describe("Form Lifecycle Flow", () => {
   it("should process the full complex lifecycle including dependencies and array remapping", async () => {

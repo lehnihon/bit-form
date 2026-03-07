@@ -1,13 +1,13 @@
 # BitStore API
 
-The `BitStore` is the core engine of Bit-Form. It is a framework-agnostic class that owns the form state, validations, dependencies, computed values, masks, history, and integrations with DevTools.
+`BitStore` is the core engine of Bit-Form. For direct consumer usage, the recommended entrypoint is `createBitStore`, which returns a public facade with stable, focused methods.
 
-All framework bindings (`useBitForm`, `injectBitForm`, etc.) are thin adapters on top of `BitStore`.
+All framework bindings (`useBitForm`, `injectBitForm`, etc.) are thin adapters on top of the internal store engine.
 
 ```ts
-import { BitStore } from "@lehnihon/bit-form";
+import { createBitStore } from "@lehnihon/bit-form";
 
-const store = new BitStore<MyFormValues>({
+const store = createBitStore<MyFormValues>({
   initialValues: {
     name: "",
     email: "",
@@ -21,6 +21,8 @@ const store = new BitStore<MyFormValues>({
   },
 });
 ```
+
+You can still instantiate `BitStore` directly for internal/advanced scenarios.
 
 - **Type parameter**: `T` — the shape of `values`. Defaults to `any` if omitted.
 - **Parameter**: `config?: BitConfig<T>` — see [Types Reference](./types.md) for all options.
