@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { BitStore } from "../core";
+import { BitStore } from "../core/store";
 import * as devtools from "./index";
 import * as bridge from "./bridge";
 
