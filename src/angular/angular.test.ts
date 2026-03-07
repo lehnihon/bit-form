@@ -6,6 +6,7 @@ import {
   injectBitField,
   injectBitForm,
   injectBitArray,
+  injectBitHistory,
   injectBitScope,
   injectBitSteps,
   provideBitStore,
@@ -22,6 +23,7 @@ interface MyForm {
 @Component({ standalone: true, template: "" })
 class HostComponent {
   form = injectBitForm<MyForm>();
+  history = injectBitHistory<MyForm>();
   userName = injectBitField<string>("user.name");
   salary = injectBitField<number>("salary", undefined, { mask: "brl" });
   list = injectBitArray<MyForm, "items">("items");
@@ -40,6 +42,7 @@ describe("Angular Integration (Signals)", () => {
         hasBonus: false,
         bonusValue: 0,
       },
+      history: { enabled: true },
       validation: { delay: 0 },
     });
 
@@ -137,6 +140,30 @@ describe("Angular Integration (Signals)", () => {
     app.form.reset();
     fixture.detectChanges();
     expect(app.form.meta.isDirty()).toBe(false);
+  });
+
+  it("deve expor undo/redo e metadados via injectBitHistory", () => {
+    const fixture = TestBed.createComponent(HostComponent);
+    const app = fixture.componentInstance;
+    fixture.detectChanges();
+
+    expect(app.history.historySize()).toBe(1);
+    expect(app.history.historyIndex()).toBe(0);
+    expect(app.history.canUndo()).toBe(false);
+
+    app.userName.setValue("Novo");
+    fixture.detectChanges();
+    app.userName.setBlur();
+    fixture.detectChanges();
+
+    expect(app.history.canUndo()).toBe(true);
+    expect(app.history.historySize()).toBe(2);
+
+    app.history.undo();
+    fixture.detectChanges();
+
+    expect(store.getState().values.user.name).toBe("Leo");
+    expect(app.history.canRedo()).toBe(true);
   });
 
   it("não deve expor registerMask no injectBitForm", () => {

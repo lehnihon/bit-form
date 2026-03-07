@@ -62,4 +62,20 @@ export class BitHistoryManager<T extends object = any> {
     this.historyIndex = -1;
     this.saveSnapshot(initialValues);
   }
+
+  getMetadata(): {
+    enabled: boolean;
+    canUndo: boolean;
+    canRedo: boolean;
+    historyIndex: number;
+    historySize: number;
+  } {
+    return {
+      enabled: this.enableHistory,
+      canUndo: this.canUndo,
+      canRedo: this.canRedo,
+      historyIndex: this.historyIndex,
+      historySize: this.history.length,
+    };
+  }
 }

@@ -77,8 +77,6 @@ const form = useBitForm();
 form.meta.isValid; // ComputedRef<boolean>
 form.meta.isDirty; // ComputedRef<boolean>
 form.meta.isSubmitting; // ComputedRef<boolean>
-form.meta.canUndo; // ComputedRef<boolean>
-form.meta.canRedo; // ComputedRef<boolean>
 form.meta.submitError; // Ref<Error | null>
 form.meta.lastResponse; // Ref<unknown>
 
@@ -97,8 +95,15 @@ form.reset();
 // Secondary actions grouped by semantic meaning
 form.mutations.pushItem(); // for array operations
 form.mutations.removeItem();
-form.history.undo(); // for history/time-travel
-form.history.redo();
+
+// History is now separated
+const history = useBitHistory();
+history.undo();
+history.redo();
+history.canUndo.value; // boolean
+history.canRedo.value; // boolean
+history.historyIndex.value; // number
+history.historySize.value; // number
 
 // Custom mask registration is done on the store
 store.registerMask("myMask", myMask);

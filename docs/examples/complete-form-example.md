@@ -105,10 +105,12 @@ const store = new BitStore({
 ```tsx
 import { useState } from "react";
 import { useBitForm, useBitField, useBitSteps } from "@lehnihon/bit-form/react";
+import { useBitHistory } from "@lehnihon/bit-form/react";
 
 // Assumes store is created and provided via BitFormProvider
 export function RegistrationWizard() {
   const form = useBitForm();
+  const history = useBitHistory();
   const steps = useBitSteps(["step1", "step2"]);
   const [isValidatingNext, setIsValidatingNext] = useState(false);
 
@@ -140,15 +142,15 @@ export function RegistrationWizard() {
       <div className="toolbar">
         <button
           type="button"
-          onClick={form.history.undo}
-          disabled={!form.meta.canUndo}
+          onClick={history.undo}
+          disabled={!history.canUndo}
         >
           ↺ Undo
         </button>
         <button
           type="button"
-          onClick={form.history.redo}
-          disabled={!form.meta.canRedo}
+          onClick={history.redo}
+          disabled={!history.canRedo}
         >
           ↻ Redo
         </button>

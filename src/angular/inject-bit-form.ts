@@ -19,16 +19,6 @@ export function injectBitForm<T extends object>() {
   const isSubmitting = computed(() => stateSignal().isSubmitting);
   const isDirty = computed(() => stateSignal().isDirty);
 
-  const canUndo = computed(() => {
-    stateSignal();
-    return store.canUndo;
-  });
-
-  const canRedo = computed(() => {
-    stateSignal();
-    return store.canRedo;
-  });
-
   const getValues = () => stateSignal().values;
   const getErrors = () => stateSignal().errors;
   const getTouched = () => stateSignal().touched;
@@ -79,8 +69,6 @@ export function injectBitForm<T extends object>() {
     isValid,
     isDirty,
     isSubmitting,
-    canUndo,
-    canRedo,
     submitError: submitError.asReadonly(),
     lastResponse: lastResponse.asReadonly(),
   };
@@ -112,11 +100,6 @@ export function injectBitForm<T extends object>() {
       insertItem: store.insertItem.bind(store),
       moveItem: store.moveItem.bind(store),
       swapItems: store.swapItems.bind(store),
-    },
-    // History (grouped)
-    history: {
-      undo: store.undo.bind(store),
-      redo: store.redo.bind(store),
     },
   };
 }
