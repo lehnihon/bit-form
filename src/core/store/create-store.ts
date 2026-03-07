@@ -30,9 +30,3 @@ export function createBitStore<T extends object = any>(
     cleanup: engine.cleanup.bind(engine),
   };
 }
-
-export function createBitStoreEngine<T extends object = any>(
-  config: BitConfig<T> = {},
-): BitStore<T> {
-  return new BitStore<T>(config);
-}

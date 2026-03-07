@@ -26,13 +26,13 @@ Here is a quick example using React:
 
 ### 1. Create the Store
 
-First, instantiate a `BitStore` with your initial values. You can define this outside of your component lifecycle or inside a stable reference to prevent unnecessary re-renders.
+First, create the store with `createBitStore` and your initial values. You can define this outside of your component lifecycle or inside a stable reference to prevent unnecessary re-renders.
 
 ```tsx
-import { BitStore } from "@lehnihon/bit-form";
+import { createBitStore } from "@lehnihon/bit-form";
 
 // Define your initial state
-const myStore = new BitStore({
+const myStore = createBitStore({
   initialValues: {
     name: "",
     email: "",

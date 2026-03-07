@@ -8,11 +8,11 @@ Create your `BitStore` instance and provide it to your component or application 
 
 ```typescript
 import { Component } from "@angular/core";
-import { BitStore } from "@lehnihon/bit-form";
+import { createBitStore } from "@lehnihon/bit-form";
 import { provideBitStore } from "@lehnihon/bit-form/angular";
 import { FormContentComponent } from "./form-content.component";
 
-const myStore = new BitStore({
+const myStore = createBitStore({
   initialValues: { name: "", document: "" },
 });
 

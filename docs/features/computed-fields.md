@@ -7,7 +7,7 @@ Computed fields are form values derived from other values. When a dependency cha
 Define computed fields in `fields` via the `computed` property per field.
 
 ```tsx
-const store = new BitStore({
+const store = createBitStore({
   initialValues: {
     price: 100,
     quantity: 2,

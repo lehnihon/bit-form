@@ -8,11 +8,11 @@ In your parent component, instantiate the `BitStore` and provide it using `provi
 
 ```vue
 <script setup lang="ts">
-import { BitStore } from "@lehnihon/bit-form";
+import { createBitStore } from "@lehnihon/bit-form";
 import { provideBitStore } from "@lehnihon/bit-form/vue";
 import UserForm from "./UserForm.vue";
 
-const store = new BitStore({
+const store = createBitStore({
   initialValues: { email: "", age: 18 },
 });
 

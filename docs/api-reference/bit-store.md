@@ -263,7 +263,7 @@ There are two ways to configure field behavior (e.g. `showIf`, `requiredIf`, `as
 **Example with `fields` (declarative, at construction):**
 
 ```ts
-const store = new BitStore({
+const store = createBitStore({
   initialValues: { documentType: "CPF", documentNumber: "" },
   fields: {
     documentNumber: {

@@ -26,7 +26,7 @@ You can define masks in two ways:
 Define the mask directly on the field. Use built-in names (`"brl"`, `"cpf"`, etc.) or a BitMask instance. For custom masks, register them first with `store.registerMask()`:
 
 ```tsx
-const store = new BitStore({
+const store = createBitStore({
   initialValues: { salary: 0 },
   fields: {
     salary: { mask: "brl" },
@@ -62,7 +62,7 @@ import { createPatternMask } from "@lehnihon/bit-form";
 const plateMask = createPatternMask("UUU-####");
 
 // Via fields (or register first with store.registerMask("plate", plateMask))
-const store = new BitStore({
+const store = createBitStore({
   initialValues: { licensePlate: "" },
   fields: { licensePlate: { mask: plateMask } },
 });
@@ -74,10 +74,7 @@ const plate = useBitField("licensePlate", { mask: plateMask });
 Dynamic patterns (e.g. phone):
 
 ```tsx
-const phoneMask = createPatternMask([
-  "(##) ####-####",
-  "(##) #####-####",
-]);
+const phoneMask = createPatternMask(["(##) ####-####", "(##) #####-####"]);
 ```
 
 ### Currency Masks
@@ -93,7 +90,7 @@ const btcMask = createCurrencyMask({
 });
 
 // Pass instance in fields, or register and use by name
-const store = new BitStore({
+const store = createBitStore({
   initialValues: { balance: 0 },
   fields: { balance: { mask: btcMask } },
 });

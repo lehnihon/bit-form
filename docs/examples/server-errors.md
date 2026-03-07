@@ -4,12 +4,12 @@ Bit-Form distinguishes between **client-side validation** and **server-side erro
 
 ## Overview
 
-| Tool | When to use | Handles |
-|------|-------------|---------|
-| **resolver** | Schema validation (Zod, Yup, Joi) | Sync validation before submit |
-| **asyncValidate** | Real-time API checks (e.g. "email taken") | Debounced per-field validation while typing |
-| **setServerErrors** | 422/400 from API on submit | Errors returned after the form is sent |
-| **onSubmit** | Wrapper that calls API + handles server errors | preventDefault, setServerErrors on 422, submitError on 500/network |
+| Tool                | When to use                                    | Handles                                                            |
+| ------------------- | ---------------------------------------------- | ------------------------------------------------------------------ |
+| **resolver**        | Schema validation (Zod, Yup, Joi)              | Sync validation before submit                                      |
+| **asyncValidate**   | Real-time API checks (e.g. "email taken")      | Debounced per-field validation while typing                        |
+| **setServerErrors** | 422/400 from API on submit                     | Errors returned after the form is sent                             |
+| **onSubmit**        | Wrapper that calls API + handles server errors | preventDefault, setServerErrors on 422, submitError on 500/network |
 
 ## Client-Side: resolver + asyncValidate
 
@@ -28,7 +28,7 @@ const schema = z.object({
   password: z.string().min(6, "Mínimo 6 caracteres"),
 });
 
-const store = new BitStore({
+const store = createBitStore({
   initialValues: { email: "", password: "" },
   validation: { resolver: zodResolver(schema) },
 });
@@ -132,7 +132,7 @@ async function createUser(values: UserForm) {
 
 ```tsx
 import { useBitForm, useBitField } from "@lehnihon/bit-form/react";
-import { BitStore } from "@lehnihon/bit-form";
+import { createBitStore } from "@lehnihon/bit-form";
 import { zodResolver } from "@lehnihon/bit-form/resolvers/zod";
 import { z } from "zod";
 
@@ -141,7 +141,7 @@ const schema = z.object({
   name: z.string().min(2),
 });
 
-const store = new BitStore({
+const store = createBitStore({
   initialValues: { email: "", name: "" },
   validation: { resolver: zodResolver(schema), delay: 300 },
 });

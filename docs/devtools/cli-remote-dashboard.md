@@ -23,15 +23,15 @@ npx bit-form devtools -p 3333
 Configure your `BitStore` to use remote mode:
 
 ```tsx
-import { BitStore } from "@lehnihon/bit-form";
+import { createBitStore } from "@lehnihon/bit-form";
 
-const store = new BitStore({
+const store = createBitStore({
   initialValues: { username: "", password: "" },
-  devTools: { mode: "remote" },  // Uses ws://localhost:3000 by default
+  devTools: { mode: "remote" }, // Uses ws://localhost:3000 by default
 });
 
 // Custom URL (e.g. if you changed the port):
-const storeCustom = new BitStore({
+const storeCustom = createBitStore({
   initialValues: { username: "" },
   devTools: { mode: "remote", url: "ws://localhost:3333" },
 });

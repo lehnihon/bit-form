@@ -14,7 +14,7 @@ A wizard-style form with:
 ## Store Configuration
 
 ```tsx
-import { BitStore, unmaskCurrency } from "@lehnihon/bit-form";
+import { createBitStore, unmaskCurrency } from "@lehnihon/bit-form";
 import { zodResolver } from "@lehnihon/bit-form/resolvers/zod";
 import { z } from "zod";
 
@@ -27,7 +27,7 @@ const schema = z.object({
   bonusValue: z.number().optional(),
 });
 
-const store = new BitStore({
+const store = createBitStore({
   name: "registration-form",
   initialValues: {
     companyType: "PF" as "PF" | "PJ",
