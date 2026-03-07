@@ -4,13 +4,20 @@ const formatStoreState = (instance: any) => {
   const cleanState =
     typeof instance.getState === "function" ? instance.getState() : instance;
 
+  const historyMeta = instance?.getHistoryMetadata?.() || {
+    canUndo: false,
+    canRedo: false,
+    historyIndex: -1,
+    historySize: 0,
+  };
+
   return {
     ...cleanState,
     _meta: {
-      canUndo: instance.canUndo,
-      canRedo: instance.canRedo,
-      totalSteps: instance.historyMg?.history?.length || 0,
-      currentIndex: instance.historyMg?.historyIndex ?? -1,
+      canUndo: historyMeta.canUndo,
+      canRedo: historyMeta.canRedo,
+      totalSteps: historyMeta.historySize,
+      currentIndex: historyMeta.historyIndex,
     },
   };
 };

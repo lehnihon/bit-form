@@ -13,33 +13,29 @@ export function useBitForm<T extends object>() {
 
   const [submitError, setSubmitError] = useState<Error | null>(null);
   const [lastResponse, setLastResponse] = useState<unknown>(null);
-
   const lastMeta = useRef<{
     isValid: boolean;
     isDirty: boolean;
     isSubmitting: boolean;
-    canUndo: boolean;
-    canRedo: boolean;
   } | null>(null);
 
   const getMetaSnapshot = useCallback(() => {
     const state = store.getState();
-    const { isValid, isDirty, isSubmitting } = state;
-    const canUndo = store.canUndo;
-    const canRedo = store.canRedo;
+    const nextMeta = {
+      isValid: state.isValid,
+      isDirty: state.isDirty,
+      isSubmitting: state.isSubmitting,
+    };
 
     if (
       lastMeta.current &&
-      lastMeta.current.isValid === isValid &&
-      lastMeta.current.isDirty === isDirty &&
-      lastMeta.current.isSubmitting === isSubmitting &&
-      lastMeta.current.canUndo === canUndo &&
-      lastMeta.current.canRedo === canRedo
+      lastMeta.current.isValid === nextMeta.isValid &&
+      lastMeta.current.isDirty === nextMeta.isDirty &&
+      lastMeta.current.isSubmitting === nextMeta.isSubmitting
     ) {
       return lastMeta.current;
     }
 
-    const nextMeta = { isValid, isDirty, isSubmitting, canUndo, canRedo };
     lastMeta.current = nextMeta;
     return nextMeta;
   }, [store]);
@@ -135,11 +131,6 @@ export function useBitForm<T extends object>() {
       insertItem: store.insertItem.bind(store),
       moveItem: store.moveItem.bind(store),
       swapItems: store.swapItems.bind(store),
-    },
-    // History (grouped)
-    history: {
-      undo: store.undo.bind(store),
-      redo: store.redo.bind(store),
     },
   };
 }

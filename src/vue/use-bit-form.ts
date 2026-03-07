@@ -23,16 +23,6 @@ export function useBitForm<T extends object>() {
   const isSubmitting = computed(() => state.value.isSubmitting);
   const isDirty = computed(() => state.value.isDirty);
 
-  const canUndo = computed(() => {
-    state.value;
-    return store.canUndo;
-  });
-
-  const canRedo = computed(() => {
-    state.value;
-    return store.canRedo;
-  });
-
   const onSubmit = (
     handler: (values: T, dirtyValues?: Partial<T>) => Promise<unknown>,
   ) => {
@@ -66,8 +56,6 @@ export function useBitForm<T extends object>() {
     isValid,
     isDirty,
     isSubmitting,
-    canUndo,
-    canRedo,
     submitError,
     lastResponse,
   };
@@ -106,11 +94,6 @@ export function useBitForm<T extends object>() {
       insertItem: store.insertItem.bind(store),
       moveItem: store.moveItem.bind(store),
       swapItems: store.swapItems.bind(store),
-    },
-    // History (grouped)
-    history: {
-      undo: store.undo.bind(store),
-      redo: store.redo.bind(store),
     },
   };
 }

@@ -7,6 +7,7 @@ import {
   useBitField,
   useBitForm,
   useBitArray,
+  useBitHistory,
   useBitScope,
   useBitSteps,
   useBitWatch,
@@ -226,6 +227,49 @@ describe("React Integration (Context + Hooks)", () => {
       });
 
       expect(result.current).toBe("Kenji");
+    });
+
+    it("deve expor undo/redo e metadados no useBitHistory", async () => {
+      const store = new BitStore<MyForm>({
+        initialValues: {
+          salary: 10,
+          user: { firstName: "Leandro", lastName: "Ishikawa" },
+          skills: ["React"],
+          hasBonus: false,
+          bonusValue: 0,
+        },
+        history: { enabled: true },
+      });
+
+      const { result } = renderHook(
+        () => ({
+          history: useBitHistory<MyForm>(),
+          field: useBitField("user.firstName"),
+        }),
+        { wrapper: (props) => wrapper({ ...props, store }) },
+      );
+
+      expect(result.current.history.historySize).toBe(1);
+      expect(result.current.history.historyIndex).toBe(0);
+      expect(result.current.history.canUndo).toBe(false);
+
+      await act(() => {
+        result.current.field.setValue("Novo Nome");
+      });
+
+      await act(() => {
+        result.current.field.setBlur();
+      });
+
+      expect(result.current.history.canUndo).toBe(true);
+      expect(result.current.history.historySize).toBe(2);
+
+      await act(() => {
+        result.current.history.undo();
+      });
+
+      expect(store.getState().values.user.firstName).toBe("Leandro");
+      expect(result.current.history.canRedo).toBe(true);
     });
 
     it("deve resetar o formulário e limpar estados", async () => {

@@ -417,6 +417,16 @@ export class BitStore<T extends object = any>
     }
   }
 
+  getHistoryMetadata(): {
+    enabled: boolean;
+    canUndo: boolean;
+    canRedo: boolean;
+    historyIndex: number;
+    historySize: number;
+  } {
+    return this.historyMg.getMetadata();
+  }
+
   // ============================================================================
   // VALIDATION & SCOPES
   // ============================================================================

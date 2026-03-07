@@ -6,6 +6,7 @@ import {
   useBitField,
   useBitForm,
   useBitArray,
+  useBitHistory,
   useBitScope,
   useBitSteps,
 } from "./index";
@@ -172,6 +173,36 @@ describe("Vue Integration", () => {
     await nextTick();
 
     expect(wrapper.vm.form.getValues().count).toBe(0);
+  });
+
+  it("should expose undo/redo and metadata through useBitHistory", async () => {
+    const store = new BitStore({
+      initialValues: { name: "Leo" },
+      history: { enabled: true },
+    });
+
+    const wrapper = createWrapper(store, () => ({
+      field: useBitField("name"),
+      history: useBitHistory(),
+    }));
+
+    expect(wrapper.vm.history.historySize.value).toBe(1);
+    expect(wrapper.vm.history.historyIndex.value).toBe(0);
+    expect(wrapper.vm.history.canUndo.value).toBe(false);
+
+    wrapper.vm.field.setValue("Leandro");
+    await nextTick();
+    wrapper.vm.field.setBlur();
+    await nextTick();
+
+    expect(wrapper.vm.history.canUndo.value).toBe(true);
+    expect(wrapper.vm.history.historySize.value).toBe(2);
+
+    wrapper.vm.history.undo();
+    await nextTick();
+
+    expect(store.getState().values.name).toBe("Leo");
+    expect(wrapper.vm.history.canRedo.value).toBe(true);
   });
 
   it("should not expose registerMask on useBitForm", () => {

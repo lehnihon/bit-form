@@ -407,6 +407,26 @@ describe("BitStore Core", () => {
       store.redo();
       expect(store.getState().values.name).toBe("Ishikawa");
     });
+
+    it("should expose history metadata", () => {
+      const store = new BitStore({
+        initialValues: { name: "Leo" },
+        history: { enabled: true },
+      });
+
+      let history = store.getHistoryMetadata();
+      expect(history.enabled).toBe(true);
+      expect(history.historySize).toBe(1);
+      expect(history.historyIndex).toBe(0);
+
+      store.setField("name", "Leandro");
+      store.blurField("name");
+
+      history = store.getHistoryMetadata();
+      expect(history.historySize).toBe(2);
+      expect(history.historyIndex).toBe(1);
+      expect(history.canUndo).toBe(true);
+    });
   });
 
   describe("Form Lifecycle & Submissions", () => {

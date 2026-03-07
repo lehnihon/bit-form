@@ -16,17 +16,21 @@ export function setupLocalDevTools(container: HTMLElement) {
       const storeInstance = instance as any;
       const state = storeInstance.getState();
 
-      const historyManager = storeInstance?.historyMg;
-      const historyArray = historyManager?.history || [];
-      const currentIndex = historyManager?.historyIndex ?? -1;
+      const historyMeta = storeInstance?.getHistoryMetadata?.() || {
+        enabled: false,
+        canUndo: false,
+        canRedo: false,
+        historyIndex: -1,
+        historySize: 0,
+      };
 
       states[id] = {
         ...state,
         _meta: {
-          canUndo: storeInstance?.canUndo,
-          canRedo: storeInstance?.canRedo,
-          totalSteps: historyArray.length,
-          currentIndex: currentIndex,
+          canUndo: historyMeta.canUndo,
+          canRedo: historyMeta.canRedo,
+          totalSteps: historyMeta.historySize,
+          currentIndex: historyMeta.historyIndex,
         },
       };
     }

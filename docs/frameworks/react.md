@@ -37,8 +37,6 @@ const form = useBitForm();
 form.meta.isValid; // boolean
 form.meta.isDirty; // boolean
 form.meta.isSubmitting; // boolean
-form.meta.canUndo; // boolean
-form.meta.canRedo; // boolean
 form.meta.submitError; // Error | null
 form.meta.lastResponse; // unknown
 
@@ -58,8 +56,15 @@ form.setField();
 // Secondary actions grouped by semantic meaning
 form.mutations.pushItem(); // for array operations
 form.mutations.removeItem();
-form.history.undo(); // for history/time-travel
-form.history.redo();
+
+// History is now separated
+const history = useBitHistory();
+history.undo();
+history.redo();
+history.canUndo; // boolean
+history.canRedo; // boolean
+history.historyIndex; // number
+history.historySize; // number
 
 // Custom mask registration is done on the store
 store.registerMask("myMask", myMask);
@@ -68,10 +73,11 @@ store.registerMask("myMask", myMask);
 ### Basic `submit`
 
 ```tsx
-import { useBitForm } from "@lehnihon/bit-form/react";
+import { useBitForm, useBitHistory } from "@lehnihon/bit-form/react";
 
 export function SubmitButton() {
   const form = useBitForm();
+  const history = useBitHistory();
 
   const onSubmit = form.submit((values, dirtyValues) => {
     console.log("Full payload:", values);
@@ -84,6 +90,10 @@ export function SubmitButton() {
       disabled={!form.meta.isValid || form.meta.isSubmitting}
     >
       {form.meta.isSubmitting ? "Loading..." : "Submit"}
+    </button>
+
+    <button onClick={history.undo} disabled={!history.canUndo}>
+      Undo
     </button>
   );
 }
