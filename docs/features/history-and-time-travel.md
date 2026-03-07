@@ -7,7 +7,7 @@ Ever wanted to give your users a `Ctrl+Z` (Undo) and `Ctrl+Y` (Redo) experience 
 By default, history tracking is disabled for maximum performance. You can enable it when instantiating the store:
 
 ```tsx
-const store = new BitStore({
+const store = createBitStore({
   initialValues: { documentText: "" },
   history: { enabled: true }, // Turns on the Time-Travel machine
 });
@@ -18,7 +18,7 @@ const store = new BitStore({
 Every time a user finishes interacting with a field (specifically, when `blurField` is triggered), Bit-Form takes a deep clone snapshot of the current values and saves it to the history stack. You can configure the limit:
 
 ```tsx
-const store = new BitStore({
+const store = createBitStore({
   initialValues: { documentText: "" },
   history: { enabled: true, limit: 30 }, // Default limit is 15
 });

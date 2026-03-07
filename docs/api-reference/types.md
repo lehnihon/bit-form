@@ -171,7 +171,7 @@ interface BitConfig<T extends object = any> {
 ### Example
 
 ```ts
-const store = new BitStore({
+const store = createBitStore({
   initialValues: { email: "" },
   validation: { resolver: zodResolver(schema), delay: 300 },
   history: { enabled: true, limit: 20 },

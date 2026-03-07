@@ -7,9 +7,9 @@ Scopes let you group form fields (e.g. by wizard step) for **per-step validation
 Define scopes by setting `scope` on each field in `fields`:
 
 ```tsx
-import { BitStore } from "@lehnihon/bit-form";
+import { createBitStore } from "@lehnihon/bit-form";
 
-const store = new BitStore({
+const store = createBitStore({
   initialValues: {
     name: "",
     email: "",
@@ -46,8 +46,12 @@ export function Wizard() {
       {steps.step === 2 && <Step2Content />}
       {steps.step === 3 && <Step3Content />}
 
-      <button onClick={steps.prev} disabled={steps.isFirst}>Back</button>
-      <button onClick={steps.next} disabled={steps.isLast || !steps.isValid}>Next</button>
+      <button onClick={steps.prev} disabled={steps.isFirst}>
+        Back
+      </button>
+      <button onClick={steps.next} disabled={steps.isLast || !steps.isValid}>
+        Next
+      </button>
     </>
   );
 }
@@ -55,22 +59,22 @@ export function Wizard() {
 
 ### Return values
 
-| Property     | Type                              | Description                                      |
-|-------------|-----------------------------------|--------------------------------------------------|
-| `step`      | `number`                          | Current step (1-based)                           |
-| `stepIndex` | `number`                          | Current step index (0-based)                     |
-| `scope`     | `string`                          | Scope name for the current step                  |
-| `next`      | `() => Promise<boolean>`          | Validates current scope and advances if valid    |
-| `prev`      | `() => void`                      | Goes to previous step (no validation)            |
-| `goTo`      | `(step: number) => void`          | Jumps to step (1-based, no validation)           |
-| `isFirst`   | `boolean`                         | Whether on the first step                        |
-| `isLast`    | `boolean`                         | Whether on the last step                         |
-| `status`    | `{ hasErrors, isDirty, errors }`  | Current scope status                             |
-| `errors`    | `Record<string, string>`          | Errors for fields in current scope               |
-| `validate`  | `() => Promise<{ valid, errors }>`| Validates only the current scope                 |
-| `getErrors` | `() => Record<string, string>`    | Returns errors for the current scope             |
-| `isValid`   | `boolean`                         | `!status.hasErrors`                              |
-| `isDirty`   | `boolean`                         | `status.isDirty`                                 |
+| Property    | Type                               | Description                                   |
+| ----------- | ---------------------------------- | --------------------------------------------- |
+| `step`      | `number`                           | Current step (1-based)                        |
+| `stepIndex` | `number`                           | Current step index (0-based)                  |
+| `scope`     | `string`                           | Scope name for the current step               |
+| `next`      | `() => Promise<boolean>`           | Validates current scope and advances if valid |
+| `prev`      | `() => void`                       | Goes to previous step (no validation)         |
+| `goTo`      | `(step: number) => void`           | Jumps to step (1-based, no validation)        |
+| `isFirst`   | `boolean`                          | Whether on the first step                     |
+| `isLast`    | `boolean`                          | Whether on the last step                      |
+| `status`    | `{ hasErrors, isDirty, errors }`   | Current scope status                          |
+| `errors`    | `Record<string, string>`           | Errors for fields in current scope            |
+| `validate`  | `() => Promise<{ valid, errors }>` | Validates only the current scope              |
+| `getErrors` | `() => Record<string, string>`     | Returns errors for the current scope          |
+| `isValid`   | `boolean`                          | `!status.hasErrors`                           |
+| `isDirty`   | `boolean`                          | `status.isDirty`                              |
 
 **When to use**: Linear wizards where the user advances step by step. Use `useBitScope` when you have multiple scopes visible at once (tabs, sections) or non-linear flows.
 
@@ -103,15 +107,15 @@ export function WizardStep1() {
 
 ### Return values
 
-| Property     | Type                              | Description                                      |
-|-------------|-----------------------------------|--------------------------------------------------|
-| `scopeName` | `string`                          | Name of the scope                                |
-| `status`    | `{ hasErrors, isDirty, errors }`  | Current status of the scope                      |
-| `errors`    | `Record<string, string>`          | Errors for fields in this scope                  |
-| `validate`  | `() => Promise<{ valid, errors }>`| Validates only the scope's fields                |
-| `getErrors` | `() => Record<string, string>`    | Returns errors for the scope                     |
-| `isValid`   | `boolean`                         | `!status.hasErrors`                              |
-| `isDirty`   | `boolean`                         | `status.isDirty`                                 |
+| Property    | Type                               | Description                       |
+| ----------- | ---------------------------------- | --------------------------------- |
+| `scopeName` | `string`                           | Name of the scope                 |
+| `status`    | `{ hasErrors, isDirty, errors }`   | Current status of the scope       |
+| `errors`    | `Record<string, string>`           | Errors for fields in this scope   |
+| `validate`  | `() => Promise<{ valid, errors }>` | Validates only the scope's fields |
+| `getErrors` | `() => Record<string, string>`     | Returns errors for the scope      |
+| `isValid`   | `boolean`                          | `!status.hasErrors`               |
+| `isDirty`   | `boolean`                          | `status.isDirty`                  |
 
 ## Vue: `useBitScope`
 
@@ -129,7 +133,9 @@ const handleNext = async () => {
 
 <template>
   <div>
-    <p v-if="step1.status.value.hasErrors">Corrija os erros antes de continuar.</p>
+    <p v-if="step1.status.value.hasErrors">
+      Corrija os erros antes de continuar.
+    </p>
     <button @click="handleNext" :disabled="!step1.isValid.value">
       Próximo
     </button>
@@ -157,9 +163,7 @@ export class WizardStep1Component {
 
 ```html
 <p *ngIf="step1.status().hasErrors">Corrija os erros antes de continuar.</p>
-<button (click)="handleNext()" [disabled]="!step1.isValid()">
-  Próximo
-</button>
+<button (click)="handleNext()" [disabled]="!step1.isValid()">Próximo</button>
 ```
 
 Angular exposes `status`, `errors`, `isValid`, and `isDirty` as signals (call them as `status()`, `isValid()`, etc.).

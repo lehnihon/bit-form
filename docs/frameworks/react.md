@@ -7,11 +7,11 @@ Bit-Form provides first-class support for React through custom hooks and a Conte
 Wrap your application or form component with `BitFormProvider`. This allows any nested components to access the store via hooks.
 
 ```tsx
-import { BitStore } from "@lehnihon/bit-form";
+import { createBitStore } from "@lehnihon/bit-form";
 import { BitFormProvider } from "@lehnihon/bit-form/react";
 import MyForm from "./MyForm";
 
-const store = new BitStore({
+const store = createBitStore({
   initialValues: { username: "", password: "" },
 });
 

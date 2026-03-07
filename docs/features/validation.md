@@ -13,14 +13,14 @@ import { zodResolver } from "@lehnihon/bit-form/resolvers/zod";
 // import { yupResolver } from "@lehnihon/bit-form/resolvers/yup";
 // import { joiResolver } from "@lehnihon/bit-form/resolvers/joi";
 import { z } from "zod";
-import { BitStore } from "@lehnihon/bit-form";
+import { createBitStore } from "@lehnihon/bit-form";
 
 const schema = z.object({
   email: z.string().email("Invalid email format"),
   password: z.string().min(6, "Password must be at least 6 characters"),
 });
 
-const store = new BitStore({
+const store = createBitStore({
   initialValues: { email: "", password: "" },
   validation: {
     resolver: zodResolver(schema),

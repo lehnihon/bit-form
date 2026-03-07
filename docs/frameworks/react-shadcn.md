@@ -52,13 +52,13 @@ npx shadcn@latest add input textarea select checkbox switch radio-group
 Example with `BitFormInput`, `BitFormTextarea`, and `BitFormSelect`:
 
 ```tsx
-import { BitStore } from "@lehnihon/bit-form";
+import { createBitStore } from "@lehnihon/bit-form";
 import { BitFormProvider } from "@lehnihon/bit-form/react";
 import { BitFormInput } from "./bit-form-input";
 import { BitFormTextarea } from "./bit-form-textarea";
 import { BitFormSelect } from "./bit-form-select";
 
-const store = new BitStore({
+const store = createBitStore({
   initialValues: {
     name: "",
     bio: "",
