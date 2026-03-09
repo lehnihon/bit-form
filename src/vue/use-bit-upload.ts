@@ -35,9 +35,9 @@ export interface UseBitUploadResult {
 
   // Upload refs
   isUploading: Ref<boolean>;
-  uploadProgress: Ref<BitUploadProgress | undefined>;
-  uploadError: Ref<string | undefined>;
-  uploadKey: Ref<string | undefined>;
+  uploadProgress: Ref<BitUploadProgress>;
+  uploadError: Ref<string | null>;
+  uploadKey: Ref<string | null>;
 
   // Actions
   handleUploadFile: (file: File | null | undefined) => Promise<void>;
@@ -52,16 +52,20 @@ export function useBitUpload(
   const field = useBitField(fieldPath);
 
   const isUploading = ref(false);
-  const uploadProgress = ref<BitUploadProgress | undefined>(undefined);
-  const uploadError = ref<string | undefined>(undefined);
-  const uploadKey = ref<string | undefined>(undefined);
+  const uploadProgress = ref<BitUploadProgress>({
+    loaded: 0,
+    total: 0,
+    percentage: 0,
+  });
+  const uploadError = ref<string | null>(null);
+  const uploadKey = ref<string | null>(null);
 
   const handleUploadFile = async (file: File | null | undefined) => {
     if (!file) return;
 
     isUploading.value = true;
-    uploadError.value = undefined;
-    uploadProgress.value = undefined;
+    uploadError.value = null;
+    uploadProgress.value = { loaded: 0, total: 0, percentage: 0 };
 
     try {
       const result = await performUpload(file, adapter, {
@@ -92,7 +96,7 @@ export function useBitUpload(
       try {
         await adapter.delete(uploadKey.value);
         field.setValue(null);
-        uploadKey.value = undefined;
+        uploadKey.value = null;
       } catch (error) {
         const message =
           error instanceof Error ? error.message : "Delete failed";
@@ -100,12 +104,12 @@ export function useBitUpload(
       }
     } else {
       field.setValue(null);
-      uploadKey.value = undefined;
+      uploadKey.value = null;
     }
   };
 
   return {
-    value: computed(() => field.value) as ComputedRef<string | File | null>,
+    value: field.value as ComputedRef<string | File | null>,
     setValue: field.setValue,
     error: computed(() => field.meta.error.value),
     isValidating: computed(() => field.meta.isValidating.value || false),

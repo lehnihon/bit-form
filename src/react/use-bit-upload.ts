@@ -45,9 +45,9 @@ export interface UseBitUploadResult {
 
   // Upload specifics
   isUploading: boolean;
-  uploadProgress?: BitUploadProgress;
-  uploadError?: string;
-  uploadKey?: string;
+  uploadProgress: BitUploadProgress;
+  uploadError: string | null;
+  uploadKey: string | null;
 
   // Actions
   handleUploadFile: (file: File | null | undefined) => Promise<void>;
@@ -61,17 +61,21 @@ export function useBitUpload(
 ): UseBitUploadResult {
   const field = useBitField(fieldPath);
   const [isUploading, setIsUploading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState<BitUploadProgress>();
-  const [uploadError, setUploadError] = useState<string>();
-  const [uploadKey, setUploadKey] = useState<string>();
+  const [uploadProgress, setUploadProgress] = useState<BitUploadProgress>({
+    loaded: 0,
+    total: 0,
+    percentage: 0,
+  });
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [uploadKey, setUploadKey] = useState<string | null>(null);
 
   const handleUploadFile = useCallback(
     async (file: File | null | undefined) => {
       if (!file) return;
 
       setIsUploading(true);
-      setUploadError(undefined);
-      setUploadProgress(undefined);
+      setUploadError(null);
+      setUploadProgress({ loaded: 0, total: 0, percentage: 0 });
 
       try {
         const result = await performUpload(file, adapter, {
@@ -106,7 +110,7 @@ export function useBitUpload(
       try {
         await adapter.delete(uploadKey);
         field.setValue(null);
-        setUploadKey(undefined);
+        setUploadKey(null);
       } catch (error) {
         const message =
           error instanceof Error ? error.message : "Delete failed";
@@ -114,7 +118,7 @@ export function useBitUpload(
       }
     } else {
       field.setValue(null);
-      setUploadKey(undefined);
+      setUploadKey(null);
     }
   }, [uploadKey, adapter, field]);
 
