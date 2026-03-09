@@ -33,14 +33,10 @@ export function injectBitSteps(scopeNames: string[]): InjectBitStepsResult {
   const store = useBitStore();
   const stepIndex = signal(0);
 
-  const scope = computed(
-    () => scopeNames[stepIndex()] ?? "",
-  );
+  const scope = computed(() => scopeNames[stepIndex()] ?? "");
 
   const getCurrentScope = () => scopeNames[stepIndex()] ?? "";
-  const status = signal<ScopeStatus>(
-    store.getStepStatus(getCurrentScope()),
-  );
+  const status = signal<ScopeStatus>(store.getStepStatus(getCurrentScope()));
 
   const updateStatus = () => {
     const scopeName = getCurrentScope();
@@ -73,6 +69,12 @@ export function injectBitSteps(scopeNames: string[]): InjectBitStepsResult {
 
   const next = async (): Promise<boolean> => {
     const scopeName = getCurrentScope();
+
+    const scopeFields = store.getConfig().scopes?.[scopeName];
+    if (store.hasValidationsInProgress(scopeFields)) {
+      return false;
+    }
+
     const valid = await store.validate({ scope: scopeName });
     if (valid) {
       const newIndex = Math.min(stepIndex() + 1, scopeNames.length - 1);

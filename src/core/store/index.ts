@@ -438,6 +438,10 @@ export class BitStore<T extends object = any>
     return this.validatorMg.validate(options);
   }
 
+  hasValidationsInProgress(scopeFields?: string[]): boolean {
+    return this.validatorMg.hasValidationsInProgress(scopeFields);
+  }
+
   getStepStatus(scopeName: string) {
     return this.scopeMg.getStepStatus(scopeName);
   }
