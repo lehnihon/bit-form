@@ -488,5 +488,54 @@ describe("React Integration (Context + Hooks)", () => {
       act(() => result.current.prev());
       expect(result.current.step).toBe(1);
     });
+
+    it("deve bloquear next enquanto o scope atual estiver validando assincronamente", async () => {
+      vi.useFakeTimers();
+
+      const store = new BitStore<{ name: string; email: string }>({
+        initialValues: { name: "", email: "" },
+        fields: {
+          name: {
+            scope: "step1",
+            validation: {
+              asyncValidate: async () => null,
+              asyncValidateDelay: 500,
+            },
+          },
+          email: { scope: "step2" },
+        },
+        validation: { delay: 0 },
+      });
+
+      const { result } = renderHook(() => useBitSteps(["step1", "step2"]), {
+        wrapper: (props) => wrapper({ ...props, store }),
+      });
+
+      await act(() => {
+        store.setField("name", "Leo");
+      });
+
+      let advanced = false;
+
+      await act(async () => {
+        advanced = await result.current.next();
+      });
+
+      expect(advanced).toBe(false);
+      expect(result.current.step).toBe(1);
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(500);
+      });
+
+      await act(async () => {
+        advanced = await result.current.next();
+      });
+
+      expect(advanced).toBe(true);
+      expect(result.current.step).toBe(2);
+
+      vi.useRealTimers();
+    });
   });
 });

@@ -72,6 +72,12 @@ export function useBitSteps(scopeNames: string[]): UseBitStepsResult {
 
   const next = async (): Promise<boolean> => {
     const scopeName = scope.value;
+
+    const scopeFields = store.getConfig().scopes?.[scopeName];
+    if (store.hasValidationsInProgress(scopeFields)) {
+      return false;
+    }
+
     const valid = await store.validate({ scope: scopeName });
     if (valid) {
       stepIndex.value = Math.min(stepIndex.value + 1, scopeNames.length - 1);

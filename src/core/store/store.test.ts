@@ -623,7 +623,7 @@ describe("BitStore Core", () => {
       store.setField("username", "leandro");
 
       expect(mockApi).not.toHaveBeenCalled();
-      expect(store.isFieldValidating("username")).toBe(false);
+      expect(store.isFieldValidating("username")).toBe(true);
 
       await vi.advanceTimersByTimeAsync(500);
 
@@ -637,6 +637,40 @@ describe("BitStore Core", () => {
 
       expect(store.isFieldValidating("username")).toBe(false);
       expect(store.getState().errors.username).toBe("Username já existe");
+    });
+
+    it("deve bloquear submit enquanto houver validação assíncrona pendente", async () => {
+      const store = new BitStore({ initialValues: { username: "" } });
+
+      let resolveApi: (msg: string | null) => void;
+      const mockApi = vi.fn().mockImplementation(() => {
+        return new Promise((resolve) => {
+          resolveApi = resolve;
+        });
+      });
+
+      const onSuccess = vi.fn();
+
+      store.registerField("username", {
+        validation: {
+          asyncValidate: mockApi,
+          asyncValidateDelay: 500,
+        },
+      });
+
+      store.setField("username", "leandro");
+
+      await store.submit(onSuccess);
+      expect(onSuccess).not.toHaveBeenCalled();
+
+      await vi.advanceTimersByTimeAsync(500);
+      expect(store.isFieldValidating("username")).toBe(true);
+
+      resolveApi!(null);
+      await vi.advanceTimersByTimeAsync(1);
+
+      await store.submit(onSuccess);
+      expect(onSuccess).toHaveBeenCalledTimes(1);
     });
 
     it("deve evitar Race Conditions ignorando respostas de requisições antigas", async () => {

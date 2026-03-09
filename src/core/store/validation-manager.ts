@@ -9,24 +9,36 @@ export class BitValidationManager<T extends object> {
 
   constructor(private store: BitValidationAdapter<T>) {}
 
+  private updateFieldValidating(path: string, isValidating: boolean) {
+    this.store.internalUpdateState({
+      isValidating: {
+        ...this.store.getState().isValidating,
+        [path]: isValidating,
+      },
+    });
+  }
+
   handleAsync(path: string, value: any) {
     const config =
       this.store.depsMg.fieldConfigs.get(path) ||
       this.store.config.fields?.[path];
     const asyncValidate = config?.validation?.asyncValidate;
-    if (!asyncValidate) return;
+    if (!asyncValidate) {
+      this.updateFieldValidating(path, false);
+      return;
+    }
 
     if (this.asyncTimers[path]) clearTimeout(this.asyncTimers[path]);
 
     const delay = config.validation?.asyncValidateDelay ?? 500;
 
+    this.updateFieldValidating(path, true);
+
     this.asyncTimers[path] = setTimeout(async () => {
+      delete this.asyncTimers[path];
+
       const currentRequestId = (this.asyncRequests[path] || 0) + 1;
       this.asyncRequests[path] = currentRequestId;
-
-      this.store.internalUpdateState({
-        isValidating: { ...this.store.getState().isValidating, [path]: true },
-      });
 
       try {
         const errorMessage = await asyncValidate(
@@ -57,15 +69,20 @@ export class BitValidationManager<T extends object> {
         }
       } finally {
         if (this.asyncRequests[path] === currentRequestId) {
-          this.store.internalUpdateState({
-            isValidating: {
-              ...this.store.getState().isValidating,
-              [path]: false,
-            },
-          });
+          this.updateFieldValidating(path, false);
         }
       }
     }, delay);
+  }
+
+  hasValidationsInProgress(scopeFields?: string[]) {
+    const state = this.store.getState();
+
+    if (scopeFields && scopeFields.length > 0) {
+      return scopeFields.some((field) => !!state.isValidating[field]);
+    }
+
+    return Object.values(state.isValidating).some(Boolean);
   }
 
   trigger(scopeFields?: string[]) {
@@ -147,11 +164,15 @@ export class BitValidationManager<T extends object> {
 
   clear(path: string) {
     if (this.asyncTimers[path]) clearTimeout(this.asyncTimers[path]);
+    delete this.asyncTimers[path];
+    this.updateFieldValidating(path, false);
     delete this.asyncErrors[path];
   }
 
   cancelAll() {
     if (this.validationTimeout) clearTimeout(this.validationTimeout);
     Object.values(this.asyncTimers).forEach((t) => clearTimeout(t));
+    this.asyncTimers = {};
+    this.store.internalUpdateState({ isValidating: {} });
   }
 }

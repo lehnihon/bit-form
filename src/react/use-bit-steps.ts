@@ -63,6 +63,12 @@ export function useBitSteps(scopeNames: string[]): UseBitStepsResult {
   }, [store, scope]);
 
   const next = useCallback(async (): Promise<boolean> => {
+    const scopeFields = store.getConfig().scopes?.[scope];
+
+    if (store.hasValidationsInProgress(scopeFields)) {
+      return false;
+    }
+
     const valid = await store.validate({ scope });
     if (valid) {
       setStepIndex((s) => Math.min(s + 1, scopeNames.length - 1));
@@ -80,11 +86,14 @@ export function useBitSteps(scopeNames: string[]): UseBitStepsResult {
     setStepIndex((s) => Math.max(s - 1, 0));
   }, []);
 
-  const goTo = useCallback((targetStep: number) => {
-    setStepIndex(
-      Math.max(0, Math.min(targetStep - 1, scopeNames.length - 1)),
-    );
-  }, [scopeNames.length]);
+  const goTo = useCallback(
+    (targetStep: number) => {
+      setStepIndex(
+        Math.max(0, Math.min(targetStep - 1, scopeNames.length - 1)),
+      );
+    },
+    [scopeNames.length],
+  );
 
   const isFirst = stepIndex === 0;
   const isLast = stepIndex >= scopeNames.length - 1;

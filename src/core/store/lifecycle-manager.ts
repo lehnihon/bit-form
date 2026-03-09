@@ -74,6 +74,8 @@ export class BitLifecycleManager<T extends object> {
 
     if (currentState.isSubmitting) return;
 
+    if (this.store.validatorMg.hasValidationsInProgress()) return;
+
     this.store.validatorMg.cancelAll();
 
     this.store.internalUpdateState({ isSubmitting: true });
