@@ -28,7 +28,7 @@
 import { useState, useCallback } from "react";
 import { useBitField } from "./use-bit-field";
 import {
-  BitUploadAdapter,
+  BitUploadFn,
   BitUploadProgress,
   UseBitUploadOptions,
 } from "../core/upload/types";
@@ -56,7 +56,7 @@ export interface UseBitUploadResult {
 
 export function useBitUpload(
   fieldPath: string,
-  adapter: BitUploadAdapter,
+  uploadFn: BitUploadFn,
   options?: UseBitUploadOptions,
 ): UseBitUploadResult {
   const field = useBitField(fieldPath);
@@ -78,8 +78,8 @@ export function useBitUpload(
       setUploadProgress({ loaded: 0, total: 0, percentage: 0 });
 
       try {
-        const result = await performUpload(file, adapter, {
-          folder: options?.uploadOptions?.folder,
+        const result = await performUpload(file, uploadFn, {
+          uploadOptions: options?.uploadOptions,
           onProgress: (progress) => {
             setUploadProgress(progress);
             options?.onProgress?.(progress);
@@ -102,13 +102,13 @@ export function useBitUpload(
         setIsUploading(false);
       }
     },
-    [adapter, field, options],
+    [uploadFn, field, options],
   );
 
   const handleRemoveFile = useCallback(async () => {
-    if (uploadKey && adapter.delete) {
+    if (uploadKey && options?.deleteFile) {
       try {
-        await adapter.delete(uploadKey);
+        await options.deleteFile(uploadKey);
         field.setValue(null);
         setUploadKey(null);
       } catch (error) {
@@ -120,7 +120,7 @@ export function useBitUpload(
       field.setValue(null);
       setUploadKey(null);
     }
-  }, [uploadKey, adapter, field]);
+  }, [uploadKey, options, field]);
 
   return {
     // Delegate field properties

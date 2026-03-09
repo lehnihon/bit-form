@@ -10,4 +10,6 @@ export { injectBitHistory } from "./inject-bit-history";
 export { injectBitScope } from "./inject-bit-scope";
 export { injectBitSteps } from "./inject-bit-steps";
 export { injectBitWatch } from "./inject-bit-watch";
+export { injectBitUpload } from "./inject-bit-upload";
+export type { InjectBitUploadResult } from "./inject-bit-upload";
 export type { ScopeStatus, ValidateScopeResult } from "../core";

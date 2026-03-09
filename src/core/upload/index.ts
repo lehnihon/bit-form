@@ -7,7 +7,7 @@
 
 export * from "./types";
 
-import { BitUploadAdapter, BitUploadResult } from "./types";
+import { BitUploadFn, BitUploadResult, UseBitUploadOptions } from "./types";
 
 /**
  * Creates an asyncValidate function that manages upload completion.
@@ -76,45 +76,17 @@ export function createUploadValidator(options?: { requiredMessage?: string }) {
  */
 export async function performUpload(
   file: File,
-  adapter: BitUploadAdapter,
-  options?: {
-    folder?: string;
-    onProgress?: (progress: {
-      loaded: number;
-      total: number;
-      percentage: number;
-    }) => void;
-    onError?: (error: Error) => void;
-  },
+  uploadFn: BitUploadFn,
+  options?: UseBitUploadOptions,
 ): Promise<BitUploadResult> {
   try {
-    // Track progress during upload (adapter emits via XMLHttpRequest or similar)
-    const result = await adapter.upload(file, {
-      folder: options?.folder,
+    return await uploadFn(file, {
+      ...options?.uploadOptions,
+      onProgress: options?.onProgress,
     });
-
-    return result;
   } catch (error) {
     const err = error instanceof Error ? error : new Error(String(error));
     options?.onError?.(err);
     throw err;
-  }
-}
-
-/**
- * Removes previously uploaded file from storage.
- *
- * @example
- * ```typescript
- * await removeUpload(result.key, s3Adapter);
- * store.setField("avatar", null);
- * ```
- */
-export async function removeUpload(
-  key: string,
-  adapter: BitUploadAdapter,
-): Promise<void> {
-  if (adapter.delete) {
-    await adapter.delete(key);
   }
 }

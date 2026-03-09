@@ -161,6 +161,7 @@ The complete documentation is available in the `/docs` folder. Explore the guide
 - **[Conditional Logic](./docs/features/conditional-logic.md)**: Managing field dependencies.
 - **[Computed Fields](./docs/features/computed-fields.md)**: Handling derived form values.
 - **[Field Arrays](./docs/features/field-arrays.md)**: Managing dynamic lists of fields.
+- **[File Uploads](./docs/features/file-uploads.md)**: Backend-first upload integration with `useBitUpload` and `injectBitUpload`.
 - **[Scopes](./docs/features/scopes.md)**: Per-step validation and status for wizard forms (`useBitScope`, `injectBitScope`).
 - **[History & Time Travel](./docs/features/history-and-time-travel.md)**: Using Undo/Redo features.
 

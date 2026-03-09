@@ -29,7 +29,7 @@
 import { signal, computed } from "@angular/core";
 import { injectBitField } from "./inject-bit-field";
 import {
-  BitUploadAdapter,
+  BitUploadFn,
   BitUploadProgress,
   UseBitUploadOptions,
 } from "../core/upload/types";
@@ -44,9 +44,9 @@ export interface InjectBitUploadResult {
 
   // Upload signals
   isUploading: import("@angular/core").Signal<boolean>;
-  uploadProgress: import("@angular/core").Signal<BitUploadProgress | undefined>;
-  uploadError: import("@angular/core").Signal<string | undefined>;
-  uploadKey: import("@angular/core").Signal<string | undefined>;
+  uploadProgress: import("@angular/core").Signal<BitUploadProgress>;
+  uploadError: import("@angular/core").Signal<string | null>;
+  uploadKey: import("@angular/core").Signal<string | null>;
 
   // Actions
   handleUploadFile: (file: File | null | undefined) => Promise<void>;
@@ -55,26 +55,30 @@ export interface InjectBitUploadResult {
 
 export function injectBitUpload(
   fieldPath: string,
-  adapter: BitUploadAdapter,
+  uploadFn: BitUploadFn,
   options?: UseBitUploadOptions,
 ): InjectBitUploadResult {
   const field = injectBitField(fieldPath);
 
   const isUploading = signal(false);
-  const uploadProgress = signal<BitUploadProgress | undefined>(undefined);
-  const uploadError = signal<string | undefined>(undefined);
-  const uploadKey = signal<string | undefined>(undefined);
+  const uploadProgress = signal<BitUploadProgress>({
+    loaded: 0,
+    total: 0,
+    percentage: 0,
+  });
+  const uploadError = signal<string | null>(null);
+  const uploadKey = signal<string | null>(null);
 
   const handleUploadFile = async (file: File | null | undefined) => {
     if (!file) return;
 
     isUploading.set(true);
-    uploadError.set(undefined);
-    uploadProgress.set(undefined);
+    uploadError.set(null);
+    uploadProgress.set({ loaded: 0, total: 0, percentage: 0 });
 
     try {
-      const result = await performUpload(file, adapter, {
-        folder: options?.uploadOptions?.folder,
+      const result = await performUpload(file, uploadFn, {
+        uploadOptions: options?.uploadOptions,
         onProgress: (progress) => {
           uploadProgress.set(progress);
           options?.onProgress?.(progress);
@@ -97,11 +101,11 @@ export function injectBitUpload(
   };
 
   const handleRemoveFile = async () => {
-    if (uploadKey() && adapter.delete) {
+    if (uploadKey() && options?.deleteFile) {
       try {
-        await adapter.delete(uploadKey()!);
+        await options.deleteFile(uploadKey()!);
         field.setValue(null);
-        uploadKey.set(undefined);
+        uploadKey.set(null);
       } catch (error) {
         const message =
           error instanceof Error ? error.message : "Delete failed";
@@ -109,7 +113,7 @@ export function injectBitUpload(
       }
     } else {
       field.setValue(null);
-      uploadKey.set(undefined);
+      uploadKey.set(null);
     }
   };
 
