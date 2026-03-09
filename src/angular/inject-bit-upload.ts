@@ -114,10 +114,10 @@ export function injectBitUpload(
   };
 
   return {
-    value: field.value,
+    value: computed(() => field.value()),
     setValue: field.setValue,
-    error: field.error,
-    isValidating: computed(() => field.meta().isValidating || false),
+    error: computed(() => field.meta.error()),
+    isValidating: computed(() => field.meta.isValidating() || false),
     isUploading,
     uploadProgress,
     uploadError,

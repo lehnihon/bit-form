@@ -105,10 +105,10 @@ export function useBitUpload(
   };
 
   return {
-    value: field.value,
+    value: computed(() => field.value) as ComputedRef<string | File | null>,
     setValue: field.setValue,
-    error: field.error,
-    isValidating: computed(() => field.meta.value.isValidating || false),
+    error: computed(() => field.meta.error.value),
+    isValidating: computed(() => field.meta.isValidating.value || false),
     isUploading,
     uploadProgress,
     uploadError,

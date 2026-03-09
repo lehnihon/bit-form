@@ -6,8 +6,8 @@
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { ref } from "vue";
-import { useBitUpload } from "../../../../../src/vue/use-bit-upload";
-import type { BitUploadAdapter } from "../../../../../src/core/upload";
+import { useBitUpload } from "./use-bit-upload";
+import type { BitUploadAdapter } from "../core/upload";
 
 describe("useBitUpload (Vue)", () => {
   let mockAdapter: BitUploadAdapter;
@@ -72,7 +72,7 @@ describe("useBitUpload (Vue)", () => {
 
     await handleUploadFile(file);
 
-    expect(uploadProgress.value.percentage).toBe(100);
+    expect(uploadProgress.value?.percentage).toBe(100);
   });
 
   it("should handle upload errors", async () => {
@@ -91,7 +91,7 @@ describe("useBitUpload (Vue)", () => {
     });
 
     expect(uploadError.value).not.toBeNull();
-    expect(uploadError.value?.message).toContain("Network");
+    expect(uploadError.value).toContain("Network");
     expect(value.value).toBeUndefined();
   });
 
@@ -132,7 +132,7 @@ describe("useBitUpload (Vue)", () => {
 
   it("should pass custom options to adapter", async () => {
     const { handleUploadFile } = useBitUpload("avatar", mockAdapter, {
-      folder: "avatars",
+      uploadOptions: { folder: "avatars" },
     });
 
     const file = new File(["content"], "avatar.jpg", { type: "image/jpeg" });
@@ -151,7 +151,7 @@ describe("useBitUpload (Vue)", () => {
         new Promise((resolve) => {
           uploadPromiseResolve = resolve;
         }),
-    );
+    ) as any;
 
     const { handleUploadFile, isUploading } = useBitUpload(
       "avatar",
@@ -238,6 +238,6 @@ describe("useBitUpload (Vue)", () => {
 
     await handleUploadFile(file);
 
-    expect(uploadProgress.value.percentage).toBe(75);
+    expect(uploadProgress.value?.percentage).toBe(75);
   });
 });

@@ -122,7 +122,7 @@ export function useBitUpload(
     // Delegate field properties
     value: field.value,
     setValue: field.setValue,
-    error: field.error,
+    error: field.meta?.error,
     isValidating: field.meta?.isValidating || false,
     meta: field.meta,
     props: field.props,

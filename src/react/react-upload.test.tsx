@@ -6,8 +6,8 @@
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { renderHook, act, waitFor } from "@testing-library/react";
-import { useBitUpload } from "../../../../../src/react/use-bit-upload";
-import type { BitUploadAdapter } from "../../../../../src/core/upload";
+import { useBitUpload } from "./use-bit-upload";
+import type { BitUploadAdapter } from "../core/upload";
 
 describe("useBitUpload (React)", () => {
   let mockAdapter: BitUploadAdapter;
@@ -71,7 +71,7 @@ describe("useBitUpload (React)", () => {
     });
 
     await waitFor(() => {
-      expect(result.current.uploadProgress.percentage).toBe(100);
+      expect(result.current.uploadProgress?.percentage).toBe(100);
     });
   });
 
@@ -92,7 +92,7 @@ describe("useBitUpload (React)", () => {
     });
 
     expect(result.current.uploadError).not.toBeNull();
-    expect(result.current.uploadError?.message).toContain("Network");
+    expect(result.current.uploadError).toContain("Network");
     expect(result.current.value).toBeUndefined();
   });
 
@@ -142,7 +142,7 @@ describe("useBitUpload (React)", () => {
 
   it("should pass custom options to adapter", async () => {
     const { result } = renderHook(() =>
-      useBitUpload("avatar", mockAdapter, { folder: "avatars" }),
+      useBitUpload("avatar", mockAdapter, { uploadOptions: { folder: "avatars" } }),
     );
 
     const file = new File(["content"], "avatar.jpg", { type: "image/jpeg" });
@@ -164,7 +164,7 @@ describe("useBitUpload (React)", () => {
         new Promise((resolve) => {
           uploadPromiseResolve = resolve;
         }),
-    );
+    ) as any;
 
     const { result } = renderHook(() => useBitUpload("avatar", mockAdapter));
     const file = new File(["content"], "avatar.jpg", { type: "image/jpeg" });

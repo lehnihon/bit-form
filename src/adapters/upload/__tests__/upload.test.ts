@@ -5,12 +5,9 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { createS3Adapter } from "../../../../../src/adapters/upload/s3-adapter";
-import { createCloudinaryAdapter } from "../../../../../src/adapters/upload/cloudinary-adapter";
-import {
-  createUploadValidator,
-  performUpload,
-} from "../../../../../src/core/upload";
+import { createS3Adapter } from "../s3-adapter";
+import { createCloudinaryAdapter } from "../cloudinary-adapter";
+import { createUploadValidator, performUpload } from "../../../core/upload";
 
 describe("Upload Adapters", () => {
   beforeEach(() => {
