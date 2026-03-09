@@ -19,11 +19,7 @@
 
 import { ref, computed, Ref, ComputedRef } from "vue";
 import { useBitField } from "./use-bit-field";
-import {
-  BitUploadAdapter,
-  BitUploadProgress,
-  UseBitUploadOptions,
-} from "../core/upload/types";
+import { BitUploadFn, BitUploadProgress, UseBitUploadOptions } from "../core/upload/types";
 import { performUpload } from "../core/upload";
 
 export interface UseBitUploadResult {
@@ -46,7 +42,7 @@ export interface UseBitUploadResult {
 
 export function useBitUpload(
   fieldPath: string,
-  adapter: BitUploadAdapter,
+  uploadFn: BitUploadFn,
   options?: UseBitUploadOptions,
 ): UseBitUploadResult {
   const field = useBitField(fieldPath);
@@ -68,8 +64,8 @@ export function useBitUpload(
     uploadProgress.value = { loaded: 0, total: 0, percentage: 0 };
 
     try {
-      const result = await performUpload(file, adapter, {
-        folder: options?.uploadOptions?.folder,
+      const result = await performUpload(file, uploadFn, {
+        uploadOptions: options?.uploadOptions,
         onProgress: (progress) => {
           uploadProgress.value = progress;
           options?.onProgress?.(progress);
@@ -92,9 +88,9 @@ export function useBitUpload(
   };
 
   const handleRemoveFile = async () => {
-    if (uploadKey.value && adapter.delete) {
+    if (uploadKey.value && options?.deleteFile) {
       try {
-        await adapter.delete(uploadKey.value);
+        await options.deleteFile(uploadKey.value);
         field.setValue(null);
         uploadKey.value = null;
       } catch (error) {

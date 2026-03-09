@@ -1,10 +1,5 @@
 /**
- * Upload Adapters
+ * Upload adapters were removed in backend-first simplification.
  *
- * Concrete implementations for different storage providers.
- * Each adapter implements the BitUploadAdapter interface.
+ * Keep this file intentionally empty to avoid deep-import crashes during migration.
  */
-
-export * from "./s3-adapter";
-export * from "./cloudinary-adapter";
-export * from "./azure-blob-adapter";
