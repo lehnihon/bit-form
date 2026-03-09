@@ -406,21 +406,23 @@ describe("React Integration (Context + Hooks)", () => {
       expect(result.current.status.isDirty).toBe(false);
       expect(result.current.isValid).toBe(true);
 
-      await act(() => {
+      act(() => {
         store.setField("user.firstName", "Leo");
       });
 
       expect(result.current.status.isDirty).toBe(true);
       expect(result.current.isDirty).toBe(true);
 
-      await act(async () => {
+      act(() => {
         store.setField("user.firstName", "");
       });
 
       let validateResult: { valid: boolean; errors: Record<string, string> };
-      await act(async () => {
-        validateResult = await result.current.validate();
-      });
+      await act(() =>
+        result.current.validate().then((res) => {
+          validateResult = res;
+        }),
+      );
 
       expect(result.current.status.hasErrors).toBe(true);
       expect(result.current.status.errors["user.firstName"]).toBe(
@@ -466,9 +468,11 @@ describe("React Integration (Context + Hooks)", () => {
       expect(result.current.isLast).toBe(false);
 
       let advanced = false;
-      await act(async () => {
-        advanced = await result.current.next();
-      });
+      await act(() =>
+        result.current.next().then((res) => {
+          advanced = res;
+        }),
+      );
       expect(advanced).toBe(false);
       expect(result.current.step).toBe(1);
 
@@ -476,9 +480,11 @@ describe("React Integration (Context + Hooks)", () => {
         store.setField("user.firstName", "Leo");
       });
 
-      await act(async () => {
-        advanced = await result.current.next();
-      });
+      await act(() =>
+        result.current.next().then((res) => {
+          advanced = res;
+        }),
+      );
       expect(advanced).toBe(true);
       expect(result.current.step).toBe(2);
       expect(result.current.scope).toBe("step2");
@@ -517,20 +523,22 @@ describe("React Integration (Context + Hooks)", () => {
 
       let advanced = false;
 
-      await act(async () => {
-        advanced = await result.current.next();
-      });
+      await act(() =>
+        result.current.next().then((res) => {
+          advanced = res;
+        }),
+      );
 
       expect(advanced).toBe(false);
       expect(result.current.step).toBe(1);
 
-      await act(async () => {
-        await vi.advanceTimersByTimeAsync(500);
-      });
+      await act(() => vi.advanceTimersByTimeAsync(500));
 
-      await act(async () => {
-        advanced = await result.current.next();
-      });
+      await act(() =>
+        result.current.next().then((res) => {
+          advanced = res;
+        }),
+      );
 
       expect(advanced).toBe(true);
       expect(result.current.step).toBe(2);

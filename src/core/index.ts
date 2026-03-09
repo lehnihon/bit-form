@@ -85,3 +85,15 @@ export {
   maskIPv6,
   maskIBAN,
 } from "./mask/presets";
+
+export { createUploadValidator, performUpload, removeUpload } from "./upload";
+
+export type {
+  BitUploadAdapter,
+  BitUploadResult,
+  BitUploadProgress,
+  BitS3AdapterOptions,
+  BitCloudinaryAdapterOptions,
+  BitAzureBlobAdapterOptions,
+  UseBitUploadOptions,
+} from "./upload/types";
