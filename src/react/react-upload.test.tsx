@@ -58,9 +58,7 @@ describe("useBitUpload (React)", () => {
 
     const file = new File(["content"], "avatar.jpg", { type: "image/jpeg" });
 
-    await act(async () => {
-      await result.current.handleUploadFile(file);
-    });
+    await act(() => result.current.handleUploadFile(file));
 
     expect(mockAdapter.upload).toHaveBeenCalledWith(
       file,
@@ -85,9 +83,7 @@ describe("useBitUpload (React)", () => {
     });
     const file = new File(["content"], "avatar.jpg", { type: "image/jpeg" });
 
-    await act(async () => {
-      await result.current.handleUploadFile(file);
-    });
+    await act(() => result.current.handleUploadFile(file));
 
     await waitFor(() => {
       expect(result.current.uploadProgress.percentage).toBe(0);
@@ -104,13 +100,11 @@ describe("useBitUpload (React)", () => {
     });
     const file = new File(["content"], "avatar.jpg", { type: "image/jpeg" });
 
-    await act(async () => {
-      try {
-        await result.current.handleUploadFile(file);
-      } catch {
+    await act(() =>
+      result.current.handleUploadFile(file).catch(() => {
         // Expected
-      }
-    });
+      }),
+    );
 
     expect(result.current.uploadError).not.toBeNull();
     expect(result.current.uploadError).toContain("Network");
@@ -124,17 +118,13 @@ describe("useBitUpload (React)", () => {
 
     // First, upload
     const file = new File(["content"], "avatar.jpg", { type: "image/jpeg" });
-    await act(async () => {
-      await result.current.handleUploadFile(file);
-    });
+    await act(() => result.current.handleUploadFile(file));
 
     expect(result.current.value).toBeDefined();
     expect(result.current.uploadKey).toBeDefined();
 
     // Then, remove
-    await act(async () => {
-      await result.current.handleRemoveFile();
-    });
+    await act(() => result.current.handleRemoveFile());
 
     expect(mockAdapter.delete).toHaveBeenCalledWith("uploads/avatar.jpg");
     expect(result.current.value).toBeNull();
@@ -154,13 +144,9 @@ describe("useBitUpload (React)", () => {
     );
 
     const file = new File(["content"], "avatar.jpg", { type: "image/jpeg" });
-    await act(async () => {
-      await result.current.handleUploadFile(file);
-    });
+    await act(() => result.current.handleUploadFile(file));
 
-    await act(async () => {
-      await result.current.handleRemoveFile();
-    });
+    await act(() => result.current.handleRemoveFile());
 
     // Should still clear local state even if adapter doesn't support delete
     expect(result.current.value).toBeNull();
@@ -179,9 +165,7 @@ describe("useBitUpload (React)", () => {
 
     const file = new File(["content"], "avatar.jpg", { type: "image/jpeg" });
 
-    await act(async () => {
-      await result.current.handleUploadFile(file);
-    });
+    await act(() => result.current.handleUploadFile(file));
 
     expect(mockAdapter.upload).toHaveBeenCalledWith(
       file,
@@ -208,18 +192,15 @@ describe("useBitUpload (React)", () => {
       uploadPromise = result.current.handleUploadFile(file);
     });
 
-    await waitFor(() => {
-      expect(result.current.isUploading).toBe(true);
-    });
+    expect(result.current.isUploading).toBe(true);
 
-    act(() => {
+    await act(() => {
       uploadPromiseResolve({
         url: "https://cdn.example.com/file.jpg",
         key: "file.jpg",
       });
+      return uploadPromise!;
     });
-
-    await uploadPromise!;
 
     await waitFor(() => {
       expect(result.current.isUploading).toBe(false);
@@ -233,7 +214,7 @@ describe("useBitUpload (React)", () => {
 
     expect(result.current).not.toBeNull();
 
-    await act(async () => {
+    act(() => {
       result.current?.setValue("https://external-cdn.com/avatar.jpg");
     });
 
@@ -248,9 +229,7 @@ describe("useBitUpload (React)", () => {
     const file1 = new File(["content"], "avatar1.jpg", { type: "image/jpeg" });
     expect(result.current).not.toBeNull();
 
-    await act(async () => {
-      await result.current?.handleUploadFile(file1);
-    });
+    await act(() => result.current?.handleUploadFile(file1));
 
     expect(result.current.uploadError).toBeNull();
 
@@ -260,13 +239,11 @@ describe("useBitUpload (React)", () => {
     });
 
     const file2 = new File(["content"], "avatar2.jpg", { type: "image/jpeg" });
-    await act(async () => {
-      try {
-        await result.current?.handleUploadFile(file2);
-      } catch {
+    await act(() =>
+      result.current?.handleUploadFile(file2).catch(() => {
         // Expected
-      }
-    });
+      }),
+    );
 
     expect(result.current.uploadError).not.toBeNull();
   });
