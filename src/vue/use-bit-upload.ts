@@ -19,7 +19,11 @@
 
 import { ref, computed, Ref, ComputedRef } from "vue";
 import { useBitField } from "./use-bit-field";
-import { BitUploadFn, BitUploadProgress, UseBitUploadOptions } from "../core/upload/types";
+import {
+  BitUploadFn,
+  BitUploadProgress,
+  UseBitUploadOptions,
+} from "../core/upload/types";
 import { performUpload } from "../core/upload";
 
 export interface UseBitUploadResult {

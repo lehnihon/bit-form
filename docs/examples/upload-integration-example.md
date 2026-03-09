@@ -72,7 +72,11 @@ import { injectBitUpload } from "bit-form/angular";
 @Component({
   selector: "app-user-profile",
   template: `
-    <input type="file" (change)="upload($event)" [disabled]="avatar.isUploading()" />
+    <input
+      type="file"
+      (change)="upload($event)"
+      [disabled]="avatar.isUploading()"
+    />
     @if (avatar.isUploading()) {
       <p>Uploading {{ avatar.uploadProgress().percentage }}%</p>
     }

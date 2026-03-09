@@ -28,7 +28,11 @@
 
 import { signal, computed } from "@angular/core";
 import { injectBitField } from "./inject-bit-field";
-import { BitUploadFn, BitUploadProgress, UseBitUploadOptions } from "../core/upload/types";
+import {
+  BitUploadFn,
+  BitUploadProgress,
+  UseBitUploadOptions,
+} from "../core/upload/types";
 import { performUpload } from "../core/upload";
 
 export interface InjectBitUploadResult {
