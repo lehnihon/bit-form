@@ -1,14 +1,6 @@
 import { computed, DestroyRef, inject, signal } from "@angular/core";
 import { useBitStore } from "./provider";
-
-export interface InjectBitHistoryResult {
-  canUndo: ReturnType<typeof computed<boolean>>;
-  canRedo: ReturnType<typeof computed<boolean>>;
-  historyIndex: ReturnType<typeof computed<number>>;
-  historySize: ReturnType<typeof computed<number>>;
-  undo: () => void;
-  redo: () => void;
-}
+import type { InjectBitHistoryResult } from "./types";
 
 export function injectBitHistory<
   T extends object = any,

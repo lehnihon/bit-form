@@ -8,15 +8,7 @@ import { computed, ComputedRef } from "vue";
 import { useBitField } from "./use-bit-field";
 import { useBitStore } from "./context";
 import { BitUploadFn, BitDeleteUploadFn } from "../core";
-
-export interface UseBitUploadResult {
-  value: ComputedRef<string | File | null>;
-  setValue: (value: string | File | null) => void;
-  error: ComputedRef<string | undefined>;
-  isValidating: ComputedRef<boolean>;
-  upload: (file: File | null | undefined) => Promise<void>;
-  remove: () => Promise<void>;
-}
+import type { UseBitUploadResult } from "./types";
 
 export function useBitUpload(
   fieldPath: string,

@@ -8,15 +8,7 @@ import { computed, inject } from "@angular/core";
 import { BIT_STORE_TOKEN } from "./provider";
 import { injectBitField } from "./inject-bit-field";
 import { BitUploadFn, BitDeleteUploadFn } from "../core";
-
-export interface InjectBitUploadResult {
-  value: import("@angular/core").Signal<string | File | null>;
-  setValue: (value: string | File | null) => void;
-  error: import("@angular/core").Signal<string | undefined>;
-  isValidating: import("@angular/core").Signal<boolean>;
-  upload: (file: File | null | undefined) => Promise<void>;
-  remove: () => Promise<void>;
-}
+import type { InjectBitUploadResult } from "./types";
 
 export function injectBitUpload(
   fieldPath: string,

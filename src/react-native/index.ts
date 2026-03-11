@@ -9,5 +9,5 @@ export type {
   UseBitFieldNativeBindProps,
   UseBitFieldNativeMeta,
   UseBitFieldNativeResult,
-} from "./use-bit-field";
+} from "./types";
 export type { ScopeStatus, ValidateScopeResult } from "../core";

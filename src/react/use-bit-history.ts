@@ -1,14 +1,6 @@
 import { useCallback, useRef, useSyncExternalStore } from "react";
 import { useBitStore } from "./context";
-
-export interface UseBitHistoryResult {
-  canUndo: boolean;
-  canRedo: boolean;
-  historyIndex: number;
-  historySize: number;
-  undo: () => void;
-  redo: () => void;
-}
+import type { UseBitHistoryResult } from "./types";
 
 export function useBitHistory<T extends object = any>(): UseBitHistoryResult {
   const store = useBitStore<T>();

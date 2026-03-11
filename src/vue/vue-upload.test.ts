@@ -1,7 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { defineComponent, nextTick } from "vue";
 import { mount } from "@vue/test-utils";
-import { useBitUpload, type UseBitUploadResult } from "./use-bit-upload";
+import { useBitUpload } from "./use-bit-upload";
+import type { UseBitUploadResult } from "./types";
 import type { BitUploadFn } from "../core/upload";
 import { BitStore } from "../core/store";
 import { BIT_STORE_KEY } from "./context";

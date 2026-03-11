@@ -6,40 +6,11 @@ import {
   BitPath,
   BitPathValue,
 } from "../core";
-
-export interface UseBitFieldMeta {
-  error: string | undefined;
-  touched: boolean;
-  invalid: boolean;
-  isValidating: boolean;
-  isDirty: boolean;
-  isHidden: boolean;
-  isRequired: boolean;
-  hasError: boolean;
-}
-
-export interface UseBitFieldBindProps {
-  value: string;
-  onChange: (e: any) => void;
-  onBlur: () => void;
-}
-
-export interface UseBitFieldResult<
-  TForm extends object = any,
-  P extends BitPath<TForm> = BitPath<TForm>,
-> {
-  // Main handlers and values (flat)
-  value: BitPathValue<TForm, P>;
-  displayValue: string;
-  setValue: (val: any) => void;
-  setBlur: () => void;
-  onChange: (e: any) => void;
-  onBlur: () => void;
-  // Props helper for native inputs
-  props: UseBitFieldBindProps;
-  // Readonly metadata (grouped)
-  meta: UseBitFieldMeta;
-}
+import type {
+  UseBitFieldMeta,
+  UseBitFieldBindProps,
+  UseBitFieldResult,
+} from "./types";
 
 function isMaskOnlyOptions(
   value: BitFieldDefinition<any> | BitFieldOptions | undefined,
