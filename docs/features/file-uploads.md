@@ -72,8 +72,3 @@ avatar = injectBitUpload("profile.avatar", uploadAvatar);
 await this.avatar.upload(file);
 await this.avatar.remove();
 ```
-
-## About `createUploadValidator`
-
-`createUploadValidator` is still available for custom/manual flows without upload hooks.
-For regular framework usage, prefer `useBitUpload` / `injectBitUpload`.

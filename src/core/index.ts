@@ -86,8 +86,6 @@ export {
   maskIBAN,
 } from "./mask/presets";
 
-export { createUploadValidator, performUpload } from "./upload";
-
 export type {
   BitUploadFn,
   BitDeleteUploadFn,

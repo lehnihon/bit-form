@@ -8,7 +8,6 @@ import { computed, inject } from "@angular/core";
 import { BIT_STORE_TOKEN } from "./provider";
 import { injectBitField } from "./inject-bit-field";
 import { BitUploadFn, BitDeleteUploadFn } from "../core/upload/types";
-import { performUpload } from "../core/upload";
 
 export interface InjectBitUploadResult {
   value: import("@angular/core").Signal<string | File | null>;
@@ -35,7 +34,7 @@ export function injectBitUpload(
     await store.clearFieldAsyncError(fieldPath);
 
     try {
-      const result = await performUpload(file, uploadFn);
+      const result = await uploadFn(file);
 
       field.setValue(result.url);
       uploadKey = result.key;

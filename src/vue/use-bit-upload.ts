@@ -8,7 +8,6 @@ import { computed, ComputedRef } from "vue";
 import { useBitField } from "./use-bit-field";
 import { useBitStore } from "./context";
 import { BitUploadFn, BitDeleteUploadFn } from "../core/upload/types";
-import { performUpload } from "../core/upload";
 
 export interface UseBitUploadResult {
   value: ComputedRef<string | File | null>;
@@ -35,7 +34,7 @@ export function useBitUpload(
     await store.clearFieldAsyncError(fieldPath);
 
     try {
-      const result = await performUpload(file, uploadFn);
+      const result = await uploadFn(file);
 
       field.setValue(result.url);
       uploadKey = result.key;
