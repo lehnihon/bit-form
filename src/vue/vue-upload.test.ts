@@ -92,6 +92,7 @@ describe("useBitUpload (Vue)", () => {
     await nextTick();
 
     expect(upload.uploadError.value).toContain("Network");
+    expect(store.getState().errors.avatar).toContain("Network");
     expect(upload.value.value).toBeUndefined();
   });
 
@@ -156,6 +157,10 @@ describe("useBitUpload (Vue)", () => {
 
     const uploadPromise = upload.handleUploadFile(file);
     expect(upload.isUploading.value).toBe(true);
+
+    await vi.waitFor(() => {
+      expect(typeof uploadPromiseResolve).toBe("function");
+    });
 
     uploadPromiseResolve({
       url: "https://cdn.example.com/file.jpg",

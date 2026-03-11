@@ -6,7 +6,7 @@
  *
  * @example
  * ```typescript
- * const avatar = useBitUpload("avatar", s3Adapter, {
+ * const avatar = useBitUpload("avatar", uploadFn, {
  *   onProgress: (p) => setProgress(p.percentage),
  *   uploadOptions: { folder: "avatars" },
  * });
@@ -27,6 +27,7 @@
 
 import { useState, useCallback } from "react";
 import { useBitField } from "./use-bit-field";
+import { useBitStore } from "./context";
 import {
   BitUploadFn,
   BitUploadProgress,
@@ -59,6 +60,7 @@ export function useBitUpload(
   uploadFn: BitUploadFn,
   options?: UseBitUploadOptions,
 ): UseBitUploadResult {
+  const store = useBitStore<any>();
   const field = useBitField(fieldPath);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<BitUploadProgress>({
@@ -74,6 +76,9 @@ export function useBitUpload(
       if (!file) return;
 
       setIsUploading(true);
+      store.beginFieldValidation(fieldPath);
+
+      await store.clearFieldAsyncError(fieldPath);
       setUploadError(null);
       setUploadProgress({ loaded: 0, total: 0, percentage: 0 });
 
@@ -86,23 +91,27 @@ export function useBitUpload(
           },
           onError: (error) => {
             setUploadError(error.message);
+            void store.setFieldAsyncError(fieldPath, error.message);
             options?.onError?.(error);
           },
         });
 
         // Update field with file URL
         field.setValue(result.url);
+        await store.clearFieldAsyncError(fieldPath);
         setUploadKey(result.key);
         options?.onSuccess?.(result);
       } catch (error) {
         const message =
           error instanceof Error ? error.message : "Upload failed";
         setUploadError(message);
+        await store.setFieldAsyncError(fieldPath, message);
       } finally {
+        store.endFieldValidation(fieldPath);
         setIsUploading(false);
       }
     },
-    [uploadFn, field, options],
+    [uploadFn, field, fieldPath, options, store],
   );
 
   const handleRemoveFile = useCallback(async () => {
@@ -110,17 +119,20 @@ export function useBitUpload(
       try {
         await options.deleteFile(uploadKey);
         field.setValue(null);
+        await store.clearFieldAsyncError(fieldPath);
         setUploadKey(null);
       } catch (error) {
         const message =
           error instanceof Error ? error.message : "Delete failed";
         setUploadError(message);
+        await store.setFieldAsyncError(fieldPath, message);
       }
     } else {
       field.setValue(null);
+      await store.clearFieldAsyncError(fieldPath);
       setUploadKey(null);
     }
-  }, [uploadKey, options, field]);
+  }, [uploadKey, options, field, fieldPath, store]);
 
   return {
     // Delegate field properties

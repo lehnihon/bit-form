@@ -103,6 +103,7 @@ describe("useBitUpload (React)", () => {
 
     expect(result.current.uploadError).not.toBeNull();
     expect(result.current.uploadError).toContain("Network");
+    expect(store.getState().errors.avatar).toContain("Network");
     expect(result.current.value).toBeUndefined();
   });
 
@@ -181,6 +182,11 @@ describe("useBitUpload (React)", () => {
     });
 
     expect(result.current.isUploading).toBe(true);
+    expect(result.current.isValidating).toBe(true);
+
+    await waitFor(() => {
+      expect(typeof uploadPromiseResolve).toBe("function");
+    });
 
     await act(() => {
       uploadPromiseResolve({
@@ -192,6 +198,7 @@ describe("useBitUpload (React)", () => {
 
     await waitFor(() => {
       expect(result.current.isUploading).toBe(false);
+      expect(result.current.isValidating).toBe(false);
     });
   });
 

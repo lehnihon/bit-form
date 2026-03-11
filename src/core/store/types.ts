@@ -157,6 +157,7 @@ export interface BitValidationAdapter<T extends object> {
   getState: () => BitState<T>;
   internalUpdateState: (partial: Partial<BitState<T>>) => void;
   setError: (path: string, message: string | undefined) => void;
+  validate?: (opts: { scopeFields?: string[] }) => Promise<boolean>;
   config: BitResolvedConfig<T>;
   depsMg: BitDependencyManager<T>;
 }

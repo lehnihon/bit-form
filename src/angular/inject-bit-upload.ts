@@ -6,7 +6,7 @@
  * @example
  * ```typescript
  * export class MyComponent {
- *   avatar = injectBitUpload("avatar", s3Adapter, {
+ *   avatar = injectBitUpload("avatar", uploadFn, {
  *     uploadOptions: { folder: "avatars" },
  *   });
  *
@@ -26,7 +26,8 @@
  * ```
  */
 
-import { signal, computed } from "@angular/core";
+import { signal, computed, inject } from "@angular/core";
+import { BIT_STORE_TOKEN } from "./provider";
 import { injectBitField } from "./inject-bit-field";
 import {
   BitUploadFn,
@@ -58,6 +59,7 @@ export function injectBitUpload(
   uploadFn: BitUploadFn,
   options?: UseBitUploadOptions,
 ): InjectBitUploadResult {
+  const store = inject(BIT_STORE_TOKEN);
   const field = injectBitField(fieldPath);
 
   const isUploading = signal(false);
@@ -73,6 +75,9 @@ export function injectBitUpload(
     if (!file) return;
 
     isUploading.set(true);
+    store.beginFieldValidation(fieldPath);
+
+    await store.clearFieldAsyncError(fieldPath);
     uploadError.set(null);
     uploadProgress.set({ loaded: 0, total: 0, percentage: 0 });
 
@@ -85,17 +90,21 @@ export function injectBitUpload(
         },
         onError: (error) => {
           uploadError.set(error.message);
+          void store.setFieldAsyncError(fieldPath, error.message);
           options?.onError?.(error);
         },
       });
 
       field.setValue(result.url);
+      await store.clearFieldAsyncError(fieldPath);
       uploadKey.set(result.key);
       options?.onSuccess?.(result);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Upload failed";
       uploadError.set(message);
+      await store.setFieldAsyncError(fieldPath, message);
     } finally {
+      store.endFieldValidation(fieldPath);
       isUploading.set(false);
     }
   };
@@ -105,14 +114,17 @@ export function injectBitUpload(
       try {
         await options.deleteFile(uploadKey()!);
         field.setValue(null);
+        await store.clearFieldAsyncError(fieldPath);
         uploadKey.set(null);
       } catch (error) {
         const message =
           error instanceof Error ? error.message : "Delete failed";
         uploadError.set(message);
+        await store.setFieldAsyncError(fieldPath, message);
       }
     } else {
       field.setValue(null);
+      await store.clearFieldAsyncError(fieldPath);
       uploadKey.set(null);
     }
   };

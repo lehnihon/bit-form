@@ -18,6 +18,46 @@ export class BitValidationManager<T extends object> {
     });
   }
 
+  private cancelFieldAsync(path: string) {
+    if (this.asyncTimers[path]) {
+      clearTimeout(this.asyncTimers[path]);
+      delete this.asyncTimers[path];
+    }
+
+    this.asyncRequests[path] = (this.asyncRequests[path] || 0) + 1;
+  }
+
+  beginExternalValidation(path: string) {
+    this.cancelFieldAsync(path);
+    this.updateFieldValidating(path, true);
+  }
+
+  endExternalValidation(path: string) {
+    this.updateFieldValidating(path, false);
+  }
+
+  async setExternalError(path: string, message: string | undefined) {
+    if (message) {
+      this.asyncErrors[path] = message;
+      this.store.setError(path, message);
+      return;
+    }
+
+    delete this.asyncErrors[path];
+
+    if (this.store.validate) {
+      await this.store.validate({ scopeFields: [path] });
+      return;
+    }
+
+    const newErrors = { ...this.store.getState().errors };
+    delete newErrors[path as keyof BitErrors<T>];
+    this.store.internalUpdateState({
+      errors: newErrors,
+      isValid: Object.keys(newErrors).length === 0,
+    });
+  }
+
   handleAsync(path: string, value: any) {
     const config =
       this.store.depsMg.fieldConfigs.get(path) ||
@@ -53,11 +93,8 @@ export class BitValidationManager<T extends object> {
           this.store.setError(path, errorMessage);
         } else {
           delete this.asyncErrors[path];
-          const storeWithValidate = this.store as {
-            validate?: (opts: { scopeFields?: string[] }) => Promise<boolean>;
-          };
-          if (storeWithValidate.validate) {
-            await storeWithValidate.validate({ scopeFields: [path] });
+          if (this.store.validate) {
+            await this.store.validate({ scopeFields: [path] });
           } else {
             const newErrors = { ...this.store.getState().errors };
             delete newErrors[path as keyof BitErrors<T>];

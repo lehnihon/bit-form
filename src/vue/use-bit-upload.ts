@@ -7,7 +7,7 @@
  * ```typescript
  * export default {
  *   setup() {
- *     const avatar = useBitUpload("avatar", s3Adapter, {
+ *     const avatar = useBitUpload("avatar", uploadFn, {
  *       uploadOptions: { folder: "avatars" },
  *     });
  *
@@ -19,6 +19,7 @@
 
 import { ref, computed, Ref, ComputedRef } from "vue";
 import { useBitField } from "./use-bit-field";
+import { useBitStore } from "./context";
 import {
   BitUploadFn,
   BitUploadProgress,
@@ -49,6 +50,7 @@ export function useBitUpload(
   uploadFn: BitUploadFn,
   options?: UseBitUploadOptions,
 ): UseBitUploadResult {
+  const store = useBitStore<any>();
   const field = useBitField(fieldPath);
 
   const isUploading = ref(false);
@@ -64,6 +66,9 @@ export function useBitUpload(
     if (!file) return;
 
     isUploading.value = true;
+    store.beginFieldValidation(fieldPath);
+
+    await store.clearFieldAsyncError(fieldPath);
     uploadError.value = null;
     uploadProgress.value = { loaded: 0, total: 0, percentage: 0 };
 
@@ -76,17 +81,21 @@ export function useBitUpload(
         },
         onError: (error) => {
           uploadError.value = error.message;
+          void store.setFieldAsyncError(fieldPath, error.message);
           options?.onError?.(error);
         },
       });
 
       field.setValue(result.url);
+      await store.clearFieldAsyncError(fieldPath);
       uploadKey.value = result.key;
       options?.onSuccess?.(result);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Upload failed";
       uploadError.value = message;
+      await store.setFieldAsyncError(fieldPath, message);
     } finally {
+      store.endFieldValidation(fieldPath);
       isUploading.value = false;
     }
   };
@@ -96,14 +105,17 @@ export function useBitUpload(
       try {
         await options.deleteFile(uploadKey.value);
         field.setValue(null);
+        await store.clearFieldAsyncError(fieldPath);
         uploadKey.value = null;
       } catch (error) {
         const message =
           error instanceof Error ? error.message : "Delete failed";
         uploadError.value = message;
+        await store.setFieldAsyncError(fieldPath, message);
       }
     } else {
       field.setValue(null);
+      await store.clearFieldAsyncError(fieldPath);
       uploadKey.value = null;
     }
   };
