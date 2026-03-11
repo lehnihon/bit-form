@@ -1,23 +1,7 @@
 import { useCallback, useSyncExternalStore, useRef, useState } from "react";
 import type { ScopeStatus, ValidateScopeResult } from "../core";
 import { useBitStore } from "./context";
-
-export interface UseBitStepsResult {
-  step: number;
-  stepIndex: number;
-  scope: string;
-  next: () => Promise<boolean>;
-  prev: () => void;
-  goTo: (step: number) => void;
-  isFirst: boolean;
-  isLast: boolean;
-  status: ScopeStatus;
-  errors: Record<string, string>;
-  isValid: boolean;
-  isDirty: boolean;
-  validate: () => Promise<ValidateScopeResult>;
-  getErrors: () => Record<string, string>;
-}
+import type { UseBitStepsResult } from "./types";
 
 export function useBitSteps(scopeNames: string[]): UseBitStepsResult {
   const store = useBitStore();

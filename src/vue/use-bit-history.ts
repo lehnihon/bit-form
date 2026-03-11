@@ -1,14 +1,6 @@
 import { computed, onUnmounted, shallowRef } from "vue";
 import { useBitStore } from "./context";
-
-export interface UseBitHistoryResult {
-  canUndo: import("vue").ComputedRef<boolean>;
-  canRedo: import("vue").ComputedRef<boolean>;
-  historyIndex: import("vue").ComputedRef<number>;
-  historySize: import("vue").ComputedRef<number>;
-  undo: () => void;
-  redo: () => void;
-}
+import type { UseBitHistoryResult } from "./types";
 
 export function useBitHistory<T extends object = any>(): UseBitHistoryResult {
   const store = useBitStore<T>();

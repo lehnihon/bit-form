@@ -5,15 +5,17 @@ import {
   BitErrors,
   BitState,
   BitFieldDefinition,
-  BitResolvedConfig,
-  BitStoreAdapter,
-  BitValidationAdapter,
-  BitLifecycleAdapter,
   BitPath,
   BitPathValue,
   BitArrayPath,
   BitArrayItem,
 } from "./types";
+import {
+  BitResolvedConfig,
+  BitStoreAdapter,
+  BitValidationAdapter,
+  BitLifecycleAdapter,
+} from "./internal-types";
 import { deepClone, deepEqual, getDeepValue, valueEqual } from "../utils";
 import { normalizeConfig } from "./config";
 import { BitDependencyManager } from "./dependency-manager";

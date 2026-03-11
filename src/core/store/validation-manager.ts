@@ -1,4 +1,5 @@
-import { BitConfig, BitErrors, BitState, BitValidationAdapter } from "./types";
+import { BitErrors } from "./types";
+import { BitValidationAdapter } from "./internal-types";
 
 export class BitValidationManager<T extends object> {
   private validationTimeout?: any;

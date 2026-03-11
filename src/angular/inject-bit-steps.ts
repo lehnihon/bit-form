@@ -1,6 +1,7 @@
 import { signal, computed, DestroyRef, inject } from "@angular/core";
 import type { ScopeStatus, ValidateScopeResult } from "../core";
 import { useBitStore } from "./provider";
+import type { InjectBitStepsResult } from "./types";
 
 function errorsEqual(
   a: Record<string, string>,
@@ -10,23 +11,6 @@ function errorsEqual(
   const keysB = Object.keys(b);
   if (keysA.length !== keysB.length) return false;
   return keysA.every((k) => a[k] === b[k]);
-}
-
-export interface InjectBitStepsResult {
-  step: ReturnType<typeof computed<number>>;
-  stepIndex: ReturnType<typeof signal<number>>;
-  scope: ReturnType<typeof computed<string>>;
-  next: () => Promise<boolean>;
-  prev: () => void;
-  goTo: (step: number) => void;
-  isFirst: ReturnType<typeof computed<boolean>>;
-  isLast: ReturnType<typeof computed<boolean>>;
-  status: ReturnType<typeof signal<ScopeStatus>>;
-  errors: ReturnType<typeof computed<Record<string, string>>>;
-  isValid: ReturnType<typeof computed<boolean>>;
-  isDirty: ReturnType<typeof computed<boolean>>;
-  validate: () => Promise<ValidateScopeResult>;
-  getErrors: () => Record<string, string>;
 }
 
 export function injectBitSteps(scopeNames: string[]): InjectBitStepsResult {

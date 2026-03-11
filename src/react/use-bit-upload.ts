@@ -23,16 +23,8 @@
 import { useCallback, useRef } from "react";
 import { useBitField } from "./use-bit-field";
 import { useBitStore } from "./context";
-import { BitUploadFn, BitDeleteUploadFn } from "../core/upload/types";
-
-export interface UseBitUploadResult {
-  value: string | File | null;
-  setValue: (value: string | File | null) => void;
-  error?: string;
-  isValidating: boolean;
-  upload: (file: File | null | undefined) => Promise<void>;
-  remove: () => Promise<void>;
-}
+import { BitUploadFn, BitDeleteUploadFn } from "../core";
+import type { UseBitUploadResult } from "./types";
 
 export function useBitUpload(
   fieldPath: string,

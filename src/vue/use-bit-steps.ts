@@ -1,6 +1,7 @@
 import { ref, computed, watch, onMounted, onUnmounted } from "vue";
 import type { ScopeStatus, ValidateScopeResult } from "../core";
 import { useBitStore } from "./context";
+import type { UseBitStepsResult } from "./types";
 
 function errorsEqual(
   a: Record<string, string>,
@@ -10,23 +11,6 @@ function errorsEqual(
   const keysB = Object.keys(b);
   if (keysA.length !== keysB.length) return false;
   return keysA.every((k) => a[k] === b[k]);
-}
-
-export interface UseBitStepsResult {
-  step: import("vue").ComputedRef<number>;
-  stepIndex: import("vue").Ref<number>;
-  scope: import("vue").ComputedRef<string>;
-  next: () => Promise<boolean>;
-  prev: () => void;
-  goTo: (step: number) => void;
-  isFirst: import("vue").ComputedRef<boolean>;
-  isLast: import("vue").ComputedRef<boolean>;
-  status: import("vue").Ref<ScopeStatus>;
-  errors: import("vue").ComputedRef<Record<string, string>>;
-  isValid: import("vue").ComputedRef<boolean>;
-  isDirty: import("vue").ComputedRef<boolean>;
-  validate: () => Promise<ValidateScopeResult>;
-  getErrors: () => Record<string, string>;
 }
 
 export function useBitSteps(scopeNames: string[]): UseBitStepsResult {

@@ -7,31 +7,7 @@ import {
   BitPath,
   BitPathValue,
 } from "../core";
-
-export interface InjectBitFieldMeta {
-  error: () => string | undefined;
-  touched: () => boolean;
-  invalid: () => boolean;
-  isDirty: () => boolean;
-  isValidating: () => boolean;
-  isHidden: () => boolean;
-  isRequired: () => boolean;
-  hasError: () => boolean;
-}
-
-export interface InjectBitFieldResult<
-  TForm extends object = any,
-  P extends BitPath<TForm> = BitPath<TForm>,
-> {
-  // Main handlers and values (flat)
-  value: () => BitPathValue<TForm, P>;
-  displayValue: () => string;
-  setValue: (val: any) => void;
-  setBlur: () => void;
-  update: (e: any) => void;
-  // Metadata (grouped)
-  meta: InjectBitFieldMeta;
-}
+import type { InjectBitFieldMeta, InjectBitFieldResult } from "./types";
 
 export function injectBitField<
   TValue = any,

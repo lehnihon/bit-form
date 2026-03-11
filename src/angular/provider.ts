@@ -1,9 +1,13 @@
-import { inject, InjectionToken, Provider } from "@angular/core"; // IMPORTANTE: Adicione o 'inject' aqui
-import { BitStore } from "../core/store";
+import { inject, InjectionToken, Provider } from "@angular/core";
+import type { BitFrameworkStore } from "../core";
 
-export const BIT_STORE_TOKEN = new InjectionToken<BitStore<any>>("BIT_STORE");
+export const BIT_STORE_TOKEN = new InjectionToken<BitFrameworkStore<any>>(
+  "BIT_STORE",
+);
 
-export function provideBitStore(store: BitStore<any>): Provider {
+export function provideBitStore<T extends object>(
+  store: BitFrameworkStore<T>,
+): Provider {
   return { provide: BIT_STORE_TOKEN, useValue: store };
 }
 
@@ -17,5 +21,5 @@ export function useBitStore<T extends object>() {
     );
   }
 
-  return store as BitStore<T>;
+  return store as BitFrameworkStore<T>;
 }
