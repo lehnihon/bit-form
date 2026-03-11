@@ -49,7 +49,7 @@ describe("useBitUpload (React)", () => {
 
     await act(() => result.current.upload(file));
 
-    expect(mockUpload).toHaveBeenCalledWith(file, expect.objectContaining({}));
+    expect(mockUpload).toHaveBeenCalledWith(file);
     expect(result.current.value).toBe(
       "https://cdn.example.com/uploads/avatar.jpg",
     );
@@ -74,7 +74,7 @@ describe("useBitUpload (React)", () => {
 
   it("should remove uploaded file and call deleteFile", async () => {
     const { result } = renderHook(
-      () => useBitUpload("avatar", mockUpload, { deleteFile: mockDelete }),
+      () => useBitUpload("avatar", mockUpload, mockDelete),
       {
         wrapper: (props) => wrapper({ ...props, testStore: store }),
       },
@@ -100,26 +100,6 @@ describe("useBitUpload (React)", () => {
     await act(() => result.current.remove());
 
     expect(result.current.value).toBeNull();
-  });
-
-  it("should pass custom uploadOptions to upload function", async () => {
-    const { result } = renderHook(
-      () =>
-        useBitUpload("avatar", mockUpload, {
-          uploadOptions: { folder: "avatars" },
-        }),
-      {
-        wrapper: (props) => wrapper({ ...props, testStore: store }),
-      },
-    );
-
-    const file = new File(["content"], "avatar.jpg", { type: "image/jpeg" });
-    await act(() => result.current.upload(file));
-
-    expect(mockUpload).toHaveBeenCalledWith(
-      file,
-      expect.objectContaining({ folder: "avatars" }),
-    );
   });
 
   it("should keep isValidating true while upload is pending", async () => {

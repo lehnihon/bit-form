@@ -7,7 +7,7 @@
 import { computed, inject } from "@angular/core";
 import { BIT_STORE_TOKEN } from "./provider";
 import { injectBitField } from "./inject-bit-field";
-import { BitUploadFn, UseBitUploadOptions } from "../core/upload/types";
+import { BitUploadFn, BitDeleteUploadFn } from "../core/upload/types";
 import { performUpload } from "../core/upload";
 
 export interface InjectBitUploadResult {
@@ -22,7 +22,7 @@ export interface InjectBitUploadResult {
 export function injectBitUpload(
   fieldPath: string,
   uploadFn: BitUploadFn,
-  options?: UseBitUploadOptions,
+  deleteFile?: BitDeleteUploadFn,
 ): InjectBitUploadResult {
   const store = inject(BIT_STORE_TOKEN);
   const field = injectBitField(fieldPath);
@@ -35,9 +35,7 @@ export function injectBitUpload(
     await store.clearFieldAsyncError(fieldPath);
 
     try {
-      const result = await performUpload(file, uploadFn, {
-        uploadOptions: options?.uploadOptions,
-      });
+      const result = await performUpload(file, uploadFn);
 
       field.setValue(result.url);
       uploadKey = result.key;
@@ -51,9 +49,9 @@ export function injectBitUpload(
   };
 
   const remove = async () => {
-    if (uploadKey && options?.deleteFile) {
+    if (uploadKey && deleteFile) {
       try {
-        await options.deleteFile(uploadKey);
+        await deleteFile(uploadKey);
       } catch (error) {
         const message =
           error instanceof Error ? error.message : "Delete failed";

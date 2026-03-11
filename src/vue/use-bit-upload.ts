@@ -7,7 +7,7 @@
 import { computed, ComputedRef } from "vue";
 import { useBitField } from "./use-bit-field";
 import { useBitStore } from "./context";
-import { BitUploadFn, UseBitUploadOptions } from "../core/upload/types";
+import { BitUploadFn, BitDeleteUploadFn } from "../core/upload/types";
 import { performUpload } from "../core/upload";
 
 export interface UseBitUploadResult {
@@ -22,7 +22,7 @@ export interface UseBitUploadResult {
 export function useBitUpload(
   fieldPath: string,
   uploadFn: BitUploadFn,
-  options?: UseBitUploadOptions,
+  deleteFile?: BitDeleteUploadFn,
 ): UseBitUploadResult {
   const store = useBitStore<any>();
   const field = useBitField(fieldPath);
@@ -35,9 +35,7 @@ export function useBitUpload(
     await store.clearFieldAsyncError(fieldPath);
 
     try {
-      const result = await performUpload(file, uploadFn, {
-        uploadOptions: options?.uploadOptions,
-      });
+      const result = await performUpload(file, uploadFn);
 
       field.setValue(result.url);
       uploadKey = result.key;
@@ -51,9 +49,9 @@ export function useBitUpload(
   };
 
   const remove = async () => {
-    if (uploadKey && options?.deleteFile) {
+    if (uploadKey && deleteFile) {
       try {
-        await options.deleteFile(uploadKey);
+        await deleteFile(uploadKey);
       } catch (error) {
         const message =
           error instanceof Error ? error.message : "Delete failed";

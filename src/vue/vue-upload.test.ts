@@ -61,7 +61,7 @@ describe("useBitUpload (Vue)", () => {
     await upload.upload(file);
     await nextTick();
 
-    expect(mockUpload).toHaveBeenCalledWith(file, expect.objectContaining({}));
+    expect(mockUpload).toHaveBeenCalledWith(file);
     expect(upload.value.value).toBe(
       "https://cdn.example.com/uploads/avatar.jpg",
     );
@@ -85,7 +85,7 @@ describe("useBitUpload (Vue)", () => {
 
   it("should remove uploaded file", async () => {
     const { upload } = mountUpload(() =>
-      useBitUpload("avatar", mockUpload, { deleteFile: mockDelete }),
+      useBitUpload("avatar", mockUpload, mockDelete),
     );
 
     const file = new File(["content"], "avatar.jpg", { type: "image/jpeg" });
@@ -110,23 +110,6 @@ describe("useBitUpload (Vue)", () => {
     await nextTick();
 
     expect(upload.value.value).toBeNull();
-  });
-
-  it("should pass custom options to upload function", async () => {
-    const { upload } = mountUpload(() =>
-      useBitUpload("avatar", mockUpload, {
-        uploadOptions: { folder: "avatars" },
-      }),
-    );
-
-    const file = new File(["content"], "avatar.jpg", { type: "image/jpeg" });
-    await upload.upload(file);
-    await nextTick();
-
-    expect(mockUpload).toHaveBeenCalledWith(
-      file,
-      expect.objectContaining({ folder: "avatars" }),
-    );
   });
 
   it("should set isValidating during pending upload", async () => {

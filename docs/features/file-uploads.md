@@ -39,15 +39,12 @@ const uploadAvatar = async (file: File) => {
   return { url: data.url, key: data.key };
 };
 
-const avatar = useBitUpload("profile.avatar", uploadAvatar, {
-  uploadOptions: { folder: "avatars" },
-  deleteFile: async (key) => {
-    await fetch("/api/uploads/avatar/delete", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ key }),
-    });
-  },
+const avatar = useBitUpload("profile.avatar", uploadAvatar, async (key) => {
+  await fetch("/api/uploads/avatar/delete", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ key }),
+  });
 });
 
 await avatar.upload(file);

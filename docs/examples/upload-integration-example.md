@@ -32,15 +32,17 @@ export function UserProfileForm() {
   });
 
   const name = useBitField("profile.name");
-  const avatar = useBitUpload("profile.avatar", uploadAvatar, {
-    deleteFile: async (key) => {
+  const avatar = useBitUpload(
+    "profile.avatar",
+    uploadAvatar,
+    async (key) => {
       await fetch("/api/uploads/avatar/delete", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ key }),
       });
     },
-  });
+  );
 
   return (
     <form>

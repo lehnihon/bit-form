@@ -23,7 +23,7 @@
 import { useCallback, useRef } from "react";
 import { useBitField } from "./use-bit-field";
 import { useBitStore } from "./context";
-import { BitUploadFn, UseBitUploadOptions } from "../core/upload/types";
+import { BitUploadFn, BitDeleteUploadFn } from "../core/upload/types";
 import { performUpload } from "../core/upload";
 
 export interface UseBitUploadResult {
@@ -38,7 +38,7 @@ export interface UseBitUploadResult {
 export function useBitUpload(
   fieldPath: string,
   uploadFn: BitUploadFn,
-  options?: UseBitUploadOptions,
+  deleteFile?: BitDeleteUploadFn,
 ): UseBitUploadResult {
   const store = useBitStore<any>();
   const field = useBitField(fieldPath);
@@ -52,9 +52,7 @@ export function useBitUpload(
       await store.clearFieldAsyncError(fieldPath);
 
       try {
-        const result = await performUpload(file, uploadFn, {
-          uploadOptions: options?.uploadOptions,
-        });
+        const result = await performUpload(file, uploadFn);
 
         field.setValue(result.url);
         uploadKeyRef.current = result.key;
@@ -67,15 +65,15 @@ export function useBitUpload(
         store.endFieldValidation(fieldPath);
       }
     },
-    [uploadFn, field, fieldPath, options, store],
+    [uploadFn, field, fieldPath, store],
   );
 
   const remove = useCallback(async () => {
     const uploadKey = uploadKeyRef.current;
 
-    if (uploadKey && options?.deleteFile) {
+    if (uploadKey && deleteFile) {
       try {
-        await options.deleteFile(uploadKey);
+        await deleteFile(uploadKey);
       } catch (error) {
         const message =
           error instanceof Error ? error.message : "Delete failed";
@@ -87,7 +85,7 @@ export function useBitUpload(
     field.setValue(null);
     uploadKeyRef.current = null;
     await store.clearFieldAsyncError(fieldPath);
-  }, [options, field, fieldPath, store]);
+  }, [deleteFile, field, fieldPath, store]);
 
   return {
     value: field.value,

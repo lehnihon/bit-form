@@ -6,7 +6,7 @@
 
 export * from "./types";
 
-import { BitUploadFn, BitUploadResult, UseBitUploadOptions } from "./types";
+import { BitUploadFn, BitUploadResult } from "./types";
 
 /**
  * Legacy helper to create an asyncValidate function for upload completion.
@@ -58,9 +58,7 @@ export function createUploadValidator(options?: { requiredMessage?: string }) {
  * @example
  * ```typescript
  * try {
- *   const result = await performUpload(file, uploadFn, {
- *     uploadOptions: { folder: "avatars" },
- *   });
+ *   const result = await performUpload(file, uploadFn);
  *   store.setField("avatar", result.url);
  * } catch (err) {
  *   console.error("Upload failed:", err);
@@ -70,7 +68,6 @@ export function createUploadValidator(options?: { requiredMessage?: string }) {
 export async function performUpload(
   file: File,
   uploadFn: BitUploadFn,
-  options?: UseBitUploadOptions,
 ): Promise<BitUploadResult> {
-  return uploadFn(file, options?.uploadOptions);
+  return uploadFn(file);
 }
