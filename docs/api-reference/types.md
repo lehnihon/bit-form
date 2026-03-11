@@ -191,17 +191,20 @@ Key points:
 
 ---
 
-## `BitResolvedConfig<T>`
+## `BitFrameworkConfig<T>`
 
-Internal form of the configuration, exposing a non-optional `initialValues`.
+Public framework-facing config returned by `store.getConfig()`. It includes normalized defaults and derived maps (`computed`, `transform`, `scopes`, `masks`).
 
 ```ts
-type BitResolvedConfig<T extends object> = BitConfig<T> & {
+interface BitFrameworkConfig<T extends object = any> extends BitConfig<T> {
   initialValues: T;
-};
+  validationDelay: number;
+  enableHistory: boolean;
+  historyLimit: number;
+}
 ```
 
-You will rarely use this directly, but it is returned by `store.getConfig()`.
+`BitResolvedConfig<T>` remains internal to the core store implementation.
 
 ---
 

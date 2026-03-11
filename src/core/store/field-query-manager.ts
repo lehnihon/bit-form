@@ -1,4 +1,5 @@
-import { BitResolvedConfig, BitState } from "./types";
+import { BitState } from "./types";
+import type { BitResolvedConfig } from "./internal-types";
 import { BitDependencyManager } from "./dependency-manager";
 import { getDeepValue, valueEqual } from "../utils";
 

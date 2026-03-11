@@ -42,7 +42,7 @@ const state = store.getState();
 
 See [`BitState<T>` in the types reference](./types.md#bitstatet) for the full structure.
 
-### `getConfig(): BitResolvedConfig<T>`
+### `getConfig(): BitFrameworkConfig<T>`
 
 Returns the resolved configuration, including normalized defaults and `initialValues`.
 

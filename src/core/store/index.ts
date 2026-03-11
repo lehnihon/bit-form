@@ -5,13 +5,13 @@ import {
   BitErrors,
   BitState,
   BitFieldDefinition,
-  BitResolvedConfig,
   BitPath,
   BitPathValue,
   BitArrayPath,
   BitArrayItem,
 } from "./types";
 import {
+  BitResolvedConfig,
   BitStoreAdapter,
   BitValidationAdapter,
   BitLifecycleAdapter,

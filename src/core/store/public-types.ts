@@ -3,14 +3,34 @@ import {
   BitFieldDefinition,
   BitPath,
   BitPathValue,
-  BitResolvedConfig,
+  BitComputedFn,
+  BitTransformFn,
+  BitConfig,
+  DevToolsOptions,
   ScopeStatus,
+  ValidatorFn,
   BitState,
 } from "./types";
 import { BitMask } from "../mask/types";
 
+export interface BitFrameworkConfig<
+  T extends object = any,
+> extends BitConfig<T> {
+  initialValues: T;
+  resolver?: ValidatorFn<T>;
+  validationDelay: number;
+  enableHistory: boolean;
+  historyLimit: number;
+  computed?: Record<string, BitComputedFn<T>>;
+  transform?: Partial<Record<string, BitTransformFn<T>>>;
+  scopes?: Record<string, string[]>;
+  masks?: Record<string, BitMask>;
+  fields?: Record<string, BitFieldDefinition<T>>;
+  devTools?: boolean | DevToolsOptions;
+}
+
 export interface BitPublicStore<T extends object = any> {
-  getConfig(): Readonly<BitResolvedConfig<T>>;
+  getConfig(): Readonly<BitFrameworkConfig<T>>;
   getState(): Readonly<BitState<T>>;
   subscribe(listener: () => void): () => void;
 
@@ -42,7 +62,7 @@ export interface BitPublicStore<T extends object = any> {
 export interface BitFrameworkStore<
   T extends object = any,
 > extends BitPublicStore<T> {
-  config: BitResolvedConfig<T>;
+  config: BitFrameworkConfig<T>;
 
   registerField(path: string, config: BitFieldDefinition<T>): void;
   unregisterField(path: string): void;

@@ -2,7 +2,12 @@ import { BitDependencyManager } from "./dependency-manager";
 import { BitDirtyManager } from "./dirty-manager";
 import { BitHistoryManager } from "./history-manager";
 import { BitValidationManager } from "./validation-manager";
-import { BitResolvedConfig, BitState } from "./types";
+import { BitState } from "./types";
+import type { BitFrameworkConfig } from "./public-types";
+
+export interface BitResolvedConfig<
+  T extends object = any,
+> extends BitFrameworkConfig<T> {}
 
 export interface BitLifecycleAdapter<T extends object> {
   getState: () => BitState<T>;

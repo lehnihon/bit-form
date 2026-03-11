@@ -1,4 +1,5 @@
-import { BitErrors, BitResolvedConfig, BitState } from "./types";
+import { BitErrors, BitState } from "./types";
+import type { BitResolvedConfig } from "./internal-types";
 import { getDeepValue, valueEqual } from "../utils";
 
 /**

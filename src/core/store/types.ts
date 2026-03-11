@@ -91,25 +91,6 @@ export interface BitConfig<T extends object = any> {
   devTools?: boolean | DevToolsOptions;
 }
 
-/** Internal config produced by normalizeConfig from BitConfig. */
-export interface BitResolvedConfig<T extends object> {
-  name?: string;
-  initialValues: T;
-  resolver?: ValidatorFn<T>;
-  validationDelay: number;
-  enableHistory: boolean;
-  historyLimit: number;
-  /** Derived from fields where field.computed exists. */
-  computed?: Record<string, BitComputedFn<T>>;
-  /** Derived from fields where field.transform exists. */
-  transform?: Partial<Record<string, BitTransformFn<T>>>;
-  /** Derived from fields where field.scope exists. */
-  scopes?: Record<string, string[]>;
-  masks?: Record<string, BitMask>;
-  fields?: Record<string, BitFieldDefinition<T>>;
-  devTools?: boolean | DevToolsOptions;
-}
-
 export interface BitFieldOptions {
   mask?: BitMask | string;
 }
