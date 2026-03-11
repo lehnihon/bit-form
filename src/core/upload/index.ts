@@ -1,8 +1,7 @@
 /**
  * Upload Integration Core
  *
- * Provides utilities to integrate file uploads with asyncValidate.
- * Enables non-blocking upload orchestration within form submission.
+ * Provides backend-first upload utilities.
  */
 
 export * from "./types";
@@ -10,13 +9,12 @@ export * from "./types";
 import { BitUploadFn, BitUploadResult, UseBitUploadOptions } from "./types";
 
 /**
- * Creates an asyncValidate function that manages upload completion.
+ * Legacy helper to create an asyncValidate function for upload completion.
  *
- * Use this when you want asyncValidate to validate:
- * - File was successfully uploaded (url is set)
- * - Upload didn't fail with an error
+ * Prefer using `useBitUpload`/`injectBitUpload`, which already integrates
+ * upload state with field validation lifecycle.
  *
- * The actual upload happens in a separate handler (not in validation).
+ * Keep this only when implementing upload flow without framework upload hooks.
  *
  * @example
  * ```typescript
@@ -54,20 +52,15 @@ export function createUploadValidator(options?: { requiredMessage?: string }) {
 }
 
 /**
- * Manages a single file upload with progress tracking.
+ * Manages a single file upload.
  * Returns promise that resolves when upload completes or rejects on error.
  *
  * @example
  * ```typescript
  * try {
- *   const result = await performUpload(
- *     file,
- *     s3Adapter,
- *     {
- *       folder: "avatars",
- *       onProgress: (p) => console.log(`${p.percentage}%`),
- *     }
- *   );
+ *   const result = await performUpload(file, uploadFn, {
+ *     uploadOptions: { folder: "avatars" },
+ *   });
  *   store.setField("avatar", result.url);
  * } catch (err) {
  *   console.error("Upload failed:", err);
@@ -79,14 +72,5 @@ export async function performUpload(
   uploadFn: BitUploadFn,
   options?: UseBitUploadOptions,
 ): Promise<BitUploadResult> {
-  try {
-    return await uploadFn(file, {
-      ...options?.uploadOptions,
-      onProgress: options?.onProgress,
-    });
-  } catch (error) {
-    const err = error instanceof Error ? error : new Error(String(error));
-    options?.onError?.(err);
-    throw err;
-  }
+  return uploadFn(file, options?.uploadOptions);
 }

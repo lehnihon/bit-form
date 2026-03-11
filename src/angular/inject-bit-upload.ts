@@ -1,57 +1,22 @@
 /**
  * Angular Dependency Injection for File Upload
  *
- * Signal-based file upload integration for Angular.
- *
- * @example
- * ```typescript
- * export class MyComponent {
- *   avatar = injectBitUpload("avatar", uploadFn, {
- *     uploadOptions: { folder: "avatars" },
- *   });
- *
- *   constructor() {
- *     effect(() => {
- *       if (this.avatar.uploadError()) {
- *         console.error(this.avatar.uploadError());
- *       }
- *     });
- *   }
- *
- *   async onFileSelect(event: Event) {
- *     const file = (event.target as HTMLInputElement).files?.[0];
- *     await this.avatar.handleUploadFile(file);
- *   }
- * }
- * ```
+ * Minimal upload API integrated with global field validation lifecycle.
  */
 
-import { signal, computed, inject } from "@angular/core";
+import { computed, inject } from "@angular/core";
 import { BIT_STORE_TOKEN } from "./provider";
 import { injectBitField } from "./inject-bit-field";
-import {
-  BitUploadFn,
-  BitUploadProgress,
-  UseBitUploadOptions,
-} from "../core/upload/types";
+import { BitUploadFn, UseBitUploadOptions } from "../core/upload/types";
 import { performUpload } from "../core/upload";
 
 export interface InjectBitUploadResult {
-  // Field integration (signals)
   value: import("@angular/core").Signal<string | File | null>;
   setValue: (value: string | File | null) => void;
   error: import("@angular/core").Signal<string | undefined>;
   isValidating: import("@angular/core").Signal<boolean>;
-
-  // Upload signals
-  isUploading: import("@angular/core").Signal<boolean>;
-  uploadProgress: import("@angular/core").Signal<BitUploadProgress>;
-  uploadError: import("@angular/core").Signal<string | null>;
-  uploadKey: import("@angular/core").Signal<string | null>;
-
-  // Actions
-  handleUploadFile: (file: File | null | undefined) => Promise<void>;
-  handleRemoveFile: () => Promise<void>;
+  upload: (file: File | null | undefined) => Promise<void>;
+  remove: () => Promise<void>;
 }
 
 export function injectBitUpload(
@@ -61,72 +26,45 @@ export function injectBitUpload(
 ): InjectBitUploadResult {
   const store = inject(BIT_STORE_TOKEN);
   const field = injectBitField(fieldPath);
+  let uploadKey: string | null = null;
 
-  const isUploading = signal(false);
-  const uploadProgress = signal<BitUploadProgress>({
-    loaded: 0,
-    total: 0,
-    percentage: 0,
-  });
-  const uploadError = signal<string | null>(null);
-  const uploadKey = signal<string | null>(null);
-
-  const handleUploadFile = async (file: File | null | undefined) => {
+  const upload = async (file: File | null | undefined) => {
     if (!file) return;
 
-    isUploading.set(true);
     store.beginFieldValidation(fieldPath);
-
     await store.clearFieldAsyncError(fieldPath);
-    uploadError.set(null);
-    uploadProgress.set({ loaded: 0, total: 0, percentage: 0 });
 
     try {
       const result = await performUpload(file, uploadFn, {
         uploadOptions: options?.uploadOptions,
-        onProgress: (progress) => {
-          uploadProgress.set(progress);
-          options?.onProgress?.(progress);
-        },
-        onError: (error) => {
-          uploadError.set(error.message);
-          void store.setFieldAsyncError(fieldPath, error.message);
-          options?.onError?.(error);
-        },
       });
 
       field.setValue(result.url);
+      uploadKey = result.key;
       await store.clearFieldAsyncError(fieldPath);
-      uploadKey.set(result.key);
-      options?.onSuccess?.(result);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Upload failed";
-      uploadError.set(message);
       await store.setFieldAsyncError(fieldPath, message);
     } finally {
       store.endFieldValidation(fieldPath);
-      isUploading.set(false);
     }
   };
 
-  const handleRemoveFile = async () => {
-    if (uploadKey() && options?.deleteFile) {
+  const remove = async () => {
+    if (uploadKey && options?.deleteFile) {
       try {
-        await options.deleteFile(uploadKey()!);
-        field.setValue(null);
-        await store.clearFieldAsyncError(fieldPath);
-        uploadKey.set(null);
+        await options.deleteFile(uploadKey);
       } catch (error) {
         const message =
           error instanceof Error ? error.message : "Delete failed";
-        uploadError.set(message);
         await store.setFieldAsyncError(fieldPath, message);
+        return;
       }
-    } else {
-      field.setValue(null);
-      await store.clearFieldAsyncError(fieldPath);
-      uploadKey.set(null);
     }
+
+    field.setValue(null);
+    uploadKey = null;
+    await store.clearFieldAsyncError(fieldPath);
   };
 
   return {
@@ -134,11 +72,7 @@ export function injectBitUpload(
     setValue: field.setValue,
     error: computed(() => field.meta.error()),
     isValidating: computed(() => field.meta.isValidating() || false),
-    isUploading,
-    uploadProgress,
-    uploadError,
-    uploadKey,
-    handleUploadFile,
-    handleRemoveFile,
+    upload,
+    remove,
   };
 }

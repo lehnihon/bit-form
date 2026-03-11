@@ -35,9 +35,6 @@ export type BitDeleteUploadFn = (key: string) => Promise<void>;
 
 /** Hook options for upload. */
 export interface UseBitUploadOptions {
-  onProgress?: (progress: BitUploadProgress) => void;
-  onError?: (error: Error) => void;
-  onSuccess?: (result: BitUploadResult) => void;
   uploadOptions?: Record<string, any>;
   deleteFile?: BitDeleteUploadFn;
 }

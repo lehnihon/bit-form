@@ -1,7 +1,3 @@
-/**
- * React "useBitUpload" Hook Tests
- */
-
 import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { renderHook, act, waitFor } from "@testing-library/react";
@@ -34,19 +30,14 @@ describe("useBitUpload (React)", () => {
     mockDelete = vi.fn(async () => {});
   });
 
-  it("should initialize with empty state", async () => {
+  it("should initialize with empty state", () => {
     const { result } = renderHook(() => useBitUpload("avatar", mockUpload), {
       wrapper: (props) => wrapper({ ...props, testStore: store }),
     });
 
     expect(result.current.value).toBeUndefined();
-    expect(result.current.isUploading).toBe(false);
-    expect(result.current.uploadProgress).toEqual({
-      loaded: 0,
-      total: 0,
-      percentage: 0,
-    });
-    expect(result.current.uploadError).toBeNull();
+    expect(result.current.error).toBeUndefined();
+    expect(result.current.isValidating).toBe(false);
   });
 
   it("should upload file and set field value", async () => {
@@ -56,36 +47,15 @@ describe("useBitUpload (React)", () => {
 
     const file = new File(["content"], "avatar.jpg", { type: "image/jpeg" });
 
-    await act(() => result.current.handleUploadFile(file));
+    await act(() => result.current.upload(file));
 
     expect(mockUpload).toHaveBeenCalledWith(file, expect.objectContaining({}));
     expect(result.current.value).toBe(
       "https://cdn.example.com/uploads/avatar.jpg",
     );
-    expect(result.current.uploadKey).toBe("uploads/avatar.jpg");
   });
 
-  it("should track upload progress", async () => {
-    mockUpload = vi.fn(async () => {
-      return {
-        url: "https://cdn.example.com/file.jpg",
-        key: "file.jpg",
-      };
-    }) as any;
-
-    const { result } = renderHook(() => useBitUpload("avatar", mockUpload), {
-      wrapper: (props) => wrapper({ ...props, testStore: store }),
-    });
-    const file = new File(["content"], "avatar.jpg", { type: "image/jpeg" });
-
-    await act(() => result.current.handleUploadFile(file));
-
-    await waitFor(() => {
-      expect(result.current.uploadProgress.percentage).toBe(0);
-    });
-  });
-
-  it("should handle upload errors", async () => {
+  it("should set field error on upload failure", async () => {
     mockUpload = vi.fn(async () => {
       throw new Error("Network error");
     }) as any;
@@ -95,19 +65,14 @@ describe("useBitUpload (React)", () => {
     });
     const file = new File(["content"], "avatar.jpg", { type: "image/jpeg" });
 
-    await act(() =>
-      result.current.handleUploadFile(file).catch(() => {
-        // Expected
-      }),
-    );
+    await act(() => result.current.upload(file));
 
-    expect(result.current.uploadError).not.toBeNull();
-    expect(result.current.uploadError).toContain("Network");
     expect(store.getState().errors.avatar).toContain("Network");
+    expect(result.current.error).toBeUndefined();
     expect(result.current.value).toBeUndefined();
   });
 
-  it("should remove uploaded file", async () => {
+  it("should remove uploaded file and call deleteFile", async () => {
     const { result } = renderHook(
       () => useBitUpload("avatar", mockUpload, { deleteFile: mockDelete }),
       {
@@ -116,32 +81,28 @@ describe("useBitUpload (React)", () => {
     );
 
     const file = new File(["content"], "avatar.jpg", { type: "image/jpeg" });
-    await act(() => result.current.handleUploadFile(file));
+    await act(() => result.current.upload(file));
 
-    expect(result.current.value).toBeDefined();
-    expect(result.current.uploadKey).toBeDefined();
-
-    await act(() => result.current.handleRemoveFile());
+    await act(() => result.current.remove());
 
     expect(mockDelete).toHaveBeenCalledWith("uploads/avatar.jpg");
     expect(result.current.value).toBeNull();
-    expect(result.current.uploadKey).toBeNull();
   });
 
-  it("should clear local state without deleteFile", async () => {
+  it("should clear field value without deleteFile", async () => {
     const { result } = renderHook(() => useBitUpload("avatar", mockUpload), {
       wrapper: (props) => wrapper({ ...props, testStore: store }),
     });
 
     const file = new File(["content"], "avatar.jpg", { type: "image/jpeg" });
-    await act(() => result.current.handleUploadFile(file));
+    await act(() => result.current.upload(file));
 
-    await act(() => result.current.handleRemoveFile());
+    await act(() => result.current.remove());
 
     expect(result.current.value).toBeNull();
   });
 
-  it("should pass custom options to upload function", async () => {
+  it("should pass custom uploadOptions to upload function", async () => {
     const { result } = renderHook(
       () =>
         useBitUpload("avatar", mockUpload, {
@@ -153,8 +114,7 @@ describe("useBitUpload (React)", () => {
     );
 
     const file = new File(["content"], "avatar.jpg", { type: "image/jpeg" });
-
-    await act(() => result.current.handleUploadFile(file));
+    await act(() => result.current.upload(file));
 
     expect(mockUpload).toHaveBeenCalledWith(
       file,
@@ -162,7 +122,7 @@ describe("useBitUpload (React)", () => {
     );
   });
 
-  it("should set isUploading flag during upload", async () => {
+  it("should keep isValidating true while upload is pending", async () => {
     let uploadPromiseResolve: any;
     mockUpload = vi.fn(
       () =>
@@ -178,10 +138,9 @@ describe("useBitUpload (React)", () => {
 
     let uploadPromise: Promise<void>;
     act(() => {
-      uploadPromise = result.current.handleUploadFile(file);
+      uploadPromise = result.current.upload(file);
     });
 
-    expect(result.current.isUploading).toBe(true);
     expect(result.current.isValidating).toBe(true);
 
     await waitFor(() => {
@@ -197,12 +156,11 @@ describe("useBitUpload (React)", () => {
     });
 
     await waitFor(() => {
-      expect(result.current.isUploading).toBe(false);
       expect(result.current.isValidating).toBe(false);
     });
   });
 
-  it("should support setValue method for field", async () => {
+  it("should support setValue method for field", () => {
     const { result } = renderHook(() => useBitUpload("avatar", mockUpload), {
       wrapper: (props) => wrapper({ ...props, testStore: store }),
     });
@@ -212,29 +170,5 @@ describe("useBitUpload (React)", () => {
     });
 
     expect(result.current.value).toBe("https://external-cdn.com/avatar.jpg");
-  });
-
-  it("should reset upload state on new upload", async () => {
-    const { result } = renderHook(() => useBitUpload("avatar", mockUpload), {
-      wrapper: (props) => wrapper({ ...props, testStore: store }),
-    });
-
-    const file1 = new File(["content"], "avatar1.jpg", { type: "image/jpeg" });
-    await act(() => result.current.handleUploadFile(file1));
-
-    expect(result.current.uploadError).toBeNull();
-
-    mockUpload.mockImplementation(async () => {
-      throw new Error("Upload failed");
-    });
-
-    const file2 = new File(["content"], "avatar2.jpg", { type: "image/jpeg" });
-    await act(() =>
-      result.current.handleUploadFile(file2).catch(() => {
-        // Expected
-      }),
-    );
-
-    expect(result.current.uploadError).not.toBeNull();
   });
 });

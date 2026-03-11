@@ -1,58 +1,38 @@
 /**
  * React Hook for File Upload Integration
  *
- * Combines useBitField with file upload management.
- * Automatically validates completion of upload before form submission.
+ * Minimal upload API integrated with global field validation lifecycle.
  *
  * @example
  * ```typescript
- * const avatar = useBitUpload("avatar", uploadFn, {
- *   onProgress: (p) => setProgress(p.percentage),
- *   uploadOptions: { folder: "avatars" },
- * });
+ * const avatar = useBitUpload("avatar", uploadFn);
  *
  * return (
  *   <>
  *     <input
  *       type="file"
- *       onChange={(e) => avatar.handleUploadFile(e.target.files?.[0])}
- *       disabled={avatar.isUploading}
+ *       onChange={(e) => avatar.upload(e.target.files?.[0])}
+ *       disabled={avatar.isValidating}
  *     />
- *     {avatar.isUploading && <ProgressBar value={avatar.uploadProgress?.percentage} />}
- *     {avatar.uploadError && <Error>{avatar.uploadError}</Error>}
+ *     {avatar.error && <Error>{avatar.error}</Error>}
  *   </>
  * );
  * ```
  */
 
-import { useState, useCallback } from "react";
+import { useCallback, useRef } from "react";
 import { useBitField } from "./use-bit-field";
 import { useBitStore } from "./context";
-import {
-  BitUploadFn,
-  BitUploadProgress,
-  UseBitUploadOptions,
-} from "../core/upload/types";
+import { BitUploadFn, UseBitUploadOptions } from "../core/upload/types";
 import { performUpload } from "../core/upload";
 
 export interface UseBitUploadResult {
-  // Field integration
   value: string | File | null;
   setValue: (value: string | File | null) => void;
   error?: string;
   isValidating: boolean;
-  meta: any;
-  props: any;
-
-  // Upload specifics
-  isUploading: boolean;
-  uploadProgress: BitUploadProgress;
-  uploadError: string | null;
-  uploadKey: string | null;
-
-  // Actions
-  handleUploadFile: (file: File | null | undefined) => Promise<void>;
-  handleRemoveFile: () => Promise<void>;
+  upload: (file: File | null | undefined) => Promise<void>;
+  remove: () => Promise<void>;
 }
 
 export function useBitUpload(
@@ -62,95 +42,59 @@ export function useBitUpload(
 ): UseBitUploadResult {
   const store = useBitStore<any>();
   const field = useBitField(fieldPath);
-  const [isUploading, setIsUploading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState<BitUploadProgress>({
-    loaded: 0,
-    total: 0,
-    percentage: 0,
-  });
-  const [uploadError, setUploadError] = useState<string | null>(null);
-  const [uploadKey, setUploadKey] = useState<string | null>(null);
+  const uploadKeyRef = useRef<string | null>(null);
 
-  const handleUploadFile = useCallback(
+  const upload = useCallback(
     async (file: File | null | undefined) => {
       if (!file) return;
 
-      setIsUploading(true);
       store.beginFieldValidation(fieldPath);
-
       await store.clearFieldAsyncError(fieldPath);
-      setUploadError(null);
-      setUploadProgress({ loaded: 0, total: 0, percentage: 0 });
 
       try {
         const result = await performUpload(file, uploadFn, {
           uploadOptions: options?.uploadOptions,
-          onProgress: (progress) => {
-            setUploadProgress(progress);
-            options?.onProgress?.(progress);
-          },
-          onError: (error) => {
-            setUploadError(error.message);
-            void store.setFieldAsyncError(fieldPath, error.message);
-            options?.onError?.(error);
-          },
         });
 
-        // Update field with file URL
         field.setValue(result.url);
+        uploadKeyRef.current = result.key;
         await store.clearFieldAsyncError(fieldPath);
-        setUploadKey(result.key);
-        options?.onSuccess?.(result);
       } catch (error) {
         const message =
           error instanceof Error ? error.message : "Upload failed";
-        setUploadError(message);
         await store.setFieldAsyncError(fieldPath, message);
       } finally {
         store.endFieldValidation(fieldPath);
-        setIsUploading(false);
       }
     },
     [uploadFn, field, fieldPath, options, store],
   );
 
-  const handleRemoveFile = useCallback(async () => {
+  const remove = useCallback(async () => {
+    const uploadKey = uploadKeyRef.current;
+
     if (uploadKey && options?.deleteFile) {
       try {
         await options.deleteFile(uploadKey);
-        field.setValue(null);
-        await store.clearFieldAsyncError(fieldPath);
-        setUploadKey(null);
       } catch (error) {
         const message =
           error instanceof Error ? error.message : "Delete failed";
-        setUploadError(message);
         await store.setFieldAsyncError(fieldPath, message);
+        return;
       }
-    } else {
-      field.setValue(null);
-      await store.clearFieldAsyncError(fieldPath);
-      setUploadKey(null);
     }
-  }, [uploadKey, options, field, fieldPath, store]);
+
+    field.setValue(null);
+    uploadKeyRef.current = null;
+    await store.clearFieldAsyncError(fieldPath);
+  }, [options, field, fieldPath, store]);
 
   return {
-    // Delegate field properties
     value: field.value,
     setValue: field.setValue,
     error: field.meta?.error,
     isValidating: field.meta?.isValidating || false,
-    meta: field.meta,
-    props: field.props,
-
-    // Upload state
-    isUploading,
-    uploadProgress,
-    uploadError,
-    uploadKey,
-
-    // Actions
-    handleUploadFile,
-    handleRemoveFile,
+    upload,
+    remove,
   };
 }

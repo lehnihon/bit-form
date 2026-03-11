@@ -1,7 +1,3 @@
-/**
- * Vue "useBitUpload" Composable Tests
- */
-
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { defineComponent, nextTick } from "vue";
 import { mount } from "@vue/test-utils";
@@ -54,31 +50,24 @@ describe("useBitUpload (Vue)", () => {
     const { upload } = mountUpload(() => useBitUpload("avatar", mockUpload));
 
     expect(upload.value.value).toBeUndefined();
-    expect(upload.isUploading.value).toBe(false);
-    expect(upload.uploadProgress.value).toEqual({
-      loaded: 0,
-      total: 0,
-      percentage: 0,
-    });
-    expect(upload.uploadError.value).toBeNull();
-    expect(upload.uploadKey.value).toBeNull();
+    expect(upload.error.value).toBeUndefined();
+    expect(upload.isValidating.value).toBe(false);
   });
 
   it("should upload file and set field value", async () => {
     const { upload } = mountUpload(() => useBitUpload("avatar", mockUpload));
     const file = new File(["content"], "avatar.jpg", { type: "image/jpeg" });
 
-    await upload.handleUploadFile(file);
+    await upload.upload(file);
     await nextTick();
 
     expect(mockUpload).toHaveBeenCalledWith(file, expect.objectContaining({}));
     expect(upload.value.value).toBe(
       "https://cdn.example.com/uploads/avatar.jpg",
     );
-    expect(upload.uploadKey.value).toBe("uploads/avatar.jpg");
   });
 
-  it("should handle upload errors", async () => {
+  it("should handle upload errors in field error", async () => {
     mockUpload = vi.fn(async () => {
       throw new Error("Network error");
     }) as any;
@@ -86,12 +75,10 @@ describe("useBitUpload (Vue)", () => {
     const { upload } = mountUpload(() => useBitUpload("avatar", mockUpload));
     const file = new File(["content"], "avatar.jpg", { type: "image/jpeg" });
 
-    await upload.handleUploadFile(file).catch(() => {
-      // Expected
-    });
+    await upload.upload(file);
     await nextTick();
 
-    expect(upload.uploadError.value).toContain("Network");
+    expect(upload.error.value).toBeUndefined();
     expect(store.getState().errors.avatar).toContain("Network");
     expect(upload.value.value).toBeUndefined();
   });
@@ -102,25 +89,24 @@ describe("useBitUpload (Vue)", () => {
     );
 
     const file = new File(["content"], "avatar.jpg", { type: "image/jpeg" });
-    await upload.handleUploadFile(file);
+    await upload.upload(file);
     await nextTick();
 
-    await upload.handleRemoveFile();
+    await upload.remove();
     await nextTick();
 
     expect(mockDelete).toHaveBeenCalledWith("uploads/avatar.jpg");
     expect(upload.value.value).toBeNull();
-    expect(upload.uploadKey.value).toBeNull();
   });
 
-  it("should clear local state without deleteFile", async () => {
+  it("should clear state without deleteFile", async () => {
     const { upload } = mountUpload(() => useBitUpload("avatar", mockUpload));
 
     const file = new File(["content"], "avatar.jpg", { type: "image/jpeg" });
-    await upload.handleUploadFile(file);
+    await upload.upload(file);
     await nextTick();
 
-    await upload.handleRemoveFile();
+    await upload.remove();
     await nextTick();
 
     expect(upload.value.value).toBeNull();
@@ -134,7 +120,7 @@ describe("useBitUpload (Vue)", () => {
     );
 
     const file = new File(["content"], "avatar.jpg", { type: "image/jpeg" });
-    await upload.handleUploadFile(file);
+    await upload.upload(file);
     await nextTick();
 
     expect(mockUpload).toHaveBeenCalledWith(
@@ -143,7 +129,7 @@ describe("useBitUpload (Vue)", () => {
     );
   });
 
-  it("should set isUploading ref during upload", async () => {
+  it("should set isValidating during pending upload", async () => {
     let uploadPromiseResolve: any;
     mockUpload = vi.fn(
       () =>
@@ -155,8 +141,8 @@ describe("useBitUpload (Vue)", () => {
     const { upload } = mountUpload(() => useBitUpload("avatar", mockUpload));
     const file = new File(["content"], "avatar.jpg", { type: "image/jpeg" });
 
-    const uploadPromise = upload.handleUploadFile(file);
-    expect(upload.isUploading.value).toBe(true);
+    const uploadPromise = upload.upload(file);
+    expect(upload.isValidating.value).toBe(true);
 
     await vi.waitFor(() => {
       expect(typeof uploadPromiseResolve).toBe("function");
@@ -170,7 +156,7 @@ describe("useBitUpload (Vue)", () => {
     await uploadPromise;
     await nextTick();
 
-    expect(upload.isUploading.value).toBe(false);
+    expect(upload.isValidating.value).toBe(false);
   });
 
   it("should support setValue method for field", async () => {
@@ -180,15 +166,5 @@ describe("useBitUpload (Vue)", () => {
     await nextTick();
 
     expect(upload.value.value).toBe("https://external-cdn.com/avatar.jpg");
-  });
-
-  it("should expose error from field", () => {
-    const { upload } = mountUpload(() => useBitUpload("avatar", mockUpload));
-    expect(upload.error).toBeDefined();
-  });
-
-  it("should expose isValidating from field", () => {
-    const { upload } = mountUpload(() => useBitUpload("avatar", mockUpload));
-    expect(typeof upload.isValidating.value).toBe("boolean");
   });
 });
