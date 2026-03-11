@@ -7,7 +7,7 @@
 import { computed, inject } from "@angular/core";
 import { BIT_STORE_TOKEN } from "./provider";
 import { injectBitField } from "./inject-bit-field";
-import { BitUploadFn, BitDeleteUploadFn } from "../core/upload/types";
+import { BitUploadFn, BitDeleteUploadFn } from "../core";
 
 export interface InjectBitUploadResult {
   value: import("@angular/core").Signal<string | File | null>;

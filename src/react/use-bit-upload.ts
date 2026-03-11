@@ -23,7 +23,7 @@
 import { useCallback, useRef } from "react";
 import { useBitField } from "./use-bit-field";
 import { useBitStore } from "./context";
-import { BitUploadFn, BitDeleteUploadFn } from "../core/upload/types";
+import { BitUploadFn, BitDeleteUploadFn } from "../core";
 
 export interface UseBitUploadResult {
   value: string | File | null;

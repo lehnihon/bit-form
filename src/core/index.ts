@@ -1,5 +1,5 @@
 export { createBitStore } from "./store/create-store";
-export type { BitPublicStore } from "./store/public-types";
+export type { BitPublicStore, BitFrameworkStore } from "./store/public-types";
 
 export { bitBus } from "./store/bus";
 

@@ -1,4 +1,5 @@
-import { BitErrors, BitLifecycleAdapter } from "./types";
+import { BitErrors } from "./types";
+import { BitLifecycleAdapter } from "./internal-types";
 import { deepClone, getDeepValue, setDeepValue } from "../utils";
 
 export class BitLifecycleManager<T extends object> {

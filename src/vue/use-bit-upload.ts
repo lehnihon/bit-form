@@ -7,7 +7,7 @@
 import { computed, ComputedRef } from "vue";
 import { useBitField } from "./use-bit-field";
 import { useBitStore } from "./context";
-import { BitUploadFn, BitDeleteUploadFn } from "../core/upload/types";
+import { BitUploadFn, BitDeleteUploadFn } from "../core";
 
 export interface UseBitUploadResult {
   value: ComputedRef<string | File | null>;

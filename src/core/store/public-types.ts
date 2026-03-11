@@ -1,8 +1,10 @@
 import {
   BitErrors,
+  BitFieldDefinition,
   BitPath,
   BitPathValue,
   BitResolvedConfig,
+  ScopeStatus,
   BitState,
 } from "./types";
 import { BitMask } from "../mask/types";
@@ -35,4 +37,47 @@ export interface BitPublicStore<T extends object = any> {
   getDirtyValues(): Partial<T>;
 
   cleanup(): void;
+}
+
+export interface BitFrameworkStore<
+  T extends object = any,
+> extends BitPublicStore<T> {
+  config: BitResolvedConfig<T>;
+
+  registerField(path: string, config: BitFieldDefinition<T>): void;
+  unregisterField(path: string): void;
+  unregisterPrefix?(prefix: string): void;
+
+  isHidden(path: any): boolean;
+  isRequired(path: any): boolean;
+  isFieldDirty(path: string): boolean;
+  isFieldValidating(path: string): boolean;
+
+  watch(path: any, callback: (value: any) => void): () => void;
+
+  pushItem(path: any, value: any): void;
+  prependItem(path: any, value: any): void;
+  insertItem(path: any, index: number, value: any): void;
+  removeItem(path: any, index: number): void;
+  moveItem(path: any, from: number, to: number): void;
+  swapItems(path: any, indexA: number, indexB: number): void;
+
+  getHistoryMetadata(): {
+    canUndo: boolean;
+    canRedo: boolean;
+    historyIndex: number;
+    historySize: number;
+  };
+  undo(): void;
+  redo(): void;
+
+  getStepStatus(scopeName: string): ScopeStatus;
+  getStepErrors(scopeName: string): Record<string, string>;
+  markFieldsTouched(paths: string[]): void;
+  hasValidationsInProgress(scopeFields?: string[]): boolean;
+
+  beginFieldValidation(path: string): void;
+  endFieldValidation(path: string): void;
+  setFieldAsyncError(path: string, message: string): Promise<void>;
+  clearFieldAsyncError(path: string): Promise<void>;
 }
