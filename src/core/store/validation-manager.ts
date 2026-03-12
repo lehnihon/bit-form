@@ -60,9 +60,7 @@ export class BitValidationManager<T extends object> {
   }
 
   handleAsync(path: string, value: any) {
-    const config =
-      this.store.depsMg.fieldConfigs.get(path) ||
-      this.store.config.fields?.[path];
+    const config = this.store.getFieldConfig(path);
     const asyncValidate = config?.validation?.asyncValidate;
     if (!asyncValidate) {
       this.updateFieldValidating(path, false);
@@ -146,8 +144,11 @@ export class BitValidationManager<T extends object> {
 
     let targetFields: string[] | undefined = options?.scopeFields;
 
-    if (options?.scope && this.store.config.scopes?.[options.scope]) {
-      targetFields = this.store.config.scopes[options.scope];
+    if (options?.scope) {
+      const scopeFields = this.store.getScopeFields(options.scope);
+      if (scopeFields.length > 0) {
+        targetFields = scopeFields;
+      }
     }
 
     let allErrors: Record<string, any> = this.store.config.resolver

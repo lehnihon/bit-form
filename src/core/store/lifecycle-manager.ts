@@ -91,18 +91,13 @@ export class BitLifecycleManager<T extends object> {
           valuesToSubmit = setDeepValue(valuesToSubmit, hiddenPath, undefined);
         });
 
-        if (this.store.config.transform) {
-          for (const path in this.store.config.transform) {
-            const transformer = this.store.config.transform[path];
-            if (transformer) {
-              const currentVal = getDeepValue(valuesToSubmit, path);
-              valuesToSubmit = setDeepValue(
-                valuesToSubmit,
-                path,
-                transformer(currentVal, this.store.getState().values),
-              );
-            }
-          }
+        for (const [path, transformer] of this.store.getTransformEntries()) {
+          const currentVal = getDeepValue(valuesToSubmit, path);
+          valuesToSubmit = setDeepValue(
+            valuesToSubmit,
+            path,
+            transformer(currentVal, this.store.getState().values),
+          );
         }
 
         const dirtyValues = this.store.dirtyMg.buildDirtyValues(valuesToSubmit);

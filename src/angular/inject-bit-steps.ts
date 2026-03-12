@@ -54,7 +54,7 @@ export function injectBitSteps(scopeNames: string[]): InjectBitStepsResult {
   const next = async (): Promise<boolean> => {
     const scopeName = getCurrentScope();
 
-    const scopeFields = store.getConfig().scopes?.[scopeName];
+    const scopeFields = store.getScopeFields(scopeName);
     if (store.hasValidationsInProgress(scopeFields)) {
       return false;
     }

@@ -61,12 +61,7 @@ export function injectBitField<
 
   const invalid = computed(() => touched() && !!rawError());
 
-  const maskOption = store.config.fields?.[path as string]?.mask;
-  const resolvedMask = maskOption
-    ? typeof maskOption === "string"
-      ? store.config.masks![maskOption]
-      : maskOption
-    : undefined;
+  const resolvedMask = store.resolveMask(path as string);
 
   const displayValue = computed(() => {
     const val = value();

@@ -2,7 +2,9 @@ import { bitBus } from "./bus";
 import { BitMask } from "../mask/types";
 import {
   BitConfig,
+  BitComputedFn,
   BitErrors,
+  BitTransformFn,
   BitState,
   BitFieldDefinition,
   BitPath,
@@ -95,7 +97,9 @@ export class BitStore<T extends object = any>
 
     // Initialize core managers
     this.depsMg = new BitDependencyManager<T>();
-    this.computedMg = new BitComputedManager<T>(this.config);
+    this.computedMg = new BitComputedManager<T>(() =>
+      this.getComputedEntries(),
+    );
     this.validatorMg = new BitValidationManager<T>(this);
     this.dirtyMg = new BitDirtyManager<T>();
     this.lifecycleMg = new BitLifecycleManager<T>(this);
@@ -111,7 +115,8 @@ export class BitStore<T extends object = any>
     // Initialize query/mutation managers with state access
     this.scopeMg = new BitScopeManager<T>(
       () => this.state,
-      () => this.config,
+      () => this.config.initialValues,
+      (scopeName) => this.getScopeFields(scopeName),
     );
     this.queryMg = new BitFieldQueryManager<T>(
       this.depsMg,
@@ -125,17 +130,6 @@ export class BitStore<T extends object = any>
 
     // Initialize form state
     const initialValues = deepClone(this.config.initialValues);
-    const valuesWithComputeds = this.computedMg.apply(initialValues);
-
-    this.state = {
-      values: valuesWithComputeds,
-      errors: {},
-      touched: {},
-      isValidating: {},
-      isValid: true,
-      isSubmitting: false,
-      isDirty: false,
-    };
 
     // Register initial fields from config
     if (this.config.fields) {
@@ -147,6 +141,18 @@ export class BitStore<T extends object = any>
         );
       });
     }
+
+    const valuesWithComputeds = this.computedMg.apply(initialValues);
+
+    this.state = {
+      values: valuesWithComputeds,
+      errors: {},
+      touched: {},
+      isValidating: {},
+      isValid: true,
+      isSubmitting: false,
+      isDirty: false,
+    };
 
     this.internalSaveSnapshot();
 
@@ -163,6 +169,60 @@ export class BitStore<T extends object = any>
 
   getConfig() {
     return this.config;
+  }
+
+  getFieldConfig(path: string): BitFieldDefinition<T> | undefined {
+    return (
+      this.depsMg.fieldConfigs.get(path) ||
+      this.config.fields?.[path as keyof typeof this.config.fields]
+    );
+  }
+
+  getScopeFields(scopeName: string): string[] {
+    const result: string[] = [];
+
+    this.depsMg.fieldConfigs.forEach((cfg, path) => {
+      if (cfg.scope === scopeName) {
+        result.push(path);
+      }
+    });
+
+    return result;
+  }
+
+  getComputedEntries(): [string, BitComputedFn<T>][] {
+    const result: [string, BitComputedFn<T>][] = [];
+
+    this.depsMg.fieldConfigs.forEach((cfg, path) => {
+      if (cfg.computed) {
+        result.push([path, cfg.computed]);
+      }
+    });
+
+    return result;
+  }
+
+  getTransformEntries(): [string, BitTransformFn<T>][] {
+    const result: [string, BitTransformFn<T>][] = [];
+
+    this.depsMg.fieldConfigs.forEach((cfg, path) => {
+      if (cfg.transform) {
+        result.push([path, cfg.transform]);
+      }
+    });
+
+    return result;
+  }
+
+  resolveMask(path: string): BitMask | undefined {
+    const maskOption = this.getFieldConfig(path)?.mask;
+    if (!maskOption) return undefined;
+
+    if (typeof maskOption === "string") {
+      return this.config.masks?.[maskOption];
+    }
+
+    return maskOption;
   }
 
   getState(): BitState<T> {
@@ -334,7 +394,10 @@ export class BitStore<T extends object = any>
   }
 
   registerMask(name: string, mask: BitMask) {
-    this.config.masks![name] = mask;
+    this.config.masks = {
+      ...(this.config.masks || {}),
+      [name]: mask,
+    };
   }
 
   getDirtyValues(): Partial<T> {
