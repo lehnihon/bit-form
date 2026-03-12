@@ -80,9 +80,12 @@ describe("Vue Integration", () => {
   });
 
   it("should apply masks and handle displayValue vs raw value", async () => {
-    const store = new BitStore({ initialValues: { salary: 10 } });
+    const store = new BitStore({
+      initialValues: { salary: 10 },
+      fields: { salary: { mask: "brl" } },
+    });
     const wrapper = createWrapper(store, () => ({
-      salary: useBitField("salary", undefined, { mask: "brl" }),
+      salary: useBitField("salary"),
     }));
 
     expect(wrapper.vm.salary.displayValue.value).toBe("R$ 10,00");

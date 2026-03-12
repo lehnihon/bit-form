@@ -28,7 +28,6 @@ export type {
   BitFieldDefinition,
   BitFieldConditional,
   BitFieldValidation,
-  BitFieldOptions,
   ValidatorFn,
   BitComputedFn,
   BitTransformFn,

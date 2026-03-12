@@ -25,7 +25,10 @@ interface MyForm {
 }
 
 describe("React Integration (Context + Hooks)", () => {
-  const createTestStore = (initialValues?: Partial<MyForm>) =>
+  const createTestStore = (
+    initialValues?: Partial<MyForm>,
+    fields?: Record<string, any>,
+  ) =>
     new BitStore<MyForm>({
       initialValues: {
         salary: 10,
@@ -35,6 +38,7 @@ describe("React Integration (Context + Hooks)", () => {
         bonusValue: 0,
         ...initialValues,
       },
+      fields,
       validation: { delay: 0 },
     });
 
@@ -122,11 +126,13 @@ describe("React Integration (Context + Hooks)", () => {
 
   describe("Masks & Formatting", () => {
     it("deve aplicar máscara no displayValue mas manter valor limpo na store", async () => {
-      const store = createTestStore({ salary: 10 });
-      const { result } = renderHook(
-        () => useBitField("salary", { mask: "brl" }),
-        { wrapper: (props) => wrapper({ ...props, store }) },
+      const store = createTestStore(
+        { salary: 10 },
+        { salary: { mask: "brl" } },
       );
+      const { result } = renderHook(() => useBitField("salary"), {
+        wrapper: (props) => wrapper({ ...props, store }),
+      });
 
       expect(result.current.props.value).toBe("R$ 10,00");
 
@@ -139,16 +145,17 @@ describe("React Integration (Context + Hooks)", () => {
     });
 
     it("deve aceitar máscaras de padrão (pattern) como CPF", async () => {
-      const store = createTestStore();
+      const store = createTestStore(undefined, {
+        "user.lastName": { mask: "cpf" },
+      });
       store.registerMask("cpf", {
         format: (v) => v.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4"),
         parse: (v) => v.replace(/\D/g, ""),
       });
 
-      const { result } = renderHook(
-        () => useBitField("user.lastName", { mask: "cpf" }),
-        { wrapper: (props) => wrapper({ ...props, store }) },
-      );
+      const { result } = renderHook(() => useBitField("user.lastName"), {
+        wrapper: (props) => wrapper({ ...props, store }),
+      });
 
       await act(() => {
         result.current.setValue("12345678901");

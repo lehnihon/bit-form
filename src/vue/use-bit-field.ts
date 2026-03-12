@@ -1,21 +1,14 @@
 import { computed, onUnmounted, shallowRef } from "vue";
 import { useBitStore } from "./context";
-import { BitFieldOptions, BitFieldDefinition, getDeepValue } from "../core";
+import { getDeepValue } from "../core";
 import type { UseBitFieldVueMeta, UseBitFieldVueResult } from "./types";
 
 export function useBitField<TValue = any>(
   path: string,
-  config?: BitFieldDefinition<any>,
-  options?: BitFieldOptions,
 ): UseBitFieldVueResult<TValue> {
   const store = useBitStore<any>();
 
-  if (config) {
-    store.registerField(path as string, config as any);
-  }
-
-  const maskOption =
-    options?.mask ?? store.config.fields?.[path as string]?.mask;
+  const maskOption = store.config.fields?.[path as string]?.mask;
   const resolvedMask = maskOption
     ? typeof maskOption === "string"
       ? store.config.masks?.[maskOption]

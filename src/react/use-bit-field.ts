@@ -1,62 +1,30 @@
 import { useMemo, useCallback } from "react";
 import { useBitFieldBase } from "./use-bit-field-base";
-import {
-  BitFieldDefinition,
-  BitFieldOptions,
-  BitPath,
-  BitPathValue,
-} from "../core";
+import { BitPath, BitPathValue } from "../core";
 import type {
   UseBitFieldMeta,
   UseBitFieldBindProps,
   UseBitFieldResult,
 } from "./types";
 
-function isMaskOnlyOptions(
-  value: BitFieldDefinition<any> | BitFieldOptions | undefined,
-): value is BitFieldOptions {
-  if (!value || typeof value !== "object") return false;
-  const keys = Object.keys(value);
-  return keys.length === 1 && keys[0] === "mask";
-}
-
 export function useBitField<
   TForm extends object = any,
   P extends BitPath<TForm> = BitPath<TForm>,
->(
-  path: P,
-  configOrOptions?: BitFieldDefinition<TForm> | BitFieldOptions,
-  maybeOptions?: BitFieldOptions,
-): UseBitFieldResult<TForm, P> {
-  const config =
-    maybeOptions !== undefined
-      ? (configOrOptions as BitFieldDefinition<TForm> | undefined)
-      : isMaskOnlyOptions(configOrOptions)
-        ? undefined
-        : (configOrOptions as BitFieldDefinition<TForm> | undefined);
-
-  const options =
-    maybeOptions !== undefined
-      ? maybeOptions
-      : isMaskOnlyOptions(configOrOptions)
-        ? configOrOptions
-        : undefined;
-
+>(path: P): UseBitFieldResult<TForm, P> {
   const {
     fieldState,
     setValue: rawSetValue,
     setBlur,
     store,
-  } = useBitFieldBase<BitPathValue<TForm, P>, TForm, P>(path, config);
+  } = useBitFieldBase<BitPathValue<TForm, P>, TForm, P>(path);
 
   const resolvedMask = useMemo(() => {
-    const maskOption =
-      options?.mask ?? store.config.fields?.[path as string]?.mask;
+    const maskOption = store.config.fields?.[path as string]?.mask;
     if (!maskOption) return undefined;
     return typeof maskOption === "string"
       ? store.config.masks![maskOption]
       : maskOption;
-  }, [options?.mask, store.config.masks, store.config.fields, path]);
+  }, [store.config.masks, store.config.fields, path]);
 
   const displayValue = useMemo(() => {
     const val = fieldState.value;
