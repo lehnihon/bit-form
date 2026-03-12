@@ -72,7 +72,7 @@ You can still pass `mask` in the hook to override the field config:
 
 ```tsx
 // Override: use USD instead of BRL for this component
-const salary = useBitField("salary", { mask: "usd" });
+const salary = useBitField("salary");
 ```
 
 ## Submit payload

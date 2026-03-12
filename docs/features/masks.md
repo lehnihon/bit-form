@@ -14,12 +14,9 @@ Bit-Form comes packed with standard presets that you can use instantly by passin
 - **USA**: `usPhone`, `zipCode`, `dateUS`, `ssn`
 - **Global/Tech**: `cc` (Smart Credit Card), `cvv`, `dateISO`, `ip`, `ipv6`, `mac`, `color`
 
-## Defining Masks: fields vs Hook Options
+## Defining Masks in Store Fields
 
-You can define masks in two ways:
-
-1. **In `fields.path.mask`** — declare the mask per field at store construction.
-2. **In the hook** — pass `mask` via `useBitField(path, { mask: "brl" })` to override or when not using `fields`.
+Masks are defined in `fields.path.mask` at store construction (or by registering field config in the store).
 
 ### Option 1: `fields.path.mask` (declarative)
 
@@ -36,17 +33,6 @@ const store = createBitStore({
 // No need to pass mask in the hook — it's read from the field config
 const salary = useBitField("salary");
 ```
-
-### Option 2: Hook options (override or ad‑hoc)
-
-Pass `mask` in the hook when you need to override or don't use `fields`:
-
-```tsx
-const salary = useBitField("salary", { mask: "brl" });
-const plate = useBitField("licensePlate", { mask: myCustomMask });
-```
-
-Hook options take precedence over `fields.path.mask`.
 
 ## Custom Masks
 
@@ -67,8 +53,7 @@ const store = createBitStore({
   fields: { licensePlate: { mask: plateMask } },
 });
 
-// Or inline in hook
-const plate = useBitField("licensePlate", { mask: plateMask });
+const plate = useBitField("licensePlate");
 ```
 
 Dynamic patterns (e.g. phone):

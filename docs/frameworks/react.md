@@ -128,23 +128,28 @@ The `useBitField` hook binds an input to a specific path in your store. It now r
 - `meta`: UI state (`invalid`, `error`, `touched`, `isDirty`, `isValidating`, `isHidden`, `isRequired`)
 - `props`: HTML helper (`value`, `onChange`, `onBlur`) for native inputs
 
-You can also register field config directly in React with the second argument (`BitFieldDefinition`) and keep mask options as the third argument.
+Field configuration now lives in the store (`fields[path]`). The hook accepts only the field path.
 
 ```tsx
 import { useBitField } from "@lehnihon/bit-form/react";
+import { createBitStore } from "@lehnihon/bit-form";
 
-export function UsernameInput() {
-  const username = useBitField("username");
-  const age = useBitField(
-    "age",
-    {
+const store = createBitStore({
+  initialValues: { username: "", age: 0 },
+  fields: {
+    age: {
       validation: {
         asyncValidate: async (value) =>
           Number(value) < 18 ? "Must be 18+" : undefined,
       },
+      mask: "integer",
     },
-    { mask: "integer" },
-  );
+  },
+});
+
+export function UsernameInput() {
+  const username = useBitField("username");
+  const age = useBitField("age");
 
   return (
     <div>

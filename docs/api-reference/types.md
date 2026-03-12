@@ -206,16 +206,3 @@ interface BitFrameworkConfig<T extends object = any> extends BitConfig<T> {
 
 `BitResolvedConfig<T>` remains internal to the core store implementation.
 
----
-
-## `BitFieldOptions`
-
-Additional options for field hooks/composables in framework integrations.
-
-```ts
-interface BitFieldOptions {
-  mask?: BitMask | string;
-}
-```
-
-This is typically used at the adapter layer (e.g. `useBitField("price", { mask: "currency" })`).

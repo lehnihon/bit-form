@@ -25,7 +25,7 @@ class HostComponent {
   form = injectBitForm<MyForm>();
   history = injectBitHistory<MyForm>();
   userName = injectBitField<string>("user.name");
-  salary = injectBitField<number>("salary", undefined, { mask: "brl" });
+  salary = injectBitField<number>("salary");
   list = injectBitArray<MyForm, "items">("items");
   bonusValue = injectBitField<number>("bonusValue");
 }
@@ -41,6 +41,9 @@ describe("Angular Integration (Signals)", () => {
         items: ["Item 1", "Item 2"],
         hasBonus: false,
         bonusValue: 0,
+      },
+      fields: {
+        salary: { mask: "brl" },
       },
       history: { enabled: true },
       validation: { delay: 0 },
