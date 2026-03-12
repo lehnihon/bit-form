@@ -8,12 +8,7 @@ export function useBitField<TValue = any>(
 ): UseBitFieldVueResult<TValue> {
   const store = useBitStore<any>();
 
-  const maskOption = store.config.fields?.[path as string]?.mask;
-  const resolvedMask = maskOption
-    ? typeof maskOption === "string"
-      ? store.config.masks?.[maskOption]
-      : maskOption
-    : undefined;
+  const resolvedMask = store.resolveMask(path as string);
 
   const state = shallowRef(store.getState());
 

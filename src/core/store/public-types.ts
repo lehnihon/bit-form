@@ -95,4 +95,6 @@ export interface BitFrameworkStore<
   endFieldValidation(path: string): void;
   setFieldAsyncError(path: string, message: string): Promise<void>;
   clearFieldAsyncError(path: string): Promise<void>;
+  resolveMask(path: string): BitMask | undefined;
+  getScopeFields(scopeName: string): string[];
 }

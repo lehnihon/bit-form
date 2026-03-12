@@ -19,11 +19,7 @@ export function useBitField<
   } = useBitFieldBase<BitPathValue<TForm, P>, TForm, P>(path);
 
   const resolvedMask = useMemo(() => {
-    const maskOption = store.config.fields?.[path as string]?.mask;
-    if (!maskOption) return undefined;
-    return typeof maskOption === "string"
-      ? store.config.masks![maskOption]
-      : maskOption;
+    return store.resolveMask(path as string);
   }, [store.config.masks, store.config.fields, path]);
 
   const displayValue = useMemo(() => {

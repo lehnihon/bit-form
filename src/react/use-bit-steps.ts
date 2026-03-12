@@ -47,7 +47,7 @@ export function useBitSteps(scopeNames: string[]): UseBitStepsResult {
   }, [store, scope]);
 
   const next = useCallback(async (): Promise<boolean> => {
-    const scopeFields = store.getConfig().scopes?.[scope];
+    const scopeFields = store.getScopeFields(scope);
 
     if (store.hasValidationsInProgress(scopeFields)) {
       return false;
