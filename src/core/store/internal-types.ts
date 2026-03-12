@@ -2,7 +2,17 @@ import { BitDependencyManager } from "./dependency-manager";
 import { BitDirtyManager } from "./dirty-manager";
 import { BitHistoryManager } from "./history-manager";
 import { BitValidationManager } from "./validation-manager";
-import { BitFieldDefinition, BitState, BitTransformFn } from "./types";
+import {
+  BitAfterSubmitEvent,
+  BitAfterValidateEvent,
+  BitBeforeSubmitEvent,
+  BitBeforeValidateEvent,
+  BitFieldChangeEvent,
+  BitFieldChangeMeta,
+  BitFieldDefinition,
+  BitState,
+  BitTransformFn,
+} from "./types";
 import type { BitFrameworkConfig } from "./public-types";
 
 export interface BitResolvedConfig<
@@ -19,12 +29,22 @@ export interface BitLifecycleAdapter<T extends object> {
   validatorMg: BitValidationManager<T>;
   historyMg: BitHistoryManager<T>;
   dirtyMg: BitDirtyManager<T>;
+  emitFieldChange: (event: BitFieldChangeEvent<T>) => void;
+  emitBeforeSubmit: (event: BitBeforeSubmitEvent<T>) => Promise<void>;
+  emitAfterSubmit: (event: BitAfterSubmitEvent<T>) => Promise<void>;
+  emitOperationalError: (event: {
+    source: "submit";
+    error: unknown;
+    payload?: unknown;
+  }) => Promise<void>;
 }
 
 export interface BitStoreAdapter<T extends object = any> {
   getState: () => BitState<T>;
   getConfig(): BitResolvedConfig<T>;
   setField(path: string, value: any): void;
+  setFieldWithMeta(path: string, value: any, meta: BitFieldChangeMeta): void;
+  emitFieldChange(event: BitFieldChangeEvent<T>): void;
   internalUpdateState(partialState: any): void;
   internalSaveSnapshot(): void;
   unregisterPrefix?: (prefix: string) => void;
@@ -41,4 +61,6 @@ export interface BitValidationAdapter<T extends object> {
   getScopeFields: (scopeName: string) => string[];
   config: BitResolvedConfig<T>;
   depsMg: BitDependencyManager<T>;
+  emitBeforeValidate: (event: BitBeforeValidateEvent<T>) => Promise<void>;
+  emitAfterValidate: (event: BitAfterValidateEvent<T>) => Promise<void>;
 }

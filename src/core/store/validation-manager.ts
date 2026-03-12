@@ -151,6 +151,13 @@ export class BitValidationManager<T extends object> {
       }
     }
 
+    await this.store.emitBeforeValidate({
+      values: currentState.values,
+      state: currentState,
+      scope: options?.scope,
+      scopeFields: targetFields,
+    });
+
     let allErrors: Record<string, any> = this.store.config.resolver
       ? await this.store.config.resolver(currentState.values, {
           scopeFields: targetFields,
@@ -167,7 +174,19 @@ export class BitValidationManager<T extends object> {
       delete this.asyncErrors[hiddenPath];
     });
 
-    if (validationId !== this.currentValidationId) return currentState.isValid;
+    if (validationId !== this.currentValidationId) {
+      await this.store.emitAfterValidate({
+        values: this.store.getState().values,
+        state: this.store.getState(),
+        scope: options?.scope,
+        scopeFields: targetFields,
+        errors: this.store.getState().errors,
+        result: currentState.isValid,
+        aborted: true,
+      });
+
+      return currentState.isValid;
+    }
 
     if (targetFields) {
       const newErrors = { ...currentState.errors };
@@ -187,7 +206,20 @@ export class BitValidationManager<T extends object> {
       const isValid = Object.keys(newErrors).length === 0;
       this.store.internalUpdateState({ errors: newErrors, isValid });
 
-      return targetFields.every((f) => !allErrors[f] && !this.asyncErrors[f]);
+      const result = targetFields.every(
+        (f) => !allErrors[f] && !this.asyncErrors[f],
+      );
+
+      await this.store.emitAfterValidate({
+        values: this.store.getState().values,
+        state: this.store.getState(),
+        scope: options?.scope,
+        scopeFields: targetFields,
+        errors: newErrors,
+        result,
+      });
+
+      return result;
     }
 
     allErrors = { ...this.asyncErrors, ...allErrors };
@@ -196,6 +228,15 @@ export class BitValidationManager<T extends object> {
     this.store.internalUpdateState({
       errors: allErrors as BitErrors<T>,
       isValid,
+    });
+
+    await this.store.emitAfterValidate({
+      values: this.store.getState().values,
+      state: this.store.getState(),
+      scope: options?.scope,
+      scopeFields: targetFields,
+      errors: allErrors as BitErrors<T>,
+      result: isValid,
     });
 
     return isValid;

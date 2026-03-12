@@ -41,6 +41,16 @@ export type {
   BitPersistConfig,
   BitPersistStorageAdapter,
   BitPersistMode,
+  BitPlugin,
+  BitPluginContext,
+  BitPluginHooks,
+  BitPluginErrorEvent,
+  BitFieldChangeEvent,
+  BitFieldChangeMeta,
+  BitBeforeValidateEvent,
+  BitAfterValidateEvent,
+  BitBeforeSubmitEvent,
+  BitAfterSubmitEvent,
 } from "./store/types";
 
 export { bitMasks } from "./mask/index";

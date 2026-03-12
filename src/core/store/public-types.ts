@@ -9,6 +9,7 @@ import {
   ValidatorFn,
   BitState,
   BitPersistResolvedConfig,
+  BitPlugin,
 } from "./types";
 import { BitMask } from "../mask/types";
 
@@ -24,6 +25,7 @@ export interface BitFrameworkConfig<
   fields?: Record<string, BitFieldDefinition<T>>;
   devTools?: boolean | DevToolsOptions;
   persist: BitPersistResolvedConfig<T>;
+  plugins: BitPlugin<T>[];
 }
 
 export interface BitPublicStore<T extends object = any> {

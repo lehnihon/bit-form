@@ -52,6 +52,7 @@ Bit-Form is a powerful, framework-agnostic library designed to handle complex va
 - **Computed Fields:** Automatically calculate and update form values in real-time based on other field changes.
 - **Field Arrays:** First-class support for dynamic lists with native methods to append, prepend, move, and swap items.
 - **Draft Persistence:** Optional draft persistence with autosave, manual restore, manual clear, and custom storage adapters (Web `localStorage`, React Native `AsyncStorage`, or your own adapter).
+- **Lifecycle Plugins:** Plugin system for lifecycle observability (`beforeValidate`, `afterValidate`, `beforeSubmit`, `afterSubmit`, `onFieldChange`, `onError`).
 - **Time-Travel DevTools:** Full history support with Undo/Redo capabilities and a Remote Inspector CLI via WebSocket.
 
 ## 🏎 Performance & Comparison
@@ -163,6 +164,7 @@ The complete documentation is available in the `/docs` folder. Explore the guide
 - **[Computed Fields](./docs/features/computed-fields.md)**: Handling derived form values.
 - **[Field Arrays](./docs/features/field-arrays.md)**: Managing dynamic lists of fields.
 - **[Draft Persistence](./docs/features/persistence.md)**: Save, restore, and clear local drafts with `useBitPersist`/`injectBitPersist` and store-level `persist` config.
+- **[Lifecycle Plugins](./docs/features/plugins.md)**: Add plugins to observe validation/submit/field-change events with fail-open behavior.
 - **[File Uploads](./docs/features/file-uploads.md)**: Backend-first upload integration with `useBitUpload` and `injectBitUpload`.
 - **[Scopes](./docs/features/scopes.md)**: Per-step validation and status for wizard forms (`useBitScope`, `injectBitScope`).
 - **[History & Time Travel](./docs/features/history-and-time-travel.md)**: Using Undo/Redo features.

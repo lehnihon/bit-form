@@ -57,6 +57,123 @@ export interface DevToolsOptions {
   url?: string;
 }
 
+export type BitPluginHookSource =
+  | "beforeValidate"
+  | "afterValidate"
+  | "beforeSubmit"
+  | "afterSubmit"
+  | "onFieldChange"
+  | "setup"
+  | "teardown"
+  | "submit";
+
+export type BitFieldChangeOrigin = "setField" | "setValues" | "array";
+
+export type BitArrayOperation =
+  | "push"
+  | "prepend"
+  | "insert"
+  | "remove"
+  | "move"
+  | "swap";
+
+export interface BitFieldChangeMeta {
+  origin: BitFieldChangeOrigin;
+  operation?: BitArrayOperation;
+  index?: number;
+  from?: number;
+  to?: number;
+}
+
+export interface BitFieldChangeEvent<T extends object = any> {
+  path: string;
+  previousValue: unknown;
+  nextValue: unknown;
+  values: Readonly<T>;
+  state: Readonly<BitState<T>>;
+  meta: BitFieldChangeMeta;
+}
+
+export interface BitBeforeValidateEvent<T extends object = any> {
+  values: Readonly<T>;
+  state: Readonly<BitState<T>>;
+  scope?: string;
+  scopeFields?: string[];
+}
+
+export interface BitAfterValidateEvent<T extends object = any> {
+  values: Readonly<T>;
+  state: Readonly<BitState<T>>;
+  scope?: string;
+  scopeFields?: string[];
+  errors: BitErrors<T>;
+  result: boolean;
+  aborted?: boolean;
+}
+
+export interface BitBeforeSubmitEvent<T extends object = any> {
+  values: Readonly<T>;
+  dirtyValues: Readonly<Partial<T>>;
+  state: Readonly<BitState<T>>;
+}
+
+export interface BitAfterSubmitEvent<T extends object = any> {
+  values: Readonly<T>;
+  dirtyValues: Readonly<Partial<T>>;
+  state: Readonly<BitState<T>>;
+  success: boolean;
+  error?: unknown;
+  invalid?: boolean;
+}
+
+export interface BitPluginErrorEvent<T extends object = any> {
+  source: BitPluginHookSource;
+  pluginName?: string;
+  error: unknown;
+  event?: unknown;
+  values: Readonly<T>;
+  state: Readonly<BitState<T>>;
+}
+
+export interface BitPluginContext<T extends object = any> {
+  storeId: string;
+  getState: () => Readonly<BitState<T>>;
+  getConfig: () => Readonly<BitConfig<T>>;
+}
+
+export interface BitPluginHooks<T extends object = any> {
+  beforeValidate?: (
+    event: BitBeforeValidateEvent<T>,
+    context: BitPluginContext<T>,
+  ) => BitMaybePromise<void>;
+  afterValidate?: (
+    event: BitAfterValidateEvent<T>,
+    context: BitPluginContext<T>,
+  ) => BitMaybePromise<void>;
+  beforeSubmit?: (
+    event: BitBeforeSubmitEvent<T>,
+    context: BitPluginContext<T>,
+  ) => BitMaybePromise<void>;
+  afterSubmit?: (
+    event: BitAfterSubmitEvent<T>,
+    context: BitPluginContext<T>,
+  ) => BitMaybePromise<void>;
+  onFieldChange?: (
+    event: BitFieldChangeEvent<T>,
+    context: BitPluginContext<T>,
+  ) => BitMaybePromise<void>;
+  onError?: (
+    event: BitPluginErrorEvent<T>,
+    context: BitPluginContext<T>,
+  ) => BitMaybePromise<void>;
+}
+
+export interface BitPlugin<T extends object = any> {
+  name: string;
+  setup?: (context: BitPluginContext<T>) => void | (() => void);
+  hooks?: BitPluginHooks<T>;
+}
+
 export type BitMaybePromise<T> = T | Promise<T>;
 
 export interface BitPersistStorageAdapter {
@@ -126,6 +243,9 @@ export interface BitConfig<T extends object = any> {
 
   /** Persistência local de rascunho */
   persist?: BitPersistConfig<T>;
+
+  /** Plugins de lifecycle (observabilidade) */
+  plugins?: BitPlugin<T>[];
 }
 
 /** Return type of BitStore.getStepStatus, used by useBitScope/injectBitScope. */

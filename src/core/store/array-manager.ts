@@ -12,20 +12,30 @@ export class BitArrayManager<T extends object = any> {
 
   pushItem(path: string, value: any) {
     const arr = getDeepValue(this.store.getState().values, path) || [];
-    this.store.setField(path, [...arr, value]);
+    this.store.setFieldWithMeta(path, [...arr, value], {
+      origin: "array",
+      operation: "push",
+    });
     this.store.internalSaveSnapshot();
   }
 
   prependItem(path: string, value: any) {
     const arr = getDeepValue(this.store.getState().values, path) || [];
-    this.store.setField(path, [value, ...arr]);
+    this.store.setFieldWithMeta(path, [value, ...arr], {
+      origin: "array",
+      operation: "prepend",
+    });
     this.store.internalSaveSnapshot();
   }
 
   insertItem(path: string, index: number, value: any) {
     const arr = [...(getDeepValue(this.store.getState().values, path) || [])];
     arr.splice(index, 0, value);
-    this.store.setField(path, arr);
+    this.store.setFieldWithMeta(path, arr, {
+      origin: "array",
+      operation: "insert",
+      index,
+    });
     this.store.internalSaveSnapshot();
   }
 
@@ -33,6 +43,8 @@ export class BitArrayManager<T extends object = any> {
     const state = this.store.getState();
     const arr = getDeepValue(state.values, path);
     if (!Array.isArray(arr)) return;
+
+    const previousArray = [...arr];
 
     if (this.store.unregisterPrefix) {
       this.store.unregisterPrefix(`${path}.${index}.`);
@@ -54,6 +66,15 @@ export class BitArrayManager<T extends object = any> {
       isDirty,
     });
 
+    this.store.emitFieldChange({
+      path,
+      previousValue: previousArray,
+      nextValue: newArray,
+      values: this.store.getState().values,
+      state: this.store.getState(),
+      meta: { origin: "array", operation: "remove", index },
+    });
+
     this.store.internalSaveSnapshot();
     this.revalidate(path);
   }
@@ -61,6 +82,7 @@ export class BitArrayManager<T extends object = any> {
   swapItems(path: string, indexA: number, indexB: number) {
     const state = this.store.getState();
     const arr = [...(getDeepValue(state.values, path) || [])];
+    const previousArray = [...arr];
     [arr[indexA], arr[indexB]] = [arr[indexB], arr[indexA]];
 
     const newValues = setDeepValue(state.values, path, arr);
@@ -78,6 +100,20 @@ export class BitArrayManager<T extends object = any> {
       isDirty,
     });
 
+    this.store.emitFieldChange({
+      path,
+      previousValue: previousArray,
+      nextValue: arr,
+      values: this.store.getState().values,
+      state: this.store.getState(),
+      meta: {
+        origin: "array",
+        operation: "swap",
+        from: indexA,
+        to: indexB,
+      },
+    });
+
     this.store.internalSaveSnapshot();
     this.revalidate(path);
   }
@@ -85,6 +121,7 @@ export class BitArrayManager<T extends object = any> {
   moveItem(path: string, from: number, to: number) {
     const state = this.store.getState();
     const arr = [...(getDeepValue(state.values, path) || [])];
+    const previousArray = [...arr];
     const [item] = arr.splice(from, 1);
     arr.splice(to, 0, item);
 
@@ -101,6 +138,20 @@ export class BitArrayManager<T extends object = any> {
       errors: moveKeys(state.errors, path, from, to),
       touched: moveKeys(state.touched, path, from, to),
       isDirty,
+    });
+
+    this.store.emitFieldChange({
+      path,
+      previousValue: previousArray,
+      nextValue: arr,
+      values: this.store.getState().values,
+      state: this.store.getState(),
+      meta: {
+        origin: "array",
+        operation: "move",
+        from,
+        to,
+      },
     });
 
     this.store.internalSaveSnapshot();
