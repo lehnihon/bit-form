@@ -1,6 +1,6 @@
 {
   "name": "@lehnihon/bit-form",
-  "version": "2.1.0",
+  "version": "2.1.1",
   "description": "Gerenciamento de estado de formulários agnóstico e performático",
   "publishConfig": {
     "access": "public"
