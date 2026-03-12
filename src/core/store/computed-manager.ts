@@ -1,17 +1,14 @@
 import { getDeepValue, setDeepValue, deepEqual } from "../utils";
-import type { BitResolvedConfig } from "./internal-types";
+import type { BitComputedFn } from "./types";
 
 export class BitComputedManager<T extends object> {
-  constructor(private config: BitResolvedConfig<T>) {}
+  constructor(private getComputedEntries: () => [string, BitComputedFn<T>][]) {}
 
   apply(values: T): T {
-    if (!this.config.computed) return values;
+    const computedEntries = this.getComputedEntries();
+    if (computedEntries.length === 0) return values;
 
     let nextValues = values;
-    const computedEntries = Object.entries(this.config.computed) as [
-      string,
-      (v: T) => unknown,
-    ][];
 
     for (let i = 0; i < 2; i++) {
       let changedInThisPass = false;

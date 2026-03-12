@@ -2,7 +2,7 @@ import { BitDependencyManager } from "./dependency-manager";
 import { BitDirtyManager } from "./dirty-manager";
 import { BitHistoryManager } from "./history-manager";
 import { BitValidationManager } from "./validation-manager";
-import { BitState } from "./types";
+import { BitFieldDefinition, BitState, BitTransformFn } from "./types";
 import type { BitFrameworkConfig } from "./public-types";
 
 export interface BitResolvedConfig<
@@ -13,6 +13,7 @@ export interface BitLifecycleAdapter<T extends object> {
   getState: () => BitState<T>;
   internalUpdateState: (partial: Partial<BitState<T>>) => void;
   internalSaveSnapshot: () => void;
+  getTransformEntries: () => [string, BitTransformFn<T>][];
   config: BitResolvedConfig<T>;
   depsMg: BitDependencyManager<T>;
   validatorMg: BitValidationManager<T>;
@@ -36,6 +37,8 @@ export interface BitValidationAdapter<T extends object> {
   internalUpdateState: (partial: Partial<BitState<T>>) => void;
   setError: (path: string, message: string | undefined) => void;
   validate?: (opts: { scopeFields?: string[] }) => Promise<boolean>;
+  getFieldConfig: (path: string) => BitFieldDefinition<T> | undefined;
+  getScopeFields: (scopeName: string) => string[];
   config: BitResolvedConfig<T>;
   depsMg: BitDependencyManager<T>;
 }

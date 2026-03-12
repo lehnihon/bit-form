@@ -3,8 +3,6 @@ import {
   BitFieldDefinition,
   BitPath,
   BitPathValue,
-  BitComputedFn,
-  BitTransformFn,
   BitConfig,
   DevToolsOptions,
   ScopeStatus,
@@ -21,9 +19,6 @@ export interface BitFrameworkConfig<
   validationDelay: number;
   enableHistory: boolean;
   historyLimit: number;
-  computed?: Record<string, BitComputedFn<T>>;
-  transform?: Partial<Record<string, BitTransformFn<T>>>;
-  scopes?: Record<string, string[]>;
   masks?: Record<string, BitMask>;
   fields?: Record<string, BitFieldDefinition<T>>;
   devTools?: boolean | DevToolsOptions;

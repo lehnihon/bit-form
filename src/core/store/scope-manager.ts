@@ -1,5 +1,4 @@
 import { BitErrors, BitState } from "./types";
-import type { BitResolvedConfig } from "./internal-types";
 import { getDeepValue, valueEqual } from "../utils";
 
 /**
@@ -12,7 +11,8 @@ import { getDeepValue, valueEqual } from "../utils";
 export class BitScopeManager<T extends object = any> {
   constructor(
     private getState: () => BitState<T>,
-    private getConfig: () => BitResolvedConfig<T>,
+    private getInitialValues: () => T,
+    private getScopeFields: (scopeName: string) => string[],
   ) {}
 
   /**
@@ -20,7 +20,7 @@ export class BitScopeManager<T extends object = any> {
    * Returns whether the scope has errors, is dirty, and the error details.
    */
   getStepStatus(scopeName: string) {
-    const fields = this.getConfig().scopes?.[scopeName] || [];
+    const fields = this.getScopeFields(scopeName);
     const state = this.getState();
 
     const hasErrors = fields.some(
@@ -29,7 +29,7 @@ export class BitScopeManager<T extends object = any> {
 
     const isDirty = fields.some((f) => {
       const current = getDeepValue(state.values, f);
-      const initial = getDeepValue(this.getConfig().initialValues, f);
+      const initial = getDeepValue(this.getInitialValues(), f);
       return !valueEqual(current, initial);
     });
 
@@ -42,7 +42,7 @@ export class BitScopeManager<T extends object = any> {
    * Get all errors for fields in a specific scope.
    */
   getStepErrors(scopeName: string): Record<string, string> {
-    const fields = this.getConfig().scopes?.[scopeName] || [];
+    const fields = this.getScopeFields(scopeName);
     const state = this.getState();
     const result: Record<string, string> = {};
 
