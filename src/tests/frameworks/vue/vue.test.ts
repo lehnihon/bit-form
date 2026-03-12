@@ -9,6 +9,7 @@ import {
   useBitHistory,
   useBitScope,
   useBitSteps,
+  useBitPersist,
 } from "bit-form/vue";
 import { BIT_STORE_KEY } from "../../../vue/context";
 
@@ -320,5 +321,62 @@ describe("Vue Integration", () => {
     await nextTick();
 
     expect(wrapper.vm.steps.step.value).toBe(1);
+  });
+
+  describe("useBitPersist", () => {
+    function createMockStorage() {
+      const data: Record<string, string> = {};
+      return {
+        getItem: vi.fn((key: string) => data[key] ?? null),
+        setItem: vi.fn((key: string, value: string) => {
+          data[key] = value;
+        }),
+        removeItem: vi.fn((key: string) => {
+          delete data[key];
+        }),
+        _data: data,
+      };
+    }
+
+    it("deve expor restore, save, clear e meta reativos", async () => {
+      const storage = createMockStorage();
+      const store = new BitStore({
+        initialValues: { name: "Leo" },
+        persist: { enabled: true, key: "vue-test", storage, autoSave: false },
+      });
+
+      const wrapper = createWrapper(store, () => ({
+        persist: useBitPersist(),
+      }));
+
+      expect(typeof wrapper.vm.persist.save).toBe("function");
+      expect(typeof wrapper.vm.persist.restore).toBe("function");
+      expect(typeof wrapper.vm.persist.clear).toBe("function");
+      expect(wrapper.vm.persist.meta.isSaving.value).toBe(false);
+      expect(wrapper.vm.persist.meta.isRestoring.value).toBe(false);
+      expect(wrapper.vm.persist.meta.error.value).toBeNull();
+      store.cleanup();
+    });
+
+    it("deve salvar e restaurar valores", async () => {
+      const storage = createMockStorage();
+      const store = new BitStore({
+        initialValues: { name: "Leo" },
+        persist: { enabled: true, key: "vue-test", storage, autoSave: false },
+      });
+
+      const wrapper = createWrapper(store, () => ({
+        persist: useBitPersist(),
+      }));
+
+      await wrapper.vm.persist.save();
+      expect(storage.setItem).toHaveBeenCalled();
+
+      store.setField("name", "Changed");
+      const ok = await wrapper.vm.persist.restore();
+      expect(ok).toBe(true);
+      expect(store.getState().values.name).toBe("Leo");
+      store.cleanup();
+    });
   });
 });

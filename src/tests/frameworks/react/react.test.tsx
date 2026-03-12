@@ -11,6 +11,7 @@ import {
   useBitScope,
   useBitSteps,
   useBitWatch,
+  useBitPersist,
 } from "bit-form/react";
 
 interface MyForm {
@@ -551,6 +552,99 @@ describe("React Integration (Context + Hooks)", () => {
       expect(result.current.step).toBe(2);
 
       vi.useRealTimers();
+    });
+  });
+
+  describe("useBitPersist", () => {
+    function createMockStorage() {
+      const data: Record<string, string> = {};
+      return {
+        getItem: vi.fn((key: string) => data[key] ?? null),
+        setItem: vi.fn((key: string, value: string) => {
+          data[key] = value;
+        }),
+        removeItem: vi.fn((key: string) => {
+          delete data[key];
+        }),
+        _data: data,
+      };
+    }
+
+    it("deve expor restore, save, clear e meta", async () => {
+      const storage = createMockStorage();
+      const store = new BitStore<MyForm>({
+        initialValues: {
+          salary: 0,
+          user: { firstName: "", lastName: "" },
+          skills: [],
+          hasBonus: false,
+          bonusValue: 0,
+        },
+        persist: { enabled: true, key: "react-test", storage, autoSave: false },
+      });
+
+      const { result } = renderHook(() => useBitPersist(), {
+        wrapper: (props) => wrapper({ ...props, store }),
+      });
+
+      expect(typeof result.current.restore).toBe("function");
+      expect(typeof result.current.save).toBe("function");
+      expect(typeof result.current.clear).toBe("function");
+      expect(result.current.meta.isSaving).toBe(false);
+      expect(result.current.meta.isRestoring).toBe(false);
+      expect(result.current.meta.error).toBeNull();
+      store.cleanup();
+    });
+
+    it("deve salvar com save() e restaurar com restore()", async () => {
+      const storage = createMockStorage();
+      const store = new BitStore<MyForm>({
+        initialValues: {
+          salary: 0,
+          user: { firstName: "Leo", lastName: "" },
+          skills: [],
+          hasBonus: false,
+          bonusValue: 0,
+        },
+        persist: { enabled: true, key: "react-test", storage, autoSave: false },
+      });
+
+      const { result } = renderHook(() => useBitPersist(), {
+        wrapper: (props) => wrapper({ ...props, store }),
+      });
+
+      await act(() => result.current.save());
+      expect(storage.setItem).toHaveBeenCalled();
+
+      store.setField("user.firstName", "Changed");
+      const ok = await act(() => result.current.restore());
+      expect(ok).toBe(true);
+      expect(store.getState().values.user.firstName).toBe("Leo");
+      store.cleanup();
+    });
+
+    it("deve limpar o rascunho com clear()", async () => {
+      const storage = createMockStorage();
+      storage._data["react-test"] = JSON.stringify({ salary: 999 });
+
+      const store = new BitStore<MyForm>({
+        initialValues: {
+          salary: 0,
+          user: { firstName: "", lastName: "" },
+          skills: [],
+          hasBonus: false,
+          bonusValue: 0,
+        },
+        persist: { enabled: true, key: "react-test", storage },
+      });
+
+      const { result } = renderHook(() => useBitPersist(), {
+        wrapper: (props) => wrapper({ ...props, store }),
+      });
+
+      await act(() => result.current.clear());
+      expect(storage.removeItem).toHaveBeenCalledWith("react-test");
+      store.cleanup();
     });
   });
 });

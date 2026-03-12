@@ -165,6 +165,7 @@ interface BitConfig<T extends object = any> {
     limit?: number;
   };
   devTools?: boolean | DevToolsOptions;
+  persist?: BitPersistConfig<T>;
 }
 ```
 
@@ -191,9 +192,55 @@ Key points:
 
 ---
 
+## `BitPersistStorageAdapter`
+
+Storage contract used by persistence. Supports sync or async adapters.
+
+```ts
+interface BitPersistStorageAdapter {
+  getItem(key: string): string | null | Promise<string | null>;
+  setItem(key: string, value: string): void | Promise<void>;
+  removeItem(key: string): void | Promise<void>;
+}
+```
+
+---
+
+## `BitPersistMode`
+
+Selects which payload is persisted.
+
+```ts
+type BitPersistMode = "values" | "dirtyValues";
+```
+
+---
+
+## `BitPersistConfig<T>`
+
+Configuration object for local draft persistence.
+
+```ts
+interface BitPersistConfig<T extends object = any> {
+  enabled?: boolean;
+  key?: string;
+  storage?: BitPersistStorageAdapter;
+  autoSave?: boolean;
+  debounceMs?: number;
+  mode?: BitPersistMode;
+  serialize?: (payload: unknown) => string;
+  deserialize?: (raw: string) => Partial<T>;
+  onError?: (error: unknown) => void;
+}
+```
+
+See [Draft Persistence](../features/persistence.md) for behavior and defaults.
+
+---
+
 ## `BitFrameworkConfig<T>`
 
-Public framework-facing config returned by `store.getConfig()`. It includes normalized defaults and derived maps (`computed`, `transform`, `scopes`, `masks`).
+Public framework-facing config returned by `store.getConfig()`. It includes normalized defaults and resolved config sections.
 
 ```ts
 interface BitFrameworkConfig<T extends object = any> extends BitConfig<T> {
@@ -201,8 +248,8 @@ interface BitFrameworkConfig<T extends object = any> extends BitConfig<T> {
   validationDelay: number;
   enableHistory: boolean;
   historyLimit: number;
+  persist: BitPersistResolvedConfig<T>;
 }
 ```
 
 `BitResolvedConfig<T>` remains internal to the core store implementation.
-

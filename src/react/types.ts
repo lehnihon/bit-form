@@ -90,3 +90,14 @@ export interface UseBitHistoryResult {
   undo: () => void;
   redo: () => void;
 }
+
+export interface UseBitPersistResult {
+  restore: () => Promise<boolean>;
+  save: () => Promise<void>;
+  clear: () => Promise<void>;
+  meta: {
+    isSaving: boolean;
+    isRestoring: boolean;
+    error: Error | null;
+  };
+}

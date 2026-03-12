@@ -9,6 +9,7 @@ import {
   injectBitHistory,
   injectBitScope,
   injectBitSteps,
+  injectBitPersist,
   provideBitStore,
 } from "bit-form/angular";
 
@@ -347,5 +348,89 @@ describe("Angular Integration (Signals)", () => {
     fixture.detectChanges();
 
     expect(app.steps.step()).toBe(1);
+  });
+
+  describe("injectBitPersist", () => {
+    function createMockStorage() {
+      const data: Record<string, string> = {};
+      return {
+        getItem: vi.fn((key: string) => data[key] ?? null),
+        setItem: vi.fn((key: string, value: string) => {
+          data[key] = value;
+        }),
+        removeItem: vi.fn((key: string) => {
+          delete data[key];
+        }),
+        _data: data,
+      };
+    }
+
+    @Component({ standalone: true, template: "" })
+    class PersistHostComponent {
+      persist = injectBitPersist<MyForm>();
+    }
+
+    it("deve expor restore, save, clear e meta como signals", async () => {
+      const storage = createMockStorage();
+      const persistStore = new BitStore<MyForm>({
+        initialValues: {
+          user: { name: "Leo" },
+          salary: 0,
+          items: [],
+          hasBonus: false,
+          bonusValue: 0,
+        },
+        persist: { enabled: true, key: "ng-test", storage, autoSave: false },
+      });
+
+      TestBed.configureTestingModule({
+        imports: [PersistHostComponent],
+        providers: [provideBitStore(persistStore)],
+      });
+
+      const fixture = TestBed.createComponent(PersistHostComponent);
+      const app = fixture.componentInstance;
+      fixture.detectChanges();
+
+      expect(typeof app.persist.save).toBe("function");
+      expect(typeof app.persist.restore).toBe("function");
+      expect(typeof app.persist.clear).toBe("function");
+      expect(app.persist.meta.isSaving()).toBe(false);
+      expect(app.persist.meta.isRestoring()).toBe(false);
+      expect(app.persist.meta.error()).toBeNull();
+      persistStore.cleanup();
+    });
+
+    it("deve salvar e restaurar valores", async () => {
+      const storage = createMockStorage();
+      const persistStore = new BitStore<MyForm>({
+        initialValues: {
+          user: { name: "Leo" },
+          salary: 0,
+          items: [],
+          hasBonus: false,
+          bonusValue: 0,
+        },
+        persist: { enabled: true, key: "ng-test", storage, autoSave: false },
+      });
+
+      TestBed.configureTestingModule({
+        imports: [PersistHostComponent],
+        providers: [provideBitStore(persistStore)],
+      });
+
+      const fixture = TestBed.createComponent(PersistHostComponent);
+      const app = fixture.componentInstance;
+      fixture.detectChanges();
+
+      await app.persist.save();
+      expect(storage.setItem).toHaveBeenCalled();
+
+      persistStore.setField("user.name", "Changed");
+      const ok = await app.persist.restore();
+      expect(ok).toBe(true);
+      expect(persistStore.getState().values.user.name).toBe("Leo");
+      persistStore.cleanup();
+    });
   });
 });

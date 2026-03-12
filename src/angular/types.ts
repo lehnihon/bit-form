@@ -86,3 +86,14 @@ export interface InjectBitHistoryResult {
   undo: () => void;
   redo: () => void;
 }
+
+export interface InjectBitPersistResult {
+  restore: () => Promise<boolean>;
+  save: () => Promise<void>;
+  clear: () => Promise<void>;
+  meta: {
+    isSaving: Signal<boolean>;
+    isRestoring: Signal<boolean>;
+    error: Signal<Error | null>;
+  };
+}

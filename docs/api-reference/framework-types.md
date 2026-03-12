@@ -112,6 +112,23 @@ interface UseBitHistoryResult {
 }
 ```
 
+### `UseBitPersistResult`
+
+Return type of `useBitPersist()` hook for draft persistence actions.
+
+```ts
+interface UseBitPersistResult {
+  restore: () => Promise<boolean>;
+  save: () => Promise<void>;
+  clear: () => Promise<void>;
+  meta: {
+    isSaving: boolean;
+    isRestoring: boolean;
+    error: Error | null;
+  };
+}
+```
+
 ---
 
 ## Vue 3 (`@lehnihon/bit-form/vue`)
@@ -198,6 +215,21 @@ interface UseBitHistoryResult {
   historySize: Readonly<any>;
   undo: () => void;
   redo: () => void;
+}
+```
+
+### `UseBitPersistResult` (Vue)
+
+```ts
+interface UseBitPersistResult {
+  restore: () => Promise<boolean>;
+  save: () => Promise<void>;
+  clear: () => Promise<void>;
+  meta: {
+    isSaving: Ref<boolean>;
+    isRestoring: Ref<boolean>;
+    error: Ref<Error | null>;
+  };
 }
 ```
 
@@ -293,6 +325,21 @@ interface InjectBitHistoryResult {
 }
 ```
 
+### `InjectBitPersistResult`
+
+```ts
+interface InjectBitPersistResult {
+  restore: () => Promise<boolean>;
+  save: () => Promise<void>;
+  clear: () => Promise<void>;
+  meta: {
+    isSaving: Signal<boolean>;
+    isRestoring: Signal<boolean>;
+    error: Signal<Error | null>;
+  };
+}
+```
+
 ---
 
 ## React Native (`@lehnihon/bit-form/react-native`)
@@ -337,18 +384,18 @@ interface UseBitFieldNativeResult<
   TForm extends object = any,
   P extends BitPath<TForm> = BitPath<TForm>,
 > {
-  field: {
-    value: BitPathValue<TForm, P>;
-    displayValue: string;
-    setValue: (val: any) => void;
-    setBlur: () => void;
-    onChangeText: (text: string) => void;
-    onBlur: () => void;
-  };
+  value: BitPathValue<TForm, P>;
+  displayValue: string;
+  setValue: (val: any) => void;
+  setBlur: () => void;
+  onChangeText: (text: string) => void;
+  onBlur: () => void;
   meta: UseBitFieldNativeMeta;
   props: UseBitFieldNativeBindProps;
 }
 ```
+
+React Native also re-exports `useBitPersist` and `UseBitPersistResult` with the same contract as React.
 
 ---
 

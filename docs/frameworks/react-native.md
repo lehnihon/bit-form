@@ -20,7 +20,7 @@ In React Native, inputs use `onChangeText` instead of `onChange`, and they stric
 
 The hook returns:
 
-- `field`: value + handlers (`setValue`, `setBlur`, `onChangeText`, `onBlur`)
+- value + handlers at root level: `value`, `displayValue`, `setValue`, `setBlur`, `onChangeText`, `onBlur`
 - `meta`: UI/validation state (`invalid`, `error`, `touched`, `isDirty`, etc.)
 - `props`: `TextInput` helper (`value`, `onChangeText`, `onBlur`)
 
@@ -60,3 +60,25 @@ export function ProfileForm() {
 ```
 
 Everything else, including `useBitArray`, `useBitScope`, `useBitStore`, and `BitFormProvider`, works exactly the same as in the standard React integration.
+
+## Draft Persistence with `useBitPersist`
+
+React Native also exports `useBitPersist` from `@lehnihon/bit-form/react-native`.
+
+```tsx
+import { useBitPersist } from "@lehnihon/bit-form/react-native";
+
+function DraftActions() {
+  const persist = useBitPersist();
+
+  return (
+    <>
+      <Button title="Save Draft" onPress={() => persist.save()} />
+      <Button title="Restore Draft" onPress={() => persist.restore()} />
+      <Button title="Clear Draft" onPress={() => persist.clear()} />
+    </>
+  );
+}
+```
+
+For storage, pass an adapter compatible with AsyncStorage in `persist.storage`.

@@ -51,6 +51,7 @@ Bit-Form is a powerful, framework-agnostic library designed to handle complex va
 - **Smart Dependencies:** Built-in dependency manager to conditionally hide or require fields using `showIf`, `requiredIf`, and `dependsOn`.
 - **Computed Fields:** Automatically calculate and update form values in real-time based on other field changes.
 - **Field Arrays:** First-class support for dynamic lists with native methods to append, prepend, move, and swap items.
+- **Draft Persistence:** Optional draft persistence with autosave, manual restore, manual clear, and custom storage adapters (Web `localStorage`, React Native `AsyncStorage`, or your own adapter).
 - **Time-Travel DevTools:** Full history support with Undo/Redo capabilities and a Remote Inspector CLI via WebSocket.
 
 ## 🏎 Performance & Comparison
@@ -161,6 +162,7 @@ The complete documentation is available in the `/docs` folder. Explore the guide
 - **[Conditional Logic](./docs/features/conditional-logic.md)**: Managing field dependencies.
 - **[Computed Fields](./docs/features/computed-fields.md)**: Handling derived form values.
 - **[Field Arrays](./docs/features/field-arrays.md)**: Managing dynamic lists of fields.
+- **[Draft Persistence](./docs/features/persistence.md)**: Save, restore, and clear local drafts with `useBitPersist`/`injectBitPersist` and store-level `persist` config.
 - **[File Uploads](./docs/features/file-uploads.md)**: Backend-first upload integration with `useBitUpload` and `injectBitUpload`.
 - **[Scopes](./docs/features/scopes.md)**: Per-step validation and status for wizard forms (`useBitScope`, `injectBitScope`).
 - **[History & Time Travel](./docs/features/history-and-time-travel.md)**: Using Undo/Redo features.

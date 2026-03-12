@@ -155,3 +155,30 @@ export class WizardStep1Component {
 ```
 
 See [Scopes](../features/scopes.md) for full documentation.
+
+## 5. Draft Persistence with `injectBitPersist`
+
+Use `injectBitPersist` for explicit draft actions in Angular with Signals.
+
+```typescript
+import { Component } from "@angular/core";
+import { injectBitPersist } from "@lehnihon/bit-form/angular";
+
+@Component({
+  selector: "app-draft-actions",
+  standalone: true,
+  template: `
+    <button type="button" (click)="persist.save()">Save Draft</button>
+    <button type="button" (click)="persist.restore()">Restore Draft</button>
+    <button type="button" (click)="persist.clear()">Clear Draft</button>
+    @if (persist.meta.error()) {
+      <p>{{ persist.meta.error()?.message }}</p>
+    }
+  `,
+})
+export class DraftActionsComponent {
+  persist = injectBitPersist();
+}
+```
+
+See [Draft Persistence](../features/persistence.md) for `persist` config details and storage adapters.

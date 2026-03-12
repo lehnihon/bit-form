@@ -91,6 +91,44 @@ const stopWatching = store.watch("user.address.city", (city) => {
 
 Use this for side-effects like analytics, autosave, or cross-form coordination.
 
+---
+
+## Draft Persistence
+
+Bit-Form exposes manual draft persistence actions on the public store facade.
+
+### `forceSave(): Promise<void>`
+
+Saves the current persist payload immediately.
+
+```ts
+await store.forceSave();
+```
+
+### `restorePersisted(): Promise<boolean>`
+
+Attempts to read saved payload and apply it to current state.
+
+- Returns `true` when a payload existed and was restored.
+- Returns `false` when there is no payload, persist is disabled, or restore fails.
+
+```ts
+const restored = await store.restorePersisted();
+if (restored) {
+  console.log("Draft restored");
+}
+```
+
+### `clearPersisted(): Promise<void>`
+
+Removes persisted payload from storage.
+
+```ts
+await store.clearPersisted();
+```
+
+See [Draft Persistence feature guide](../features/persistence.md) for full configuration details.
+
 ### `getDirtyValues(): Partial<T>`
 
 Returns an object containing only the fields that have changed from their initial values.

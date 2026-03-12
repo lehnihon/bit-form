@@ -8,6 +8,7 @@ import {
   ScopeStatus,
   ValidatorFn,
   BitState,
+  BitPersistResolvedConfig,
 } from "./types";
 import { BitMask } from "../mask/types";
 
@@ -22,6 +23,7 @@ export interface BitFrameworkConfig<
   masks?: Record<string, BitMask>;
   fields?: Record<string, BitFieldDefinition<T>>;
   devTools?: boolean | DevToolsOptions;
+  persist: BitPersistResolvedConfig<T>;
 }
 
 export interface BitPublicStore<T extends object = any> {
@@ -50,6 +52,9 @@ export interface BitPublicStore<T extends object = any> {
 
   registerMask(name: string, mask: BitMask): void;
   getDirtyValues(): Partial<T>;
+  restorePersisted(): Promise<boolean>;
+  forceSave(): Promise<void>;
+  clearPersisted(): Promise<void>;
 
   cleanup(): void;
 }
