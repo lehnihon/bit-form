@@ -31,14 +31,12 @@ export interface UseBitFieldNativeResult<
   TForm extends object = any,
   P extends BitPath<TForm> = BitPath<TForm>,
 > {
-  field: {
-    value: BitPathValue<TForm, P>;
-    displayValue: string;
-    setValue: (val: any) => void;
-    setBlur: () => void;
-    onChangeText: (text: string) => void;
-    onBlur: () => void;
-  };
+  value: BitPathValue<TForm, P>;
+  displayValue: string;
+  setValue: (val: any) => void;
+  setBlur: () => void;
+  onChangeText: (text: string) => void;
+  onBlur: () => void;
   meta: UseBitFieldNativeMeta;
   props: UseBitFieldNativeBindProps;
 }
