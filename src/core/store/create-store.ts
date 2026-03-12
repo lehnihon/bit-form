@@ -26,6 +26,9 @@ export function createBitStore<T extends object = any>(
 
     registerMask: engine.registerMask.bind(engine),
     getDirtyValues: engine.getDirtyValues.bind(engine),
+    restorePersisted: engine.restorePersisted.bind(engine),
+    forceSave: engine.forceSave.bind(engine),
+    clearPersisted: engine.clearPersisted.bind(engine),
 
     cleanup: engine.cleanup.bind(engine),
   };

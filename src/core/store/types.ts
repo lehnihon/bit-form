@@ -57,6 +57,40 @@ export interface DevToolsOptions {
   url?: string;
 }
 
+export type BitMaybePromise<T> = T | Promise<T>;
+
+export interface BitPersistStorageAdapter {
+  getItem(key: string): BitMaybePromise<string | null>;
+  setItem(key: string, value: string): BitMaybePromise<void>;
+  removeItem(key: string): BitMaybePromise<void>;
+}
+
+export type BitPersistMode = "values" | "dirtyValues";
+
+export interface BitPersistConfig<T extends object = any> {
+  enabled?: boolean;
+  key?: string;
+  storage?: BitPersistStorageAdapter;
+  autoSave?: boolean;
+  debounceMs?: number;
+  mode?: BitPersistMode;
+  serialize?: (payload: unknown) => string;
+  deserialize?: (raw: string) => Partial<T>;
+  onError?: (error: unknown) => void;
+}
+
+export interface BitPersistResolvedConfig<T extends object = any> {
+  enabled: boolean;
+  key: string;
+  storage?: BitPersistStorageAdapter;
+  autoSave: boolean;
+  debounceMs: number;
+  mode: BitPersistMode;
+  serialize: (payload: unknown) => string;
+  deserialize: (raw: string) => Partial<T>;
+  onError?: (error: unknown) => void;
+}
+
 /** Validation config. */
 export interface BitValidationConfig<T> {
   resolver?: ValidatorFn<T>;
@@ -89,6 +123,9 @@ export interface BitConfig<T extends object = any> {
 
   /** DevTools */
   devTools?: boolean | DevToolsOptions;
+
+  /** Persistência local de rascunho */
+  persist?: BitPersistConfig<T>;
 }
 
 /** Return type of BitStore.getStepStatus, used by useBitScope/injectBitScope. */

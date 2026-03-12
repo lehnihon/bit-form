@@ -31,6 +31,7 @@ import { BitDirtyManager } from "./dirty-manager";
 import { BitScopeManager } from "./scope-manager";
 import { BitFieldQueryManager } from "./field-query-manager";
 import { BitErrorManager } from "./error-manager";
+import { BitPersistManager } from "./persist-manager";
 
 /**
  * BitStore
@@ -51,6 +52,7 @@ export class BitStore<T extends object = any>
 
   private state: BitState<T>;
   private listeners: Set<() => void> = new Set();
+  private persistMg: BitPersistManager<T>;
 
   // ============================================================================
   // PUBLIC PROPERTIES
@@ -126,6 +128,12 @@ export class BitStore<T extends object = any>
     this.errorMg = new BitErrorManager<T>(
       () => this.state,
       (partial) => this.internalUpdateState(partial),
+    );
+    this.persistMg = new BitPersistManager<T>(
+      this.config.persist,
+      () => this.state.values,
+      () => this.getDirtyValues(),
+      (values) => this.applyPersistedValues(values),
     );
 
     // Initialize form state
@@ -404,6 +412,18 @@ export class BitStore<T extends object = any>
     return this.dirtyMg.buildDirtyValues(this.state.values);
   }
 
+  async restorePersisted(): Promise<boolean> {
+    return this.persistMg.restore();
+  }
+
+  async forceSave(): Promise<void> {
+    await this.persistMg.saveNow();
+  }
+
+  async clearPersisted(): Promise<void> {
+    await this.persistMg.clear();
+  }
+
   // ============================================================================
   // ARRAY OPERATIONS (Delegated to arraysMg)
   // ============================================================================
@@ -547,6 +567,11 @@ export class BitStore<T extends object = any>
     }
 
     this.state = nextState;
+
+    if (partialState.values) {
+      this.persistMg.queueSave();
+    }
+
     this.notify();
 
     bitBus.dispatch(this.storeId, this.state);
@@ -556,9 +581,35 @@ export class BitStore<T extends object = any>
     this.historyMg.saveSnapshot(this.state.values);
   }
 
+  private applyPersistedValues(values: Partial<T>) {
+    const nextValues = deepClone({
+      ...this.config.initialValues,
+      ...(values as any),
+    });
+
+    this.validatorMg.cancelAll();
+    this.depsMg.evaluateAll(nextValues);
+
+    const isDirty = this.dirtyMg.rebuild(nextValues, this.config.initialValues);
+
+    this.internalUpdateState({
+      values: nextValues,
+      errors: {},
+      touched: {},
+      isValidating: {},
+      isValid: true,
+      isDirty,
+      isSubmitting: false,
+    });
+
+    this.internalSaveSnapshot();
+    this.validatorMg.validate();
+  }
+
   cleanup() {
     this.listeners.clear();
     this.validatorMg.cancelAll();
+    this.persistMg.destroy();
 
     delete bitBus.stores[this.storeId];
   }

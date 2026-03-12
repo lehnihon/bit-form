@@ -38,6 +38,9 @@ export type {
   ScopeStatus,
   ValidateScopeResult,
   DeepPartial,
+  BitPersistConfig,
+  BitPersistStorageAdapter,
+  BitPersistMode,
 } from "./store/types";
 
 export { bitMasks } from "./mask/index";

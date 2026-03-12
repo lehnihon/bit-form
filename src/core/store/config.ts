@@ -1,4 +1,4 @@
-import type { BitConfig } from "./types";
+import type { BitConfig, BitPersistResolvedConfig } from "./types";
 import type { BitResolvedConfig } from "./internal-types";
 import { deepClone } from "../utils";
 import { bitMasks } from "../mask";
@@ -10,6 +10,24 @@ export function normalizeConfig<T extends object>(
   const validation = config.validation;
   const history = config.history;
 
+  const defaultPersistKey = config.name
+    ? `bit-form:${config.name}:draft`
+    : "bit-form:draft";
+
+  const persist: BitPersistResolvedConfig<T> = {
+    enabled: config.persist?.enabled ?? false,
+    key: config.persist?.key ?? defaultPersistKey,
+    storage: config.persist?.storage,
+    autoSave: config.persist?.autoSave ?? true,
+    debounceMs: config.persist?.debounceMs ?? 300,
+    mode: config.persist?.mode ?? "values",
+    serialize: config.persist?.serialize ?? JSON.stringify,
+    deserialize:
+      config.persist?.deserialize ??
+      ((raw: string) => JSON.parse(raw) as Partial<T>),
+    onError: config.persist?.onError,
+  };
+
   return {
     name: config.name,
     initialValues: deepClone(rawInitial),
@@ -20,5 +38,6 @@ export function normalizeConfig<T extends object>(
     masks: { ...bitMasks },
     fields: config.fields,
     devTools: config.devTools,
+    persist,
   } as BitResolvedConfig<T>;
 }
