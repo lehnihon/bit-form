@@ -151,6 +151,7 @@ The complete documentation is available in the `/docs` folder. Explore the guide
 ### 🖼 Framework Guides
 
 - **[React](./docs/frameworks/react.md)**: Using hooks and Context Provider.
+- **[Next.js](./docs/frameworks/next.md)**: Using Bit-Form in App Router/Pages Router with client boundaries (`"use client"`).
 - **[React + shadcn/ui](./docs/frameworks/react-shadcn.md)**: Generate form wrappers with `bit-form add shadcn` (Input, Textarea, Select, Checkbox, Switch, RadioGroup).
 - **[React Native](./docs/frameworks/react-native.md)**: Mobile specifics and `onChangeText` mapping.
 - **[Vue](./docs/frameworks/vue.md)**: Using composables and InjectionKeys.
@@ -173,6 +174,7 @@ The complete documentation is available in the `/docs` folder. Explore the guide
 
 - **[When to Use What](./docs/guides/when-to-use-what.md)**: Quick reference for resolver vs asyncValidate vs setServerErrors, computed vs transform, and conditional fields.
 - **[Complete Form Example](./docs/examples/complete-form-example.md)**: End-to-end example with masks, asyncValidate, conditional logic, scopes, history, and DevTools.
+- **[Upload Integration Example](./docs/examples/upload-integration-example.md)**: Backend-first upload example using `useBitUpload`/`injectBitUpload`.
 - **[Server Errors](./docs/examples/server-errors.md)**: Client validation (resolver/asyncValidate) vs API 422 handling (setServerErrors, onSubmit).
 
 ### 🔍 DevTools & CLI
