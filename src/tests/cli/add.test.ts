@@ -5,7 +5,7 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import * as os from "node:os";
-import { runAddCommand } from "../add";
+import { runAddCommand } from "../../cli/add";
 
 describe("bit-form add", () => {
   let tmpDir: string;
@@ -60,21 +60,21 @@ describe("bit-form add", () => {
     runAddCommand(["shadcn", "input", "textarea", "checkbox", "--path", "."]);
 
     expect(fs.existsSync(path.join(tmpDir, "bit-form-input.tsx"))).toBe(true);
-    expect(fs.existsSync(path.join(tmpDir, "bit-form-textarea.tsx"))).toBe(true);
-    expect(fs.existsSync(path.join(tmpDir, "bit-form-checkbox.tsx"))).toBe(true);
+    expect(fs.existsSync(path.join(tmpDir, "bit-form-textarea.tsx"))).toBe(
+      true,
+    );
+    expect(fs.existsSync(path.join(tmpDir, "bit-form-checkbox.tsx"))).toBe(
+      true,
+    );
   });
 
   it("uses --ui-path in generated imports", () => {
-    runAddCommand([
-      "shadcn",
-      "input",
-      "--path",
-      ".",
-      "--ui-path",
-      "@/lib/ui",
-    ]);
+    runAddCommand(["shadcn", "input", "--path", ".", "--ui-path", "@/lib/ui"]);
 
-    const contents = fs.readFileSync(path.join(tmpDir, "bit-form-input.tsx"), "utf-8");
+    const contents = fs.readFileSync(
+      path.join(tmpDir, "bit-form-input.tsx"),
+      "utf-8",
+    );
     expect(contents).toContain('from "@/lib/ui/input"');
   });
 
@@ -111,10 +111,16 @@ describe("bit-form add", () => {
     runAddCommand(["shadcn", "--path", "."]);
 
     expect(fs.existsSync(path.join(tmpDir, "bit-form-input.tsx"))).toBe(true);
-    expect(fs.existsSync(path.join(tmpDir, "bit-form-textarea.tsx"))).toBe(true);
+    expect(fs.existsSync(path.join(tmpDir, "bit-form-textarea.tsx"))).toBe(
+      true,
+    );
     expect(fs.existsSync(path.join(tmpDir, "bit-form-select.tsx"))).toBe(true);
-    expect(fs.existsSync(path.join(tmpDir, "bit-form-checkbox.tsx"))).toBe(true);
+    expect(fs.existsSync(path.join(tmpDir, "bit-form-checkbox.tsx"))).toBe(
+      true,
+    );
     expect(fs.existsSync(path.join(tmpDir, "bit-form-switch.tsx"))).toBe(true);
-    expect(fs.existsSync(path.join(tmpDir, "bit-form-radio-group.tsx"))).toBe(true);
+    expect(fs.existsSync(path.join(tmpDir, "bit-form-radio-group.tsx"))).toBe(
+      true,
+    );
   });
 });

@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { TestBed } from "@angular/core/testing";
 import { Component, DestroyRef } from "@angular/core";
-import { BitStore } from "../core/store";
+import { BitStore } from "../../../core/store";
 import {
   injectBitField,
   injectBitForm,
@@ -10,7 +10,7 @@ import {
   injectBitScope,
   injectBitSteps,
   provideBitStore,
-} from "./index";
+} from "bit-form/angular";
 
 interface MyForm {
   user: { name: string };

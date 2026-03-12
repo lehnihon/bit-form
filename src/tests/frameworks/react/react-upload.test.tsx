@@ -1,10 +1,9 @@
 import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { renderHook, act, waitFor } from "@testing-library/react";
-import { useBitUpload } from "./use-bit-upload";
-import type { BitUploadFn } from "../core/upload";
-import { BitFormProvider } from "./context";
-import { BitStore } from "../core/store";
+import { useBitUpload, BitFormProvider } from "bit-form/react";
+import type { BitUploadFn } from "../../../core/upload";
+import { BitStore } from "../../../core/store";
 
 describe("useBitUpload (React)", () => {
   let mockUpload: ReturnType<typeof vi.fn> & BitUploadFn;

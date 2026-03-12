@@ -3,9 +3,9 @@ import { z } from "zod";
 import * as yup from "yup";
 import Joi from "joi";
 
-import { zodResolver } from "./zod";
-import { yupResolver } from "./yup";
-import { joiResolver } from "./joi";
+import { zodResolver } from "../../resolvers/zod";
+import { yupResolver } from "../../resolvers/yup";
+import { joiResolver } from "../../resolvers/joi";
 
 describe("Resolvers Validation Consistency", () => {
   beforeAll(() => {
