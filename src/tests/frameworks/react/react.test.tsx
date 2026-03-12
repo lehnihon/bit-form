@@ -1,7 +1,7 @@
 import React from "react";
 import { describe, it, expect, vi } from "vitest";
 import { renderHook, act } from "@testing-library/react";
-import { BitStore } from "../../src/core/store";
+import { BitStore } from "../../../core/store";
 import {
   BitFormProvider,
   useBitField,
@@ -11,7 +11,7 @@ import {
   useBitScope,
   useBitSteps,
   useBitWatch,
-} from "../../src/react";
+} from "bit-form/react";
 
 interface MyForm {
   salary: number;

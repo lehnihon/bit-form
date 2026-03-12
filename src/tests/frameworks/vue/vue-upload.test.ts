@@ -1,11 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { defineComponent, nextTick } from "vue";
 import { mount } from "@vue/test-utils";
-import { useBitUpload } from "./use-bit-upload";
-import type { UseBitUploadResult } from "./types";
-import type { BitUploadFn } from "../core/upload";
-import { BitStore } from "../core/store";
-import { BIT_STORE_KEY } from "./context";
+import { useBitUpload, type UseBitUploadResult } from "bit-form/vue";
+import type { BitUploadFn } from "../../../core/upload";
+import { BitStore } from "../../../core/store";
+import { BIT_STORE_KEY } from "../../../vue/context";
 
 describe("useBitUpload (Vue)", () => {
   let mockUpload: ReturnType<typeof vi.fn> & BitUploadFn;

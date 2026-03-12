@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
 import { mount } from "@vue/test-utils";
 import { defineComponent, nextTick } from "vue";
-import { BitStore } from "../core/store";
+import { BitStore } from "../../../core/store";
 import {
   useBitField,
   useBitForm,
@@ -9,8 +9,8 @@ import {
   useBitHistory,
   useBitScope,
   useBitSteps,
-} from "./index";
-import { BIT_STORE_KEY } from "./context";
+} from "bit-form/vue";
+import { BIT_STORE_KEY } from "../../../vue/context";
 
 describe("Vue Integration", () => {
   const createWrapper = (store: BitStore<any>, setupFn: () => any) => {

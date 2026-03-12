@@ -1,15 +1,15 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { BitStore } from "../core/store";
-import * as devtools from "./index";
-import * as bridge from "./bridge";
+import { BitStore } from "../../core/store";
+import * as devtools from "../../devtools/index";
+import * as bridge from "../../devtools/bridge";
 
-vi.mock("./index", () => ({
+vi.mock("../../devtools/index", () => ({
   initDevTools: vi.fn(() => ({
     destroy: vi.fn(),
   })),
 }));
 
-vi.mock("./bridge", () => ({
+vi.mock("../../devtools/bridge", () => ({
   setupRemoteBridge: vi.fn(() => vi.fn()),
 }));
 

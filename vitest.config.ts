@@ -11,10 +11,12 @@ export default defineConfig({
       "bit-form/react": path.resolve(__dirname, "./src/react"),
       "bit-form/vue": path.resolve(__dirname, "./src/vue"),
       "bit-form/angular": path.resolve(__dirname, "./src/angular"),
+      "bit-form/react-native": path.resolve(__dirname, "./src/react-native"),
       "bit-form": path.resolve(__dirname, "./src/index.ts"),
     },
   },
   test: {
+    include: ["src/tests/**/*.test.{ts,tsx}"],
     globals: true,
     environment: "jsdom",
     setupFiles: ["./src/tests/setup.ts"],
