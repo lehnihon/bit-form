@@ -169,3 +169,36 @@ const handleNext = async () => {
 ```
 
 See [Scopes](../features/scopes.md) for full documentation.
+
+## 5. Draft Persistence with `useBitPersist`
+
+`useBitPersist` gives explicit draft actions and reactive meta refs.
+
+```vue
+<script setup lang="ts">
+import { useBitPersist } from "@lehnihon/bit-form/vue";
+
+const persist = useBitPersist();
+
+async function saveDraft() {
+  await persist.save();
+}
+
+async function restoreDraft() {
+  await persist.restore();
+}
+
+async function clearDraft() {
+  await persist.clear();
+}
+</script>
+
+<template>
+  <button type="button" @click="saveDraft">Save Draft</button>
+  <button type="button" @click="restoreDraft">Restore Draft</button>
+  <button type="button" @click="clearDraft">Clear Draft</button>
+  <p v-if="persist.meta.error.value">{{ persist.meta.error.value.message }}</p>
+</template>
+```
+
+See [Draft Persistence](../features/persistence.md) for full config options.

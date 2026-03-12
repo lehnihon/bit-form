@@ -213,3 +213,37 @@ const handleNext = async () => {
 ```
 
 See [Scopes](../features/scopes.md) for full documentation and store configuration.
+
+## 6. Draft Persistence with `useBitPersist`
+
+Use `useBitPersist` when you want to save and restore local drafts explicitly.
+
+- `save()` forces an immediate save.
+- `restore()` restores the persisted payload into current form state.
+- `clear()` removes the stored draft.
+- `meta` exposes `isSaving`, `isRestoring`, and `error`.
+
+```tsx
+import { useBitPersist } from "@lehnihon/bit-form/react";
+
+function DraftActions() {
+  const persist = useBitPersist();
+
+  return (
+    <>
+      <button type="button" onClick={() => persist.save()}>
+        Save Draft
+      </button>
+      <button type="button" onClick={() => persist.restore()}>
+        Restore Draft
+      </button>
+      <button type="button" onClick={() => persist.clear()}>
+        Clear Draft
+      </button>
+      {persist.meta.error && <p>{persist.meta.error.message}</p>}
+    </>
+  );
+}
+```
+
+See [Draft Persistence](../features/persistence.md) for configuration (`persist.enabled`, `storage`, debounce, mode, serialization).
