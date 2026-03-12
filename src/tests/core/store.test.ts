@@ -800,4 +800,206 @@ describe("BitStore Core", () => {
       expect((store as any).validatorMg.asyncErrors.cnpj).toBeUndefined();
     });
   });
+
+  describe("Plugin Lifecycle", () => {
+    it("should run plugin setup on init and teardown on cleanup", () => {
+      const teardown = vi.fn();
+      const setup = vi.fn(() => teardown);
+
+      const store = new BitStore({
+        initialValues: { name: "" },
+        plugins: [{ name: "setup-plugin", setup }],
+      });
+
+      expect(setup).toHaveBeenCalledTimes(1);
+      store.cleanup();
+      expect(teardown).toHaveBeenCalledTimes(1);
+    });
+
+    it("should trigger beforeValidate and afterValidate in order", async () => {
+      const calls: string[] = [];
+
+      const store = new BitStore({
+        initialValues: { name: "Leo" },
+        validation: {
+          resolver: () => ({}),
+          delay: 0,
+        },
+        plugins: [
+          {
+            name: "validate-plugin",
+            hooks: {
+              beforeValidate: () => {
+                calls.push("beforeValidate");
+              },
+              afterValidate: (event) => {
+                calls.push("afterValidate");
+                expect(event.result).toBe(true);
+              },
+            },
+          },
+        ],
+      });
+
+      await store.validate();
+
+      expect(calls).toEqual(["beforeValidate", "afterValidate"]);
+      store.cleanup();
+    });
+
+    it("should trigger beforeSubmit and afterSubmit around successful submit", async () => {
+      const calls: string[] = [];
+
+      const store = new BitStore({
+        initialValues: { name: "Leo" },
+        validation: {
+          resolver: () => ({}),
+          delay: 0,
+        },
+        plugins: [
+          {
+            name: "submit-plugin",
+            hooks: {
+              beforeSubmit: () => {
+                calls.push("beforeSubmit");
+              },
+              afterSubmit: (event) => {
+                calls.push("afterSubmit");
+                expect(event.success).toBe(true);
+              },
+            },
+          },
+        ],
+      });
+
+      await store.submit(async () => {
+        calls.push("onSuccess");
+      });
+
+      expect(calls).toEqual(["beforeSubmit", "onSuccess", "afterSubmit"]);
+      store.cleanup();
+    });
+
+    it("should emit onFieldChange for setField, setValues and array operations", async () => {
+      const changes: Array<{
+        origin: string;
+        operation?: string;
+        path: string;
+      }> = [];
+
+      const store = new BitStore({
+        initialValues: { name: "", items: ["A"] },
+        plugins: [
+          {
+            name: "field-change-plugin",
+            hooks: {
+              onFieldChange: (event) => {
+                changes.push({
+                  origin: event.meta.origin,
+                  operation: event.meta.operation,
+                  path: event.path,
+                });
+              },
+            },
+          },
+        ],
+      });
+
+      store.setField("name", "Leo");
+      store.setValues({ name: "Leandro", items: ["A"] });
+      store.pushItem("items", "B");
+
+      expect(changes.some((event) => event.origin === "setField")).toBe(true);
+      expect(changes.some((event) => event.origin === "setValues")).toBe(true);
+      expect(
+        changes.some(
+          (event) => event.origin === "array" && event.operation === "push",
+        ),
+      ).toBe(true);
+
+      store.cleanup();
+    });
+
+    it("should be fail-open when plugin throws and report via onError", async () => {
+      const onError = vi.fn();
+
+      const store = new BitStore({
+        initialValues: { email: "x" },
+        validation: {
+          resolver: () => ({}),
+          delay: 0,
+        },
+        plugins: [
+          {
+            name: "broken-plugin",
+            hooks: {
+              beforeValidate: () => {
+                throw new Error("plugin exploded");
+              },
+            },
+          },
+          {
+            name: "error-plugin",
+            hooks: {
+              onError,
+            },
+          },
+        ],
+      });
+
+      const result = await store.validate();
+
+      expect(result).toBe(true);
+      expect(onError).toHaveBeenCalledWith(
+        expect.objectContaining({
+          source: "beforeValidate",
+          pluginName: "broken-plugin",
+        }),
+        expect.any(Object),
+      );
+
+      store.cleanup();
+    });
+
+    it("should report submit callback errors through onError and afterSubmit", async () => {
+      const consoleErrorSpy = vi
+        .spyOn(console, "error")
+        .mockImplementation(() => undefined);
+      const onError = vi.fn();
+      const afterSubmit = vi.fn();
+
+      const store = new BitStore({
+        initialValues: { name: "Leo" },
+        validation: {
+          resolver: () => ({}),
+          delay: 0,
+        },
+        plugins: [
+          {
+            name: "submit-errors",
+            hooks: {
+              onError,
+              afterSubmit,
+            },
+          },
+        ],
+      });
+
+      await store.submit(async () => {
+        throw new Error("submit failed");
+      });
+
+      expect(onError).toHaveBeenCalledWith(
+        expect.objectContaining({ source: "submit" }),
+        expect.any(Object),
+      );
+      expect(afterSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({ success: false }),
+        expect.any(Object),
+      );
+
+      consoleErrorSpy.mockRestore();
+      store.cleanup();
+    });
+  });
 });

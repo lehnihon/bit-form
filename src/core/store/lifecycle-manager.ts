@@ -1,12 +1,17 @@
-import { BitErrors } from "./types";
+import { BitErrors, BitFieldChangeMeta } from "./types";
 import { BitLifecycleAdapter } from "./internal-types";
 import { deepClone, getDeepValue, setDeepValue } from "../utils";
 
 export class BitLifecycleManager<T extends object> {
   constructor(private store: BitLifecycleAdapter<T>) {}
 
-  updateField(path: string, value: any) {
+  updateField(
+    path: string,
+    value: any,
+    meta: BitFieldChangeMeta = { origin: "setField" },
+  ) {
     const state = this.store.getState();
+    const previousValue = getDeepValue(state.values, path);
     const newValues = setDeepValue(state.values, path, value);
     const newErrors = { ...state.errors };
 
@@ -35,6 +40,15 @@ export class BitLifecycleManager<T extends object> {
       isDirty,
     });
 
+    this.store.emitFieldChange({
+      path,
+      previousValue,
+      nextValue: value,
+      values: this.store.getState().values,
+      state: this.store.getState(),
+      meta,
+    });
+
     if (this.store.config.resolver) {
       this.store.validatorMg.trigger([path]);
     }
@@ -45,6 +59,7 @@ export class BitLifecycleManager<T extends object> {
   }
 
   updateAll(newValues: T) {
+    const previousValues = this.store.getState().values;
     const clonedValues = deepClone(newValues);
 
     this.store.config.initialValues = deepClone(clonedValues);
@@ -66,6 +81,15 @@ export class BitLifecycleManager<T extends object> {
 
     this.store.internalSaveSnapshot();
     this.store.validatorMg.validate();
+
+    this.store.emitFieldChange({
+      path: "*",
+      previousValue: previousValues,
+      nextValue: clonedValues,
+      values: this.store.getState().values,
+      state: this.store.getState(),
+      meta: { origin: "setValues" },
+    });
   }
 
   async submit(
@@ -102,8 +126,36 @@ export class BitLifecycleManager<T extends object> {
 
         const dirtyValues = this.store.dirtyMg.buildDirtyValues(valuesToSubmit);
 
+        await this.store.emitBeforeSubmit({
+          values: valuesToSubmit,
+          dirtyValues,
+          state: this.store.getState(),
+        });
+
         await onSuccess(valuesToSubmit, dirtyValues);
+
+        await this.store.emitAfterSubmit({
+          values: valuesToSubmit,
+          dirtyValues,
+          state: this.store.getState(),
+          success: true,
+        });
       } catch (error) {
+        await this.store.emitOperationalError({
+          source: "submit",
+          error,
+        });
+
+        await this.store.emitAfterSubmit({
+          values: this.store.getState().values,
+          dirtyValues: this.store.dirtyMg.buildDirtyValues(
+            this.store.getState().values,
+          ),
+          state: this.store.getState(),
+          success: false,
+          error,
+        });
+
         console.error(error);
       }
     } else {
@@ -115,6 +167,16 @@ export class BitLifecycleManager<T extends object> {
       });
 
       this.store.internalUpdateState({ touched: newTouched });
+
+      await this.store.emitAfterSubmit({
+        values: this.store.getState().values,
+        dirtyValues: this.store.dirtyMg.buildDirtyValues(
+          this.store.getState().values,
+        ),
+        state: this.store.getState(),
+        success: false,
+        invalid: true,
+      });
     }
 
     this.store.internalUpdateState({ isSubmitting: false });

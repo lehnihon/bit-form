@@ -11,6 +11,12 @@ import {
   BitPathValue,
   BitArrayPath,
   BitArrayItem,
+  BitFieldChangeMeta,
+  BitFieldChangeEvent,
+  BitBeforeValidateEvent,
+  BitAfterValidateEvent,
+  BitBeforeSubmitEvent,
+  BitAfterSubmitEvent,
 } from "./types";
 import {
   BitResolvedConfig,
@@ -32,6 +38,7 @@ import { BitScopeManager } from "./scope-manager";
 import { BitFieldQueryManager } from "./field-query-manager";
 import { BitErrorManager } from "./error-manager";
 import { BitPersistManager } from "./persist-manager";
+import { BitPluginManager } from "./plugin-manager";
 
 /**
  * BitStore
@@ -53,6 +60,7 @@ export class BitStore<T extends object = any>
   private state: BitState<T>;
   private listeners: Set<() => void> = new Set();
   private persistMg: BitPersistManager<T>;
+  private pluginMg: BitPluginManager<T>;
 
   // ============================================================================
   // PUBLIC PROPERTIES
@@ -164,10 +172,18 @@ export class BitStore<T extends object = any>
 
     this.internalSaveSnapshot();
 
-    // Register store in global bus
     this.storeId =
       this.config.name ||
       `bit-form-${Math.random().toString(36).substring(2, 9)}`;
+
+    this.pluginMg = new BitPluginManager<T>(this.config.plugins, () => ({
+      storeId: this.storeId,
+      getState: () => this.getState(),
+      getConfig: () => this.getConfig(),
+    }));
+    this.pluginMg.setupAll();
+
+    // Register store in global bus
     bitBus.stores[this.storeId] = this;
   }
 
@@ -341,7 +357,19 @@ export class BitStore<T extends object = any>
   // ============================================================================
 
   setField<P extends BitPath<T>>(path: P, value: BitPathValue<T, P>) {
-    const { visibilitiesChanged } = this.lifecycleMg.updateField(path, value);
+    this.setFieldWithMeta(path as string, value, { origin: "setField" });
+  }
+
+  setFieldWithMeta(
+    path: string,
+    value: any,
+    meta: BitFieldChangeMeta = { origin: "setField" },
+  ) {
+    const { visibilitiesChanged } = this.lifecycleMg.updateField(
+      path,
+      value,
+      meta,
+    );
 
     if (!this.config.resolver || visibilitiesChanged) {
       this.notify();
@@ -523,6 +551,34 @@ export class BitStore<T extends object = any>
     return this.validatorMg.validate(options);
   }
 
+  emitBeforeValidate(event: BitBeforeValidateEvent<T>): Promise<void> {
+    return this.pluginMg.beforeValidate(event);
+  }
+
+  emitAfterValidate(event: BitAfterValidateEvent<T>): Promise<void> {
+    return this.pluginMg.afterValidate(event);
+  }
+
+  emitBeforeSubmit(event: BitBeforeSubmitEvent<T>): Promise<void> {
+    return this.pluginMg.beforeSubmit(event);
+  }
+
+  emitAfterSubmit(event: BitAfterSubmitEvent<T>): Promise<void> {
+    return this.pluginMg.afterSubmit(event);
+  }
+
+  emitFieldChange(event: BitFieldChangeEvent<T>) {
+    this.pluginMg.onFieldChange(event);
+  }
+
+  emitOperationalError(event: {
+    source: "submit";
+    error: unknown;
+    payload?: unknown;
+  }) {
+    return this.pluginMg.reportError(event.source, event.error, event.payload);
+  }
+
   hasValidationsInProgress(scopeFields?: string[]): boolean {
     return this.validatorMg.hasValidationsInProgress(scopeFields);
   }
@@ -610,6 +666,7 @@ export class BitStore<T extends object = any>
     this.listeners.clear();
     this.validatorMg.cancelAll();
     this.persistMg.destroy();
+    this.pluginMg.destroy();
 
     delete bitBus.stores[this.storeId];
   }

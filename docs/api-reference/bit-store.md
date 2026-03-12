@@ -27,6 +27,8 @@ You can still instantiate `BitStore` directly for internal/advanced scenarios.
 - **Type parameter**: `T` — the shape of `values`. Defaults to `any` if omitted.
 - **Parameter**: `config?: BitConfig<T>` — see [Types Reference](./types.md) for all options.
 
+`BitConfig.plugins` allows lifecycle plugins for observability of validation/submit/field-change events. See [Lifecycle Plugins](../features/plugins.md).
+
 ---
 
 ## Core State & Accessors

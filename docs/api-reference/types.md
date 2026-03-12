@@ -166,6 +166,7 @@ interface BitConfig<T extends object = any> {
   };
   devTools?: boolean | DevToolsOptions;
   persist?: BitPersistConfig<T>;
+  plugins?: BitPlugin<T>[];
 }
 ```
 
@@ -235,6 +236,31 @@ interface BitPersistConfig<T extends object = any> {
 ```
 
 See [Draft Persistence](../features/persistence.md) for behavior and defaults.
+
+---
+
+## `BitPlugin<T>`
+
+Lifecycle plugin contract.
+
+```ts
+interface BitPlugin<T extends object = any> {
+  name: string;
+  setup?: (context: BitPluginContext<T>) => void | (() => void);
+  hooks?: BitPluginHooks<T>;
+}
+```
+
+Hook coverage:
+
+- `beforeValidate`
+- `afterValidate`
+- `beforeSubmit`
+- `afterSubmit`
+- `onFieldChange`
+- `onError`
+
+See [Lifecycle Plugins](../features/plugins.md) for examples and behavior.
 
 ---
 

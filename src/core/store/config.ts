@@ -39,5 +39,6 @@ export function normalizeConfig<T extends object>(
     fields: config.fields,
     devTools: config.devTools,
     persist,
+    plugins: config.plugins ?? [],
   } as BitResolvedConfig<T>;
 }
