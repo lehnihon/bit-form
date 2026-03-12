@@ -1,11 +1,7 @@
 import { useMemo, useCallback } from "react";
 import { useBitFieldBase } from "../react/use-bit-field-base";
 import { BitPath, BitPathValue } from "../core";
-import type {
-  UseBitFieldNativeMeta,
-  UseBitFieldNativeBindProps,
-  UseBitFieldNativeResult,
-} from "./types";
+import type { UseBitFieldNativeResult } from "./types";
 
 export function useBitField<
   TForm extends object = any,
@@ -63,14 +59,12 @@ export function useBitField<
   }, [setBlur]);
 
   return {
-    field: {
-      value: value as BitPathValue<TForm, P>,
-      displayValue,
-      setValue,
-      setBlur,
-      onChangeText: handleChange,
-      onBlur,
-    },
+    value: value as BitPathValue<TForm, P>,
+    displayValue,
+    setValue,
+    setBlur,
+    onChangeText: handleChange,
+    onBlur,
     meta: {
       error: visibleError,
       touched,

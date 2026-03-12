@@ -42,7 +42,7 @@ describe("React Native Integration (bit-form/react-native)", () => {
       result.current.props.onChangeText("Desenvolvedor BitForm");
     });
 
-    expect(result.current.field.value).toBe("Desenvolvedor BitForm");
+    expect(result.current.value).toBe("Desenvolvedor BitForm");
     expect(store.getState().values.bio).toBe("Desenvolvedor BitForm");
   });
 
@@ -81,7 +81,7 @@ describe("React Native Integration (bit-form/react-native)", () => {
     expect(result.current.cnpj.meta.isHidden).toBe(true);
 
     act(() => {
-      result.current.type.field.setValue("PJ");
+      result.current.type.setValue("PJ");
     });
 
     expect(result.current.cnpj.meta.isHidden).toBe(false);
