@@ -5,13 +5,24 @@ import { isValidationErrorShape, extractServerErrors } from "../core/utils";
 export function injectBitForm<T extends object>() {
   const store = useBitStore<T>();
   const destroyRef = inject(DestroyRef);
-  const stateSignal = signal(store.getState());
+  const stateSignal = signal({
+    isValid: store.getState().isValid,
+    isSubmitting: store.getState().isSubmitting,
+    isDirty: store.getState().isDirty,
+  });
   const submitError = signal<Error | null>(null);
   const lastResponse = signal<unknown>(null);
 
-  const sub = store.subscribe(() => {
-    stateSignal.set(store.getState());
-  });
+  const sub = store.subscribeSelector(
+    (state) => ({
+      isValid: state.isValid,
+      isSubmitting: state.isSubmitting,
+      isDirty: state.isDirty,
+    }),
+    (nextState) => {
+      stateSignal.set(nextState);
+    },
+  );
 
   destroyRef.onDestroy(() => sub());
 
@@ -19,9 +30,9 @@ export function injectBitForm<T extends object>() {
   const isSubmitting = computed(() => stateSignal().isSubmitting);
   const isDirty = computed(() => stateSignal().isDirty);
 
-  const getValues = () => stateSignal().values;
-  const getErrors = () => stateSignal().errors;
-  const getTouched = () => stateSignal().touched;
+  const getValues = () => store.getState().values;
+  const getErrors = () => store.getState().errors;
+  const getTouched = () => store.getState().touched;
   const getDirtyValues = () => store.getDirtyValues();
 
   const submit = (
@@ -85,6 +96,9 @@ export function injectBitForm<T extends object>() {
     submit,
     onSubmit,
     reset,
+    replaceValues: store.replaceValues.bind(store),
+    hydrate: store.hydrate.bind(store),
+    rebase: store.rebase.bind(store),
     setValues: store.setValues.bind(store),
     setError: store.setError.bind(store),
     setErrors: store.setErrors.bind(store),

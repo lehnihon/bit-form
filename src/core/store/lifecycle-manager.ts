@@ -1,6 +1,6 @@
-import { BitErrors, BitFieldChangeMeta } from "./types";
+import { BitErrors, BitFieldChangeMeta, DeepPartial } from "./types";
 import { BitLifecycleAdapter } from "./internal-types";
-import { deepClone, getDeepValue, setDeepValue } from "../utils";
+import { deepClone, deepMerge, getDeepValue, setDeepValue } from "../utils";
 
 export class BitLifecycleManager<T extends object> {
   constructor(private store: BitLifecycleAdapter<T>) {}
@@ -54,11 +54,51 @@ export class BitLifecycleManager<T extends object> {
     }
 
     this.store.validatorMg.handleAsync(path, value);
-
-    return { visibilitiesChanged: toggledFields.length > 0 };
   }
 
-  updateAll(newValues: T) {
+  replaceValues(
+    newValues: T,
+    origin: "replaceValues" | "hydrate" = "replaceValues",
+  ) {
+    const previousValues = this.store.getState().values;
+    const clonedValues = deepClone(newValues);
+
+    this.store.validatorMg.cancelAll();
+    this.store.depsMg.evaluateAll(clonedValues);
+
+    const isDirty = this.store.dirtyMg.rebuild(
+      clonedValues,
+      this.store.config.initialValues,
+    );
+
+    this.store.internalUpdateState({
+      values: clonedValues,
+      errors: {},
+      isValidating: {},
+      isValid: true,
+      isDirty,
+      isSubmitting: false,
+    });
+
+    this.store.internalSaveSnapshot();
+    this.store.validatorMg.validate();
+
+    this.store.emitFieldChange({
+      path: "*",
+      previousValue: previousValues,
+      nextValue: clonedValues,
+      values: this.store.getState().values,
+      state: this.store.getState(),
+      meta: { origin },
+    });
+  }
+
+  hydrateValues(values: DeepPartial<T>) {
+    const mergedValues = deepMerge(this.store.getState().values, values);
+    this.replaceValues(mergedValues, "hydrate");
+  }
+
+  rebaseValues(newValues: T) {
     const previousValues = this.store.getState().values;
     const clonedValues = deepClone(newValues);
 

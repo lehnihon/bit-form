@@ -159,10 +159,8 @@ export class BitArrayManager<T extends object = any> {
   }
 
   private revalidate(path: string) {
-    const storeInternals = this.store as any;
-
-    if (typeof storeInternals.triggerValidation === "function") {
-      storeInternals.triggerValidation([path]);
+    if (typeof this.store.triggerValidation === "function") {
+      this.store.triggerValidation([path]);
     } else if (typeof this.store.validate === "function") {
       this.store.validate();
     }

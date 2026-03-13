@@ -37,6 +37,7 @@ export interface BitLifecycleAdapter<T extends object> {
     error: unknown;
     payload?: unknown;
   }) => Promise<void>;
+  notify: () => void;
 }
 
 export interface BitStoreAdapter<T extends object = any> {
@@ -49,6 +50,7 @@ export interface BitStoreAdapter<T extends object = any> {
   internalSaveSnapshot(): void;
   unregisterPrefix?: (prefix: string) => void;
   validate?: () => Promise<boolean>;
+  triggerValidation?: (scopeFields?: string[]) => void;
   dirtyMg: BitDirtyManager<T>;
 }
 

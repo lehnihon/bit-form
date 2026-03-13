@@ -4,19 +4,30 @@ import { isValidationErrorShape, extractServerErrors } from "../core/utils";
 
 export function useBitForm<T extends object>() {
   const store = useBitStore<T>();
-  const state = shallowRef(store.getState());
+  const state = shallowRef({
+    isValid: store.getState().isValid,
+    isSubmitting: store.getState().isSubmitting,
+    isDirty: store.getState().isDirty,
+  });
   const submitError = ref<Error | null>(null);
   const lastResponse = ref<unknown>(null);
 
-  const unsubscribe = store.subscribe(() => {
-    state.value = { ...store.getState() };
-  });
+  const unsubscribe = store.subscribeSelector(
+    (snapshot) => ({
+      isValid: snapshot.isValid,
+      isSubmitting: snapshot.isSubmitting,
+      isDirty: snapshot.isDirty,
+    }),
+    (nextState) => {
+      state.value = nextState;
+    },
+  );
 
   onUnmounted(unsubscribe);
 
-  const getValues = () => state.value.values;
-  const getErrors = () => state.value.errors;
-  const getTouched = () => state.value.touched;
+  const getValues = () => store.getState().values;
+  const getErrors = () => store.getState().errors;
+  const getTouched = () => store.getState().touched;
   const getDirtyValues = () => store.getDirtyValues();
 
   const isValid = computed(() => state.value.isValid);
@@ -79,6 +90,9 @@ export function useBitForm<T extends object>() {
     },
     onSubmit,
     reset,
+    replaceValues: store.replaceValues.bind(store),
+    hydrate: store.hydrate.bind(store),
+    rebase: store.rebase.bind(store),
     setValues: store.setValues.bind(store),
     setError: store.setError.bind(store),
     setErrors: store.setErrors.bind(store),

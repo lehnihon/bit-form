@@ -25,14 +25,19 @@ describe("BitStore Core", () => {
       expect(submittedDirtyValues).toEqual({ name: "Leandro" });
     });
 
-    it("should not expose internal history methods in facade", () => {
+    it("should expose the full public API without leaking internal managers", () => {
       const store = createBitStore({ initialValues: { name: "Leo" } }) as any;
 
-      expect("undo" in store).toBe(false);
-      expect("redo" in store).toBe(false);
-      expect("canUndo" in store).toBe(false);
-      expect("canRedo" in store).toBe(false);
+      expect("undo" in store).toBe(true);
+      expect("redo" in store).toBe(true);
+      expect("getHistoryMetadata" in store).toBe(true);
+      expect("subscribeSelector" in store).toBe(true);
+      expect("subscribePath" in store).toBe(true);
+      expect("replaceValues" in store).toBe(true);
+      expect("hydrate" in store).toBe(true);
+      expect("rebase" in store).toBe(true);
       expect("historyMg" in store).toBe(false);
+      expect("depsMg" in store).toBe(false);
     });
   });
 
@@ -72,6 +77,43 @@ describe("BitStore Core", () => {
 
       store.setField("user.name", "Leandro");
       expect(watcher).toHaveBeenCalledWith("Leandro");
+    });
+
+    it("should support selector-based subscriptions", () => {
+      const store = new BitStore({
+        initialValues: { user: { name: "Leo" }, age: 30 },
+      });
+      const listener = vi.fn();
+
+      const unsubscribe = store.subscribeSelector(
+        (state) => state.values.user.name,
+        listener,
+      );
+
+      store.setField("age", 31);
+      expect(listener).not.toHaveBeenCalled();
+
+      store.setField("user.name", "Leandro");
+      expect(listener).toHaveBeenCalledWith("Leandro");
+
+      unsubscribe();
+    });
+
+    it("should support path-based subscriptions", () => {
+      const store = new BitStore({
+        initialValues: { user: { name: "Leo" }, age: 30 },
+      });
+      const listener = vi.fn();
+
+      const unsubscribe = store.subscribePath("user.name", listener);
+
+      store.setField("age", 31);
+      expect(listener).not.toHaveBeenCalled();
+
+      store.setField("user.name", "Leandro");
+      expect(listener).toHaveBeenCalledWith("Leandro");
+
+      unsubscribe();
     });
 
     it("should update nested fields using dot notation", () => {
@@ -448,6 +490,42 @@ describe("BitStore Core", () => {
 
       store.setValues({ name: "Leandro" });
       expect(store.getState().values.name).toBe("Leandro");
+      expect(store.isDirty).toBe(false);
+    });
+
+    it("should replace values without rebasing the initial state", () => {
+      const store = new BitStore({ initialValues: { name: "Leo", age: 30 } });
+
+      store.replaceValues({ name: "Leandro", age: 31 });
+
+      expect(store.getState().values).toEqual({ name: "Leandro", age: 31 });
+      expect(store.getConfig().initialValues).toEqual({ name: "Leo", age: 30 });
+      expect(store.isDirty).toBe(true);
+    });
+
+    it("should hydrate current values with deep merge semantics", () => {
+      const store = new BitStore({
+        initialValues: { user: { name: "Leo", profile: { city: "Tokyo" } } },
+      });
+
+      store.hydrate({ user: { profile: { city: "Osaka" } } });
+
+      expect(store.getState().values).toEqual({
+        user: { name: "Leo", profile: { city: "Osaka" } },
+      });
+      expect(store.isDirty).toBe(true);
+    });
+
+    it("should rebase values explicitly", () => {
+      const store = new BitStore({ initialValues: { name: "Leo", age: 30 } });
+
+      store.rebase({ name: "Leandro", age: 31 });
+
+      expect(store.getState().values).toEqual({ name: "Leandro", age: 31 });
+      expect(store.getConfig().initialValues).toEqual({
+        name: "Leandro",
+        age: 31,
+      });
       expect(store.isDirty).toBe(false);
     });
 

@@ -4,6 +4,7 @@ import {
   BitConfig,
   BitComputedFn,
   BitErrors,
+  BitFieldState,
   BitTransformFn,
   BitState,
   BitFieldDefinition,
@@ -11,6 +12,7 @@ import {
   BitPathValue,
   BitArrayPath,
   BitArrayItem,
+  DeepPartial,
   BitFieldChangeMeta,
   BitFieldChangeEvent,
   BitBeforeValidateEvent,
@@ -18,6 +20,7 @@ import {
   BitBeforeSubmitEvent,
   BitAfterSubmitEvent,
 } from "./types";
+import { BitSelector, BitSelectorSubscriptionOptions } from "./public-types";
 import {
   BitResolvedConfig,
   BitStoreAdapter,
@@ -40,6 +43,13 @@ import { BitErrorManager } from "./error-manager";
 import { BitPersistManager } from "./persist-manager";
 import { BitPluginManager } from "./plugin-manager";
 
+interface SelectorSubscription<T extends object, TSlice> {
+  selector: BitSelector<T, TSlice>;
+  listener: (slice: TSlice) => void;
+  equalityFn: (previous: TSlice, next: TSlice) => boolean;
+  lastSlice: TSlice;
+}
+
 /**
  * BitStore
  *
@@ -59,6 +69,7 @@ export class BitStore<T extends object = any>
 
   private state: BitState<T>;
   private listeners: Set<() => void> = new Set();
+  private selectorListeners: Set<SelectorSubscription<T, any>> = new Set();
   private persistMg: BitPersistManager<T>;
   private pluginMg: BitPluginManager<T>;
 
@@ -253,6 +264,25 @@ export class BitStore<T extends object = any>
     return this.state;
   }
 
+  getFieldState<P extends BitPath<T>>(
+    path: P,
+  ): BitFieldState<T, BitPathValue<T, P>> {
+    const value = getDeepValue(
+      this.state.values,
+      path as string,
+    ) as BitPathValue<T, P>;
+
+    return {
+      value,
+      error: this.state.errors[path as keyof BitErrors<T>],
+      touched: !!this.state.touched[path as keyof typeof this.state.touched],
+      isHidden: this.isHidden(path),
+      isRequired: this.isRequired(path),
+      isDirty: this.isFieldDirty(path as string),
+      isValidating: this.isFieldValidating(path as string),
+    };
+  }
+
   get isValid(): boolean {
     return this.state.isValid;
   }
@@ -338,17 +368,50 @@ export class BitStore<T extends object = any>
     return () => this.listeners.delete(listener);
   }
 
+  subscribeSelector<TSlice>(
+    selector: BitSelector<T, TSlice>,
+    listener: (slice: TSlice) => void,
+    options?: BitSelectorSubscriptionOptions<TSlice>,
+  ) {
+    const subscription: SelectorSubscription<T, TSlice> = {
+      selector,
+      listener,
+      equalityFn: options?.equalityFn ?? valueEqual,
+      lastSlice: selector(this.state),
+    };
+
+    this.selectorListeners.add(subscription as SelectorSubscription<T, any>);
+
+    if (options?.emitImmediately) {
+      listener(subscription.lastSlice);
+    }
+
+    return () => {
+      this.selectorListeners.delete(
+        subscription as SelectorSubscription<T, any>,
+      );
+    };
+  }
+
+  subscribePath<P extends BitPath<T>>(
+    path: P,
+    listener: (value: BitPathValue<T, P>) => void,
+    options?: BitSelectorSubscriptionOptions<BitPathValue<T, P>>,
+  ) {
+    return this.subscribeSelector(
+      (state) =>
+        getDeepValue(state.values, path as string) as BitPathValue<T, P>,
+      listener,
+      options,
+    );
+  }
+
   watch<P extends BitPath<T>>(
     path: P,
     callback: (value: BitPathValue<T, P>) => void,
   ) {
-    let lastValue = deepClone(getDeepValue(this.state.values, path));
-    return this.subscribe(() => {
-      const newValue = getDeepValue(this.state.values, path);
-      if (!deepEqual(newValue, lastValue)) {
-        lastValue = deepClone(newValue);
-        callback(newValue);
-      }
+    return this.subscribePath(path, callback, {
+      equalityFn: deepEqual,
     });
   }
 
@@ -365,15 +428,7 @@ export class BitStore<T extends object = any>
     value: any,
     meta: BitFieldChangeMeta = { origin: "setField" },
   ) {
-    const { visibilitiesChanged } = this.lifecycleMg.updateField(
-      path,
-      value,
-      meta,
-    );
-
-    if (!this.config.resolver || visibilitiesChanged) {
-      this.notify();
-    }
+    this.lifecycleMg.updateField(path, value, meta);
   }
 
   blurField<P extends BitPath<T>>(path: P) {
@@ -396,7 +451,19 @@ export class BitStore<T extends object = any>
   }
 
   setValues(newValues: T) {
-    this.lifecycleMg.updateAll(newValues);
+    this.rebase(newValues);
+  }
+
+  replaceValues(newValues: T) {
+    this.lifecycleMg.replaceValues(newValues);
+  }
+
+  hydrate(values: DeepPartial<T>) {
+    this.lifecycleMg.hydrateValues(values);
+  }
+
+  rebase(newValues: T) {
+    this.lifecycleMg.rebaseValues(newValues);
   }
 
   // ============================================================================
@@ -599,6 +666,10 @@ export class BitStore<T extends object = any>
     return this.validatorMg.setExternalError(path, undefined);
   }
 
+  triggerValidation(scopeFields?: string[]) {
+    this.validatorMg.trigger(scopeFields);
+  }
+
   getStepStatus(scopeName: string) {
     return this.scopeMg.getStepStatus(scopeName);
   }
@@ -612,6 +683,7 @@ export class BitStore<T extends object = any>
   // ============================================================================
 
   internalUpdateState(partialState: Partial<BitState<T>>) {
+    const previousState = this.state;
     let nextState = { ...this.state, ...partialState };
 
     if (partialState.values) {
@@ -628,7 +700,7 @@ export class BitStore<T extends object = any>
       this.persistMg.queueSave();
     }
 
-    this.notify();
+    this.notify(previousState, nextState);
 
     bitBus.dispatch(this.storeId, this.state);
   }
@@ -664,14 +736,30 @@ export class BitStore<T extends object = any>
 
   cleanup() {
     this.listeners.clear();
+    this.selectorListeners.clear();
     this.validatorMg.cancelAll();
+    this.devtoolsMg.destroy();
     this.persistMg.destroy();
     this.pluginMg.destroy();
 
     delete bitBus.stores[this.storeId];
   }
 
-  private notify() {
+  notify(
+    previousState: BitState<T> = this.state,
+    nextState: BitState<T> = this.state,
+  ) {
     this.listeners.forEach((listener) => listener());
+
+    this.selectorListeners.forEach((subscription) => {
+      const nextSlice = subscription.selector(nextState);
+
+      if (subscription.equalityFn(subscription.lastSlice, nextSlice)) {
+        return;
+      }
+
+      subscription.lastSlice = nextSlice;
+      subscription.listener(nextSlice);
+    });
   }
 }

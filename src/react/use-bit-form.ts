@@ -40,8 +40,21 @@ export function useBitForm<T extends object>() {
     return nextMeta;
   }, [store]);
 
+  const subscribeMeta = useCallback(
+    (cb: () => void) =>
+      store.subscribeSelector(
+        (state) => ({
+          isValid: state.isValid,
+          isDirty: state.isDirty,
+          isSubmitting: state.isSubmitting,
+        }),
+        () => cb(),
+      ),
+    [store],
+  );
+
   const metaState = useSyncExternalStore(
-    store.subscribe.bind(store),
+    subscribeMeta,
     getMetaSnapshot,
     getMetaSnapshot,
   );
@@ -118,6 +131,9 @@ export function useBitForm<T extends object>() {
     reset,
     setField: store.setField.bind(store),
     blurField: store.blurField.bind(store),
+    replaceValues: store.replaceValues.bind(store),
+    hydrate: store.hydrate.bind(store),
+    rebase: store.rebase.bind(store),
     setValues: store.setValues.bind(store),
     setError: store.setError.bind(store),
     setErrors: store.setErrors.bind(store),

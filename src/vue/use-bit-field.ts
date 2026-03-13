@@ -1,6 +1,5 @@
 import { computed, onUnmounted, shallowRef } from "vue";
 import { useBitStore } from "./context";
-import { getDeepValue } from "../core";
 import type { UseBitFieldVueMeta, UseBitFieldVueResult } from "./types";
 
 export function useBitField<TValue = any>(
@@ -10,11 +9,14 @@ export function useBitField<TValue = any>(
 
   const resolvedMask = store.resolveMask(path as string);
 
-  const state = shallowRef(store.getState());
+  const state = shallowRef(store.getFieldState(path as string));
 
-  const unsubscribe = store.subscribe(() => {
-    state.value = store.getState();
-  });
+  const unsubscribe = store.subscribeSelector(
+    () => store.getFieldState(path as string),
+    (nextState) => {
+      state.value = nextState;
+    },
+  );
 
   onUnmounted(() => {
     unsubscribe();
@@ -23,9 +25,7 @@ export function useBitField<TValue = any>(
     }
   });
 
-  const rawValue = computed(
-    () => getDeepValue(state.value.values, path as string) as TValue,
-  );
+  const rawValue = computed(() => state.value.value as TValue);
 
   const displayValue = computed(() => {
     const val = rawValue.value;
@@ -46,32 +46,20 @@ export function useBitField<TValue = any>(
     },
   });
 
-  const rawError = computed(() => state.value.errors[path]);
+  const rawError = computed(() => state.value.error);
   const error = computed(() =>
-    state.value.touched[path] ? state.value.errors[path] : undefined,
+    state.value.touched ? state.value.error : undefined,
   );
-  const touched = computed(() => !!state.value.touched[path]);
+  const touched = computed(() => state.value.touched);
   const invalid = computed(() => !!(touched.value && error.value));
 
-  const isValidating = computed(() => {
-    state.value;
-    return store.isFieldValidating(path);
-  });
+  const isValidating = computed(() => state.value.isValidating);
 
-  const isDirty = computed(() => {
-    state.value;
-    return store.isFieldDirty(path);
-  });
+  const isDirty = computed(() => state.value.isDirty);
 
-  const isHidden = computed(() => {
-    state.value;
-    return store.isHidden(path);
-  });
+  const isHidden = computed(() => state.value.isHidden);
 
-  const isRequired = computed(() => {
-    state.value;
-    return store.isRequired(path);
-  });
+  const isRequired = computed(() => state.value.isRequired);
 
   const hasError = computed(() => !!rawError.value);
 

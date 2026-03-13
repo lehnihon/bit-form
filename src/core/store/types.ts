@@ -19,6 +19,16 @@ export interface BitState<T> {
   isDirty: boolean;
 }
 
+export interface BitFieldState<T extends object = any, TValue = unknown> {
+  value: TValue;
+  error: string | undefined;
+  touched: boolean;
+  isHidden: boolean;
+  isRequired: boolean;
+  isDirty: boolean;
+  isValidating: boolean;
+}
+
 export type ValidatorFn<T> = (
   values: T,
   options?: { scopeFields?: string[] },
@@ -67,7 +77,12 @@ export type BitPluginHookSource =
   | "teardown"
   | "submit";
 
-export type BitFieldChangeOrigin = "setField" | "setValues" | "array";
+export type BitFieldChangeOrigin =
+  | "setField"
+  | "setValues"
+  | "replaceValues"
+  | "hydrate"
+  | "array";
 
 export type BitArrayOperation =
   | "push"

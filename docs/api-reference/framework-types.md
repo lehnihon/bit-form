@@ -401,15 +401,15 @@ React Native also re-exports `useBitPersist` and `UseBitPersistResult` with the 
 
 ## Type Organization Summary
 
-| Category           | Location                           | Public? | Purpose                                             |
-| ------------------ | ---------------------------------- | ------- | --------------------------------------------------- |
-| Core domain types  | `src/core/store/types.ts`          | ✅      | Form state structure, configuration                 |
-| Core public API    | `src/core/store/public-types.ts`   | ✅      | `BitPublicStore`, `BitFrameworkStore`               |
-| Core adapters      | `src/core/store/internal-types.ts` | ❌      | Internal: `BitStoreAdapter`, `BitValidationAdapter` |
-| Bus / global       | `src/core/store/bus-types.ts`      | ❌      | Internal: `BitFormGlobal`, `BitBus`                 |
-| React hooks        | `src/react/types.ts`               | ✅      | Framework wrapper types                             |
-| Vue composables    | `src/vue/types.ts`                 | ✅      | Framework wrapper types                             |
-| Angular injectors  | `src/angular/types.ts`             | ✅      | Framework wrapper types                             |
-| React-Native hooks | `src/react-native/types.ts`        | ✅      | Framework wrapper types                             |
+| Category           | Location                           | Public? | Purpose                                                        |
+| ------------------ | ---------------------------------- | ------- | -------------------------------------------------------------- |
+| Core domain types  | `src/core/store/types.ts`          | ✅      | Form state structure, configuration                            |
+| Core public API    | `src/core/store/public-types.ts`   | ✅      | `BitStoreApi` (aliases: `BitPublicStore`, `BitFrameworkStore`) |
+| Core adapters      | `src/core/store/internal-types.ts` | ❌      | Internal: `BitStoreAdapter`, `BitValidationAdapter`            |
+| Bus / global       | `src/core/store/bus-types.ts`      | ❌      | Internal: `BitFormGlobal`, `BitBus`                            |
+| React hooks        | `src/react/types.ts`               | ✅      | Framework wrapper types                                        |
+| Vue composables    | `src/vue/types.ts`                 | ✅      | Framework wrapper types                                        |
+| Angular injectors  | `src/angular/types.ts`             | ✅      | Framework wrapper types                                        |
+| React-Native hooks | `src/react-native/types.ts`        | ✅      | Framework wrapper types                                        |
 
 **Key principle**: Framework types wrap the base contracts with framework-specific reactivity (Vue `ComputedRef`, Angular `Signal`, React plain values).

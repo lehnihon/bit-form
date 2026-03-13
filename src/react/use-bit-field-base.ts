@@ -1,6 +1,6 @@
 import { useCallback, useSyncExternalStore, useRef, useEffect } from "react";
 import { useBitStore } from "./context";
-import { getDeepValue, BitPath, BitPathValue } from "../core";
+import { BitPath, BitPathValue } from "../core";
 
 export function useBitFieldBase<
   TValue = any,
@@ -27,48 +27,41 @@ export function useBitFieldBase<
   }, [store, path]);
 
   const getSnapshot = useCallback(() => {
-    const state = store.getState();
-    const value = getDeepValue(state.values, path as string) as BitPathValue<
-      TForm,
-      P
-    >;
-    const error = state.errors[path];
-    const touched = !!state.touched[path];
-
-    const isHidden = store.isHidden(path);
-    const isRequired = store.isRequired(path);
-    const isDirty = store.isFieldDirty(path);
-    const isValidating = store.isFieldValidating(path);
+    const nextState = store.getFieldState(path);
 
     if (
       lastState.current &&
-      lastState.current.value === value &&
-      lastState.current.error === error &&
-      lastState.current.touched === touched &&
-      lastState.current.isHidden === isHidden &&
-      lastState.current.isRequired === isRequired &&
-      lastState.current.isDirty === isDirty &&
-      lastState.current.isValidating === isValidating
+      lastState.current.value === nextState.value &&
+      lastState.current.error === nextState.error &&
+      lastState.current.touched === nextState.touched &&
+      lastState.current.isHidden === nextState.isHidden &&
+      lastState.current.isRequired === nextState.isRequired &&
+      lastState.current.isDirty === nextState.isDirty &&
+      lastState.current.isValidating === nextState.isValidating
     ) {
       return lastState.current;
     }
 
     const newState = {
-      value,
-      error,
-      touched,
-      isHidden,
-      isRequired,
-      isDirty,
-      isValidating,
+      value: nextState.value,
+      error: nextState.error,
+      touched: nextState.touched,
+      isHidden: nextState.isHidden,
+      isRequired: nextState.isRequired,
+      isDirty: nextState.isDirty,
+      isValidating: nextState.isValidating,
     };
     lastState.current = newState;
     return newState;
   }, [store, path]);
 
   const subscribe = useCallback(
-    (cb: () => void) => store.subscribe(cb),
-    [store],
+    (cb: () => void) =>
+      store.subscribeSelector(
+        () => store.getFieldState(path),
+        () => cb(),
+      ),
+    [store, path],
   );
 
   const fieldState = useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
