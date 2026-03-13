@@ -68,7 +68,7 @@ describe("BitDevtoolsManager", () => {
       initialValues: {},
       devTools: true,
     } as any);
-    (storeLocal as any).devtoolsMg.destroy();
+    storeLocal.cleanup();
     expect(mockDestroyLocal).toHaveBeenCalled();
 
     const mockDestroyRemote = vi.fn();
@@ -78,7 +78,7 @@ describe("BitDevtoolsManager", () => {
       initialValues: {},
       devTools: { mode: "remote" },
     } as any);
-    (storeRemote as any).devtoolsMg.destroy();
+    storeRemote.cleanup();
     expect(mockDestroyRemote).toHaveBeenCalled();
   });
 });
