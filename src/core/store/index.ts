@@ -29,7 +29,7 @@ import type {
 import {
   BitResolvedConfig,
   BitStoreAdapter,
-  SelectorSubscription,
+  SelectorListenerEntry,
   BitValidationAdapter,
   BitLifecycleAdapter,
 } from "./internal-types";
@@ -67,7 +67,7 @@ export class BitStore<T extends object = any>
 
   private state: BitState<T>;
   private listeners: Set<() => void> = new Set();
-  private selectorListeners: Set<SelectorSubscription<T, any>> = new Set();
+  private selectorListeners: Set<SelectorListenerEntry<T>> = new Set();
   private persistMg: BitPersistManager<T>;
   private pluginMg: BitPluginManager<T>;
 
@@ -371,24 +371,29 @@ export class BitStore<T extends object = any>
     listener: (slice: TSlice) => void,
     options?: BitSelectorSubscriptionOptions<TSlice>,
   ) {
-    const subscription: SelectorSubscription<T, TSlice> = {
-      selector,
-      listener,
-      equalityFn: options?.equalityFn ?? valueEqual,
-      lastSlice: selector(this.state),
+    const equalityFn = options?.equalityFn ?? valueEqual;
+    let lastSlice = selector(this.state);
+
+    const subscription: SelectorListenerEntry<T> = {
+      notify: (nextState) => {
+        const nextSlice = selector(nextState);
+
+        if (equalityFn(lastSlice, nextSlice)) {
+          return;
+        }
+
+        lastSlice = nextSlice;
+        listener(nextSlice);
+      },
     };
 
-    this.selectorListeners.add(subscription as SelectorSubscription<T, any>);
+    this.selectorListeners.add(subscription);
 
     if (options?.emitImmediately) {
-      listener(subscription.lastSlice);
+      listener(lastSlice);
     }
 
-    return () => {
-      this.selectorListeners.delete(
-        subscription as SelectorSubscription<T, any>,
-      );
-    };
+    return () => this.selectorListeners.delete(subscription);
   }
 
   subscribePath<P extends BitPath<T>>(
@@ -798,14 +803,7 @@ export class BitStore<T extends object = any>
     this.listeners.forEach((listener) => listener());
 
     this.selectorListeners.forEach((subscription) => {
-      const nextSlice = subscription.selector(nextState);
-
-      if (subscription.equalityFn(subscription.lastSlice, nextSlice)) {
-        return;
-      }
-
-      subscription.lastSlice = nextSlice;
-      subscription.listener(nextSlice);
+      subscription.notify(nextState);
     });
   }
 }

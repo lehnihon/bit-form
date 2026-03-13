@@ -1,18 +1,23 @@
 import type { ComputedRef, Ref } from "vue";
-import type { ScopeStatus, ValidateScopeResult } from "../core";
+import type {
+  BitHistoryMetadata,
+  BitPersistMetadata,
+  ScopeStatus,
+  ValidateScopeResult,
+} from "../core";
 
 /**
  * Metadata describing the current state of a form field (Vue reactive).
  */
 export interface UseBitFieldVueMeta {
-  error: Readonly<any>;
-  touched: Readonly<any>;
-  invalid: Readonly<any>;
-  isValidating: Readonly<any>;
-  isDirty: Readonly<any>;
-  isHidden: Readonly<any>;
-  isRequired: Readonly<any>;
-  hasError: Readonly<any>;
+  error: ComputedRef<string | undefined>;
+  touched: ComputedRef<boolean>;
+  invalid: ComputedRef<boolean>;
+  isValidating: ComputedRef<boolean>;
+  isDirty: ComputedRef<boolean>;
+  isHidden: ComputedRef<boolean>;
+  isRequired: ComputedRef<boolean>;
+  hasError: ComputedRef<boolean>;
 }
 
 /**
@@ -21,12 +26,12 @@ export interface UseBitFieldVueMeta {
  */
 export interface UseBitFieldVueResult<TValue = any> {
   // Main handlers and values (flat)
-  value: Readonly<any>;
-  displayValue: Readonly<any>;
-  modelValue: any;
-  setValue: (val: any) => void;
+  value: ComputedRef<TValue>;
+  displayValue: ComputedRef<string>;
+  modelValue: ComputedRef<string>;
+  setValue: (val: TValue | string | number | null | undefined) => void;
   setBlur: () => void;
-  onInput: (val: any) => void;
+  onInput: (val: TValue | string | number | null | undefined) => void;
   onBlur: () => void;
   // Metadata (grouped)
   meta: UseBitFieldVueMeta;
@@ -71,10 +76,10 @@ export interface UseBitUploadResult {
  * Provides form history undo/redo capabilities (Vue reactive).
  */
 export interface UseBitHistoryResult {
-  canUndo: Readonly<any>;
-  canRedo: Readonly<any>;
-  historyIndex: Readonly<any>;
-  historySize: Readonly<any>;
+  canUndo: ComputedRef<BitHistoryMetadata["canUndo"]>;
+  canRedo: ComputedRef<BitHistoryMetadata["canRedo"]>;
+  historyIndex: ComputedRef<BitHistoryMetadata["historyIndex"]>;
+  historySize: ComputedRef<BitHistoryMetadata["historySize"]>;
   undo: () => void;
   redo: () => void;
 }
@@ -84,8 +89,8 @@ export interface UseBitPersistResult {
   save: () => Promise<void>;
   clear: () => Promise<void>;
   meta: {
-    isSaving: Ref<boolean>;
-    isRestoring: Ref<boolean>;
-    error: Ref<Error | null>;
+    isSaving: Ref<BitPersistMetadata["isSaving"]>;
+    isRestoring: Ref<BitPersistMetadata["isRestoring"]>;
+    error: Ref<BitPersistMetadata["error"]>;
   };
 }

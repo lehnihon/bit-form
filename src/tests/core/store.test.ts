@@ -99,6 +99,35 @@ describe("BitStore Core", () => {
       unsubscribe();
     });
 
+    it("should support selector options emitImmediately and equalityFn", () => {
+      const store = new BitStore({
+        initialValues: { user: { name: "Leo" }, age: 30 },
+      });
+
+      const listener = vi.fn();
+
+      const unsubscribe = store.subscribeSelector(
+        (state) => state.values.user,
+        listener,
+        {
+          emitImmediately: true,
+          equalityFn: (prev, next) => prev.name === next.name,
+        },
+      );
+
+      expect(listener).toHaveBeenCalledTimes(1);
+      expect(listener).toHaveBeenCalledWith({ name: "Leo" });
+
+      store.setField("age", 31);
+      expect(listener).toHaveBeenCalledTimes(1);
+
+      store.setField("user.name", "Leandro");
+      expect(listener).toHaveBeenCalledTimes(2);
+      expect(listener).toHaveBeenLastCalledWith({ name: "Leandro" });
+
+      unsubscribe();
+    });
+
     it("should support path-based subscriptions", () => {
       const store = new BitStore({
         initialValues: { user: { name: "Leo" }, age: 30 },
@@ -959,7 +988,7 @@ describe("BitStore Core", () => {
       store.cleanup();
     });
 
-    it("should emit onFieldChange for setField, setValues and array operations", async () => {
+    it("should emit onFieldChange for setField, rebase and array operations", async () => {
       const changes: Array<{
         origin: string;
         operation?: string;
@@ -989,7 +1018,7 @@ describe("BitStore Core", () => {
       store.pushItem("items", "B");
 
       expect(changes.some((event) => event.origin === "setField")).toBe(true);
-      expect(changes.some((event) => event.origin === "setValues")).toBe(true);
+      expect(changes.some((event) => event.origin === "rebase")).toBe(true);
       expect(
         changes.some(
           (event) => event.origin === "array" && event.operation === "push",

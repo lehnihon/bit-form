@@ -4,6 +4,8 @@ import {
   BitFieldDefinition,
   BitPath,
   BitPathValue,
+  BitArrayPath,
+  BitArrayItem,
   BitConfig,
   DevToolsOptions,
   ScopeStatus,
@@ -37,6 +39,12 @@ export interface BitHistoryMetadata {
   canRedo: boolean;
   historyIndex: number;
   historySize: number;
+}
+
+export interface BitPersistMetadata {
+  isSaving: boolean;
+  isRestoring: boolean;
+  error: Error | null;
 }
 
 export interface BitFrameworkConfig<
@@ -107,19 +115,36 @@ export interface BitStoreApi<T extends object = any> {
   unregisterField(path: string): void;
   unregisterPrefix?(prefix: string): void;
 
-  isHidden(path: any): boolean;
-  isRequired(path: any): boolean;
+  isHidden<P extends BitPath<T>>(path: P): boolean;
+  isRequired<P extends BitPath<T>>(path: P): boolean;
   isFieldDirty(path: string): boolean;
   isFieldValidating(path: string): boolean;
 
-  watch(path: any, callback: (value: any) => void): () => void;
+  watch<P extends BitPath<T>>(
+    path: P,
+    callback: (value: BitPathValue<T, P>) => void,
+  ): () => void;
 
-  pushItem(path: any, value: any): void;
-  prependItem(path: any, value: any): void;
-  insertItem(path: any, index: number, value: any): void;
-  removeItem(path: any, index: number): void;
-  moveItem(path: any, from: number, to: number): void;
-  swapItems(path: any, indexA: number, indexB: number): void;
+  pushItem<P extends BitArrayPath<T>>(
+    path: P,
+    value: BitArrayItem<BitPathValue<T, P>>,
+  ): void;
+  prependItem<P extends BitArrayPath<T>>(
+    path: P,
+    value: BitArrayItem<BitPathValue<T, P>>,
+  ): void;
+  insertItem<P extends BitArrayPath<T>>(
+    path: P,
+    index: number,
+    value: BitArrayItem<BitPathValue<T, P>>,
+  ): void;
+  removeItem<P extends BitArrayPath<T>>(path: P, index: number): void;
+  moveItem<P extends BitArrayPath<T>>(path: P, from: number, to: number): void;
+  swapItems<P extends BitArrayPath<T>>(
+    path: P,
+    indexA: number,
+    indexB: number,
+  ): void;
 
   getHistoryMetadata(): BitHistoryMetadata;
   undo(): void;
@@ -138,10 +163,12 @@ export interface BitStoreApi<T extends object = any> {
   getScopeFields(scopeName: string): string[];
 }
 
+/** @deprecated Use `BitStoreApi` instead. */
 export interface BitPublicStore<
   T extends object = any,
 > extends BitStoreApi<T> {}
 
+/** @deprecated Use `BitStoreApi` instead. */
 export interface BitFrameworkStore<
   T extends object = any,
 > extends BitStoreApi<T> {}

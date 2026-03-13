@@ -1,18 +1,20 @@
 import { computed, onUnmounted, shallowRef } from "vue";
 import { useBitStore } from "./context";
-import type { UseBitFieldVueMeta, UseBitFieldVueResult } from "./types";
+import type { UseBitFieldVueResult } from "./types";
+import type { BitPath, BitPathValue } from "../core";
 
-export function useBitField<TValue = any>(
-  path: string,
-): UseBitFieldVueResult<TValue> {
-  const store = useBitStore<any>();
+export function useBitField<
+  TForm extends object = any,
+  P extends BitPath<TForm> = BitPath<TForm>,
+>(path: P): UseBitFieldVueResult<BitPathValue<TForm, P>> {
+  const store = useBitStore<TForm>();
 
-  const resolvedMask = store.resolveMask(path as string);
+  const resolvedMask = store.resolveMask(path);
 
-  const state = shallowRef(store.getFieldState(path as string));
+  const state = shallowRef(store.getFieldState(path));
 
   const unsubscribe = store.subscribeSelector(
-    () => store.getFieldState(path as string),
+    () => store.getFieldState(path),
     (nextState) => {
       state.value = nextState;
     },
@@ -21,24 +23,24 @@ export function useBitField<TValue = any>(
   onUnmounted(() => {
     unsubscribe();
     if (store.unregisterField) {
-      store.unregisterField(path as string);
+      store.unregisterField(path);
     }
   });
 
-  const rawValue = computed(() => state.value.value as TValue);
+  const rawValue = computed(() => state.value.value as BitPathValue<TForm, P>);
 
   const displayValue = computed(() => {
     const val = rawValue.value;
     if (val === undefined || val === null || val === "") return "";
 
-    return resolvedMask ? resolvedMask.format(val as any) : String(val);
+    return resolvedMask ? resolvedMask.format(val) : String(val);
   });
 
   const modelValue = computed({
     get: () => displayValue.value,
-    set: (val: any) => {
+    set: (val: string) => {
       if (!resolvedMask) {
-        store.setField(path, val);
+        store.setField(path, val as BitPathValue<TForm, P>);
         return;
       }
 
@@ -63,13 +65,22 @@ export function useBitField<TValue = any>(
 
   const hasError = computed(() => !!rawError.value);
 
-  const setValue = (val: any) => {
-    modelValue.value = val;
+  const setValue = (
+    val: BitPathValue<TForm, P> | string | number | null | undefined,
+  ) => {
+    if (!resolvedMask) {
+      store.setField(path, val as BitPathValue<TForm, P>);
+      return;
+    }
+
+    modelValue.value = String(val ?? "");
   };
 
   const setBlur = () => store.blurField(path);
 
-  const onInput = (val: any) => {
+  const onInput = (
+    val: BitPathValue<TForm, P> | string | number | null | undefined,
+  ) => {
     setValue(val);
   };
 

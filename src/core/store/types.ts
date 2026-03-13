@@ -79,7 +79,7 @@ export type BitPluginHookSource =
 
 export type BitFieldChangeOrigin =
   | "setField"
-  | "setValues"
+  | "rebase"
   | "replaceValues"
   | "hydrate"
   | "array";

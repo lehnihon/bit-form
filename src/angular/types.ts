@@ -1,5 +1,7 @@
 import type { Signal } from "@angular/core";
 import type {
+  BitHistoryMetadata,
+  BitPersistMetadata,
   BitPath,
   BitPathValue,
   ScopeStatus,
@@ -81,8 +83,12 @@ export interface InjectBitUploadResult {
 export interface InjectBitHistoryResult {
   canUndo: ReturnType<typeof import("@angular/core").computed<boolean>>;
   canRedo: ReturnType<typeof import("@angular/core").computed<boolean>>;
-  historyIndex: ReturnType<typeof import("@angular/core").computed<number>>;
-  historySize: ReturnType<typeof import("@angular/core").computed<number>>;
+  historyIndex: ReturnType<
+    typeof import("@angular/core").computed<BitHistoryMetadata["historyIndex"]>
+  >;
+  historySize: ReturnType<
+    typeof import("@angular/core").computed<BitHistoryMetadata["historySize"]>
+  >;
   undo: () => void;
   redo: () => void;
 }
@@ -92,8 +98,8 @@ export interface InjectBitPersistResult {
   save: () => Promise<void>;
   clear: () => Promise<void>;
   meta: {
-    isSaving: Signal<boolean>;
-    isRestoring: Signal<boolean>;
-    error: Signal<Error | null>;
+    isSaving: Signal<BitPersistMetadata["isSaving"]>;
+    isRestoring: Signal<BitPersistMetadata["isRestoring"]>;
+    error: Signal<BitPersistMetadata["error"]>;
   };
 }

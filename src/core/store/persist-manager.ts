@@ -7,7 +7,7 @@ import type {
 function getDefaultStorage(): BitPersistStorageAdapter | undefined {
   if (typeof globalThis === "undefined") return undefined;
 
-  const storageLike = (globalThis as any).localStorage;
+  const storageLike = (globalThis as { localStorage?: Storage }).localStorage;
   if (!storageLike) return undefined;
 
   return {

@@ -82,14 +82,32 @@ export function setupRemoteBridge(url: string) {
 
     socket.onmessage = (event) => {
       try {
-        const { type, payload } = JSON.parse(event.data);
+        const message = JSON.parse(event.data) as {
+          type?: unknown;
+          payload?: unknown;
+        };
 
-        if (type === "ACTION") {
-          const { storeId, action } = payload;
+        if (message.type === "ACTION") {
+          const payload = message.payload as {
+            storeId?: unknown;
+            action?: unknown;
+          };
+          const storeId = payload.storeId;
+          const action = payload.action;
+
+          if (typeof storeId !== "string" || typeof action !== "string") {
+            return;
+          }
+
           const store = bitBus.stores[storeId];
 
-          if (store && typeof store[action] === "function") {
-            store[action]();
+          if (!store || typeof store !== "object") {
+            return;
+          }
+
+          const method = (store as Record<string, unknown>)[action];
+          if (typeof method === "function") {
+            (method as () => void).call(store);
           }
         }
       } catch (e) {

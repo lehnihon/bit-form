@@ -1,4 +1,9 @@
-import type { BitPath, BitPathValue } from "../core";
+import type {
+  BitHistoryMetadata,
+  BitPath,
+  BitPathValue,
+  BitPersistMetadata,
+} from "../core";
 
 /**
  * Metadata describing the current state of a form field.
@@ -83,10 +88,10 @@ export interface UseBitUploadResult {
  * Provides form history undo/redo capabilities.
  */
 export interface UseBitHistoryResult {
-  canUndo: boolean;
-  canRedo: boolean;
-  historyIndex: number;
-  historySize: number;
+  canUndo: BitHistoryMetadata["canUndo"];
+  canRedo: BitHistoryMetadata["canRedo"];
+  historyIndex: BitHistoryMetadata["historyIndex"];
+  historySize: BitHistoryMetadata["historySize"];
   undo: () => void;
   redo: () => void;
 }
@@ -95,9 +100,5 @@ export interface UseBitPersistResult {
   restore: () => Promise<boolean>;
   save: () => Promise<void>;
   clear: () => Promise<void>;
-  meta: {
-    isSaving: boolean;
-    isRestoring: boolean;
-    error: Error | null;
-  };
+  meta: BitPersistMetadata;
 }
