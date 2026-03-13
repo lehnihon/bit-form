@@ -170,8 +170,7 @@ describe("React Integration (Context + Hooks)", () => {
   describe("Arrays & Iteration", () => {
     it("deve gerenciar listas dinâmicas e remapear erros ao mover itens", async () => {
       const store = createTestStore({ skills: ["React", "Vue"] });
-      (store as any).validate = vi.fn();
-      (store as any).triggerValidation = vi.fn();
+      store.triggerValidation = vi.fn();
 
       const { result } = renderHook(() => useBitArray("skills"), {
         wrapper: (props) => wrapper({ ...props, store }),
@@ -195,8 +194,7 @@ describe("React Integration (Context + Hooks)", () => {
 
     it("deve limpar erros residuais ao remover um item do array", async () => {
       const store = createTestStore({ skills: ["React", "Vue"] });
-      (store as any).validate = vi.fn();
-      (store as any).triggerValidation = vi.fn();
+      store.triggerValidation = vi.fn();
 
       const { result } = renderHook(() => useBitArray("skills"), {
         wrapper: (props) => wrapper({ ...props, store }),

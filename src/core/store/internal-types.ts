@@ -10,7 +10,11 @@ import {
   BitState,
   BitTransformFn,
 } from "./types";
-import type { BitFrameworkConfig } from "./public-types";
+import type {
+  BitFrameworkConfig,
+  BitSelector,
+  BitValidationOptions,
+} from "./public-types";
 
 export interface BitResolvedConfig<
   T extends object = any,
@@ -32,10 +36,7 @@ export interface BitLifecycleAdapter<T extends object> {
   triggerValidation: (scopeFields?: string[]) => void;
   handleFieldAsyncValidation: (path: string, value: any) => void;
   cancelAllValidations: () => void;
-  validateNow: (options?: {
-    scope?: string;
-    scopeFields?: string[];
-  }) => Promise<boolean>;
+  validateNow: (options?: BitValidationOptions) => Promise<boolean>;
   hasValidationsInProgress: (scopeFields?: string[]) => boolean;
 
   updateDirtyForPath: (
@@ -65,11 +66,10 @@ export interface BitStoreAdapter<T extends object = any> {
   setField(path: string, value: any): void;
   setFieldWithMeta(path: string, value: any, meta: BitFieldChangeMeta): void;
   emitFieldChange(event: BitFieldChangeEvent<T>): void;
-  internalUpdateState(partialState: any): void;
+  internalUpdateState(partialState: Partial<BitState<T>>): void;
   internalSaveSnapshot(): void;
   unregisterPrefix?: (prefix: string) => void;
-  validate?: () => Promise<boolean>;
-  triggerValidation?: (scopeFields?: string[]) => void;
+  triggerValidation: (scopeFields?: string[]) => void;
   updateDirtyForPath: (
     path: string,
     nextValues: T,
@@ -81,7 +81,7 @@ export interface BitValidationAdapter<T extends object> {
   getState: () => BitState<T>;
   internalUpdateState: (partial: Partial<BitState<T>>) => void;
   setError: (path: string, message: string | undefined) => void;
-  validate?: (opts: { scopeFields?: string[] }) => Promise<boolean>;
+  validate: (opts: BitValidationOptions) => Promise<boolean>;
   getFieldConfig: (path: string) => BitFieldDefinition<T> | undefined;
   getScopeFields: (scopeName: string) => string[];
   config: BitResolvedConfig<T>;
@@ -89,4 +89,11 @@ export interface BitValidationAdapter<T extends object> {
   getHiddenFields: () => string[];
   emitBeforeValidate: (event: BitBeforeValidateEvent<T>) => Promise<void>;
   emitAfterValidate: (event: BitAfterValidateEvent<T>) => Promise<void>;
+}
+
+export interface SelectorSubscription<T extends object, TSlice> {
+  selector: BitSelector<T, TSlice>;
+  listener: (slice: TSlice) => void;
+  equalityFn: (previous: TSlice, next: TSlice) => boolean;
+  lastSlice: TSlice;
 }

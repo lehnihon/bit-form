@@ -29,8 +29,7 @@ describe("Cross-Framework Consistency", () => {
 
   it("should handle array error shifting and value integrity consistently", () => {
     const store = new BitStore({ initialValues: { list: ["A", "B", "C"] } });
-    (store as any).validate = vi.fn();
-    (store as any).triggerValidation = vi.fn();
+    store.triggerValidation = vi.fn();
 
     store.setError("list.2", "Error C");
     store.removeItem("list", 1);

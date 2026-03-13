@@ -1,4 +1,5 @@
 import { BitStore } from "./index";
+import type { DevToolsOptions } from "./types";
 import { setupRemoteBridge } from "../../devtools/bridge";
 import { initDevTools } from "../../devtools";
 
@@ -12,13 +13,14 @@ export class BitDevtoolsManager<T extends object> {
   }
 
   private setup() {
-    const devTools = (this.store.config as any).devTools;
+    const devTools = this.store.config.devTools;
     if (!devTools) return;
 
-    const options =
+    const options: Required<Pick<DevToolsOptions, "enabled" | "mode">> &
+      Pick<DevToolsOptions, "url"> =
       typeof devTools === "boolean"
         ? { enabled: devTools, mode: "local" }
-        : { enabled: true, ...devTools };
+        : { enabled: true, mode: devTools.mode ?? "local", ...devTools };
 
     if (!options.enabled) return;
 

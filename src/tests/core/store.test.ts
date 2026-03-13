@@ -617,8 +617,7 @@ describe("BitStore Core", () => {
 
     it("should clean up and shift errors when item is removed", () => {
       const store = new BitStore({ initialValues: { list: ["A", "B", "C"] } });
-      (store as any).validate = vi.fn();
-      (store as any).triggerValidation = vi.fn();
+      store.triggerValidation = vi.fn();
 
       store.setError("list.2", "Error on C");
       store.removeItem("list", 1);
@@ -630,8 +629,7 @@ describe("BitStore Core", () => {
 
     it("should swap items and swap their errors", () => {
       const store = new BitStore({ initialValues: { list: ["A", "B"] } });
-      (store as any).validate = vi.fn();
-      (store as any).triggerValidation = vi.fn();
+      store.triggerValidation = vi.fn();
 
       store.setError("list.0", "Error on A");
       store.swapItems("list", 0, 1);
@@ -643,8 +641,7 @@ describe("BitStore Core", () => {
 
     it("should move items and shift errors accordingly", () => {
       const store = new BitStore({ initialValues: { list: ["A", "B", "C"] } });
-      (store as any).validate = vi.fn();
-      (store as any).triggerValidation = vi.fn();
+      store.triggerValidation = vi.fn();
 
       store.setError("list.0", "Error on A");
       store.moveItem("list", 0, 2);

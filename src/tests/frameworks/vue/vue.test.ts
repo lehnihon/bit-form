@@ -99,8 +99,7 @@ describe("Vue Integration", () => {
 
   it("should shift errors and keep stable keys in arrays", async () => {
     const store = new BitStore({ initialValues: { tags: ["A", "B", "C"] } });
-    (store as any).validate = vi.fn();
-    (store as any).triggerValidation = vi.fn();
+    store.triggerValidation = vi.fn();
 
     const wrapper = createWrapper(store, () => ({
       list: useBitArray("tags"),
@@ -120,8 +119,7 @@ describe("Vue Integration", () => {
 
   it("should swap items and their respective errors", async () => {
     const store = new BitStore({ initialValues: { tags: ["A", "B"] } });
-    (store as any).validate = vi.fn();
-    (store as any).triggerValidation = vi.fn();
+    store.triggerValidation = vi.fn();
 
     const wrapper = createWrapper(store, () => ({
       list: useBitArray("tags"),
