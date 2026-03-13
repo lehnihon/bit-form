@@ -20,10 +20,16 @@ import {
   BitBeforeSubmitEvent,
   BitAfterSubmitEvent,
 } from "./types";
-import { BitSelector, BitSelectorSubscriptionOptions } from "./public-types";
+import type {
+  BitHistoryMetadata,
+  BitSelector,
+  BitSelectorSubscriptionOptions,
+  BitValidationOptions,
+} from "./public-types";
 import {
   BitResolvedConfig,
   BitStoreAdapter,
+  SelectorSubscription,
   BitValidationAdapter,
   BitLifecycleAdapter,
 } from "./internal-types";
@@ -42,14 +48,6 @@ import { BitFieldQueryManager } from "./field-query-manager";
 import { BitErrorManager } from "./error-manager";
 import { BitPersistManager } from "./persist-manager";
 import { BitPluginManager } from "./plugin-manager";
-
-interface SelectorSubscription<T extends object, TSlice> {
-  selector: BitSelector<T, TSlice>;
-  listener: (slice: TSlice) => void;
-  equalityFn: (previous: TSlice, next: TSlice) => boolean;
-  lastSlice: TSlice;
-}
-
 /**
  * BitStore
  *
@@ -450,6 +448,7 @@ export class BitStore<T extends object = any>
     this.internalUpdateState({ touched: newTouched });
   }
 
+  /** @deprecated Use `rebase()` instead. This method is an alias and may be removed in a future version. */
   setValues(newValues: T) {
     this.rebase(newValues);
   }
@@ -597,13 +596,7 @@ export class BitStore<T extends object = any>
     }
   }
 
-  getHistoryMetadata(): {
-    enabled: boolean;
-    canUndo: boolean;
-    canRedo: boolean;
-    historyIndex: number;
-    historySize: number;
-  } {
+  getHistoryMetadata(): BitHistoryMetadata {
     return this.historyMg.getMetadata();
   }
 
@@ -611,10 +604,7 @@ export class BitStore<T extends object = any>
   // VALIDATION & SCOPES
   // ============================================================================
 
-  validate(options?: {
-    scope?: string;
-    scopeFields?: string[];
-  }): Promise<boolean> {
+  validate(options?: BitValidationOptions): Promise<boolean> {
     return this.validatorMg.validate(options);
   }
 
@@ -710,10 +700,7 @@ export class BitStore<T extends object = any>
     this.validatorMg.cancelAll();
   }
 
-  validateNow(options?: {
-    scope?: string;
-    scopeFields?: string[];
-  }): Promise<boolean> {
+  validateNow(options?: BitValidationOptions): Promise<boolean> {
     return this.validatorMg.validate(options);
   }
 
@@ -771,8 +758,8 @@ export class BitStore<T extends object = any>
   private applyPersistedValues(values: Partial<T>) {
     const nextValues = deepClone({
       ...this.config.initialValues,
-      ...(values as any),
-    });
+      ...values,
+    } as T);
 
     this.validatorMg.cancelAll();
     this.depsMg.evaluateAll(nextValues);
@@ -804,7 +791,7 @@ export class BitStore<T extends object = any>
     delete bitBus.stores[this.storeId];
   }
 
-  notify(
+  private notify(
     previousState: BitState<T> = this.state,
     nextState: BitState<T> = this.state,
   ) {

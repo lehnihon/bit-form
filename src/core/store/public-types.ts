@@ -26,6 +26,19 @@ export interface BitSelectorSubscriptionOptions<TValue> {
   emitImmediately?: boolean;
 }
 
+export interface BitValidationOptions {
+  scope?: string;
+  scopeFields?: string[];
+}
+
+export interface BitHistoryMetadata {
+  enabled: boolean;
+  canUndo: boolean;
+  canRedo: boolean;
+  historyIndex: number;
+  historySize: number;
+}
+
 export interface BitFrameworkConfig<
   T extends object = any,
 > extends BitConfig<T> {
@@ -67,16 +80,14 @@ export interface BitStoreApi<T extends object = any> {
   replaceValues(values: T): void;
   hydrate(values: DeepPartial<T>): void;
   rebase(values: T): void;
+  /** @deprecated Use `rebase()` instead. This method is an alias and may be removed in a future version. */
   setValues(values: T): void;
 
   setError(path: string, message: string | undefined): void;
   setErrors(errors: BitErrors<T>): void;
   setServerErrors(serverErrors: Record<string, string[] | string>): void;
 
-  validate(options?: {
-    scope?: string;
-    scopeFields?: string[];
-  }): Promise<boolean>;
+  validate(options?: BitValidationOptions): Promise<boolean>;
 
   reset(): void;
 
@@ -110,12 +121,7 @@ export interface BitStoreApi<T extends object = any> {
   moveItem(path: any, from: number, to: number): void;
   swapItems(path: any, indexA: number, indexB: number): void;
 
-  getHistoryMetadata(): {
-    canUndo: boolean;
-    canRedo: boolean;
-    historyIndex: number;
-    historySize: number;
-  };
+  getHistoryMetadata(): BitHistoryMetadata;
   undo(): void;
   redo(): void;
 
