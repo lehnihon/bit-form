@@ -128,7 +128,7 @@ export class BitLifecycleManager<T extends object> {
       nextValue: clonedValues,
       values: this.store.getState().values,
       state: this.store.getState(),
-      meta: { origin: "setValues" },
+      meta: { origin: "rebase" },
     });
   }
 

@@ -17,8 +17,14 @@ export class BitErrorManager<T extends object = any> {
    * Pass undefined to clear the error.
    */
   setError(path: string, message: string | undefined): void {
-    const newErrors = { ...this.getState().errors, [path]: message };
-    if (!message) delete (newErrors as any)[path];
+    const newErrors = {
+      ...this.getState().errors,
+      [path]: message,
+    } as BitErrors<T>;
+
+    if (!message) {
+      delete newErrors[path as keyof BitErrors<T>];
+    }
 
     this.internalUpdateState({ errors: newErrors });
   }
@@ -42,7 +48,7 @@ export class BitErrorManager<T extends object = any> {
     for (const [key, value] of Object.entries(serverErrors)) {
       formattedErrors[key as keyof BitErrors<T>] = Array.isArray(value)
         ? value[0]
-        : (value as any);
+        : value;
     }
 
     this.setErrors(formattedErrors);

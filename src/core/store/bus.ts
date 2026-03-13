@@ -7,7 +7,9 @@ declare global {
 const rootGlobal =
   typeof globalThis !== "undefined"
     ? globalThis
-    : ((typeof global !== "undefined" ? global : window) as any);
+    : typeof global !== "undefined"
+      ? global
+      : window;
 
 if (!rootGlobal.__BIT_FORM__) {
   rootGlobal.__BIT_FORM__ = {

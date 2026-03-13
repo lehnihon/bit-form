@@ -106,7 +106,9 @@ Teardown runs when `store.cleanup()` is called.
 
 - `onFieldChange` fires for:
   - `setField` (`meta.origin = "setField"`)
-  - `setValues` (`meta.origin = "setValues"`)
+  - `rebase` (`meta.origin = "rebase"`)
+  - `replaceValues` (`meta.origin = "replaceValues"`)
+  - `hydrate` (`meta.origin = "hydrate"`)
   - array operations (`meta.origin = "array"`, `meta.operation = push|prepend|insert|remove|move|swap`)
 - Validate hooks receive scope/scopeFields context when provided.
 - Submit hooks receive `values` and `dirtyValues` snapshot.

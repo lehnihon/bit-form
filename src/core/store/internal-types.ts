@@ -97,3 +97,7 @@ export interface SelectorSubscription<T extends object, TSlice> {
   equalityFn: (previous: TSlice, next: TSlice) => boolean;
   lastSlice: TSlice;
 }
+
+export interface SelectorListenerEntry<T extends object> {
+  notify(nextState: Readonly<BitState<T>>): void;
+}

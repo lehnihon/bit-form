@@ -102,11 +102,17 @@ export function injectBitArray<
     },
     replace: (items: BitArrayItem<BitPathValue<TForm, P>>[]) => {
       idsSig.set(items.map(() => generateId()));
-      store.setField(path as unknown as BitPath<TForm>, items as any);
+      store.setField(
+        path as unknown as BitPath<TForm>,
+        items as unknown as BitPathValue<TForm, BitPath<TForm>>,
+      );
     },
     clear: () => {
       idsSig.set([]);
-      store.setField(path as unknown as BitPath<TForm>, [] as any);
+      store.setField(
+        path as unknown as BitPath<TForm>,
+        [] as unknown as BitPathValue<TForm, BitPath<TForm>>,
+      );
     },
   };
 }

@@ -94,6 +94,11 @@ const unsubscribe = store.subscribeSelector(
 );
 ```
 
+`options` supports:
+
+- `equalityFn?: (previous, next) => boolean` to customize change detection.
+- `emitImmediately?: boolean` to emit current slice right after subscription.
+
 ### `subscribePath(path, listener, options?): () => void`
 
 Convenience subscription for a path inside `state.values`.
@@ -104,7 +109,9 @@ const unsubscribe = store.subscribePath("user.address.city", (city) => {
 });
 ```
 
-### `watch(path: string, callback: (value: any) => void): () => void`
+`options` is the same as `subscribeSelector` (`equalityFn`, `emitImmediately`).
+
+### `watch<P extends BitPath<T>>(path: P, callback: (value: BitPathValue<T, P>) => void): () => void`
 
 Subscribes to changes for a specific field path. The callback is only called when the value at that path actually changes (deep comparison).
 
@@ -238,7 +245,7 @@ store.rebase({
 });
 ```
 
-### `setValues(newValues: T): void`
+### `setValues(newValues: T): void` (deprecated)
 
 Alias of `rebase(newValues)`.
 

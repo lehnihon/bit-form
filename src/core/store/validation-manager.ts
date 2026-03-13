@@ -1,8 +1,9 @@
 import { BitErrors } from "./types";
 import { BitValidationAdapter } from "./internal-types";
+import { BitValidationOptions } from "./public-types";
 
 export class BitValidationManager<T extends object> {
-  private validationTimeout?: any;
+  private validationTimeout?: ReturnType<typeof setTimeout>;
   private currentValidationId: number = 0;
   private asyncTimers: Record<string, ReturnType<typeof setTimeout>> = {};
   private asyncRequests: Record<string, number> = {};
@@ -135,10 +136,7 @@ export class BitValidationManager<T extends object> {
     }
   }
 
-  async validate(options?: {
-    scope?: string;
-    scopeFields?: string[];
-  }): Promise<boolean> {
+  async validate(options?: BitValidationOptions): Promise<boolean> {
     const validationId = ++this.currentValidationId;
     const currentState = this.store.getState();
 
@@ -195,9 +193,7 @@ export class BitValidationManager<T extends object> {
         if (allErrors[field]) {
           newErrors[field as keyof BitErrors<T>] = allErrors[field];
         } else if (this.asyncErrors[field]) {
-          newErrors[field as keyof BitErrors<T>] = this.asyncErrors[
-            field
-          ] as any;
+          newErrors[field as keyof BitErrors<T>] = this.asyncErrors[field];
         } else {
           delete newErrors[field as keyof BitErrors<T>];
         }

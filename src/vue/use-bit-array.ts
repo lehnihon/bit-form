@@ -97,11 +97,11 @@ export function useBitArray<
     },
     replace: (items: Item[]) => {
       ids.value = items.map(generateId);
-      store.setField(path as unknown as BitPath<TForm>, items as any);
+      store.setField(path as unknown as BitPath<TForm>, items);
     },
     clear: () => {
       ids.value = [];
-      store.setField(path as unknown as BitPath<TForm>, [] as any);
+      store.setField(path as unknown as BitPath<TForm>, [] as Item[]);
     },
   };
 }
