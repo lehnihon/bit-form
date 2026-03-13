@@ -85,29 +85,29 @@ export class BitStore<T extends object = any>
   // Managers for essential form state management
   // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-  public depsMg: BitDependencyManager<T>;
-  public validatorMg: BitValidationManager<T>;
-  public computedMg: BitComputedManager<T>;
-  public dirtyMg: BitDirtyManager<T>;
-  public lifecycleMg: BitLifecycleManager<T>;
+  private readonly depsMg: BitDependencyManager<T>;
+  private readonly validatorMg: BitValidationManager<T>;
+  private readonly computedMg: BitComputedManager<T>;
+  private readonly dirtyMg: BitDirtyManager<T>;
+  private readonly lifecycleMg: BitLifecycleManager<T>;
 
   // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   // Feature Managers
   // Managers for optional features like history, arrays, and scopes
   // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-  public historyMg: BitHistoryManager<T>;
-  public arraysMg: BitArrayManager<T>;
-  public scopeMg: BitScopeManager<T>;
-  public devtoolsMg: BitDevtoolsManager<T>;
+  private readonly historyMg: BitHistoryManager<T>;
+  private readonly arraysMg: BitArrayManager<T>;
+  private readonly scopeMg: BitScopeManager<T>;
+  private readonly devtoolsMg: BitDevtoolsManager<T>;
 
   // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   // Query & Mutation Managers
   // Dedicated managers for specific operations
   // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-  public queryMg: BitFieldQueryManager<T>;
-  public errorMg: BitErrorManager<T>;
+  private readonly queryMg: BitFieldQueryManager<T>;
+  private readonly errorMg: BitErrorManager<T>;
 
   // ============================================================================
   // CONSTRUCTOR
@@ -676,6 +676,65 @@ export class BitStore<T extends object = any>
 
   getStepErrors(scopeName: string): Record<string, string> {
     return this.scopeMg.getStepErrors(scopeName);
+  }
+
+  updateDependencies(changedPath: string, newValues: T): string[] {
+    return this.depsMg.updateDependencies(changedPath, newValues);
+  }
+
+  isFieldHidden(path: string): boolean {
+    return this.depsMg.isHidden(path);
+  }
+
+  evaluateAllDependencies(values: T): void {
+    this.depsMg.evaluateAll(values);
+  }
+
+  getHiddenFields(): string[] {
+    return Array.from(this.depsMg.hiddenFields);
+  }
+
+  getRequiredErrors(values: T): BitErrors<T> {
+    return this.depsMg.getRequiredErrors(values);
+  }
+
+  clearFieldValidation(path: string): void {
+    this.validatorMg.clear(path);
+  }
+
+  handleFieldAsyncValidation(path: string, value: any): void {
+    this.validatorMg.handleAsync(path, value);
+  }
+
+  cancelAllValidations(): void {
+    this.validatorMg.cancelAll();
+  }
+
+  validateNow(options?: {
+    scope?: string;
+    scopeFields?: string[];
+  }): Promise<boolean> {
+    return this.validatorMg.validate(options);
+  }
+
+  updateDirtyForPath(path: string, nextValues: T, baselineValues: T): boolean {
+    return this.dirtyMg.updateForPath(path, nextValues, baselineValues);
+  }
+
+  rebuildDirtyState(nextValues: T, baselineValues: T): boolean {
+    return this.dirtyMg.rebuild(nextValues, baselineValues);
+  }
+
+  clearDirtyState(): void {
+    this.dirtyMg.clear();
+  }
+
+  buildDirtyValues(values: T): Partial<T> {
+    return this.dirtyMg.buildDirtyValues(values);
+  }
+
+  resetHistory(initialValues: T): void {
+    this.historyMg.reset(initialValues);
   }
 
   // ============================================================================

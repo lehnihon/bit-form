@@ -164,12 +164,12 @@ export class BitValidationManager<T extends object> {
         })
       : {};
 
-    const dynamicRequiredErrors = this.store.depsMg.getRequiredErrors(
+    const dynamicRequiredErrors = this.store.getRequiredErrors(
       currentState.values,
     );
     allErrors = { ...allErrors, ...dynamicRequiredErrors };
 
-    this.store.depsMg.hiddenFields.forEach((hiddenPath: string) => {
+    this.store.getHiddenFields().forEach((hiddenPath: string) => {
       delete allErrors[hiddenPath];
       delete this.asyncErrors[hiddenPath];
     });

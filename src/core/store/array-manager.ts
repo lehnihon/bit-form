@@ -53,7 +53,7 @@ export class BitArrayManager<T extends object = any> {
     const newArray = arr.filter((_, i) => i !== index);
     const newValues = setDeepValue(state.values, path, newArray);
 
-    const isDirty = this.store.dirtyMg.updateForPath(
+    const isDirty = this.store.updateDirtyForPath(
       path,
       newValues,
       this.store.getConfig().initialValues,
@@ -87,7 +87,7 @@ export class BitArrayManager<T extends object = any> {
 
     const newValues = setDeepValue(state.values, path, arr);
 
-    const isDirty = this.store.dirtyMg.updateForPath(
+    const isDirty = this.store.updateDirtyForPath(
       path,
       newValues,
       this.store.getConfig().initialValues,
@@ -127,7 +127,7 @@ export class BitArrayManager<T extends object = any> {
 
     const newValues = setDeepValue(state.values, path, arr);
 
-    const isDirty = this.store.dirtyMg.updateForPath(
+    const isDirty = this.store.updateDirtyForPath(
       path,
       newValues,
       this.store.getConfig().initialValues,

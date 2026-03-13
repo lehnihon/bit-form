@@ -1,12 +1,9 @@
-import { BitDependencyManager } from "./dependency-manager";
-import { BitDirtyManager } from "./dirty-manager";
-import { BitHistoryManager } from "./history-manager";
-import { BitValidationManager } from "./validation-manager";
 import {
   BitAfterSubmitEvent,
   BitAfterValidateEvent,
   BitBeforeSubmitEvent,
   BitBeforeValidateEvent,
+  BitErrors,
   BitFieldChangeEvent,
   BitFieldChangeMeta,
   BitFieldDefinition,
@@ -25,10 +22,33 @@ export interface BitLifecycleAdapter<T extends object> {
   internalSaveSnapshot: () => void;
   getTransformEntries: () => [string, BitTransformFn<T>][];
   config: BitResolvedConfig<T>;
-  depsMg: BitDependencyManager<T>;
-  validatorMg: BitValidationManager<T>;
-  historyMg: BitHistoryManager<T>;
-  dirtyMg: BitDirtyManager<T>;
+
+  updateDependencies: (changedPath: string, newValues: T) => string[];
+  isFieldHidden: (path: string) => boolean;
+  evaluateAllDependencies: (values: T) => void;
+  getHiddenFields: () => string[];
+
+  clearFieldValidation: (path: string) => void;
+  triggerValidation: (scopeFields?: string[]) => void;
+  handleFieldAsyncValidation: (path: string, value: any) => void;
+  cancelAllValidations: () => void;
+  validateNow: (options?: {
+    scope?: string;
+    scopeFields?: string[];
+  }) => Promise<boolean>;
+  hasValidationsInProgress: (scopeFields?: string[]) => boolean;
+
+  updateDirtyForPath: (
+    path: string,
+    nextValues: T,
+    baselineValues: T,
+  ) => boolean;
+  rebuildDirtyState: (nextValues: T, baselineValues: T) => boolean;
+  clearDirtyState: () => void;
+  buildDirtyValues: (values: T) => Partial<T>;
+
+  resetHistory: (initialValues: T) => void;
+
   emitFieldChange: (event: BitFieldChangeEvent<T>) => void;
   emitBeforeSubmit: (event: BitBeforeSubmitEvent<T>) => Promise<void>;
   emitAfterSubmit: (event: BitAfterSubmitEvent<T>) => Promise<void>;
@@ -37,7 +57,6 @@ export interface BitLifecycleAdapter<T extends object> {
     error: unknown;
     payload?: unknown;
   }) => Promise<void>;
-  notify: () => void;
 }
 
 export interface BitStoreAdapter<T extends object = any> {
@@ -51,7 +70,11 @@ export interface BitStoreAdapter<T extends object = any> {
   unregisterPrefix?: (prefix: string) => void;
   validate?: () => Promise<boolean>;
   triggerValidation?: (scopeFields?: string[]) => void;
-  dirtyMg: BitDirtyManager<T>;
+  updateDirtyForPath: (
+    path: string,
+    nextValues: T,
+    baselineValues: T,
+  ) => boolean;
 }
 
 export interface BitValidationAdapter<T extends object> {
@@ -62,7 +85,8 @@ export interface BitValidationAdapter<T extends object> {
   getFieldConfig: (path: string) => BitFieldDefinition<T> | undefined;
   getScopeFields: (scopeName: string) => string[];
   config: BitResolvedConfig<T>;
-  depsMg: BitDependencyManager<T>;
+  getRequiredErrors: (values: T) => BitErrors<T>;
+  getHiddenFields: () => string[];
   emitBeforeValidate: (event: BitBeforeValidateEvent<T>) => Promise<void>;
   emitAfterValidate: (event: BitAfterValidateEvent<T>) => Promise<void>;
 }

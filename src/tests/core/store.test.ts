@@ -327,11 +327,11 @@ describe("BitStore Core", () => {
         },
       });
 
-      expect(store.depsMg.fieldConfigs.has("bonusValue")).toBe(true);
+      expect(store.getFieldConfig("bonusValue")).toBeDefined();
 
       store.unregisterField("bonusValue");
 
-      expect(store.depsMg.fieldConfigs.has("bonusValue")).toBe(true);
+      expect(store.getFieldConfig("bonusValue")).toBeDefined();
     });
   });
 
@@ -875,7 +875,11 @@ describe("BitStore Core", () => {
       await vi.advanceTimersByTimeAsync(10);
 
       expect(store.getState().errors.cnpj).toBeUndefined();
-      expect((store as any).validatorMg.asyncErrors.cnpj).toBeUndefined();
+
+      store.setField("hasCnpj", true);
+      await store.validate({ scopeFields: ["cnpj"] });
+
+      expect(store.getState().errors.cnpj).toBeUndefined();
     });
   });
 
