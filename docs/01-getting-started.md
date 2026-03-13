@@ -28,6 +28,8 @@ Here is a quick example using React:
 
 First, create the store with `createBitStore` and your initial values. You can define this outside of your component lifecycle or inside a stable reference to prevent unnecessary re-renders.
 
+The returned value is the official store facade shared by the core API and all framework adapters.
+
 ```tsx
 import { createBitStore } from "@lehnihon/bit-form";
 

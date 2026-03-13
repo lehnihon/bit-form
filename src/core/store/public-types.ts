@@ -1,5 +1,6 @@
 import {
   BitErrors,
+  BitFieldState,
   BitFieldDefinition,
   BitPath,
   BitPathValue,
@@ -10,8 +11,20 @@ import {
   BitState,
   BitPersistResolvedConfig,
   BitPlugin,
+  DeepPartial,
 } from "./types";
 import { BitMask } from "../mask/types";
+
+export type BitSelector<T extends object, TSlice> = (
+  state: Readonly<BitState<T>>,
+) => TSlice;
+
+export type BitEqualityFn<TValue> = (previous: TValue, next: TValue) => boolean;
+
+export interface BitSelectorSubscriptionOptions<TValue> {
+  equalityFn?: BitEqualityFn<TValue>;
+  emitImmediately?: boolean;
+}
 
 export interface BitFrameworkConfig<
   T extends object = any,
@@ -28,13 +41,32 @@ export interface BitFrameworkConfig<
   plugins: BitPlugin<T>[];
 }
 
-export interface BitPublicStore<T extends object = any> {
+export interface BitStoreApi<T extends object = any> {
+  readonly config: Readonly<BitFrameworkConfig<T>>;
+
   getConfig(): Readonly<BitFrameworkConfig<T>>;
   getState(): Readonly<BitState<T>>;
+  getFieldState<P extends BitPath<T>>(
+    path: P,
+  ): Readonly<BitFieldState<T, BitPathValue<T, P>>>;
+
   subscribe(listener: () => void): () => void;
+  subscribePath<P extends BitPath<T>>(
+    path: P,
+    listener: (value: BitPathValue<T, P>) => void,
+    options?: BitSelectorSubscriptionOptions<BitPathValue<T, P>>,
+  ): () => void;
+  subscribeSelector<TSlice>(
+    selector: BitSelector<T, TSlice>,
+    listener: (slice: TSlice) => void,
+    options?: BitSelectorSubscriptionOptions<TSlice>,
+  ): () => void;
 
   setField<P extends BitPath<T>>(path: P, value: BitPathValue<T, P>): void;
   blurField<P extends BitPath<T>>(path: P): void;
+  replaceValues(values: T): void;
+  hydrate(values: DeepPartial<T>): void;
+  rebase(values: T): void;
   setValues(values: T): void;
 
   setError(path: string, message: string | undefined): void;
@@ -59,12 +91,6 @@ export interface BitPublicStore<T extends object = any> {
   clearPersisted(): Promise<void>;
 
   cleanup(): void;
-}
-
-export interface BitFrameworkStore<
-  T extends object = any,
-> extends BitPublicStore<T> {
-  config: BitFrameworkConfig<T>;
 
   registerField(path: string, config: BitFieldDefinition<T>): void;
   unregisterField(path: string): void;
@@ -105,3 +131,11 @@ export interface BitFrameworkStore<
   resolveMask(path: string): BitMask | undefined;
   getScopeFields(scopeName: string): string[];
 }
+
+export interface BitPublicStore<
+  T extends object = any,
+> extends BitStoreApi<T> {}
+
+export interface BitFrameworkStore<
+  T extends object = any,
+> extends BitStoreApi<T> {}

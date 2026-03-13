@@ -32,11 +32,12 @@ export function useBitArray<
     return Array.isArray(value) ? (value as Item[]) : [];
   }, [store, path]);
 
-  const data = useSyncExternalStore(
-    store.subscribe.bind(store),
-    getSnapshot,
-    getSnapshot,
+  const subscribeArray = useCallback(
+    (cb: () => void) => store.subscribePath(path, () => cb()),
+    [store, path],
   );
+
+  const data = useSyncExternalStore(subscribeArray, getSnapshot, getSnapshot);
 
   const [ids, setIds] = useState<string[]>(() =>
     (data as Item[]).map(generateId),

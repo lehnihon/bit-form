@@ -19,10 +19,9 @@ export function useBitArray<
   type Item = BitArrayItem<BitPathValue<TForm, P>>;
 
   const getSnapshot = (): Item[] => {
-    const val = getDeepValue(
-      store.getState().values,
-      path as string,
-    ) as BitPathValue<TForm, P> | undefined;
+    const val = getDeepValue(store.getState().values, path as string) as
+      | BitPathValue<TForm, P>
+      | undefined;
     return Array.isArray(val) ? (val as Item[]) : [];
   };
 
@@ -30,18 +29,19 @@ export function useBitArray<
   const values = ref<Item[]>(initialValues);
   const ids = ref<string[]>(initialValues.map(generateId));
 
-  const unsubscribe = store.subscribe(() => {
-    const newValues = getSnapshot();
-    values.value = [...newValues];
+  const unsubscribe = store.subscribePath(path, (newValues) => {
+    const nextValues = (Array.isArray(newValues) ? newValues : []) as Item[];
 
-    if (newValues.length !== ids.value.length) {
+    values.value = [...nextValues];
+
+    if (nextValues.length !== ids.value.length) {
       const currentIds = [...ids.value];
-      if (newValues.length > currentIds.length) {
-        const diff = newValues.length - currentIds.length;
+      if (nextValues.length > currentIds.length) {
+        const diff = nextValues.length - currentIds.length;
         const newIds = Array.from({ length: diff }, generateId);
         ids.value = [...currentIds, ...newIds];
       } else {
-        ids.value = currentIds.slice(0, newValues.length);
+        ids.value = currentIds.slice(0, nextValues.length);
       }
     }
   });

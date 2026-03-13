@@ -30,8 +30,10 @@ export function injectBitArray<
   const valuesSig = signal<BitArrayItem<BitPathValue<TForm, P>>[]>(getRaw());
   const idsSig = signal<string[]>(valuesSig().map(generateId));
 
-  const unsub = store.subscribe(() => {
-    const next = getRaw();
+  const unsub = store.subscribePath(path, (value) => {
+    const next = Array.isArray(value)
+      ? (value as BitArrayItem<BitPathValue<TForm, P>>[])
+      : [];
     const ids = untracked(idsSig);
     valuesSig.set(next);
 

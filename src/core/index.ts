@@ -1,8 +1,12 @@
 export { createBitStore } from "./store/create-store";
 export type {
+  BitStoreApi,
   BitPublicStore,
   BitFrameworkStore,
   BitFrameworkConfig,
+  BitSelector,
+  BitEqualityFn,
+  BitSelectorSubscriptionOptions,
 } from "./store/public-types";
 
 export { bitBus } from "./store/bus";
@@ -11,6 +15,7 @@ export {
   getDeepValue,
   setDeepValue,
   deepClone,
+  deepMerge,
   deepEqual,
   valueEqual,
   cleanPrefixedKeys,
@@ -25,6 +30,7 @@ export type {
   BitState,
   BitErrors,
   BitTouched,
+  BitFieldState,
   BitFieldDefinition,
   BitFieldConditional,
   BitFieldValidation,

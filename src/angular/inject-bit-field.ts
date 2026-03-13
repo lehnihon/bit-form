@@ -1,6 +1,6 @@
 import { inject, DestroyRef, computed, signal } from "@angular/core";
 import { BIT_STORE_TOKEN } from "./provider";
-import { getDeepValue, BitPath, BitPathValue } from "../core";
+import { BitPath, BitPathValue } from "../core";
 import type { InjectBitFieldMeta, InjectBitFieldResult } from "./types";
 
 export function injectBitField<
@@ -10,11 +10,14 @@ export function injectBitField<
 >(path: P): InjectBitFieldResult<TForm, P> {
   const store = inject(BIT_STORE_TOKEN);
 
-  const stateSignal = signal(store.getState());
+  const stateSignal = signal(store.getFieldState(path));
 
-  const unsubscribe = store.subscribe(() => {
-    stateSignal.set(store.getState());
-  });
+  const unsubscribe = store.subscribeSelector(
+    () => store.getFieldState(path),
+    (nextState) => {
+      stateSignal.set(nextState);
+    },
+  );
 
   inject(DestroyRef).onDestroy(() => {
     unsubscribe();
@@ -23,41 +26,18 @@ export function injectBitField<
     }
   });
 
-  const value = computed(
-    () =>
-      getDeepValue(stateSignal().values, path as string) as BitPathValue<
-        TForm,
-        P
-      >,
-  );
-  const rawError = computed(
-    () =>
-      (stateSignal().errors as Record<string, any>)[path] as string | undefined,
-  );
-  const touched = computed(
-    () => !!(stateSignal().touched as Record<string, any>)[path],
-  );
+  const value = computed(() => stateSignal().value as BitPathValue<TForm, P>);
+  const rawError = computed(() => stateSignal().error);
+  const touched = computed(() => stateSignal().touched);
   const error = computed(() => (touched() ? rawError() : undefined));
 
-  const isDirty = computed(() => {
-    stateSignal();
-    return store.isFieldDirty(path);
-  });
+  const isDirty = computed(() => stateSignal().isDirty);
 
-  const isValidating = computed(() => {
-    stateSignal();
-    return store.isFieldValidating(path);
-  });
+  const isValidating = computed(() => stateSignal().isValidating);
 
-  const isHidden = computed(() => {
-    stateSignal();
-    return store.isHidden(path);
-  });
+  const isHidden = computed(() => stateSignal().isHidden);
 
-  const isRequired = computed(() => {
-    stateSignal();
-    return store.isRequired(path);
-  });
+  const isRequired = computed(() => stateSignal().isRequired);
 
   const invalid = computed(() => touched() && !!rawError());
 

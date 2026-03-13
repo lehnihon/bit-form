@@ -1,6 +1,6 @@
 # BitStore API
 
-`BitStore` is the core engine of Bit-Form. For direct consumer usage, the recommended entrypoint is `createBitStore`, which returns a public facade with stable, focused methods.
+`BitStore` is the core engine of Bit-Form. For direct consumer usage, the recommended entrypoint is `createBitStore`, which returns the official store facade consumed by React, Vue and Angular integrations.
 
 All framework bindings (`useBitForm`, `injectBitForm`, etc.) are thin adapters on top of the internal store engine.
 
@@ -79,6 +79,29 @@ const unsubscribe = store.subscribe(() => {
 
 // Later
 unsubscribe();
+```
+
+### `subscribeSelector(selector, listener, options?): () => void`
+
+Subscribes to a derived slice of state and only notifies when that slice changes.
+
+```ts
+const unsubscribe = store.subscribeSelector(
+  (state) => state.values.user.name,
+  (name) => {
+    console.log("User name changed:", name);
+  },
+);
+```
+
+### `subscribePath(path, listener, options?): () => void`
+
+Convenience subscription for a path inside `state.values`.
+
+```ts
+const unsubscribe = store.subscribePath("user.address.city", (city) => {
+  console.log("City changed:", city);
+});
 ```
 
 ### `watch(path: string, callback: (value: any) => void): () => void`
@@ -173,12 +196,51 @@ Updates a single field value by path.
 store.setField("email", "john@example.com");
 ```
 
-### `setValues(newValues: T): void`
+### `replaceValues(newValues: T): void`
 
-Replaces the entire `values` object in a single operation, then:
+Replaces the current `values` object without rebasing `initialValues`, then:
 
 - Re-applies all computed fields.
 - Re-runs dependency visibility logic.
+- Recomputes dirty state against the existing baseline.
+
+```ts
+store.replaceValues({
+  name: "John",
+  email: "john@example.com",
+});
+```
+
+### `hydrate(partialValues: DeepPartial<T>): void`
+
+Deep-merges a partial payload into the current values while keeping the current baseline.
+
+```ts
+store.hydrate({
+  profile: {
+    city: "Osaka",
+  },
+});
+```
+
+### `rebase(newValues: T): void`
+
+Replaces the current `values` object and also resets `initialValues` to the new payload.
+
+- Re-applies all computed fields.
+- Re-runs dependency visibility logic.
+- Clears dirty state relative to the new baseline.
+
+```ts
+store.rebase({
+  name: "John",
+  email: "john@example.com",
+});
+```
+
+### `setValues(newValues: T): void`
+
+Alias of `rebase(newValues)`.
 
 ```ts
 store.setValues({

@@ -23,6 +23,50 @@ export function deepClone<T>(obj: T): T {
   return clone as T;
 }
 
+export function deepMerge<T>(target: T, source: any): T {
+  if (source === undefined) {
+    return deepClone(target);
+  }
+
+  if (
+    source === null ||
+    typeof source !== "object" ||
+    source instanceof Date ||
+    source instanceof RegExp ||
+    Array.isArray(source)
+  ) {
+    return deepClone(source as T);
+  }
+
+  const base =
+    target && typeof target === "object" && !Array.isArray(target)
+      ? deepClone(target as any)
+      : ({} as Record<string, unknown>);
+
+  for (const key of Object.keys(source)) {
+    const sourceValue = source[key];
+    const baseValue = (base as Record<string, unknown>)[key];
+
+    if (
+      sourceValue !== null &&
+      typeof sourceValue === "object" &&
+      !Array.isArray(sourceValue) &&
+      !(sourceValue instanceof Date) &&
+      !(sourceValue instanceof RegExp)
+    ) {
+      (base as Record<string, unknown>)[key] = deepMerge(
+        baseValue,
+        sourceValue,
+      );
+      continue;
+    }
+
+    (base as Record<string, unknown>)[key] = deepClone(sourceValue);
+  }
+
+  return base as T;
+}
+
 /**
  * Fast equality for single values. Uses === for primitives, deepEqual for objects/arrays.
  * Prefer over deepEqual when comparing a single field value (e.g. isFieldDirty, getStepStatus).
@@ -277,7 +321,8 @@ export function isValidationErrorShape(
   if (typeof x !== "object" || x === null || Array.isArray(x)) return false;
 
   const obj = (x as Record<string, unknown>).errors ?? x;
-  if (typeof obj !== "object" || obj === null || Array.isArray(obj)) return false;
+  if (typeof obj !== "object" || obj === null || Array.isArray(obj))
+    return false;
 
   return Object.values(obj as Record<string, unknown>).every(
     (v) =>

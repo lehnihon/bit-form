@@ -39,7 +39,8 @@ export class BitDependencyManager<T extends object = any> {
       if (this.isRequired(path, values)) {
         const val = getDeepValue(values, path);
         if (this.isEmpty(val)) {
-          errors[path] = config.conditional?.requiredMessage ?? "required field";
+          errors[path] =
+            config.conditional?.requiredMessage ?? "required field";
         }
       }
     });
@@ -55,19 +56,36 @@ export class BitDependencyManager<T extends object = any> {
 
   updateDependencies(changedPath: string, newValues: T): string[] {
     const toggledFields: string[] = [];
-    const dependents = this.dependencies.get(changedPath);
 
-    if (!dependents) return toggledFields;
+    const queue = [changedPath];
+    const visited = new Set<string>();
 
-    dependents.forEach((depPath) => {
-      const wasHidden = this.isHidden(depPath);
-      this.evaluateFieldCondition(depPath, newValues);
-      const isHiddenNow = this.isHidden(depPath);
+    while (queue.length > 0) {
+      const currentPath = queue.shift()!;
 
-      if (wasHidden !== isHiddenNow) {
-        toggledFields.push(depPath);
+      if (visited.has(currentPath)) {
+        continue;
       }
-    });
+
+      visited.add(currentPath);
+
+      const dependents = this.dependencies.get(currentPath);
+      if (!dependents) {
+        continue;
+      }
+
+      dependents.forEach((depPath) => {
+        const wasHidden = this.isHidden(depPath);
+        this.evaluateFieldCondition(depPath, newValues);
+        const isHiddenNow = this.isHidden(depPath);
+
+        if (wasHidden !== isHiddenNow) {
+          toggledFields.push(depPath);
+        }
+
+        queue.push(depPath);
+      });
+    }
 
     return toggledFields;
   }
