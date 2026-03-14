@@ -1,3 +1,4 @@
+import type { BitMask } from "./types";
 import {
   createCreditCardMask,
   createCurrencyMask,
@@ -118,6 +119,48 @@ export const maskCNH = createPatternMask("###########");
 
 /** RG (00.000.000-X) - Suporta o 'X' como dígito verificador */
 export const maskRG = createPatternMask("##.###.###-X");
+
+/**
+ * CPF + CNPJ combinado — alterna automaticamente pelo número de dígitos:
+ * - Até 11 dígitos → CPF  (000.000.000-00)
+ * - Mais de 11     → CNPJ (00.000.000/0000-00)
+ */
+export const maskCPFCNPJ = createPatternMask([
+  "###.###.###-##",
+  "##.###.###/####-##",
+]);
+
+/**
+ * Placa de veículo BR — detecta o formato pelo 5.º caractere:
+ * - Antigo   → ABC-1234 (posição 5 é dígito)
+ * - Mercosul → ABC1D23  (posição 5 é letra)
+ */
+export const maskPlate: BitMask = {
+  format(value: any): string {
+    const raw = String(value ?? "")
+      .replace(/[^a-zA-Z0-9]/g, "")
+      .toUpperCase()
+      .slice(0, 7);
+
+    if (raw.length === 0) return "";
+
+    const prefix = raw.slice(0, 3);
+    const rest = raw.slice(3);
+
+    if (rest.length === 0) return prefix;
+
+    // Posição 5 (rest[1]): letra → Mercosul; dígito → formato antigo
+    const isMercosul = rest.length >= 2 && /[A-Z]/.test(rest[1]);
+
+    return isMercosul ? `${prefix}${rest}` : `${prefix}-${rest}`;
+  },
+  parse(value: string): string {
+    return String(value ?? "")
+      .replace(/[^a-zA-Z0-9]/g, "")
+      .toUpperCase()
+      .slice(0, 7);
+  },
+};
 
 // ==========================================
 // 🇺🇸 PADRÕES AMERICANOS (USA)

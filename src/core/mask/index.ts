@@ -21,9 +21,11 @@ export const bitMasks: Record<BitBuiltInMaskName, BitMask> = {
   // Documentos BR
   cpf: presets.maskCPF,
   cnpj: presets.maskCNPJ,
+  cpfCnpj: presets.maskCPFCNPJ,
   rg: presets.maskRG,
   cep: presets.maskCEP,
   cnh: presets.maskCNH,
+  plate: presets.maskPlate,
   // Comunicação/Data
   phone: presets.maskPhone,
   landline: presets.maskLandline,
