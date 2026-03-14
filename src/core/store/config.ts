@@ -1,5 +1,5 @@
 import type { BitConfig, BitPersistResolvedConfig } from "./types";
-import type { BitResolvedConfig } from "./internal-types";
+import type { BitResolvedConfig } from "./public-types";
 import { deepClone } from "../utils";
 import { bitMasks } from "../mask";
 

@@ -1,4 +1,3 @@
-import { bitBus } from "./bus";
 import { BitMask, BitMaskName } from "../mask/types";
 import {
   BitConfig,
@@ -21,33 +20,29 @@ import {
   BitAfterSubmitEvent,
 } from "./types";
 import type {
+  BitResolvedConfig,
   BitHistoryMetadata,
   BitSelector,
   BitSelectorSubscriptionOptions,
   BitValidationOptions,
 } from "./public-types";
-import {
-  BitResolvedConfig,
-  BitStoreAdapter,
-  SelectorListenerEntry,
-  BitValidationAdapter,
-  BitLifecycleAdapter,
-} from "./internal-types";
 import { deepClone, deepEqual, getDeepValue, valueEqual } from "../utils";
 import { normalizeConfig } from "./config";
 import { BitDependencyManager } from "./dependency-manager";
-import { BitHistoryManager } from "./history-manager";
-import { BitArrayManager } from "./array-manager";
 import { BitComputedManager } from "./computed-manager";
-import { BitValidationManager } from "./validation-manager";
-import { BitLifecycleManager } from "./lifecycle-manager";
 import { BitDirtyManager } from "./dirty-manager";
-import { BitScopeManager } from "./scope-manager";
-import { BitFieldQueryManager } from "./field-query-manager";
-import { BitErrorManager } from "./error-manager";
-import { BitPersistManager } from "./persist-manager";
-import { BitPluginManager } from "./plugin-manager";
-import { createDevtoolsPlugin } from "./devtools-plugin";
+import { BitSubscriptionEngine } from "./subscription-engine";
+import { applyStateUpdate } from "./state-update-engine";
+import { BitStoreEffectEngine } from "./effect-engine";
+import { BitCapabilityRegistry } from "./capability-registry";
+import type { BitStoreCapabilities } from "./capabilities";
+import type { BitLifecycleStorePort } from "./lifecycle-manager";
+import type { BitValidationStorePort } from "./validation-manager";
+import {
+  createInitialStoreState,
+  createStoreCapabilities,
+  createStoreEffects,
+} from "./store-bootstrap";
 /**
  * BitStore
  *
@@ -59,21 +54,16 @@ import { createDevtoolsPlugin } from "./devtools-plugin";
  * - Query/mutation managers organize domain-specific operations
  */
 export class BitStore<T extends object = any>
-  implements BitStoreAdapter<T>, BitValidationAdapter<T>, BitLifecycleAdapter<T>
+  implements BitValidationStorePort<T>, BitLifecycleStorePort<T>
 {
   // ============================================================================
   // PRIVATE PROPERTIES
   // ============================================================================
 
   private state: BitState<T>;
-  private listeners: Set<() => void> = new Set();
-  private selectorListeners: Set<SelectorListenerEntry<T>> = new Set();
-  private pathScopedSubscriptions: Map<SelectorListenerEntry<T>, string[]> =
-    new Map();
-  private pathSelectorIndex: Map<string, Set<SelectorListenerEntry<T>>> =
-    new Map();
-  private persistMg: BitPersistManager<T>;
-  private pluginMg: BitPluginManager<T>;
+  private readonly subscriptions: BitSubscriptionEngine<T>;
+  private readonly effects: BitStoreEffectEngine<T>;
+  private readonly capabilities: BitCapabilityRegistry<BitStoreCapabilities<T>>;
 
   // ============================================================================
   // PUBLIC PROPERTIES
@@ -88,27 +78,45 @@ export class BitStore<T extends object = any>
   // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
   private readonly depsMg: BitDependencyManager<T>;
-  private readonly validatorMg: BitValidationManager<T>;
   private readonly computedMg: BitComputedManager<T>;
   private readonly dirtyMg: BitDirtyManager<T>;
-  private readonly lifecycleMg: BitLifecycleManager<T>;
+
+  private getCapability<TKey extends keyof BitStoreCapabilities<T>>(key: TKey) {
+    return this.capabilities.get(key);
+  }
 
   // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   // Feature Managers
   // Managers for optional features like history, arrays, and scopes
   // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-  private readonly historyMg: BitHistoryManager<T>;
-  private readonly arraysMg: BitArrayManager<T>;
-  private readonly scopeMg: BitScopeManager<T>;
+  private get validation() {
+    return this.getCapability("validation");
+  }
 
-  // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  // Query & Mutation Managers
-  // Dedicated managers for specific operations
-  // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  private get lifecycle() {
+    return this.getCapability("lifecycle");
+  }
 
-  private readonly queryMg: BitFieldQueryManager<T>;
-  private readonly errorMg: BitErrorManager<T>;
+  private get history() {
+    return this.getCapability("history");
+  }
+
+  private get arrays() {
+    return this.getCapability("arrays");
+  }
+
+  private get scope() {
+    return this.getCapability("scope");
+  }
+
+  private get query() {
+    return this.getCapability("query");
+  }
+
+  private get error() {
+    return this.getCapability("error");
+  }
 
   // ============================================================================
   // CONSTRUCTOR
@@ -122,64 +130,17 @@ export class BitStore<T extends object = any>
     this.computedMg = new BitComputedManager<T>(() =>
       this.getComputedEntries(),
     );
-    this.validatorMg = new BitValidationManager<T>(this);
     this.dirtyMg = new BitDirtyManager<T>();
-    this.lifecycleMg = new BitLifecycleManager<T>(this);
-
-    // Initialize feature managers
-    this.historyMg = new BitHistoryManager<T>(
-      !!this.config.enableHistory,
-      this.config.historyLimit ?? 15,
-    );
-    this.arraysMg = new BitArrayManager<T>(this);
-
-    // Initialize query/mutation managers with state access
-    this.scopeMg = new BitScopeManager<T>(
-      () => this.state,
-      () => this.config.initialValues,
-      (scopeName) => this.getScopeFields(scopeName),
-    );
-    this.queryMg = new BitFieldQueryManager<T>(
-      this.depsMg,
-      () => this.state,
-      () => this.config,
-    );
-    this.errorMg = new BitErrorManager<T>(
-      () => this.state,
-      (partial) => this.internalUpdateState(partial),
-    );
-    this.persistMg = new BitPersistManager<T>(
-      this.config.persist,
-      () => this.state.values,
-      () => this.getDirtyValues(),
-      (values) => this.applyPersistedValues(values),
-    );
-
-    // Initialize form state
-    const initialValues = deepClone(this.config.initialValues);
-
-    // Register initial fields from config
-    if (this.config.fields) {
-      Object.entries(this.config.fields).forEach(([path, fieldConfig]) => {
-        this.depsMg.register(
-          path,
-          fieldConfig as BitFieldDefinition<T>,
-          initialValues,
-        );
-      });
-    }
-
-    const valuesWithComputeds = this.computedMg.apply(initialValues);
-
-    this.state = {
-      values: valuesWithComputeds,
-      errors: {},
-      touched: {},
-      isValidating: {},
-      isValid: true,
-      isSubmitting: false,
-      isDirty: false,
-    };
+    this.capabilities = createStoreCapabilities<T>({
+      store: this,
+      depsMg: this.depsMg,
+    });
+    this.state = createInitialStoreState<T>({
+      config: this.config,
+      depsMg: this.depsMg,
+      computedMg: this.computedMg,
+    });
+    this.subscriptions = new BitSubscriptionEngine<T>(() => this.state);
 
     this.internalSaveSnapshot();
 
@@ -188,21 +149,16 @@ export class BitStore<T extends object = any>
       this.config.name ||
       `bit-form-${Math.random().toString(36).substring(2, 9)}`;
 
-    const runtimePlugins = [...this.config.plugins];
-    const devtoolsPlugin = createDevtoolsPlugin<T>(this.config.devTools);
-    if (devtoolsPlugin) {
-      runtimePlugins.push(devtoolsPlugin);
-    }
-
-    this.pluginMg = new BitPluginManager<T>(runtimePlugins, () => ({
+    this.effects = createStoreEffects<T>({
       storeId: this.storeId,
+      storeInstance: this,
+      config: this.config,
       getState: () => this.getState(),
       getConfig: () => this.getConfig(),
-    }));
-    this.pluginMg.setupAll();
-
-    // Register store in global bus
-    bitBus.stores[this.storeId] = this;
+      getValues: () => this.state.values,
+      getDirtyValues: () => this.getDirtyValues(),
+      applyPersistedValues: (values) => this.applyPersistedValues(values),
+    });
   }
 
   // ============================================================================
@@ -309,7 +265,7 @@ export class BitStore<T extends object = any>
   registerField(path: string, config: BitFieldDefinition<T>) {
     this.depsMg.register(path, config, this.state.values);
     if (this.depsMg.isHidden(path)) {
-      this.notify();
+      this.subscriptions.notify(this.state, ["*"]);
     }
   }
 
@@ -351,19 +307,19 @@ export class BitStore<T extends object = any>
   // ============================================================================
 
   isHidden<P extends BitPath<T>>(path: P): boolean {
-    return this.queryMg.isHidden(path);
+    return this.query.isHidden(path);
   }
 
   isRequired<P extends BitPath<T>>(path: P): boolean {
-    return this.queryMg.isRequired(path);
+    return this.query.isRequired(path);
   }
 
   isFieldDirty(path: string): boolean {
-    return this.queryMg.isFieldDirty(path);
+    return this.query.isFieldDirty(path);
   }
 
   isFieldValidating(path: string): boolean {
-    return this.queryMg.isFieldValidating(path);
+    return this.query.isFieldValidating(path);
   }
 
   // ============================================================================
@@ -371,8 +327,7 @@ export class BitStore<T extends object = any>
   // ============================================================================
 
   subscribe(listener: () => void): () => void {
-    this.listeners.add(listener);
-    return () => this.listeners.delete(listener);
+    return this.subscriptions.subscribe(listener);
   }
 
   subscribeSelector<TSlice>(
@@ -381,64 +336,12 @@ export class BitStore<T extends object = any>
     options?: BitSelectorSubscriptionOptions<TSlice>,
   ) {
     const equalityFn = options?.equalityFn ?? valueEqual;
-    let lastSlice = selector(this.state);
-
-    const subscription: SelectorListenerEntry<T> = {
-      notify: (nextState) => {
-        const nextSlice = selector(nextState);
-
-        if (equalityFn(lastSlice, nextSlice)) {
-          return;
-        }
-
-        lastSlice = nextSlice;
-        listener(nextSlice);
-      },
-    };
-
-    const autoTrackedPaths =
-      options?.autoTrackPaths === false
-        ? []
-        : this.collectTrackedSelectorPaths(selector);
-
-    const scopedPaths = this.normalizeSubscriptionPaths([
-      ...(options?.paths ?? []),
-      ...autoTrackedPaths,
-    ]);
-
-    if (scopedPaths.length > 0) {
-      this.pathScopedSubscriptions.set(subscription, scopedPaths);
-      scopedPaths.forEach((pathKey) => {
-        const listeners = this.pathSelectorIndex.get(pathKey) ?? new Set();
-        listeners.add(subscription);
-        this.pathSelectorIndex.set(pathKey, listeners);
-      });
-    } else {
-      this.selectorListeners.add(subscription);
-    }
-
-    if (options?.emitImmediately) {
-      listener(lastSlice);
-    }
-
-    return () => {
-      this.selectorListeners.delete(subscription);
-
-      const paths = this.pathScopedSubscriptions.get(subscription);
-      if (!paths) return;
-
-      paths.forEach((pathKey) => {
-        const listeners = this.pathSelectorIndex.get(pathKey);
-        if (!listeners) return;
-
-        listeners.delete(subscription);
-        if (listeners.size === 0) {
-          this.pathSelectorIndex.delete(pathKey);
-        }
-      });
-
-      this.pathScopedSubscriptions.delete(subscription);
-    };
+    return this.subscriptions.subscribeSelector(
+      selector,
+      listener,
+      options,
+      equalityFn,
+    );
   }
 
   subscribePath<P extends BitPath<T>>(
@@ -481,7 +384,7 @@ export class BitStore<T extends object = any>
     value: any,
     meta: BitFieldChangeMeta = { origin: "setField" },
   ) {
-    this.lifecycleMg.updateField(path, value, meta);
+    this.lifecycle.updateField(path, value, meta);
   }
 
   blurField<P extends BitPath<T>>(path: P) {
@@ -493,7 +396,7 @@ export class BitStore<T extends object = any>
       });
     }
 
-    this.validatorMg.trigger([path]);
+    this.validation.trigger([path]);
   }
 
   markFieldsTouched(paths: string[]) {
@@ -504,15 +407,15 @@ export class BitStore<T extends object = any>
   }
 
   replaceValues(newValues: T) {
-    this.lifecycleMg.replaceValues(newValues);
+    this.lifecycle.replaceValues(newValues);
   }
 
   hydrate(values: DeepPartial<T>) {
-    this.lifecycleMg.hydrateValues(values);
+    this.lifecycle.hydrateValues(values);
   }
 
   rebase(newValues: T) {
-    this.lifecycleMg.rebaseValues(newValues);
+    this.lifecycle.rebaseValues(newValues);
   }
 
   // ============================================================================
@@ -520,15 +423,15 @@ export class BitStore<T extends object = any>
   // ============================================================================
 
   setError(path: string, message: string | undefined) {
-    this.errorMg.setError(path, message);
+    this.error.setError(path, message);
   }
 
   setErrors(errors: BitErrors<T>) {
-    this.errorMg.setErrors(errors);
+    this.error.setErrors(errors);
   }
 
   setServerErrors(serverErrors: Record<string, string[] | string>) {
-    this.errorMg.setServerErrors(serverErrors);
+    this.error.setServerErrors(serverErrors);
   }
 
   // ============================================================================
@@ -536,13 +439,13 @@ export class BitStore<T extends object = any>
   // ============================================================================
 
   reset() {
-    this.lifecycleMg.reset();
+    this.lifecycle.reset();
   }
 
   async submit(
     onSuccess: (values: T, dirtyValues?: Partial<T>) => void | Promise<void>,
   ) {
-    return this.lifecycleMg.submit(onSuccess);
+    return this.lifecycle.submit(onSuccess);
   }
 
   registerMask(name: BitMaskName, mask: BitMask) {
@@ -557,15 +460,15 @@ export class BitStore<T extends object = any>
   }
 
   async restorePersisted(): Promise<boolean> {
-    return this.persistMg.restore();
+    return this.effects.restorePersisted();
   }
 
   async forceSave(): Promise<void> {
-    await this.persistMg.saveNow();
+    await this.effects.savePersistedNow();
   }
 
   async clearPersisted(): Promise<void> {
-    await this.persistMg.clear();
+    await this.effects.clearPersisted();
   }
 
   // ============================================================================
@@ -576,14 +479,14 @@ export class BitStore<T extends object = any>
     path: P,
     value: BitArrayItem<BitPathValue<T, P>>,
   ) {
-    this.arraysMg.pushItem(path, value);
+    this.arrays.pushItem(path, value);
   }
 
   prependItem<P extends BitArrayPath<T>>(
     path: P,
     value: BitArrayItem<BitPathValue<T, P>>,
   ) {
-    this.arraysMg.prependItem(path, value);
+    this.arrays.prependItem(path, value);
   }
 
   insertItem<P extends BitArrayPath<T>>(
@@ -591,11 +494,11 @@ export class BitStore<T extends object = any>
     index: number,
     value: BitArrayItem<BitPathValue<T, P>>,
   ) {
-    this.arraysMg.insertItem(path, index, value);
+    this.arrays.insertItem(path, index, value);
   }
 
   removeItem<P extends BitArrayPath<T>>(path: P, index: number) {
-    this.arraysMg.removeItem(path, index);
+    this.arrays.removeItem(path, index);
   }
 
   swapItems<P extends BitArrayPath<T>>(
@@ -603,11 +506,11 @@ export class BitStore<T extends object = any>
     indexA: number,
     indexB: number,
   ) {
-    this.arraysMg.swapItems(path, indexA, indexB);
+    this.arrays.swapItems(path, indexA, indexB);
   }
 
   moveItem<P extends BitArrayPath<T>>(path: P, from: number, to: number) {
-    this.arraysMg.moveItem(path, from, to);
+    this.arrays.moveItem(path, from, to);
   }
 
   // ============================================================================
@@ -615,39 +518,39 @@ export class BitStore<T extends object = any>
   // ============================================================================
 
   get canUndo(): boolean {
-    return this.historyMg.canUndo;
+    return this.history.canUndo;
   }
 
   get canRedo(): boolean {
-    return this.historyMg.canRedo;
+    return this.history.canRedo;
   }
 
   undo() {
-    const prevState = this.historyMg.undo();
+    const prevState = this.history.undo();
     if (prevState) {
       const isDirty = this.dirtyMg.rebuild(
         prevState,
         this.config.initialValues,
       );
       this.internalUpdateState({ values: prevState, isDirty });
-      this.validatorMg.validate();
+      this.validation.validate();
     }
   }
 
   redo() {
-    const nextState = this.historyMg.redo();
+    const nextState = this.history.redo();
     if (nextState) {
       const isDirty = this.dirtyMg.rebuild(
         nextState,
         this.config.initialValues,
       );
       this.internalUpdateState({ values: nextState, isDirty });
-      this.validatorMg.validate();
+      this.validation.validate();
     }
   }
 
   getHistoryMetadata(): BitHistoryMetadata {
-    return this.historyMg.getMetadata();
+    return this.history.getMetadata();
   }
 
   // ============================================================================
@@ -655,27 +558,27 @@ export class BitStore<T extends object = any>
   // ============================================================================
 
   validate(options?: BitValidationOptions): Promise<boolean> {
-    return this.validatorMg.validate(options);
+    return this.validation.validate(options);
   }
 
   emitBeforeValidate(event: BitBeforeValidateEvent<T>): Promise<void> {
-    return this.pluginMg.beforeValidate(event);
+    return this.effects.beforeValidate(event);
   }
 
   emitAfterValidate(event: BitAfterValidateEvent<T>): Promise<void> {
-    return this.pluginMg.afterValidate(event);
+    return this.effects.afterValidate(event);
   }
 
   emitBeforeSubmit(event: BitBeforeSubmitEvent<T>): Promise<void> {
-    return this.pluginMg.beforeSubmit(event);
+    return this.effects.beforeSubmit(event);
   }
 
   emitAfterSubmit(event: BitAfterSubmitEvent<T>): Promise<void> {
-    return this.pluginMg.afterSubmit(event);
+    return this.effects.afterSubmit(event);
   }
 
   emitFieldChange(event: BitFieldChangeEvent<T>) {
-    this.pluginMg.onFieldChange(event);
+    this.effects.onFieldChange(event);
   }
 
   emitOperationalError(event: {
@@ -683,23 +586,23 @@ export class BitStore<T extends object = any>
     error: unknown;
     payload?: unknown;
   }) {
-    return this.pluginMg.reportError(event.source, event.error, event.payload);
+    return this.effects.reportOperationalError(event);
   }
 
   hasValidationsInProgress(scopeFields?: string[]): boolean {
-    return this.validatorMg.hasValidationsInProgress(scopeFields);
+    return this.validation.hasValidationsInProgress(scopeFields);
   }
 
   triggerValidation(scopeFields?: string[]) {
-    this.validatorMg.trigger(scopeFields);
+    this.validation.trigger(scopeFields);
   }
 
   getStepStatus(scopeName: string) {
-    return this.scopeMg.getStepStatus(scopeName);
+    return this.scope.getStepStatus(scopeName);
   }
 
   getStepErrors(scopeName: string): Record<string, string> {
-    return this.scopeMg.getStepErrors(scopeName);
+    return this.scope.getStepErrors(scopeName);
   }
 
   updateDependencies(changedPath: string, newValues: T): string[] {
@@ -723,19 +626,19 @@ export class BitStore<T extends object = any>
   }
 
   clearFieldValidation(path: string): void {
-    this.validatorMg.clear(path);
+    this.validation.clear(path);
   }
 
   handleFieldAsyncValidation(path: string, value: any): void {
-    this.validatorMg.handleAsync(path, value);
+    this.validation.handleAsync(path, value);
   }
 
   cancelAllValidations(): void {
-    this.validatorMg.cancelAll();
+    this.validation.cancelAll();
   }
 
   validateNow(options?: BitValidationOptions): Promise<boolean> {
-    return this.validatorMg.validate(options);
+    return this.validation.validate(options);
   }
 
   updateDirtyForPath(path: string, nextValues: T, baselineValues: T): boolean {
@@ -755,7 +658,7 @@ export class BitStore<T extends object = any>
   }
 
   resetHistory(initialValues: T): void {
-    this.historyMg.reset(initialValues);
+    this.history.reset(initialValues);
   }
 
   // ============================================================================
@@ -766,37 +669,21 @@ export class BitStore<T extends object = any>
     partialState: Partial<BitState<T>>,
     changedPaths?: string[],
   ) {
-    const previousState = this.state;
-    let nextState = { ...this.state, ...partialState };
+    const updateResult = applyStateUpdate({
+      currentState: this.state,
+      partialState,
+      changedPaths,
+      applyComputedValues: (values) => this.computedMg.apply(values),
+    });
 
-    if (partialState.values) {
-      nextState.values = this.computedMg.apply(partialState.values);
-    }
+    this.state = updateResult.nextState;
 
-    if (partialState.errors) {
-      nextState.isValid = Object.keys(nextState.errors).length === 0;
-    }
-
-    this.state = nextState;
-
-    if (partialState.values) {
-      this.persistMg.queueSave();
-    }
-
-    const effectiveChangedPaths =
-      changedPaths && changedPaths.length > 0
-        ? changedPaths
-        : partialState.values
-          ? ["*"]
-          : undefined;
-
-    this.notify(previousState, nextState, effectiveChangedPaths);
-
-    bitBus.dispatch(this.storeId, this.state);
+    this.subscriptions.notify(this.state, updateResult.changedPaths);
+    this.effects.onStateUpdated(this.state, updateResult.valuesChanged);
   }
 
   internalSaveSnapshot() {
-    this.historyMg.saveSnapshot(this.state.values);
+    this.history.saveSnapshot(this.state.values);
   }
 
   private applyPersistedValues(values: Partial<T>) {
@@ -805,7 +692,7 @@ export class BitStore<T extends object = any>
       ...values,
     } as T);
 
-    this.validatorMg.cancelAll();
+    this.validation.cancelAll();
     this.depsMg.evaluateAll(nextValues);
 
     const isDirty = this.dirtyMg.rebuild(nextValues, this.config.initialValues);
@@ -821,152 +708,13 @@ export class BitStore<T extends object = any>
     });
 
     this.internalSaveSnapshot();
-    this.validatorMg.validate();
+    this.validation.validate();
   }
 
   cleanup() {
-    this.listeners.clear();
-    this.selectorListeners.clear();
-    this.pathScopedSubscriptions.clear();
-    this.pathSelectorIndex.clear();
-    this.validatorMg.cancelAll();
-    this.persistMg.destroy();
-    this.pluginMg.destroy();
-
-    delete bitBus.stores[this.storeId];
-  }
-
-  private notify(
-    previousState: BitState<T> = this.state,
-    nextState: BitState<T> = this.state,
-    changedPaths?: string[],
-  ) {
-    this.listeners.forEach((listener) => listener());
-
-    this.selectorListeners.forEach((subscription) => {
-      subscription.notify(nextState);
-    });
-
-    if (this.pathScopedSubscriptions.size === 0) {
-      return;
-    }
-
-    if (
-      !changedPaths ||
-      changedPaths.length === 0 ||
-      changedPaths.includes("*")
-    ) {
-      this.pathScopedSubscriptions.forEach((_paths, subscription) => {
-        subscription.notify(nextState);
-      });
-      return;
-    }
-
-    const scopedSubscribers =
-      this.collectSubscribersForChangedPaths(changedPaths);
-
-    scopedSubscribers.forEach((subscription) => {
-      subscription.notify(nextState);
-    });
-  }
-
-  private normalizeSubscriptionPaths(paths?: string[]): string[] {
-    if (!paths || paths.length === 0) return [];
-
-    return Array.from(
-      new Set(
-        paths.map((path) => path.trim()).filter((path) => path.length > 0),
-      ),
-    );
-  }
-
-  private collectTrackedSelectorPaths<TSlice>(
-    selector: BitSelector<T, TSlice>,
-  ): string[] {
-    const trackedPaths = new Set<string>();
-
-    const createTrackedProxy = (
-      value: unknown,
-      currentPath: string,
-    ): unknown => {
-      if (!value || typeof value !== "object") {
-        return value;
-      }
-
-      return new Proxy(value as Record<string, unknown>, {
-        get: (target, key) => {
-          if (typeof key !== "string") {
-            return Reflect.get(target, key);
-          }
-
-          const nextPath = currentPath ? `${currentPath}.${key}` : key;
-          trackedPaths.add(nextPath);
-
-          const nextValue = Reflect.get(target, key);
-          return createTrackedProxy(nextValue, nextPath);
-        },
-      });
-    };
-
-    const trackedState = new Proxy(
-      this.state as unknown as Record<string, unknown>,
-      {
-        get: (target, key) => {
-          if (typeof key !== "string") {
-            return Reflect.get(target, key);
-          }
-
-          const value = Reflect.get(target, key);
-
-          if (key === "values") {
-            return createTrackedProxy(value, "");
-          }
-
-          return value;
-        },
-      },
-    ) as Readonly<BitState<T>>;
-
-    try {
-      selector(trackedState);
-      return Array.from(trackedPaths);
-    } catch {
-      return [];
-    }
-  }
-
-  private collectSubscribersForChangedPaths(
-    changedPaths: string[],
-  ): Set<SelectorListenerEntry<T>> {
-    const scopedSubscribers = new Set<SelectorListenerEntry<T>>();
-
-    const addByPath = (path: string) => {
-      const listeners = this.pathSelectorIndex.get(path);
-      if (!listeners) return;
-      listeners.forEach((subscription) => scopedSubscribers.add(subscription));
-    };
-
-    const normalizedChangedPaths =
-      this.normalizeSubscriptionPaths(changedPaths);
-
-    normalizedChangedPaths.forEach((changedPath) => {
-      addByPath(changedPath);
-
-      const parts = changedPath.split(".");
-      while (parts.length > 1) {
-        parts.pop();
-        addByPath(parts.join("."));
-      }
-
-      this.pathSelectorIndex.forEach((listeners, indexedPath) => {
-        if (indexedPath.startsWith(`${changedPath}.`)) {
-          listeners.forEach((subscription) =>
-            scopedSubscribers.add(subscription),
-          );
-        }
-      });
-    });
-
-    return scopedSubscribers;
+    this.subscriptions.destroy();
+    this.validation.cancelAll();
+    this.capabilities.clear();
+    this.effects.destroy();
   }
 }
