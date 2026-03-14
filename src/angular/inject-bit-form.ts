@@ -1,8 +1,9 @@
 import { signal, computed, inject, DestroyRef } from "@angular/core";
 import { useBitStore } from "./provider";
 import { isValidationErrorShape, extractServerErrors } from "../core/utils";
+import type { InjectBitFormResult } from "./types";
 
-export function injectBitForm<T extends object>() {
+export function injectBitForm<T extends object>(): InjectBitFormResult<T> {
   const store = useBitStore<T>();
   const destroyRef = inject(DestroyRef);
   const stateSignal = signal({

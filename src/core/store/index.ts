@@ -1,5 +1,5 @@
 import { bitBus } from "./bus";
-import { BitMask } from "../mask/types";
+import { BitMask, BitMaskName } from "../mask/types";
 import {
   BitConfig,
   BitComputedFn,
@@ -495,7 +495,7 @@ export class BitStore<T extends object = any>
     return this.lifecycleMg.submit(onSuccess);
   }
 
-  registerMask(name: string, mask: BitMask) {
+  registerMask(name: BitMaskName, mask: BitMask) {
     this.config.masks = {
       ...(this.config.masks || {}),
       [name]: mask,

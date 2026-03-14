@@ -106,7 +106,7 @@ history.canRedo.value; // boolean
 history.historyIndex.value; // number
 history.historySize.value; // number
 
-// Custom mask registration is done on the store
+// Custom mask registration — must be done BEFORE fields are mounted
 store.registerMask("myMask", myMask);
 ```
 

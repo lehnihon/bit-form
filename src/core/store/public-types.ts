@@ -15,7 +15,7 @@ import {
   BitPlugin,
   DeepPartial,
 } from "./types";
-import { BitMask } from "../mask/types";
+import { BitMask, BitMaskName } from "../mask/types";
 
 export type BitSelector<T extends object, TSlice> = (
   state: Readonly<BitState<T>>,
@@ -88,7 +88,7 @@ export interface BitStoreApi<T extends object = any> {
     onSuccess: (values: T, dirtyValues?: Partial<T>) => void | Promise<void>,
   ): Promise<void>;
 
-  registerMask(name: string, mask: BitMask): void;
+  registerMask(name: BitMaskName, mask: BitMask): void;
   getDirtyValues(): Partial<T>;
   restorePersisted(): Promise<boolean>;
   forceSave(): Promise<void>;

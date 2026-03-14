@@ -1,9 +1,11 @@
 import type { Signal } from "@angular/core";
 import type {
+  BitErrors,
   BitHistoryMetadata,
   BitPersistMetadata,
   BitPath,
   BitPathValue,
+  BitTouched,
   ScopeStatus,
   ValidateScopeResult,
 } from "../core";
@@ -102,4 +104,36 @@ export interface InjectBitPersistResult {
     isRestoring: Signal<BitPersistMetadata["isRestoring"]>;
     error: Signal<BitPersistMetadata["error"]>;
   };
+}
+
+export interface InjectBitFormResult<T extends object = any> {
+  meta: {
+    isValid: ReturnType<typeof import("@angular/core").computed<boolean>>;
+    isDirty: ReturnType<typeof import("@angular/core").computed<boolean>>;
+    isSubmitting: ReturnType<typeof import("@angular/core").computed<boolean>>;
+    submitError: Signal<Error | null>;
+    lastResponse: Signal<unknown>;
+  };
+  getValues: () => T;
+  getErrors: () => BitErrors<T>;
+  getTouched: () => BitTouched<T>;
+  getDirtyValues: () => Partial<T>;
+  submit: (
+    onSuccess: (values: T, dirtyValues?: Partial<T>) => void | Promise<void>,
+  ) => (event?: Event) => Promise<void>;
+  onSubmit: (
+    handler: (values: T, dirtyValues?: Partial<T>) => Promise<unknown>,
+  ) => (event?: Event) => Promise<void>;
+  reset: () => void;
+  replaceValues: (values: T) => void;
+  hydrate: (values: import("../core").DeepPartial<T>) => void;
+  rebase: (values: T) => void;
+  setError: (path: string, message: string | undefined) => void;
+  setErrors: (errors: BitErrors<T>) => void;
+  setServerErrors: (serverErrors: Record<string, string[] | string>) => void;
+  setField: <P extends BitPath<T>>(path: P, value: BitPathValue<T, P>) => void;
+  blurField: <P extends BitPath<T>>(path: P) => void;
+  validate: (
+    options?: import("../core").BitValidationOptions,
+  ) => Promise<boolean>;
 }

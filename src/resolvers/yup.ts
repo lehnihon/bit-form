@@ -1,5 +1,10 @@
 import { ValidationError, Schema } from "yup";
 import { BitErrors } from "../core";
+import {
+  filterErrorsByScope,
+  normalizeErrorPath,
+  setFirstError,
+} from "./utils";
 
 export const yupResolver = <T extends object>(schema: Schema<any>) => {
   return async (
@@ -13,10 +18,13 @@ export const yupResolver = <T extends object>(schema: Schema<any>) => {
         options.scopeFields.map(async (field) => {
           try {
             await schema.validateAt(field, values);
-          } catch (err: any) {
-            if (err.name === "ValidationError" && err.path) {
-              const normalizedPath = err.path.replace(/\[(\d+)\]/g, ".$1");
-              errors[normalizedPath] = err.message;
+          } catch (error: unknown) {
+            if (error instanceof ValidationError && error.path) {
+              setFirstError(
+                errors,
+                normalizeErrorPath(error.path),
+                error.message,
+              );
             }
           }
         }),
@@ -27,18 +35,17 @@ export const yupResolver = <T extends object>(schema: Schema<any>) => {
     try {
       await schema.validate(values, { abortEarly: false });
       return {};
-    } catch (err: any) {
-      if (err.name === "ValidationError" || err instanceof ValidationError) {
-        err.inner?.forEach((error: any) => {
-          if (error.path) {
-            const normalizedPath = error.path.replace(/\[(\d+)\]/g, ".$1");
-            if (!errors[normalizedPath]) {
-              errors[normalizedPath] = error.message;
-            }
+    } catch (error: unknown) {
+      if (error instanceof ValidationError) {
+        for (const item of error.inner ?? []) {
+          if (item.path) {
+            setFirstError(errors, normalizeErrorPath(item.path), item.message);
           }
-        });
-        return errors;
+        }
+
+        return filterErrorsByScope(errors, options?.scopeFields);
       }
+
       return {};
     }
   };

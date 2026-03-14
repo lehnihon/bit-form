@@ -2,6 +2,10 @@ import { computed, onUnmounted, shallowRef } from "vue";
 import { useBitStore } from "./context";
 import type { UseBitFieldVueResult } from "./types";
 import type { BitPath, BitPathValue } from "../core";
+import {
+  formatMaskedValue,
+  parseMaskedInput,
+} from "../core/mask/field-binding";
 
 export function useBitField<
   TForm extends object = any,
@@ -29,22 +33,20 @@ export function useBitField<
 
   const rawValue = computed(() => state.value.value as BitPathValue<TForm, P>);
 
-  const displayValue = computed(() => {
-    const val = rawValue.value;
-    if (val === undefined || val === null || val === "") return "";
-
-    return resolvedMask ? resolvedMask.format(val) : String(val);
-  });
+  const displayValue = computed(() =>
+    formatMaskedValue(rawValue.value, resolvedMask ?? undefined),
+  );
 
   const modelValue = computed({
     get: () => displayValue.value,
     set: (val: string) => {
-      if (!resolvedMask) {
-        store.setField(path, val as BitPathValue<TForm, P>);
-        return;
-      }
-
-      store.setField(path, resolvedMask.parse(String(val ?? "")));
+      store.setField(
+        path,
+        parseMaskedInput(val, resolvedMask ?? undefined) as BitPathValue<
+          TForm,
+          P
+        >,
+      );
     },
   });
 
@@ -68,12 +70,13 @@ export function useBitField<
   const setValue = (
     val: BitPathValue<TForm, P> | string | number | null | undefined,
   ) => {
-    if (!resolvedMask) {
-      store.setField(path, val as BitPathValue<TForm, P>);
-      return;
-    }
-
-    modelValue.value = String(val ?? "");
+    store.setField(
+      path,
+      parseMaskedInput(val, resolvedMask ?? undefined) as BitPathValue<
+        TForm,
+        P
+      >,
+    );
   };
 
   const setBlur = () => store.blurField(path);

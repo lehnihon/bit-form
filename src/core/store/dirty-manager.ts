@@ -1,4 +1,9 @@
-import { collectDirtyPaths, getDeepValue, valueEqual } from "../utils";
+import {
+  collectDirtyPaths,
+  getDeepValue,
+  setDeepValue,
+  valueEqual,
+} from "../utils";
 
 /**
  * BitDirtyManager
@@ -74,56 +79,24 @@ export class BitDirtyManager<T extends object = any> {
   buildDirtyValues<T extends object>(values: T): Partial<T> {
     if (this.dirtyPaths.size === 0) return {};
 
-    const result: any = {};
+    let result: any = {};
     const processedArrays = new Set<string>();
 
     for (const path of this.dirtyPaths) {
-      // Check if this path is part of an array
-      const arrayMatch = path.match(/^(.+)\.(\d+)/);
+      const arrayMatch = path.match(/^(.+)\.\d+/);
 
       if (arrayMatch) {
         const arrayPath = arrayMatch[1];
-
-        // Skip if we already processed this array
         if (processedArrays.has(arrayPath)) continue;
-
         processedArrays.add(arrayPath);
-        this.setNestedValue(
-          result,
-          arrayPath,
-          this.getNestedValue(values, arrayPath),
-        );
+        const arrayVal = getDeepValue(values, arrayPath);
+        result = setDeepValue(result, arrayPath, arrayVal);
       } else {
-        // Regular field or array reference itself
-        this.setNestedValue(result, path, this.getNestedValue(values, path));
+        const fieldVal = getDeepValue(values, path);
+        result = setDeepValue(result, path, fieldVal);
       }
     }
 
     return result;
-  }
-
-  private getNestedValue(obj: any, path: string): any {
-    const keys = path.split(".");
-    let current = obj;
-    for (const key of keys) {
-      if (current === null || current === undefined) return undefined;
-      current = current[key];
-    }
-    return current;
-  }
-
-  private setNestedValue(obj: any, path: string, value: any): void {
-    const keys = path.split(".");
-    let current = obj;
-
-    for (let i = 0; i < keys.length - 1; i++) {
-      const key = keys[i];
-      if (!(key in current)) {
-        current[key] = {};
-      }
-      current = current[key];
-    }
-
-    current[keys[keys.length - 1]] = value;
   }
 }

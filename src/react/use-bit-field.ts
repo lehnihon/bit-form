@@ -1,6 +1,10 @@
 import { useMemo, useCallback } from "react";
 import { useBitFieldBase } from "./use-bit-field-base";
 import { BitPath, BitPathValue } from "../core";
+import {
+  formatMaskedValue,
+  parseMaskedInput,
+} from "../core/mask/field-binding";
 import type {
   UseBitFieldMeta,
   UseBitFieldBindProps,
@@ -22,22 +26,14 @@ export function useBitField<
     return store.resolveMask(path as string);
   }, [store.config.masks, store.config.fields, path]);
 
-  const displayValue = useMemo(() => {
-    const val = fieldState.value;
-    if (val === undefined || val === null || val === "") return "";
-
-    return resolvedMask ? resolvedMask.format(val) : String(val);
-  }, [fieldState.value, resolvedMask]);
+  const displayValue = useMemo(
+    () => formatMaskedValue(fieldState.value, resolvedMask ?? undefined),
+    [fieldState.value, resolvedMask],
+  );
 
   const setValue = useCallback(
-    (val: any) => {
-      if (!resolvedMask) {
-        rawSetValue(val);
-        return;
-      }
-
-      rawSetValue(resolvedMask.parse(String(val ?? "")) as any);
-    },
+    (val: any) =>
+      rawSetValue(parseMaskedInput(val, resolvedMask ?? undefined) as any),
     [resolvedMask, rawSetValue],
   );
 

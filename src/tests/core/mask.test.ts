@@ -13,6 +13,11 @@ import {
   createCreditCardMask,
   maskIBAN,
   createDateMask,
+  maskJPY,
+  maskInteger,
+  bitMasks,
+  formatMaskedValue,
+  parseMaskedInput,
 } from "../../core/mask";
 
 describe("Mask Utils - Patterns", () => {
@@ -251,5 +256,115 @@ describe("Mask Utils - International & Smart Dates", () => {
     // Usamos diretamente o preset do IBAN
     const ptIban = "pt50123456789012345678901";
     expect(maskIBAN.format(ptIban)).toBe("PT50 1234 5678 9012 3456 7890 1");
+  });
+});
+
+describe("Mask Utils - Currency precision: 0", () => {
+  it("maskJPY não deve adicionar separador decimal ao formatar", () => {
+    expect(maskJPY.format("1000")).toBe("¥1,000");
+    expect(maskJPY.format("100000")).toBe("¥100,000");
+  });
+
+  it("maskInteger não deve adicionar separador decimal ao formatar", () => {
+    expect(maskInteger.format("1000")).toBe("1.000");
+    expect(maskInteger.format("42")).toBe("42");
+  });
+
+  it("maskJPY.parse deve retornar número inteiro sem casas decimais", () => {
+    expect(maskJPY.parse("¥1,000")).toBe(1000);
+    expect(maskJPY.parse("¥100,000")).toBe(100000);
+  });
+
+  it("maskInteger.parse deve retornar número inteiro", () => {
+    expect(maskInteger.parse("1.000")).toBe(1000);
+  });
+});
+
+describe("Mask Utils - Built-in Registry (bitMasks)", () => {
+  const expectedKeys = [
+    "brl",
+    "usd",
+    "eur",
+    "gbp",
+    "jpy",
+    "percent",
+    "decimal",
+    "int",
+    "integer",
+    "cpf",
+    "cnpj",
+    "rg",
+    "cep",
+    "cnh",
+    "phone",
+    "landline",
+    "date",
+    "time",
+    "usPhone",
+    "zipCode",
+    "dateUS",
+    "ssn",
+    "cc",
+    "cvv",
+    "dateISO",
+    "ip",
+    "ipv6",
+    "mac",
+    "color",
+    "iban",
+  ];
+
+  it.each(expectedKeys)(
+    'deve ter o preset "%s" registado no bitMasks',
+    (key) => {
+      expect(bitMasks).toHaveProperty(key);
+      expect(typeof bitMasks[key as keyof typeof bitMasks].format).toBe(
+        "function",
+      );
+      expect(typeof bitMasks[key as keyof typeof bitMasks].parse).toBe(
+        "function",
+      );
+    },
+  );
+
+  it("int e integer devem apontar para o mesmo preset", () => {
+    expect(bitMasks.int).toBe(bitMasks.integer);
+  });
+
+  it("usPhone deve aceitar formato americano (###) ###-####", () => {
+    expect(bitMasks.usPhone.format("2125551234")).toBe("(212) 555-1234");
+  });
+
+  it("zipCode deve aceitar formato 00000-0000", () => {
+    expect(bitMasks.zipCode.format("900210001")).toBe("90021-0001");
+  });
+
+  it("ssn deve aceitar formato ###-##-####", () => {
+    expect(bitMasks.ssn.format("123456789")).toBe("123-45-6789");
+  });
+});
+
+describe("Mask Utils - field-binding helpers", () => {
+  it("formatMaskedValue retorna string vazia para null/undefined/empty", () => {
+    expect(formatMaskedValue(null)).toBe("");
+    expect(formatMaskedValue(undefined)).toBe("");
+    expect(formatMaskedValue("")).toBe("");
+  });
+
+  it("formatMaskedValue aplica format da máscara quando fornecida", () => {
+    expect(formatMaskedValue("11122233344", maskCPF)).toBe("111.222.333-44");
+  });
+
+  it("formatMaskedValue converte para string quando sem máscara", () => {
+    expect(formatMaskedValue(42)).toBe("42");
+  });
+
+  it("parseMaskedInput retorna valor original sem máscara", () => {
+    expect(parseMaskedInput("abc")).toBe("abc");
+    expect(parseMaskedInput(42)).toBe(42);
+  });
+
+  it("parseMaskedInput chama parse da máscara quando fornecida", () => {
+    expect(parseMaskedInput("111.222.333-44", maskCPF)).toBe("11122233344");
   });
 });

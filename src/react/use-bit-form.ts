@@ -7,8 +7,9 @@ import {
 } from "react";
 import { useBitStore } from "./context";
 import { isValidationErrorShape, extractServerErrors } from "../core/utils";
+import type { UseBitFormResult } from "./types";
 
-export function useBitForm<T extends object>() {
+export function useBitForm<T extends object>(): UseBitFormResult<T> {
   const store = useBitStore<T>();
 
   const [submitError, setSubmitError] = useState<Error | null>(null);
