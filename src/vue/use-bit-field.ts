@@ -22,6 +22,7 @@ export function useBitField<
     (nextState) => {
       state.value = nextState;
     },
+    { paths: [path as string] },
   );
 
   onUnmounted(() => {
