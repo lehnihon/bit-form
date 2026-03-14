@@ -30,3 +30,9 @@ For production, disable DevTools so they are tree-shaken from the bundle:
 ```tsx
 devTools: process.env.NODE_ENV !== "production";
 ```
+
+## Runtime behavior
+
+- DevTools are initialized lazily (dynamic import) only when `devTools` is enabled.
+- Internally, they run as a built-in plugin with setup/teardown tied to store lifecycle.
+- `store.cleanup()` always tears down devtools connections/panels.

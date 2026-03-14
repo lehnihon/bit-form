@@ -8,6 +8,9 @@ Plugins are **observability-first** and **fail-open**:
 - They do not change core flow by contract.
 - If a plugin throws, core flow continues and `onError` is called.
 
+Bit-Form also wires DevTools internally through a lazy plugin (`bit-devtools`) when `devTools` is enabled.
+This keeps DevTools opt-in while preserving the same plugin lifecycle and teardown behavior.
+
 ---
 
 ## Supported hooks
@@ -112,6 +115,8 @@ Teardown runs when `store.cleanup()` is called.
   - array operations (`meta.origin = "array"`, `meta.operation = push|prepend|insert|remove|move|swap`)
 - Validate hooks receive scope/scopeFields context when provided.
 - Submit hooks receive `values` and `dirtyValues` snapshot.
+- Submit lifecycle is stage-based (`submit:start`, `submit:prepare`, hooks, handler, finalize),
+  so plugin hooks run in deterministic order around the same pipeline.
 
 ---
 
