@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { createPatternMask, unmaskCurrency } from "../../core";
+import { createPatternMask, unmaskCurrency } from "../../core/mask/creators";
 import { BitStore } from "../../core/store";
 
 describe("Form Lifecycle Flow", () => {
