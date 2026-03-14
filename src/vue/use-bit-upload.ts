@@ -4,7 +4,7 @@
  * Minimal upload API integrated with global field validation lifecycle.
  */
 
-import { computed, ComputedRef } from "vue";
+import { computed, ComputedRef, ref } from "vue";
 import { useBitField } from "./use-bit-field";
 import { useBitStore } from "./context";
 import { BitUploadFn, BitDeleteUploadFn } from "../core";
@@ -18,24 +18,25 @@ export function useBitUpload(
   const store = useBitStore<any>();
   const field = useBitField(fieldPath);
   let uploadKey: string | null = null;
+  const isUploading = ref(false);
 
   const upload = async (file: File | null | undefined) => {
     if (!file) return;
 
-    store.beginFieldValidation(fieldPath);
-    await store.clearFieldAsyncError(fieldPath);
+    isUploading.value = true;
+    store.setError(fieldPath, undefined);
 
     try {
       const result = await uploadFn(file);
 
       field.setValue(result.url);
       uploadKey = result.key;
-      await store.clearFieldAsyncError(fieldPath);
+      store.setError(fieldPath, undefined);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Upload failed";
-      await store.setFieldAsyncError(fieldPath, message);
+      store.setError(fieldPath, message);
     } finally {
-      store.endFieldValidation(fieldPath);
+      isUploading.value = false;
     }
   };
 
@@ -46,21 +47,23 @@ export function useBitUpload(
       } catch (error) {
         const message =
           error instanceof Error ? error.message : "Delete failed";
-        await store.setFieldAsyncError(fieldPath, message);
+        store.setError(fieldPath, message);
         return;
       }
     }
 
     field.setValue(null);
     uploadKey = null;
-    await store.clearFieldAsyncError(fieldPath);
+    store.setError(fieldPath, undefined);
   };
 
   return {
     value: field.value as ComputedRef<string | File | null>,
     setValue: field.setValue,
     error: computed(() => field.meta.error.value),
-    isValidating: computed(() => field.meta.isValidating.value || false),
+    isValidating: computed(
+      () => !!field.meta.isValidating.value || isUploading.value,
+    ),
     upload,
     remove,
   };

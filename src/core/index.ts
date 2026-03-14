@@ -1,8 +1,7 @@
 export { createBitStore } from "./store/create-store";
 export type {
   BitStoreApi,
-  BitPublicStore,
-  BitFrameworkStore,
+  BitStoreHooksApi,
   BitFrameworkConfig,
   BitValidationOptions,
   BitHistoryMetadata,

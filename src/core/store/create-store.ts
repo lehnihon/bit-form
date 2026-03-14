@@ -1,30 +1,47 @@
 import { BitStore } from "./index";
 import { BitConfig } from "./types";
-import { BitStoreApi } from "./public-types";
+import { BitStoreApi, BitStoreHooksApi } from "./public-types";
+
+const BIT_STORE_ENGINE = Symbol.for("bit-form.store.engine");
+
+type BitStoreFacade<T extends object> = BitStoreApi<T> & {
+  [BIT_STORE_ENGINE]?: BitStore<T>;
+};
+
+export function resolveBitStoreForHooks<T extends object>(
+  store: BitStoreApi<T> | BitStore<T>,
+): BitStoreHooksApi<T> {
+  if (store instanceof BitStore) {
+    return store;
+  }
+
+  const facade = store as BitStoreFacade<T>;
+  if (facade[BIT_STORE_ENGINE]) {
+    return facade[BIT_STORE_ENGINE] as BitStoreHooksApi<T>;
+  }
+
+  return store as unknown as BitStoreHooksApi<T>;
+}
 
 export function createBitStore<T extends object = any>(
   config: BitConfig<T> = {},
 ): BitStoreApi<T> {
   const engine = new BitStore<T>(config);
 
-  return {
+  const facade: BitStoreFacade<T> = {
     get config() {
       return engine.config;
     },
 
     getConfig: () => engine.getConfig(),
     getState: () => engine.getState(),
-    getFieldState: engine.getFieldState.bind(engine),
     subscribe: engine.subscribe.bind(engine),
-    subscribePath: engine.subscribePath.bind(engine),
-    subscribeSelector: engine.subscribeSelector.bind(engine),
 
     setField: engine.setField.bind(engine),
     blurField: engine.blurField.bind(engine),
     replaceValues: engine.replaceValues.bind(engine),
     hydrate: engine.hydrate.bind(engine),
     rebase: engine.rebase.bind(engine),
-    setValues: engine.setValues.bind(engine),
 
     setError: engine.setError.bind(engine),
     setErrors: engine.setErrors.bind(engine),
@@ -42,7 +59,6 @@ export function createBitStore<T extends object = any>(
 
     registerField: engine.registerField.bind(engine),
     unregisterField: engine.unregisterField.bind(engine),
-    unregisterPrefix: engine.unregisterPrefix.bind(engine),
 
     isHidden: engine.isHidden.bind(engine),
     isRequired: engine.isRequired.bind(engine),
@@ -63,15 +79,16 @@ export function createBitStore<T extends object = any>(
 
     getStepStatus: engine.getStepStatus.bind(engine),
     getStepErrors: engine.getStepErrors.bind(engine),
-    markFieldsTouched: engine.markFieldsTouched.bind(engine),
-    hasValidationsInProgress: engine.hasValidationsInProgress.bind(engine),
-    beginFieldValidation: engine.beginFieldValidation.bind(engine),
-    endFieldValidation: engine.endFieldValidation.bind(engine),
-    setFieldAsyncError: engine.setFieldAsyncError.bind(engine),
-    clearFieldAsyncError: engine.clearFieldAsyncError.bind(engine),
-    resolveMask: engine.resolveMask.bind(engine),
-    getScopeFields: engine.getScopeFields.bind(engine),
 
     cleanup: engine.cleanup.bind(engine),
   };
+
+  Object.defineProperty(facade, BIT_STORE_ENGINE, {
+    value: engine,
+    enumerable: false,
+    configurable: false,
+    writable: false,
+  });
+
+  return facade;
 }

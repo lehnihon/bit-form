@@ -4,7 +4,7 @@
  * Minimal upload API integrated with global field validation lifecycle.
  */
 
-import { computed, inject } from "@angular/core";
+import { computed, inject, signal } from "@angular/core";
 import { BIT_STORE_TOKEN } from "./provider";
 import { injectBitField } from "./inject-bit-field";
 import { BitUploadFn, BitDeleteUploadFn } from "../core";
@@ -18,24 +18,25 @@ export function injectBitUpload(
   const store = inject(BIT_STORE_TOKEN);
   const field = injectBitField(fieldPath);
   let uploadKey: string | null = null;
+  const isUploading = signal(false);
 
   const upload = async (file: File | null | undefined) => {
     if (!file) return;
 
-    store.beginFieldValidation(fieldPath);
-    await store.clearFieldAsyncError(fieldPath);
+    isUploading.set(true);
+    store.setError(fieldPath, undefined);
 
     try {
       const result = await uploadFn(file);
 
       field.setValue(result.url);
       uploadKey = result.key;
-      await store.clearFieldAsyncError(fieldPath);
+      store.setError(fieldPath, undefined);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Upload failed";
-      await store.setFieldAsyncError(fieldPath, message);
+      store.setError(fieldPath, message);
     } finally {
-      store.endFieldValidation(fieldPath);
+      isUploading.set(false);
     }
   };
 
@@ -46,21 +47,21 @@ export function injectBitUpload(
       } catch (error) {
         const message =
           error instanceof Error ? error.message : "Delete failed";
-        await store.setFieldAsyncError(fieldPath, message);
+        store.setError(fieldPath, message);
         return;
       }
     }
 
     field.setValue(null);
     uploadKey = null;
-    await store.clearFieldAsyncError(fieldPath);
+    store.setError(fieldPath, undefined);
   };
 
   return {
     value: computed(() => field.value()),
     setValue: field.setValue,
     error: computed(() => field.meta.error()),
-    isValidating: computed(() => field.meta.isValidating() || false),
+    isValidating: computed(() => !!field.meta.isValidating() || isUploading()),
     upload,
     remove,
   };

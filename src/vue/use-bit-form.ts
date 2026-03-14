@@ -93,7 +93,6 @@ export function useBitForm<T extends object>() {
     replaceValues: store.replaceValues.bind(store),
     hydrate: store.hydrate.bind(store),
     rebase: store.rebase.bind(store),
-    setValues: store.setValues.bind(store),
     setError: store.setError.bind(store),
     setErrors: store.setErrors.bind(store),
     setServerErrors: store.setServerErrors.bind(store),
