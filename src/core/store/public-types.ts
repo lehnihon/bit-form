@@ -67,29 +67,14 @@ export interface BitStoreApi<T extends object = any> {
 
   getConfig(): Readonly<BitFrameworkConfig<T>>;
   getState(): Readonly<BitState<T>>;
-  getFieldState<P extends BitPath<T>>(
-    path: P,
-  ): Readonly<BitFieldState<T, BitPathValue<T, P>>>;
 
   subscribe(listener: () => void): () => void;
-  subscribePath<P extends BitPath<T>>(
-    path: P,
-    listener: (value: BitPathValue<T, P>) => void,
-    options?: BitSelectorSubscriptionOptions<BitPathValue<T, P>>,
-  ): () => void;
-  subscribeSelector<TSlice>(
-    selector: BitSelector<T, TSlice>,
-    listener: (slice: TSlice) => void,
-    options?: BitSelectorSubscriptionOptions<TSlice>,
-  ): () => void;
 
   setField<P extends BitPath<T>>(path: P, value: BitPathValue<T, P>): void;
   blurField<P extends BitPath<T>>(path: P): void;
   replaceValues(values: T): void;
   hydrate(values: DeepPartial<T>): void;
   rebase(values: T): void;
-  /** @deprecated Use `rebase()` instead. This method is an alias and may be removed in a future version. */
-  setValues(values: T): void;
 
   setError(path: string, message: string | undefined): void;
   setErrors(errors: BitErrors<T>): void;
@@ -113,7 +98,6 @@ export interface BitStoreApi<T extends object = any> {
 
   registerField(path: string, config: BitFieldDefinition<T>): void;
   unregisterField(path: string): void;
-  unregisterPrefix?(prefix: string): void;
 
   isHidden<P extends BitPath<T>>(path: P): boolean;
   isRequired<P extends BitPath<T>>(path: P): boolean;
@@ -152,23 +136,27 @@ export interface BitStoreApi<T extends object = any> {
 
   getStepStatus(scopeName: string): ScopeStatus;
   getStepErrors(scopeName: string): Record<string, string>;
+}
+
+export interface BitStoreHooksApi<
+  T extends object = any,
+> extends BitStoreApi<T> {
+  getFieldState<P extends BitPath<T>>(
+    path: P,
+  ): Readonly<BitFieldState<T, BitPathValue<T, P>>>;
+  subscribePath<P extends BitPath<T>>(
+    path: P,
+    listener: (value: BitPathValue<T, P>) => void,
+    options?: BitSelectorSubscriptionOptions<BitPathValue<T, P>>,
+  ): () => void;
+  subscribeSelector<TSlice>(
+    selector: BitSelector<T, TSlice>,
+    listener: (slice: TSlice) => void,
+    options?: BitSelectorSubscriptionOptions<TSlice>,
+  ): () => void;
+  unregisterPrefix?(prefix: string): void;
   markFieldsTouched(paths: string[]): void;
   hasValidationsInProgress(scopeFields?: string[]): boolean;
-
-  beginFieldValidation(path: string): void;
-  endFieldValidation(path: string): void;
-  setFieldAsyncError(path: string, message: string): Promise<void>;
-  clearFieldAsyncError(path: string): Promise<void>;
   resolveMask(path: string): BitMask | undefined;
   getScopeFields(scopeName: string): string[];
 }
-
-/** @deprecated Use `BitStoreApi` instead. */
-export interface BitPublicStore<
-  T extends object = any,
-> extends BitStoreApi<T> {}
-
-/** @deprecated Use `BitStoreApi` instead. */
-export interface BitFrameworkStore<
-  T extends object = any,
-> extends BitStoreApi<T> {}

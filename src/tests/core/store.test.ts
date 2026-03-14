@@ -25,14 +25,17 @@ describe("BitStore Core", () => {
       expect(submittedDirtyValues).toEqual({ name: "Leandro" });
     });
 
-    it("should expose the full public API without leaking internal managers", () => {
+    it("should expose only public facade methods without leaking internals", () => {
       const store = createBitStore({ initialValues: { name: "Leo" } }) as any;
 
       expect("undo" in store).toBe(true);
       expect("redo" in store).toBe(true);
       expect("getHistoryMetadata" in store).toBe(true);
-      expect("subscribeSelector" in store).toBe(true);
-      expect("subscribePath" in store).toBe(true);
+      expect("subscribeSelector" in store).toBe(false);
+      expect("subscribePath" in store).toBe(false);
+      expect("getFieldState" in store).toBe(false);
+      expect("setValues" in store).toBe(false);
+      expect("beginFieldValidation" in store).toBe(false);
       expect("replaceValues" in store).toBe(true);
       expect("hydrate" in store).toBe(true);
       expect("rebase" in store).toBe(true);
@@ -514,10 +517,10 @@ describe("BitStore Core", () => {
       expect(store.isDirty).toBe(false);
     });
 
-    it("should hydrate state using setValues", () => {
+    it("should reset baseline using rebase", () => {
       const store = new BitStore({ initialValues: { name: "" } });
 
-      store.setValues({ name: "Leandro" });
+      store.rebase({ name: "Leandro" });
       expect(store.getState().values.name).toBe("Leandro");
       expect(store.isDirty).toBe(false);
     });
@@ -1014,7 +1017,7 @@ describe("BitStore Core", () => {
       });
 
       store.setField("name", "Leo");
-      store.setValues({ name: "Leandro", items: ["A"] });
+      store.rebase({ name: "Leandro", items: ["A"] });
       store.pushItem("items", "B");
 
       expect(changes.some((event) => event.origin === "setField")).toBe(true);

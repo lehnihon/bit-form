@@ -39,8 +39,8 @@ Use `injectBitForm` and `injectBitField` inside your child components.
   - `submitError()`, `lastResponse()`
 - Getters: `getValues()`, `getErrors()`, `getTouched()`, `getDirtyValues()`
 - Main actions: `submit`, `onSubmit`, `reset`, `setField`, etc. (remain flat)
-- `mutations`: secondary actions for array operations
-  - `pushItem()`, `removeItem()`, etc.
+
+Array operations are handled by `injectBitArray`.
 
 History is now exposed by `injectBitHistory`:
 

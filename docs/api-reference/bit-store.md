@@ -245,17 +245,6 @@ store.rebase({
 });
 ```
 
-### `setValues(newValues: T): void` (deprecated)
-
-Alias of `rebase(newValues)`.
-
-```ts
-store.setValues({
-  name: "John",
-  email: "john@example.com",
-});
-```
-
 ### `blurField(path: string): void`
 
 Signals that a field has been blurred (lost focus).

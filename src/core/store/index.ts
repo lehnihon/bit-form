@@ -453,11 +453,6 @@ export class BitStore<T extends object = any>
     this.internalUpdateState({ touched: newTouched });
   }
 
-  /** @deprecated Use `rebase()` instead. This method is an alias and may be removed in a future version. */
-  setValues(newValues: T) {
-    this.rebase(newValues);
-  }
-
   replaceValues(newValues: T) {
     this.lifecycleMg.replaceValues(newValues);
   }
@@ -643,22 +638,6 @@ export class BitStore<T extends object = any>
 
   hasValidationsInProgress(scopeFields?: string[]): boolean {
     return this.validatorMg.hasValidationsInProgress(scopeFields);
-  }
-
-  beginFieldValidation(path: string) {
-    this.validatorMg.beginExternalValidation(path);
-  }
-
-  endFieldValidation(path: string) {
-    this.validatorMg.endExternalValidation(path);
-  }
-
-  setFieldAsyncError(path: string, message: string | undefined) {
-    return this.validatorMg.setExternalError(path, message);
-  }
-
-  clearFieldAsyncError(path: string) {
-    return this.validatorMg.setExternalError(path, undefined);
   }
 
   triggerValidation(scopeFields?: string[]) {

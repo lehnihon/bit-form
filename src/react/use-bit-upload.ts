@@ -20,7 +20,7 @@
  * ```
  */
 
-import { useCallback, useRef } from "react";
+import { useCallback, useRef, useState } from "react";
 import { useBitField } from "./use-bit-field";
 import { useBitStore } from "./context";
 import { BitUploadFn, BitDeleteUploadFn } from "../core";
@@ -34,26 +34,27 @@ export function useBitUpload(
   const store = useBitStore<any>();
   const field = useBitField(fieldPath);
   const uploadKeyRef = useRef<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
 
   const upload = useCallback(
     async (file: File | null | undefined) => {
       if (!file) return;
 
-      store.beginFieldValidation(fieldPath);
-      await store.clearFieldAsyncError(fieldPath);
+      setIsUploading(true);
+      store.setError(fieldPath, undefined);
 
       try {
         const result = await uploadFn(file);
 
         field.setValue(result.url);
         uploadKeyRef.current = result.key;
-        await store.clearFieldAsyncError(fieldPath);
+        store.setError(fieldPath, undefined);
       } catch (error) {
         const message =
           error instanceof Error ? error.message : "Upload failed";
-        await store.setFieldAsyncError(fieldPath, message);
+        store.setError(fieldPath, message);
       } finally {
-        store.endFieldValidation(fieldPath);
+        setIsUploading(false);
       }
     },
     [uploadFn, field, fieldPath, store],
@@ -68,21 +69,21 @@ export function useBitUpload(
       } catch (error) {
         const message =
           error instanceof Error ? error.message : "Delete failed";
-        await store.setFieldAsyncError(fieldPath, message);
+        store.setError(fieldPath, message);
         return;
       }
     }
 
     field.setValue(null);
     uploadKeyRef.current = null;
-    await store.clearFieldAsyncError(fieldPath);
+    store.setError(fieldPath, undefined);
   }, [deleteFile, field, fieldPath, store]);
 
   return {
     value: field.value,
     setValue: field.setValue,
     error: field.meta?.error,
-    isValidating: field.meta?.isValidating || false,
+    isValidating: !!field.meta?.isValidating || isUploading,
     upload,
     remove,
   };

@@ -53,9 +53,10 @@ form.reset();
 form.setField();
 // ... etc
 
-// Secondary actions grouped by semantic meaning
-form.mutations.pushItem(); // for array operations
-form.mutations.removeItem();
+// Array operations are handled by useBitArray
+const skills = useBitArray("skills");
+skills.append("React");
+skills.remove(0);
 
 // History is now separated
 const history = useBitHistory();
