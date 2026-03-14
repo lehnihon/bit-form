@@ -1,16 +1,20 @@
 import { ObjectSchema } from "joi";
 import { BitErrors } from "../core";
 import { filterErrorsByScope, setFirstError } from "./utils";
+import { BitJoiResolverConfig, BitResolverScopeOptions } from "./types";
 
-export const joiResolver = <T extends object>(schema: ObjectSchema<T>) => {
+export const joiResolver = <T extends object>(
+  schema: ObjectSchema<T>,
+  config?: BitJoiResolverConfig,
+) => {
   return async (
     values: T,
-    options?: { scopeFields?: string[] },
+    options?: BitResolverScopeOptions,
   ): Promise<BitErrors<T>> => {
-    // Para validação parcial, o Joi precisa ignorar campos desconhecidos no objeto de valores
     const { error } = schema.validate(values, {
-      abortEarly: false,
-      allowUnknown: true,
+      abortEarly: config?.abortEarly ?? false,
+      allowUnknown: config?.allowUnknown ?? false,
+      stripUnknown: config?.stripUnknown ?? false,
     });
 
     if (!error) return {};

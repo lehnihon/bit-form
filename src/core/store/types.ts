@@ -242,6 +242,7 @@ export interface BitHistoryConfig {
 export interface BitConfig<T extends object = any> {
   /** Core */
   name?: string;
+  storeId?: string;
   initialValues?: T;
 
   /** Central field config: conditional, validation, transform, computed, mask, scope. */

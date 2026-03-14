@@ -7,6 +7,7 @@ export default defineConfig([
   {
     entry: {
       index: "src/index.ts",
+      "core/light": "src/core/light.ts",
       "react/index": "src/react/index.ts",
       "react-native/index": "src/react-native/index.ts",
       "vue/index": "src/vue/index.ts",
@@ -14,6 +15,7 @@ export default defineConfig([
       "resolvers/zod": "src/resolvers/zod.ts",
       "resolvers/yup": "src/resolvers/yup.ts",
       "resolvers/joi": "src/resolvers/joi.ts",
+      "resolvers/types": "src/resolvers/types.ts",
       "devtools/index": "src/devtools/index.ts",
       "devtools/bridge": "src/devtools/bridge.ts",
     },
