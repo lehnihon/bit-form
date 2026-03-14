@@ -1,6 +1,6 @@
 import { computed, onUnmounted, shallowRef, ref } from "vue";
 import { useBitStore } from "./context";
-import { executeSubmitHandler } from "../core/submit-handler";
+import { createFormController } from "../core/form-controller";
 import type { UseBitFormResult } from "./types";
 
 export function useBitForm<T extends object>(): UseBitFormResult<T> {
@@ -26,43 +26,25 @@ export function useBitForm<T extends object>(): UseBitFormResult<T> {
 
   onUnmounted(unsubscribe);
 
-  const getValues = () => store.getState().values;
-  const getErrors = () => store.getState().errors;
-  const getTouched = () => store.getState().touched;
-  const getDirtyValues = () => store.getDirtyValues();
+  const controller = createFormController(store, {
+    clearSubmissionState: () => {
+      submitError.value = null;
+      lastResponse.value = null;
+    },
+    setSubmissionResult: (result) => {
+      lastResponse.value = result;
+    },
+    setSubmissionError: (error) => {
+      submitError.value = error;
+    },
+  });
 
   const isValid = computed(() => state.value.isValid);
   const isSubmitting = computed(() => state.value.isSubmitting);
   const isDirty = computed(() => state.value.isDirty);
 
-  const onSubmit = (
-    handler: (values: T, dirtyValues?: Partial<T>) => Promise<unknown>,
-  ) => {
-    return (e?: Event) => {
-      e?.preventDefault?.();
-      submitError.value = null;
-      return store.submit(async (values, dirtyValues) => {
-        await executeSubmitHandler(handler, values, dirtyValues, {
-          onSuccess: (result) => {
-            lastResponse.value = result;
-            submitError.value = null;
-          },
-          onServerErrors: (serverErrors) => {
-            store.setServerErrors(serverErrors);
-          },
-          onUnhandledError: (error) => {
-            submitError.value = error;
-          },
-        });
-      });
-    };
-  };
-
-  const reset = () => {
-    store.reset();
-    submitError.value = null;
-    lastResponse.value = null;
-  };
+  const onSubmit = controller.onSubmit;
+  const reset = controller.reset;
 
   const meta = {
     isValid,
@@ -76,19 +58,12 @@ export function useBitForm<T extends object>(): UseBitFormResult<T> {
     // Metadata (grouped)
     meta,
     // Getters
-    getValues,
-    getErrors,
-    getTouched,
-    getDirtyValues,
+    getValues: controller.getValues,
+    getErrors: controller.getErrors,
+    getTouched: controller.getTouched,
+    getDirtyValues: controller.getDirtyValues,
     // Main actions (frequent use - flat)
-    submit: (
-      onSuccess: (values: T, dirtyValues?: Partial<T>) => void | Promise<void>,
-    ) => {
-      return (e?: Event) => {
-        e?.preventDefault?.();
-        return store.submit(onSuccess);
-      };
-    },
+    submit: controller.submit,
     onSubmit,
     reset,
     replaceValues: store.replaceValues.bind(store),

@@ -1,6 +1,6 @@
 import { signal, computed, inject, DestroyRef } from "@angular/core";
 import { useBitStore } from "./provider";
-import { executeSubmitHandler } from "../core/submit-handler";
+import { createFormController } from "../core/form-controller";
 import type { InjectBitFormResult } from "./types";
 
 export function injectBitForm<T extends object>(): InjectBitFormResult<T> {
@@ -31,50 +31,22 @@ export function injectBitForm<T extends object>(): InjectBitFormResult<T> {
   const isSubmitting = computed(() => stateSignal().isSubmitting);
   const isDirty = computed(() => stateSignal().isDirty);
 
-  const getValues = () => store.getState().values;
-  const getErrors = () => store.getState().errors;
-  const getTouched = () => store.getState().touched;
-  const getDirtyValues = () => store.getDirtyValues();
-
-  const submit = (
-    onSuccess: (values: T, dirtyValues?: Partial<T>) => void | Promise<void>,
-  ) => {
-    return (event?: Event) => {
-      event?.preventDefault();
-      event?.stopPropagation();
-      return store.submit(onSuccess);
-    };
-  };
-
-  const onSubmit = (
-    handler: (values: T, dirtyValues?: Partial<T>) => Promise<unknown>,
-  ) => {
-    return (event?: Event) => {
-      event?.preventDefault();
-      event?.stopPropagation();
-      submitError.set(null);
-      return store.submit(async (values, dirtyValues) => {
-        await executeSubmitHandler(handler, values, dirtyValues, {
-          onSuccess: (result) => {
-            lastResponse.set(result);
-            submitError.set(null);
-          },
-          onServerErrors: (serverErrors) => {
-            store.setServerErrors(serverErrors);
-          },
-          onUnhandledError: (error) => {
-            submitError.set(error);
-          },
-        });
-      });
-    };
-  };
-
-  const reset = () => {
-    store.reset();
-    submitError.set(null);
-    lastResponse.set(null);
-  };
+  const controller = createFormController(
+    store,
+    {
+      clearSubmissionState: () => {
+        submitError.set(null);
+        lastResponse.set(null);
+      },
+      setSubmissionResult: (result) => {
+        lastResponse.set(result);
+      },
+      setSubmissionError: (error) => {
+        submitError.set(error);
+      },
+    },
+    { stopPropagation: true },
+  );
 
   const meta = {
     isValid,
@@ -88,14 +60,14 @@ export function injectBitForm<T extends object>(): InjectBitFormResult<T> {
     // Metadata (grouped)
     meta,
     // Getters
-    getValues,
-    getErrors,
-    getTouched,
-    getDirtyValues,
+    getValues: controller.getValues,
+    getErrors: controller.getErrors,
+    getTouched: controller.getTouched,
+    getDirtyValues: controller.getDirtyValues,
     // Main actions (frequent use - flat)
-    submit,
-    onSubmit,
-    reset,
+    submit: controller.submit,
+    onSubmit: controller.onSubmit,
+    reset: controller.reset,
     replaceValues: store.replaceValues.bind(store),
     hydrate: store.hydrate.bind(store),
     rebase: store.rebase.bind(store),

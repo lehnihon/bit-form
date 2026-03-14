@@ -41,13 +41,13 @@ import { BitArrayManager } from "./array-manager";
 import { BitComputedManager } from "./computed-manager";
 import { BitValidationManager } from "./validation-manager";
 import { BitLifecycleManager } from "./lifecycle-manager";
-import { BitDevtoolsManager } from "./devtools-manager";
 import { BitDirtyManager } from "./dirty-manager";
 import { BitScopeManager } from "./scope-manager";
 import { BitFieldQueryManager } from "./field-query-manager";
 import { BitErrorManager } from "./error-manager";
 import { BitPersistManager } from "./persist-manager";
 import { BitPluginManager } from "./plugin-manager";
+import { createDevtoolsPlugin } from "./devtools-plugin";
 /**
  * BitStore
  *
@@ -101,7 +101,6 @@ export class BitStore<T extends object = any>
   private readonly historyMg: BitHistoryManager<T>;
   private readonly arraysMg: BitArrayManager<T>;
   private readonly scopeMg: BitScopeManager<T>;
-  private readonly devtoolsMg: BitDevtoolsManager<T>;
 
   // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   // Query & Mutation Managers
@@ -133,7 +132,6 @@ export class BitStore<T extends object = any>
       this.config.historyLimit ?? 15,
     );
     this.arraysMg = new BitArrayManager<T>(this);
-    this.devtoolsMg = new BitDevtoolsManager<T>(this);
 
     // Initialize query/mutation managers with state access
     this.scopeMg = new BitScopeManager<T>(
@@ -190,7 +188,13 @@ export class BitStore<T extends object = any>
       this.config.name ||
       `bit-form-${Math.random().toString(36).substring(2, 9)}`;
 
-    this.pluginMg = new BitPluginManager<T>(this.config.plugins, () => ({
+    const runtimePlugins = [...this.config.plugins];
+    const devtoolsPlugin = createDevtoolsPlugin<T>(this.config.devTools);
+    if (devtoolsPlugin) {
+      runtimePlugins.push(devtoolsPlugin);
+    }
+
+    this.pluginMg = new BitPluginManager<T>(runtimePlugins, () => ({
       storeId: this.storeId,
       getState: () => this.getState(),
       getConfig: () => this.getConfig(),
@@ -826,7 +830,6 @@ export class BitStore<T extends object = any>
     this.pathScopedSubscriptions.clear();
     this.pathSelectorIndex.clear();
     this.validatorMg.cancelAll();
-    this.devtoolsMg.destroy();
     this.persistMg.destroy();
     this.pluginMg.destroy();
 

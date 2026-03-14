@@ -1,6 +1,7 @@
 import { useCallback, useSyncExternalStore, useRef, useEffect } from "react";
 import { useBitStore } from "./context";
 import { BitPath, BitPathValue } from "../core";
+import { subscribeFieldState } from "../core/field-controller";
 
 export function useBitFieldBase<
   TValue = any,
@@ -56,12 +57,7 @@ export function useBitFieldBase<
   }, [store, path]);
 
   const subscribe = useCallback(
-    (cb: () => void) =>
-      store.subscribeSelector(
-        () => store.getFieldState(path),
-        () => cb(),
-        { paths: [path as string] },
-      ),
+    (cb: () => void) => subscribeFieldState(store, path, () => cb()),
     [store, path],
   );
 

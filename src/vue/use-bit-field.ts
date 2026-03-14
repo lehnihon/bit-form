@@ -3,9 +3,9 @@ import { useBitStore } from "./context";
 import type { UseBitFieldVueResult } from "./types";
 import type { BitPath, BitPathValue } from "../core";
 import {
-  formatMaskedValue,
-  parseMaskedInput,
-} from "../core/mask/field-binding";
+  createMaskedFieldController,
+  subscribeFieldState,
+} from "../core/field-controller";
 
 export function useBitField<
   TForm extends object = any,
@@ -14,16 +14,17 @@ export function useBitField<
   const store = useBitStore<TForm>();
 
   const resolvedMask = store.resolveMask(path);
+  const fieldController = createMaskedFieldController(
+    store,
+    path,
+    resolvedMask,
+  );
 
   const state = shallowRef(store.getFieldState(path));
 
-  const unsubscribe = store.subscribeSelector(
-    () => store.getFieldState(path),
-    (nextState) => {
-      state.value = nextState;
-    },
-    { paths: [path as string] },
-  );
+  const unsubscribe = subscribeFieldState(store, path, (nextState) => {
+    state.value = nextState;
+  });
 
   onUnmounted(() => {
     unsubscribe();
@@ -35,19 +36,13 @@ export function useBitField<
   const rawValue = computed(() => state.value.value as BitPathValue<TForm, P>);
 
   const displayValue = computed(() =>
-    formatMaskedValue(rawValue.value, resolvedMask ?? undefined),
+    fieldController.displayValue(rawValue.value),
   );
 
   const modelValue = computed({
     get: () => displayValue.value,
     set: (val: string) => {
-      store.setField(
-        path,
-        parseMaskedInput(val, resolvedMask ?? undefined) as BitPathValue<
-          TForm,
-          P
-        >,
-      );
+      fieldController.setValue(val);
     },
   });
 
@@ -71,16 +66,10 @@ export function useBitField<
   const setValue = (
     val: BitPathValue<TForm, P> | string | number | null | undefined,
   ) => {
-    store.setField(
-      path,
-      parseMaskedInput(val, resolvedMask ?? undefined) as BitPathValue<
-        TForm,
-        P
-      >,
-    );
+    fieldController.setValue(val);
   };
 
-  const setBlur = () => store.blurField(path);
+  const setBlur = () => fieldController.setBlur();
 
   const onInput = (
     val: BitPathValue<TForm, P> | string | number | null | undefined,

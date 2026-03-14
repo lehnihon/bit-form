@@ -1,6 +1,16 @@
 import { BitErrors, BitFieldChangeMeta, DeepPartial } from "./types";
 import { BitLifecycleAdapter } from "./internal-types";
 import { deepClone, deepMerge, getDeepValue, setDeepValue } from "../utils";
+import { BitPipelineContext, BitPipelineRunner } from "./pipeline";
+
+interface SubmitPipelineContext<T extends object> extends BitPipelineContext {
+  onSuccess: (values: T, dirtyValues?: Partial<T>) => void | Promise<void>;
+  isValid: boolean;
+  valuesToSubmit: T;
+  dirtyValues: Partial<T>;
+  error?: unknown;
+  invalid?: boolean;
+}
 
 export class BitLifecycleManager<T extends object> {
   constructor(private store: BitLifecycleAdapter<T>) {}
@@ -152,81 +162,125 @@ export class BitLifecycleManager<T extends object> {
 
     this.store.cancelAllValidations();
 
-    this.store.internalUpdateState({ isSubmitting: true });
+    const context: SubmitPipelineContext<T> = {
+      onSuccess,
+      isValid: false,
+      valuesToSubmit: deepClone(this.store.getState().values),
+      dirtyValues: {},
+    };
 
-    const isValid = await this.store.validateNow();
+    const pipeline = new BitPipelineRunner<SubmitPipelineContext<T>>([
+      {
+        name: "submit:start",
+        run: async (ctx) => {
+          this.store.internalUpdateState({ isSubmitting: true });
+          ctx.isValid = await this.store.validateNow();
+        },
+      },
+      {
+        name: "submit:invalid",
+        run: async (ctx) => {
+          if (ctx.isValid) return;
 
-    if (isValid) {
-      try {
-        let valuesToSubmit = deepClone(this.store.getState().values);
+          const currentErrors = this.store.getState().errors;
+          const newTouched = { ...this.store.getState().touched };
 
-        this.store.getHiddenFields().forEach((hiddenPath) => {
-          valuesToSubmit = setDeepValue(valuesToSubmit, hiddenPath, undefined);
-        });
+          Object.keys(currentErrors).forEach((path) => {
+            newTouched[path as keyof typeof newTouched] = true;
+          });
 
-        for (const [path, transformer] of this.store.getTransformEntries()) {
-          const currentVal = getDeepValue(valuesToSubmit, path);
-          valuesToSubmit = setDeepValue(
-            valuesToSubmit,
-            path,
-            transformer(currentVal, this.store.getState().values),
-          );
-        }
+          this.store.internalUpdateState({ touched: newTouched });
 
-        const dirtyValues = this.store.buildDirtyValues(valuesToSubmit);
-
-        await this.store.emitBeforeSubmit({
-          values: valuesToSubmit,
-          dirtyValues,
-          state: this.store.getState(),
-        });
-
-        await onSuccess(valuesToSubmit, dirtyValues);
-
-        await this.store.emitAfterSubmit({
-          values: valuesToSubmit,
-          dirtyValues,
-          state: this.store.getState(),
-          success: true,
-        });
-      } catch (error) {
-        await this.store.emitOperationalError({
-          source: "submit",
-          error,
-        });
-
-        await this.store.emitAfterSubmit({
-          values: this.store.getState().values,
-          dirtyValues: this.store.buildDirtyValues(
+          ctx.dirtyValues = this.store.buildDirtyValues(
             this.store.getState().values,
-          ),
-          state: this.store.getState(),
-          success: false,
-          error,
-        });
+          );
+          ctx.invalid = true;
 
-        console.error(error);
-      }
-    } else {
-      const currentErrors = this.store.getState().errors;
-      const newTouched = { ...this.store.getState().touched };
+          await this.store.emitAfterSubmit({
+            values: this.store.getState().values,
+            dirtyValues: ctx.dirtyValues,
+            state: this.store.getState(),
+            success: false,
+            invalid: true,
+          });
 
-      Object.keys(currentErrors).forEach((path) => {
-        newTouched[path as keyof typeof newTouched] = true;
+          ctx.halted = true;
+        },
+      },
+      {
+        name: "submit:prepare",
+        run: (ctx) => {
+          this.store.getHiddenFields().forEach((hiddenPath) => {
+            ctx.valuesToSubmit = setDeepValue(
+              ctx.valuesToSubmit,
+              hiddenPath,
+              undefined,
+            );
+          });
+
+          for (const [path, transformer] of this.store.getTransformEntries()) {
+            const currentVal = getDeepValue(ctx.valuesToSubmit, path);
+            ctx.valuesToSubmit = setDeepValue(
+              ctx.valuesToSubmit,
+              path,
+              transformer(currentVal, this.store.getState().values),
+            );
+          }
+
+          ctx.dirtyValues = this.store.buildDirtyValues(ctx.valuesToSubmit);
+        },
+      },
+      {
+        name: "submit:before-hooks",
+        run: async (ctx) => {
+          await this.store.emitBeforeSubmit({
+            values: ctx.valuesToSubmit,
+            dirtyValues: ctx.dirtyValues,
+            state: this.store.getState(),
+          });
+        },
+      },
+      {
+        name: "submit:user-handler",
+        run: async (ctx) => {
+          await ctx.onSuccess(ctx.valuesToSubmit, ctx.dirtyValues);
+        },
+      },
+      {
+        name: "submit:after-hooks",
+        run: async (ctx) => {
+          await this.store.emitAfterSubmit({
+            values: ctx.valuesToSubmit,
+            dirtyValues: ctx.dirtyValues,
+            state: this.store.getState(),
+            success: true,
+          });
+        },
+      },
+    ]);
+
+    try {
+      await pipeline.run(context);
+    } catch (error) {
+      context.error = error;
+
+      await this.store.emitOperationalError({
+        source: "submit",
+        error,
       });
-
-      this.store.internalUpdateState({ touched: newTouched });
 
       await this.store.emitAfterSubmit({
         values: this.store.getState().values,
         dirtyValues: this.store.buildDirtyValues(this.store.getState().values),
         state: this.store.getState(),
         success: false,
-        invalid: true,
+        error,
       });
-    }
 
-    this.store.internalUpdateState({ isSubmitting: false });
+      console.error(error);
+    } finally {
+      this.store.internalUpdateState({ isSubmitting: false });
+    }
   }
 
   reset() {

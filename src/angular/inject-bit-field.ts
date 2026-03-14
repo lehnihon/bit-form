@@ -2,9 +2,9 @@ import { inject, DestroyRef, computed, signal } from "@angular/core";
 import { BIT_STORE_TOKEN } from "./provider";
 import { BitPath, BitPathValue } from "../core";
 import {
-  formatMaskedValue,
-  parseMaskedInput,
-} from "../core/mask/field-binding";
+  createMaskedFieldController,
+  subscribeFieldState,
+} from "../core/field-controller";
 import type { InjectBitFieldMeta, InjectBitFieldResult } from "./types";
 
 export function injectBitField<
@@ -16,13 +16,9 @@ export function injectBitField<
 
   const stateSignal = signal(store.getFieldState(path));
 
-  const unsubscribe = store.subscribeSelector(
-    () => store.getFieldState(path),
-    (nextState) => {
-      stateSignal.set(nextState);
-    },
-    { paths: [path as string] },
-  );
+  const unsubscribe = subscribeFieldState(store, path, (nextState) => {
+    stateSignal.set(nextState);
+  });
 
   inject(DestroyRef).onDestroy(() => {
     unsubscribe();
@@ -47,19 +43,19 @@ export function injectBitField<
   const invalid = computed(() => touched() && !!rawError());
 
   const resolvedMask = store.resolveMask(path as string);
-
-  const displayValue = computed(() =>
-    formatMaskedValue(value(), resolvedMask ?? undefined),
+  const fieldController = createMaskedFieldController(
+    store,
+    path,
+    resolvedMask,
   );
 
+  const displayValue = computed(() => fieldController.displayValue(value()));
+
   const setValue = (val: any) => {
-    store.setField(
-      path,
-      parseMaskedInput(val, resolvedMask ?? undefined) as any,
-    );
+    fieldController.setValue(val);
   };
 
-  const setBlur = () => store.blurField(path);
+  const setBlur = () => fieldController.setBlur();
 
   const hasError = computed(() => !!rawError());
 
