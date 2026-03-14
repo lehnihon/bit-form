@@ -7,7 +7,7 @@ import type {
   BitFieldDefinition,
   BitState,
 } from "./types";
-import type { BitResolvedConfig } from "./internal-types";
+import type { BitResolvedConfig } from "./public-types";
 
 export interface BitValidationStorePort<T extends object> {
   getState: () => BitState<T>;

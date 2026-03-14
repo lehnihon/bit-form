@@ -64,6 +64,10 @@ export interface BitFrameworkConfig<
   plugins: BitPlugin<T>[];
 }
 
+export interface BitResolvedConfig<
+  T extends object = any,
+> extends BitFrameworkConfig<T> {}
+
 export interface BitStoreApi<T extends object = any> {
   readonly config: Readonly<BitFrameworkConfig<T>>;
 

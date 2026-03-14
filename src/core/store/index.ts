@@ -20,12 +20,12 @@ import {
   BitAfterSubmitEvent,
 } from "./types";
 import type {
+  BitResolvedConfig,
   BitHistoryMetadata,
   BitSelector,
   BitSelectorSubscriptionOptions,
   BitValidationOptions,
 } from "./public-types";
-import { BitResolvedConfig } from "./internal-types";
 import { deepClone, deepEqual, getDeepValue, valueEqual } from "../utils";
 import { normalizeConfig } from "./config";
 import { BitDependencyManager } from "./dependency-manager";

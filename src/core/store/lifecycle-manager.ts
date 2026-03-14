@@ -5,7 +5,6 @@ import {
   BitPipelineRunner,
   BitSyncPipelineRunner,
 } from "./pipeline";
-import type { BitResolvedConfig } from "./internal-types";
 import type {
   BitState,
   BitTransformFn,
@@ -13,7 +12,7 @@ import type {
   BitAfterSubmitEvent,
   BitFieldChangeEvent,
 } from "./types";
-import type { BitValidationOptions } from "./public-types";
+import type { BitResolvedConfig, BitValidationOptions } from "./public-types";
 
 export interface BitLifecycleStorePort<T extends object> {
   getState: () => BitState<T>;
