@@ -29,18 +29,8 @@ import type {
 import { deepClone, deepEqual, getDeepValue, valueEqual } from "../utils";
 import { normalizeConfig } from "./config";
 import { BitDependencyManager } from "./dependency-manager";
-import { BitHistoryManager } from "./history-manager";
-import { BitArrayManager } from "./array-manager";
 import { BitComputedManager } from "./computed-manager";
-import { BitValidationManager } from "./validation-manager";
-import { BitLifecycleManager } from "./lifecycle-manager";
 import { BitDirtyManager } from "./dirty-manager";
-import { BitScopeManager } from "./scope-manager";
-import { BitFieldQueryManager } from "./field-query-manager";
-import { BitErrorManager } from "./error-manager";
-import { BitPersistManager } from "./persist-manager";
-import { BitPluginManager } from "./plugin-manager";
-import { createDevtoolsPlugin } from "./devtools-plugin";
 import { BitSubscriptionEngine } from "./subscription-engine";
 import { applyStateUpdate } from "./state-update-engine";
 import { BitStoreEffectEngine } from "./effect-engine";
@@ -48,6 +38,7 @@ import { BitCapabilityRegistry } from "./capability-registry";
 import type { BitStoreCapabilities } from "./capabilities";
 import type { BitLifecycleStorePort } from "./lifecycle-manager";
 import type { BitValidationStorePort } from "./validation-manager";
+import { createStoreCapabilities, createStoreEffects } from "./store-bootstrap";
 /**
  * BitStore
  *
@@ -136,47 +127,10 @@ export class BitStore<T extends object = any>
       this.getComputedEntries(),
     );
     this.dirtyMg = new BitDirtyManager<T>();
-    this.capabilities = new BitCapabilityRegistry<BitStoreCapabilities<T>>();
-
-    const validationManager = new BitValidationManager<T>(this);
-    const lifecycleManager = new BitLifecycleManager<T>(this);
-    this.capabilities.register("validation", validationManager);
-    this.capabilities.register("lifecycle", lifecycleManager);
-
-    // Initialize feature managers
-    const historyManager = new BitHistoryManager<T>(
-      !!this.config.enableHistory,
-      this.config.historyLimit ?? 15,
-    );
-    const arraysManager = new BitArrayManager<T>(this);
-
-    // Initialize query/mutation managers with state access
-    const scopeManager = new BitScopeManager<T>(
-      () => this.state,
-      () => this.config.initialValues,
-      (scopeName) => this.getScopeFields(scopeName),
-    );
-    const queryManager = new BitFieldQueryManager<T>(
-      this.depsMg,
-      () => this.state,
-      () => this.config,
-    );
-    const errorManager = new BitErrorManager<T>(
-      () => this.state,
-      (partial) => this.internalUpdateState(partial),
-    );
-
-    this.capabilities.register("history", historyManager);
-    this.capabilities.register("arrays", arraysManager);
-    this.capabilities.register("scope", scopeManager);
-    this.capabilities.register("query", queryManager);
-    this.capabilities.register("error", errorManager);
-    const persistManager = new BitPersistManager<T>(
-      this.config.persist,
-      () => this.state.values,
-      () => this.getDirtyValues(),
-      (values) => this.applyPersistedValues(values),
-    );
+    this.capabilities = createStoreCapabilities<T>({
+      store: this,
+      depsMg: this.depsMg,
+    });
 
     // Initialize form state
     const initialValues = deepClone(this.config.initialValues);
@@ -212,25 +166,16 @@ export class BitStore<T extends object = any>
       this.config.name ||
       `bit-form-${Math.random().toString(36).substring(2, 9)}`;
 
-    const runtimePlugins = [...this.config.plugins];
-    const devtoolsPlugin = createDevtoolsPlugin<T>(this.config.devTools);
-    if (devtoolsPlugin) {
-      runtimePlugins.push(devtoolsPlugin);
-    }
-
-    const pluginManager = new BitPluginManager<T>(runtimePlugins, () => ({
+    this.effects = createStoreEffects<T>({
       storeId: this.storeId,
+      storeInstance: this,
+      config: this.config,
       getState: () => this.getState(),
       getConfig: () => this.getConfig(),
-    }));
-
-    this.effects = new BitStoreEffectEngine<T>(
-      this.storeId,
-      this,
-      persistManager,
-      pluginManager,
-    );
-    this.effects.initialize();
+      getValues: () => this.state.values,
+      getDirtyValues: () => this.getDirtyValues(),
+      applyPersistedValues: (values) => this.applyPersistedValues(values),
+    });
   }
 
   // ============================================================================
