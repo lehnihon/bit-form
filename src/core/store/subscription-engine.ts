@@ -3,7 +3,10 @@ import type {
   BitSelectorSubscriptionOptions,
 } from "./public-types";
 import type { BitState } from "./types";
-import type { SelectorListenerEntry } from "./internal-types";
+
+interface SelectorListenerEntry<T extends object> {
+  notify(nextState: Readonly<BitState<T>>): void;
+}
 
 export class BitSubscriptionEngine<T extends object> {
   private listeners: Set<() => void> = new Set();
