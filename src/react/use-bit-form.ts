@@ -6,7 +6,7 @@ import {
   useState,
 } from "react";
 import { useBitStore } from "./context";
-import { executeSubmitHandler } from "../core/submit-handler";
+import { createFormController } from "../core/form-controller";
 import type { UseBitFormResult } from "./types";
 
 export function useBitForm<T extends object>(): UseBitFormResult<T> {
@@ -60,53 +60,31 @@ export function useBitForm<T extends object>(): UseBitFormResult<T> {
     getMetaSnapshot,
   );
 
-  const submit = useCallback(
-    (
-      onSuccess: (values: T, dirtyValues?: Partial<T>) => void | Promise<void>,
-    ) => {
-      return (e?: { preventDefault: () => void }) => {
-        e?.preventDefault?.();
-        return store.submit(onSuccess);
-      };
-    },
+  const controller = useMemo(
+    () =>
+      createFormController(store, {
+        clearSubmissionState: () => {
+          setSubmitError(null);
+          setLastResponse(null);
+        },
+        setSubmissionResult: (result) => {
+          setLastResponse(result);
+        },
+        setSubmissionError: (error) => {
+          setSubmitError(error);
+        },
+      }),
     [store],
   );
 
-  const onSubmit = useCallback(
-    (handler: (values: T, dirtyValues?: Partial<T>) => Promise<unknown>) => {
-      return (e?: { preventDefault: () => void }) => {
-        e?.preventDefault?.();
-        setSubmitError(null);
+  const submit = useCallback(controller.submit, [controller]);
+  const onSubmit = useCallback(controller.onSubmit, [controller]);
+  const reset = useCallback(controller.reset, [controller]);
 
-        return store.submit(async (values, dirtyValues) => {
-          await executeSubmitHandler(handler, values, dirtyValues, {
-            onSuccess: (result) => {
-              setLastResponse(result);
-              setSubmitError(null);
-            },
-            onServerErrors: (serverErrors) => {
-              store.setServerErrors(serverErrors);
-            },
-            onUnhandledError: (error) => {
-              setSubmitError(error);
-            },
-          });
-        });
-      };
-    },
-    [store],
-  );
-
-  const reset = useCallback(() => {
-    store.reset();
-    setSubmitError(null);
-    setLastResponse(null);
-  }, [store]);
-
-  const getValues = useCallback(() => store.getState().values, [store]);
-  const getErrors = useCallback(() => store.getState().errors, [store]);
-  const getTouched = useCallback(() => store.getState().touched, [store]);
-  const getDirtyValues = useCallback(() => store.getDirtyValues(), [store]);
+  const getValues = useCallback(controller.getValues, [controller]);
+  const getErrors = useCallback(controller.getErrors, [controller]);
+  const getTouched = useCallback(controller.getTouched, [controller]);
+  const getDirtyValues = useCallback(controller.getDirtyValues, [controller]);
 
   const meta = useMemo(
     () => ({
