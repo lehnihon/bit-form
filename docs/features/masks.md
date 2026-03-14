@@ -4,15 +4,64 @@ Bit-Form includes a highly advanced, zero-dependency masking engine. It parses u
 
 ## Built-in Presets
 
-Bit-Form comes packed with standard presets that you can use instantly by passing their string identifiers.
+Bit-Form ships with a full set of standard presets that can be used instantly by passing their string identifiers.
 
-### Available String Presets
+> **Note:** `registerMask` is designed for **pre-mount registration** only. Register custom masks before creating/mounting the store — dynamic registration after fields are mounted is not supported.
 
-- **Currencies**: `brl`, `usd`, `eur`, `gbp`, `jpy`
-- **Numbers**: `percent`, `decimal`, `int`
-- **Brazil**: `cpf`, `cnpj`, `rg`, `cep`, `cnh`, `phone`, `landline`, `date`
-- **USA**: `usPhone`, `zipCode`, `dateUS`, `ssn`
-- **Global/Tech**: `cc` (Smart Credit Card), `cvv`, `dateISO`, `ip`, `ipv6`, `mac`, `color`
+### Currencies
+
+| Key   | Format      |
+| ----- | ----------- |
+| `brl` | R$ 1.000,00 |
+| `usd` | $1,000.00   |
+| `eur` | 1.000,00 €  |
+| `gbp` | £1,000.00   |
+| `jpy` | ¥1,000      |
+
+### Numbers
+
+| Key       | Format        |
+| --------- | ------------- |
+| `percent` | 10,5%         |
+| `decimal` | 1.000,00      |
+| `int`     | 1.000         |
+| `integer` | 1.000 (alias) |
+
+### Brazil
+
+| Key        | Format             |
+| ---------- | ------------------ |
+| `cpf`      | 000.000.000-00     |
+| `cnpj`     | 00.000.000/0000-00 |
+| `rg`       | 00.000.000-X       |
+| `cep`      | 00000-000          |
+| `cnh`      | 00000000000        |
+| `phone`    | (00) 00000-0000    |
+| `landline` | (00) 0000-0000     |
+| `date`     | DD/MM/YYYY         |
+| `time`     | HH:MM              |
+
+### USA
+
+| Key       | Format         |
+| --------- | -------------- |
+| `usPhone` | (000) 000-0000 |
+| `zipCode` | 00000-0000     |
+| `dateUS`  | MM/DD/YYYY     |
+| `ssn`     | 000-00-0000    |
+
+### Global / Tech
+
+| Key       | Format                                            |
+| --------- | ------------------------------------------------- |
+| `cc`      | Smart Credit Card (auto-detects Visa/Amex/Diners) |
+| `cvv`     | 3-4 digits                                        |
+| `dateISO` | YYYY-MM-DD                                        |
+| `ip`      | 000.000.000.000                                   |
+| `ipv6`    | HHHH:HHHH:HHHH:HHHH:HHHH:HHHH:HHHH:HHHH           |
+| `mac`     | HH:HH:HH:HH:HH:HH                                 |
+| `color`   | #HHHHHH                                           |
+| `iban`    | UU## XXXX XXXX …                                  |
 
 ## Defining Masks in Store Fields
 
@@ -27,6 +76,9 @@ const store = createBitStore({
   initialValues: { salary: 0 },
   fields: {
     salary: { mask: "brl" },
+    age: { mask: "integer" }, // also accepts "int"
+    phone: { mask: "usPhone" },
+    doc: { mask: "ssn" },
   },
 });
 
@@ -47,7 +99,6 @@ import { createPatternMask } from "@lehnihon/bit-form";
 
 const plateMask = createPatternMask("UUU-####");
 
-// Via fields (or register first with store.registerMask("plate", plateMask))
 const store = createBitStore({
   initialValues: { licensePlate: "" },
   fields: { licensePlate: { mask: plateMask } },
@@ -74,15 +125,11 @@ const btcMask = createCurrencyMask({
   precision: 4,
 });
 
-// Pass instance in fields, or register and use by name
 const store = createBitStore({
   initialValues: { balance: 0 },
   fields: { balance: { mask: btcMask } },
 });
 ```
 
-### Raw Value vs Display Value
-
-When you type `"R$ 1.500,50"` with the `brl` mask, the store saves the number `1500.5`. On submit you send clean data; no manual parsing needed.
-
-See the [Masks Example](../examples/masks-example.md) for a full working sample.
+> **`precision: 0`** (e.g. `jpy` or `integer`) produces whole-number output only — no decimal separator is appended.
+> See the [Masks Example](../examples/masks-example.md) for a full working sample.

@@ -1,6 +1,10 @@
 import { inject, DestroyRef, computed, signal } from "@angular/core";
 import { BIT_STORE_TOKEN } from "./provider";
 import { BitPath, BitPathValue } from "../core";
+import {
+  formatMaskedValue,
+  parseMaskedInput,
+} from "../core/mask/field-binding";
 import type { InjectBitFieldMeta, InjectBitFieldResult } from "./types";
 
 export function injectBitField<
@@ -43,21 +47,15 @@ export function injectBitField<
 
   const resolvedMask = store.resolveMask(path as string);
 
-  const displayValue = computed(() => {
-    const val = value();
-    if (val === undefined || val === null || val === "") return "";
-
-    return resolvedMask ? resolvedMask.format(val) : String(val);
-  });
+  const displayValue = computed(() =>
+    formatMaskedValue(value(), resolvedMask ?? undefined),
+  );
 
   const setValue = (val: any) => {
-    if (!resolvedMask) {
-      store.setField(path, val);
-      return;
-    }
-
-    const stringVal = String(val ?? "");
-    store.setField(path, resolvedMask.parse(stringVal) as any);
+    store.setField(
+      path,
+      parseMaskedInput(val, resolvedMask ?? undefined) as any,
+    );
   };
 
   const setBlur = () => store.blurField(path);

@@ -3,6 +3,40 @@ export interface BitMask {
   parse: (value: string) => any;
 }
 
+export type BitBuiltInMaskName =
+  | "brl"
+  | "usd"
+  | "eur"
+  | "gbp"
+  | "jpy"
+  | "percent"
+  | "decimal"
+  | "int"
+  | "integer"
+  | "cpf"
+  | "cnpj"
+  | "rg"
+  | "cep"
+  | "cnh"
+  | "phone"
+  | "landline"
+  | "date"
+  | "time"
+  | "usPhone"
+  | "zipCode"
+  | "dateUS"
+  | "ssn"
+  | "cc"
+  | "cvv"
+  | "dateISO"
+  | "ip"
+  | "ipv6"
+  | "mac"
+  | "color"
+  | "iban";
+
+export type BitMaskName = BitBuiltInMaskName | (string & {});
+
 export interface PatternMaskOptions {
   allowChars?: string;
   customParse?: (value: string) => any;

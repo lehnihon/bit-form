@@ -1,4 +1,4 @@
-import { BitMask } from "../mask/types";
+import { BitMask, BitMaskName } from "../mask/types";
 
 export type DeepPartial<T> = T extends object
   ? { [P in keyof T]?: DeepPartial<T[P]> }
@@ -55,8 +55,8 @@ export interface BitFieldDefinition<T extends object = any> {
   validation?: BitFieldValidation<T>;
   transform?: BitTransformFn<T>;
   computed?: BitComputedFn<T>;
-  /** Mask name (from registry) or BitMask instance. */
-  mask?: BitMask | string;
+  /** Mask name (built-in or custom registry key) or BitMask instance. */
+  mask?: BitMask | BitMaskName;
   /** Scope name (e.g. wizard step). */
   scope?: string;
 }

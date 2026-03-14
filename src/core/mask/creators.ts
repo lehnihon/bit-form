@@ -55,80 +55,75 @@ export const createPatternMask = (
   const getRawLength = (p: string) =>
     p.split("").filter((c) => tokens[c]).length;
 
-  return {
-    format: (value: any) => {
-      let stringVal = unmask(value, options?.allowChars);
+  const patterns = Array.isArray(pattern) ? pattern : [pattern];
+  const sortedPatterns = [...patterns].sort(
+    (a, b) => getRawLength(a) - getRawLength(b),
+  );
 
-      // Se não há valor e o guide não está ativo, retorna vazio logo de cara
-      if (!stringVal && !options?.guide) return "";
-
-      const patterns = Array.isArray(pattern) ? pattern : [pattern];
-      const sortedPatterns = [...patterns].sort(
-        (a, b) => getRawLength(a) - getRawLength(b),
-      );
-
-      let activePattern = sortedPatterns[sortedPatterns.length - 1];
-      for (const p of sortedPatterns) {
-        if (stringVal.length <= getRawLength(p)) {
-          activePattern = p;
-          break;
-        }
+  const getActivePattern = (rawValueLength: number) => {
+    let activePattern = sortedPatterns[sortedPatterns.length - 1];
+    for (const candidate of sortedPatterns) {
+      if (rawValueLength <= getRawLength(candidate)) {
+        activePattern = candidate;
+        break;
       }
+    }
+    return activePattern;
+  };
 
-      let masked = "";
-      let valueIndex = 0;
+  const formatValue = (value: string | number | null | undefined): string => {
+    const stringVal = unmask(value, options?.allowChars);
 
-      // Variáveis do guide
-      const showGuide = options?.guide || false;
-      const placeholder = options?.placeholderChar || "_";
+    if (!stringVal && !options?.guide) {
+      return "";
+    }
 
-      // O loop agora corre o activePattern por inteiro se o guide for true
-      for (let i = 0; i < activePattern.length; i++) {
-        const patternChar = activePattern[i];
-        const token = tokens[patternChar];
+    const activePattern = getActivePattern(stringVal.length);
+    const showGuide = options?.guide || false;
+    const placeholder = options?.placeholderChar || "_";
 
-        if (valueIndex < stringVal.length) {
-          // 1. Ainda temos texto do utilizador para processar
-          let dataChar = stringVal[valueIndex];
+    let masked = "";
+    let valueIndex = 0;
 
-          if (token) {
-            if (patternChar === "U") dataChar = dataChar.toUpperCase();
-            if (patternChar === "L") dataChar = dataChar.toLowerCase();
+    for (let i = 0; i < activePattern.length; i++) {
+      const patternChar = activePattern[i];
+      const token = tokens[patternChar];
 
-            if (token.test(dataChar)) {
-              masked += dataChar;
-              valueIndex++;
-            } else {
-              // Se o utilizador digitou um char inválido, ignora-o.
-              // Se o guide estiver ativo, desenha o placeholder.
-              if (showGuide) masked += placeholder;
-              else break;
-            }
+      if (valueIndex < stringVal.length) {
+        let dataChar = stringVal[valueIndex];
+
+        if (token) {
+          if (patternChar === "U") dataChar = dataChar.toUpperCase();
+          if (patternChar === "L") dataChar = dataChar.toLowerCase();
+
+          if (token.test(dataChar)) {
+            masked += dataChar;
+            valueIndex++;
+          } else if (showGuide) {
+            masked += placeholder;
           } else {
-            masked += patternChar;
-            if (dataChar === patternChar) valueIndex++;
-          }
-        } else {
-          // 2. Acabou o texto do utilizador!
-          if (showGuide) {
-            // Se for um token (ex: #), põe o placeholder (_). Se for literal (ex: -), põe o literal.
-            masked += token ? placeholder : patternChar;
-          } else {
-            // Se não for para mostrar o guide, terminamos a máscara aqui.
             break;
           }
+        } else {
+          masked += patternChar;
+          if (dataChar === patternChar) valueIndex++;
         }
+      } else if (showGuide) {
+        masked += token ? placeholder : patternChar;
+      } else {
+        break;
       }
+    }
 
-      // Evita mostrar o guide solto se o campo estiver 100% vazio e o dev não quiser
-      // (Mas por padrão, se guide é true, até o campo vazio exibe a máscara inteira)
-      return masked;
-    },
+    return masked;
+  };
+
+  return {
+    format: formatValue,
     parse: (value: string) => {
       if (options?.customParse) return options.customParse(value);
 
-      const mask = createPatternMask(pattern, options);
-      const formatted = mask.format(value);
+      const formatted = formatValue(value);
 
       if (options?.saveRaw) {
         if (options?.guide) {
@@ -177,8 +172,10 @@ export const createCurrencyMask = ({
     stringValue = stringValue.padStart(precision + 1, "0");
 
     const integerPart =
-      stringValue.slice(0, -precision).replace(/^0+(?=\d)/, "") || "0";
-    const decimalPart = stringValue.slice(-precision);
+      precision > 0
+        ? stringValue.slice(0, -precision).replace(/^0+(?=\d)/, "") || "0"
+        : stringValue.replace(/^0+(?=\d)/, "") || "0";
+    const decimalPart = precision > 0 ? stringValue.slice(-precision) : "";
 
     const formattedInteger = integerPart.replace(
       /\B(?=(\d{3})+(?!\d))/g,
@@ -188,6 +185,10 @@ export const createCurrencyMask = ({
     const isNegative =
       typeof value === "number" ? value < 0 : String(value).includes("-");
     const sign = isNegative && allowNegative ? "-" : "";
+
+    if (precision === 0) {
+      return `${sign}${prefix}${formattedInteger}${suffix}`;
+    }
 
     return `${sign}${prefix}${formattedInteger}${decimal}${decimalPart}${suffix}`;
   };
