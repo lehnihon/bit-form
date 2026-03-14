@@ -1,4 +1,5 @@
 import { bitBus } from "bit-form/core";
+import type { DevToolsActionName, DevToolsActionPayload } from "./types";
 
 const formatStoreState = (instance: any) => {
   const cleanState =
@@ -23,6 +24,22 @@ const formatStoreState = (instance: any) => {
 };
 
 let activeBridgeCleanup: (() => void) | null = null;
+
+const isDevToolsActionPayload = (
+  payload: unknown,
+): payload is DevToolsActionPayload => {
+  if (!payload || typeof payload !== "object") return false;
+
+  const { storeId, action } = payload as {
+    storeId?: unknown;
+    action?: unknown;
+  };
+
+  return (
+    typeof storeId === "string" &&
+    (action === "undo" || action === "redo" || action === "reset")
+  );
+};
 
 export function setupRemoteBridge(url: string) {
   if (activeBridgeCleanup) {
@@ -88,16 +105,11 @@ export function setupRemoteBridge(url: string) {
         };
 
         if (message.type === "ACTION") {
-          const payload = message.payload as {
-            storeId?: unknown;
-            action?: unknown;
-          };
-          const storeId = payload.storeId;
-          const action = payload.action;
-
-          if (typeof storeId !== "string" || typeof action !== "string") {
+          if (!isDevToolsActionPayload(message.payload)) {
             return;
           }
+
+          const { storeId, action } = message.payload;
 
           const store = bitBus.stores[storeId];
 
@@ -105,7 +117,15 @@ export function setupRemoteBridge(url: string) {
             return;
           }
 
-          const method = (store as Record<string, unknown>)[action];
+          const methodByAction: Record<DevToolsActionName, string> = {
+            undo: "undo",
+            redo: "redo",
+            reset: "reset",
+          };
+
+          const method = (store as Record<string, unknown>)[
+            methodByAction[action]
+          ];
           if (typeof method === "function") {
             (method as () => void).call(store);
           }

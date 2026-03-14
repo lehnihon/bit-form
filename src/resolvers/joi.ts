@@ -1,5 +1,6 @@
 import { ObjectSchema } from "joi";
 import { BitErrors } from "../core";
+import { filterErrorsByScope, setFirstError } from "./utils";
 
 export const joiResolver = <T extends object>(schema: ObjectSchema<T>) => {
   return async (
@@ -19,16 +20,9 @@ export const joiResolver = <T extends object>(schema: ObjectSchema<T>) => {
     error.details.forEach((detail) => {
       const path = detail.path.join(".");
 
-      // Se houver campos alvo, filtramos o erro. Caso contrário, pega tudo.
-      if (options?.scopeFields) {
-        if (options.scopeFields.includes(path) && !errors[path]) {
-          errors[path] = detail.message;
-        }
-      } else if (path && !errors[path]) {
-        errors[path] = detail.message;
-      }
+      setFirstError(errors, path, detail.message);
     });
 
-    return errors;
+    return filterErrorsByScope(errors, options?.scopeFields);
   };
 };

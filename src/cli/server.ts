@@ -3,6 +3,14 @@ import fs from "node:fs";
 import path from "node:path";
 import { WebSocketServer } from "ws";
 
+type RelayMessage = {
+  type?: unknown;
+  payload?: unknown;
+};
+
+const isPingMessage = (message: RelayMessage): boolean =>
+  message.type === "PING";
+
 export function startDevServer(port = 3000) {
   const server = http.createServer((req, res) => {
     if (req.url === "/" || req.url === "/index.html") {
@@ -55,9 +63,9 @@ export function startDevServer(port = 3000) {
       const messageStr = messageBuffer.toString();
 
       try {
-        const data = JSON.parse(messageStr);
+        const data = JSON.parse(messageStr) as RelayMessage;
 
-        if (data.type === "PING") {
+        if (isPingMessage(data)) {
           return;
         }
       } catch (e) {}

@@ -1,5 +1,6 @@
-import { ZodSchema } from "zod";
+import { ZodError, ZodSchema } from "zod";
 import { BitErrors } from "../core";
+import { filterErrorsByScope, setFirstError } from "./utils";
 
 export const zodResolver = <T extends object>(schema: ZodSchema<T>) => {
   return async (
@@ -9,28 +10,17 @@ export const zodResolver = <T extends object>(schema: ZodSchema<T>) => {
     try {
       await schema.parseAsync(values);
       return {};
-    } catch (err: any) {
+    } catch (error: unknown) {
       const errors: BitErrors<T> = {};
 
-      if (err.issues) {
-        err.issues.forEach((issue: any) => {
+      if (error instanceof ZodError) {
+        for (const issue of error.issues) {
           const path = issue.path.join(".");
-          if (path && !errors[path]) {
-            errors[path] = issue.message;
-          }
-        });
-      }
-
-      if (options?.scopeFields && options.scopeFields.length > 0) {
-        const scopeSet = new Set(options.scopeFields);
-        const filtered: BitErrors<T> = {};
-        for (const [key, msg] of Object.entries(errors)) {
-          if (scopeSet.has(key) && msg) filtered[key as keyof BitErrors<T>] = msg;
+          setFirstError(errors, path, issue.message);
         }
-        return filtered;
       }
 
-      return errors;
+      return filterErrorsByScope(errors, options?.scopeFields);
     }
   };
 };

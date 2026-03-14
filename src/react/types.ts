@@ -1,8 +1,10 @@
 import type {
+  BitErrors,
   BitHistoryMetadata,
   BitPath,
   BitPathValue,
   BitPersistMetadata,
+  BitTouched,
 } from "../core";
 
 /**
@@ -101,4 +103,38 @@ export interface UseBitPersistResult {
   save: () => Promise<void>;
   clear: () => Promise<void>;
   meta: BitPersistMetadata;
+}
+
+export interface UseBitFormMeta {
+  isValid: boolean;
+  isDirty: boolean;
+  isSubmitting: boolean;
+  submitError: Error | null;
+  lastResponse: unknown;
+}
+
+export interface UseBitFormResult<T extends object = any> {
+  meta: UseBitFormMeta;
+  getValues: () => T;
+  getErrors: () => BitErrors<T>;
+  getTouched: () => BitTouched<T>;
+  getDirtyValues: () => Partial<T>;
+  submit: (
+    onSuccess: (values: T, dirtyValues?: Partial<T>) => void | Promise<void>,
+  ) => (e?: { preventDefault: () => void }) => Promise<void>;
+  onSubmit: (
+    handler: (values: T, dirtyValues?: Partial<T>) => Promise<unknown>,
+  ) => (e?: { preventDefault: () => void }) => Promise<void>;
+  reset: () => void;
+  setField: <P extends BitPath<T>>(path: P, value: BitPathValue<T, P>) => void;
+  blurField: <P extends BitPath<T>>(path: P) => void;
+  replaceValues: (values: T) => void;
+  hydrate: (values: import("../core").DeepPartial<T>) => void;
+  rebase: (values: T) => void;
+  setError: (path: string, message: string | undefined) => void;
+  setErrors: (errors: BitErrors<T>) => void;
+  setServerErrors: (serverErrors: Record<string, string[] | string>) => void;
+  validate: (
+    options?: import("../core").BitValidationOptions,
+  ) => Promise<boolean>;
 }

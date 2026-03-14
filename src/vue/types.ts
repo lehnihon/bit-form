@@ -1,7 +1,9 @@
 import type { ComputedRef, Ref } from "vue";
 import type {
+  BitErrors,
   BitHistoryMetadata,
   BitPersistMetadata,
+  BitTouched,
   ScopeStatus,
   ValidateScopeResult,
 } from "../core";
@@ -93,4 +95,39 @@ export interface UseBitPersistResult {
     isRestoring: Ref<BitPersistMetadata["isRestoring"]>;
     error: Ref<BitPersistMetadata["error"]>;
   };
+}
+
+export interface UseBitFormResult<T extends object = any> {
+  meta: {
+    isValid: ComputedRef<boolean>;
+    isDirty: ComputedRef<boolean>;
+    isSubmitting: ComputedRef<boolean>;
+    submitError: Ref<Error | null>;
+    lastResponse: Ref<unknown>;
+  };
+  getValues: () => T;
+  getErrors: () => BitErrors<T>;
+  getTouched: () => BitTouched<T>;
+  getDirtyValues: () => Partial<T>;
+  submit: (
+    onSuccess: (values: T, dirtyValues?: Partial<T>) => void | Promise<void>,
+  ) => (e?: Event) => Promise<void>;
+  onSubmit: (
+    handler: (values: T, dirtyValues?: Partial<T>) => Promise<unknown>,
+  ) => (e?: Event) => Promise<void>;
+  reset: () => void;
+  replaceValues: (values: T) => void;
+  hydrate: (values: import("../core").DeepPartial<T>) => void;
+  rebase: (values: T) => void;
+  setError: (path: string, message: string | undefined) => void;
+  setErrors: (errors: BitErrors<T>) => void;
+  setServerErrors: (serverErrors: Record<string, string[] | string>) => void;
+  setField: <P extends import("../core").BitPath<T>>(
+    path: P,
+    value: import("../core").BitPathValue<T, P>,
+  ) => void;
+  blurField: <P extends import("../core").BitPath<T>>(path: P) => void;
+  validate: (
+    options?: import("../core").BitValidationOptions,
+  ) => Promise<boolean>;
 }
