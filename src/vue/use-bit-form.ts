@@ -99,14 +99,5 @@ export function useBitForm<T extends object>() {
     setField: store.setField.bind(store),
     blurField: store.blurField.bind(store),
     validate: store.validate.bind(store),
-    // Array mutations (grouped)
-    mutations: {
-      pushItem: store.pushItem.bind(store),
-      prependItem: store.prependItem.bind(store),
-      removeItem: store.removeItem.bind(store),
-      insertItem: store.insertItem.bind(store),
-      moveItem: store.moveItem.bind(store),
-      swapItems: store.swapItems.bind(store),
-    },
   };
 }
