@@ -1,6 +1,20 @@
 import { BitErrors } from "./types";
 import { BitValidationAdapter } from "./internal-types";
 import { BitValidationOptions } from "./public-types";
+import { BitPipelineContext, BitPipelineRunner } from "./pipeline";
+
+interface ValidationPipelineContext<
+  T extends object,
+> extends BitPipelineContext {
+  options?: BitValidationOptions;
+  validationId: number;
+  currentState: ReturnType<BitValidationAdapter<T>["getState"]>;
+  targetFields?: string[];
+  allErrors: Record<string, any>;
+  isValid: boolean;
+  result: boolean;
+  aborted: boolean;
+}
 
 export class BitValidationManager<T extends object> {
   private validationTimeout?: ReturnType<typeof setTimeout>;
@@ -137,105 +151,155 @@ export class BitValidationManager<T extends object> {
   }
 
   async validate(options?: BitValidationOptions): Promise<boolean> {
-    const validationId = ++this.currentValidationId;
-    const currentState = this.store.getState();
+    const context: ValidationPipelineContext<T> = {
+      options,
+      validationId: ++this.currentValidationId,
+      currentState: this.store.getState(),
+      targetFields: options?.scopeFields,
+      allErrors: {},
+      isValid: true,
+      result: true,
+      aborted: false,
+    };
 
-    let targetFields: string[] | undefined = options?.scopeFields;
+    const pipeline = new BitPipelineRunner<ValidationPipelineContext<T>>([
+      {
+        name: "validate:resolve-target-fields",
+        run: (ctx) => {
+          if (ctx.options?.scope) {
+            const scopeFields = this.store.getScopeFields(ctx.options.scope);
+            if (scopeFields.length > 0) {
+              ctx.targetFields = scopeFields;
+            }
+          }
+        },
+      },
+      {
+        name: "validate:before-hooks",
+        run: async (ctx) => {
+          await this.store.emitBeforeValidate({
+            values: ctx.currentState.values,
+            state: ctx.currentState,
+            scope: ctx.options?.scope,
+            scopeFields: ctx.targetFields,
+          });
+        },
+      },
+      {
+        name: "validate:resolver",
+        run: async (ctx) => {
+          ctx.allErrors = this.store.config.resolver
+            ? await this.store.config.resolver(ctx.currentState.values, {
+                scopeFields: ctx.targetFields,
+              })
+            : {};
+        },
+      },
+      {
+        name: "validate:required-and-hidden",
+        run: (ctx) => {
+          const dynamicRequiredErrors = this.store.getRequiredErrors(
+            ctx.currentState.values,
+          );
+          ctx.allErrors = { ...ctx.allErrors, ...dynamicRequiredErrors };
 
-    if (options?.scope) {
-      const scopeFields = this.store.getScopeFields(options.scope);
-      if (scopeFields.length > 0) {
-        targetFields = scopeFields;
-      }
-    }
+          this.store.getHiddenFields().forEach((hiddenPath: string) => {
+            delete ctx.allErrors[hiddenPath];
+            delete this.asyncErrors[hiddenPath];
+          });
+        },
+      },
+      {
+        name: "validate:abort-check",
+        run: async (ctx) => {
+          if (ctx.validationId === this.currentValidationId) {
+            return;
+          }
 
-    await this.store.emitBeforeValidate({
-      values: currentState.values,
-      state: currentState,
-      scope: options?.scope,
-      scopeFields: targetFields,
-    });
+          ctx.aborted = true;
+          ctx.result = ctx.currentState.isValid;
 
-    let allErrors: Record<string, any> = this.store.config.resolver
-      ? await this.store.config.resolver(currentState.values, {
-          scopeFields: targetFields,
-        })
-      : {};
+          await this.store.emitAfterValidate({
+            values: this.store.getState().values,
+            state: this.store.getState(),
+            scope: ctx.options?.scope,
+            scopeFields: ctx.targetFields,
+            errors: this.store.getState().errors,
+            result: ctx.currentState.isValid,
+            aborted: true,
+          });
 
-    const dynamicRequiredErrors = this.store.getRequiredErrors(
-      currentState.values,
-    );
-    allErrors = { ...allErrors, ...dynamicRequiredErrors };
+          ctx.halted = true;
+        },
+      },
+      {
+        name: "validate:commit-scoped",
+        run: async (ctx) => {
+          if (!ctx.targetFields) {
+            return;
+          }
 
-    this.store.getHiddenFields().forEach((hiddenPath: string) => {
-      delete allErrors[hiddenPath];
-      delete this.asyncErrors[hiddenPath];
-    });
+          const newErrors = { ...ctx.currentState.errors };
 
-    if (validationId !== this.currentValidationId) {
-      await this.store.emitAfterValidate({
-        values: this.store.getState().values,
-        state: this.store.getState(),
-        scope: options?.scope,
-        scopeFields: targetFields,
-        errors: this.store.getState().errors,
-        result: currentState.isValid,
-        aborted: true,
-      });
+          ctx.targetFields.forEach((field) => {
+            if (ctx.allErrors[field]) {
+              newErrors[field as keyof BitErrors<T>] = ctx.allErrors[field];
+            } else if (this.asyncErrors[field]) {
+              newErrors[field as keyof BitErrors<T>] = this.asyncErrors[field];
+            } else {
+              delete newErrors[field as keyof BitErrors<T>];
+            }
+          });
 
-      return currentState.isValid;
-    }
+          ctx.isValid = Object.keys(newErrors).length === 0;
+          ctx.result = ctx.targetFields.every(
+            (f) => !ctx.allErrors[f] && !this.asyncErrors[f],
+          );
 
-    if (targetFields) {
-      const newErrors = { ...currentState.errors };
+          this.store.internalUpdateState({
+            errors: newErrors,
+            isValid: ctx.isValid,
+          });
 
-      targetFields.forEach((field) => {
-        if (allErrors[field]) {
-          newErrors[field as keyof BitErrors<T>] = allErrors[field];
-        } else if (this.asyncErrors[field]) {
-          newErrors[field as keyof BitErrors<T>] = this.asyncErrors[field];
-        } else {
-          delete newErrors[field as keyof BitErrors<T>];
-        }
-      });
+          await this.store.emitAfterValidate({
+            values: this.store.getState().values,
+            state: this.store.getState(),
+            scope: ctx.options?.scope,
+            scopeFields: ctx.targetFields,
+            errors: newErrors,
+            result: ctx.result,
+          });
 
-      const isValid = Object.keys(newErrors).length === 0;
-      this.store.internalUpdateState({ errors: newErrors, isValid });
+          ctx.halted = true;
+        },
+      },
+      {
+        name: "validate:commit-global",
+        run: async (ctx) => {
+          ctx.allErrors = { ...this.asyncErrors, ...ctx.allErrors };
+          ctx.isValid = Object.keys(ctx.allErrors).length === 0;
+          ctx.result = ctx.isValid;
 
-      const result = targetFields.every(
-        (f) => !allErrors[f] && !this.asyncErrors[f],
-      );
+          this.store.internalUpdateState({
+            errors: ctx.allErrors as BitErrors<T>,
+            isValid: ctx.isValid,
+          });
 
-      await this.store.emitAfterValidate({
-        values: this.store.getState().values,
-        state: this.store.getState(),
-        scope: options?.scope,
-        scopeFields: targetFields,
-        errors: newErrors,
-        result,
-      });
+          await this.store.emitAfterValidate({
+            values: this.store.getState().values,
+            state: this.store.getState(),
+            scope: ctx.options?.scope,
+            scopeFields: ctx.targetFields,
+            errors: ctx.allErrors as BitErrors<T>,
+            result: ctx.isValid,
+          });
+        },
+      },
+    ]);
 
-      return result;
-    }
+    await pipeline.run(context);
 
-    allErrors = { ...this.asyncErrors, ...allErrors };
-    const isValid = Object.keys(allErrors).length === 0;
-
-    this.store.internalUpdateState({
-      errors: allErrors as BitErrors<T>,
-      isValid,
-    });
-
-    await this.store.emitAfterValidate({
-      values: this.store.getState().values,
-      state: this.store.getState(),
-      scope: options?.scope,
-      scopeFields: targetFields,
-      errors: allErrors as BitErrors<T>,
-      result: isValid,
-    });
-
-    return isValid;
+    return context.result;
   }
 
   clear(path: string) {

@@ -1,7 +1,11 @@
 import { BitErrors, BitFieldChangeMeta, DeepPartial } from "./types";
 import { BitLifecycleAdapter } from "./internal-types";
 import { deepClone, deepMerge, getDeepValue, setDeepValue } from "../utils";
-import { BitPipelineContext, BitPipelineRunner } from "./pipeline";
+import {
+  BitPipelineContext,
+  BitPipelineRunner,
+  BitSyncPipelineRunner,
+} from "./pipeline";
 
 interface SubmitPipelineContext<T extends object> extends BitPipelineContext {
   onSuccess: (values: T, dirtyValues?: Partial<T>) => void | Promise<void>;
@@ -10,6 +14,19 @@ interface SubmitPipelineContext<T extends object> extends BitPipelineContext {
   dirtyValues: Partial<T>;
   error?: unknown;
   invalid?: boolean;
+}
+
+interface FieldUpdatePipelineContext<
+  T extends object,
+> extends BitPipelineContext {
+  path: string;
+  value: any;
+  meta: BitFieldChangeMeta;
+  previousValue: unknown;
+  nextValues: T;
+  nextErrors: BitErrors<T>;
+  toggledFields: string[];
+  isDirty: boolean;
 }
 
 export class BitLifecycleManager<T extends object> {
@@ -21,52 +38,96 @@ export class BitLifecycleManager<T extends object> {
     meta: BitFieldChangeMeta = { origin: "setField" },
   ) {
     const state = this.store.getState();
-    const previousValue = getDeepValue(state.values, path);
-    const newValues = setDeepValue(state.values, path, value);
-    const newErrors = { ...state.errors };
 
-    delete newErrors[path as keyof BitErrors<T>];
-    this.store.clearFieldValidation(path);
-
-    const toggledFields = this.store.updateDependencies(path, newValues);
-
-    toggledFields.forEach((depPath) => {
-      if (this.store.isFieldHidden(depPath)) {
-        delete newErrors[depPath as keyof BitErrors<T>];
-        this.store.clearFieldValidation(depPath);
-      }
-    });
-
-    const isDirty = this.store.updateDirtyForPath(
+    const context: FieldUpdatePipelineContext<T> = {
       path,
-      newValues,
-      this.store.config.initialValues,
-    );
-
-    this.store.internalUpdateState(
-      {
-        values: newValues,
-        errors: newErrors,
-        isValid: Object.keys(newErrors).length === 0,
-        isDirty,
-      },
-      [path, ...toggledFields],
-    );
-
-    this.store.emitFieldChange({
-      path,
-      previousValue,
-      nextValue: value,
-      values: this.store.getState().values,
-      state: this.store.getState(),
+      value,
       meta,
-    });
+      previousValue: getDeepValue(state.values, path),
+      nextValues: setDeepValue(state.values, path, value),
+      nextErrors: { ...state.errors },
+      toggledFields: [],
+      isDirty: false,
+    };
 
-    if (this.store.config.resolver) {
-      this.store.triggerValidation([path]);
-    }
+    const pipeline = new BitSyncPipelineRunner<FieldUpdatePipelineContext<T>>([
+      {
+        name: "field:clear-current-error",
+        run: (ctx) => {
+          delete ctx.nextErrors[ctx.path as keyof BitErrors<T>];
+          this.store.clearFieldValidation(ctx.path);
+        },
+      },
+      {
+        name: "field:update-dependencies",
+        run: (ctx) => {
+          ctx.toggledFields = this.store.updateDependencies(
+            ctx.path,
+            ctx.nextValues,
+          );
 
-    this.store.handleFieldAsyncValidation(path, value);
+          ctx.toggledFields.forEach((depPath) => {
+            if (this.store.isFieldHidden(depPath)) {
+              delete ctx.nextErrors[depPath as keyof BitErrors<T>];
+              this.store.clearFieldValidation(depPath);
+            }
+          });
+        },
+      },
+      {
+        name: "field:update-dirty",
+        run: (ctx) => {
+          ctx.isDirty = this.store.updateDirtyForPath(
+            ctx.path,
+            ctx.nextValues,
+            this.store.config.initialValues,
+          );
+        },
+      },
+      {
+        name: "field:commit-state",
+        run: (ctx) => {
+          this.store.internalUpdateState(
+            {
+              values: ctx.nextValues,
+              errors: ctx.nextErrors,
+              isValid: Object.keys(ctx.nextErrors).length === 0,
+              isDirty: ctx.isDirty,
+            },
+            [ctx.path, ...ctx.toggledFields],
+          );
+        },
+      },
+      {
+        name: "field:emit-change",
+        run: (ctx) => {
+          this.store.emitFieldChange({
+            path: ctx.path,
+            previousValue: ctx.previousValue,
+            nextValue: ctx.value,
+            values: this.store.getState().values,
+            state: this.store.getState(),
+            meta: ctx.meta,
+          });
+        },
+      },
+      {
+        name: "field:trigger-validate",
+        run: (ctx) => {
+          if (this.store.config.resolver) {
+            this.store.triggerValidation([ctx.path]);
+          }
+        },
+      },
+      {
+        name: "field:trigger-async-validate",
+        run: (ctx) => {
+          this.store.handleFieldAsyncValidation(ctx.path, ctx.value);
+        },
+      },
+    ]);
+
+    pipeline.run(context);
   }
 
   replaceValues(

@@ -8,6 +8,15 @@ The `BitStore` is a plain TypeScript class that acts as the single source of tru
 
 When you use framework-specific wrappers like `useBitForm` (React/Vue) or `injectBitForm` (Angular), they are simply subscribing to the `BitStore` and triggering re-renders only when necessary. This architecture is what makes Bit-Form incredibly performant and cross-compatible.
 
+## 🧱 Shared Controllers (Framework-Agnostic)
+
+Bit-Form now centralizes shared UI orchestration into framework-agnostic controllers:
+
+- `form-controller`: submit/onSubmit/reset orchestration and server error normalization.
+- `field-controller`: field subscription and mask parse/format orchestration.
+
+Framework adapters (React/Vue/Angular) become thin bindings over these controllers, reducing duplicated behavior and drift across integrations.
+
 ## 📊 Form State (`BitState`)
 
 At any given moment, the `BitStore` holds a comprehensive state object. You can access these properties via the hooks/composables provided by your framework of choice.
@@ -41,15 +50,17 @@ As your UI renders, fields are "registered" into the store (automatically handle
 
 ### 4. Submission
 
-When you call the `submit(onSuccess)` method, the `BitStore` performs a sequence of critical actions:
+When you call the `submit(onSuccess)` method, the `BitStore` executes a staged pipeline:
 
-1. Cancels any pending asynchronous validations.
-2. Sets `isSubmitting` to `true`.
-3. Runs a full validation across all registered fields.
-4. **Data Cleanup**: If the form is valid, it completely removes values belonging to fields that are currently _hidden_ (due to conditional logic).
-5. **Data Transformation**: It applies any `transform` functions you defined in the config (e.g., converting a masked currency string like `"R$ 1.500,00"` into a float `1500.00`).
-6. Finally, it executes your `onSuccess` callback with the clean, transformed payload.
-7. Sets `isSubmitting` to `false`.
+1. `submit:start` → marks `isSubmitting` and validates.
+2. `submit:invalid` → marks touched fields and exits early when invalid.
+3. `submit:prepare` → strips hidden fields and applies `transform`.
+4. `submit:before-hooks` → runs plugin `beforeSubmit` hooks.
+5. `submit:user-handler` → executes your callback.
+6. `submit:after-hooks` → runs plugin `afterSubmit` hooks.
+7. `finally` → always resets `isSubmitting`.
+
+This explicit stage model makes behavior easier to reason about and safer to extend.
 
 ## 🧩 The Managers
 
