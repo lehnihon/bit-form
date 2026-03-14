@@ -26,6 +26,8 @@ export type BitEqualityFn<TValue> = (previous: TValue, next: TValue) => boolean;
 export interface BitSelectorSubscriptionOptions<TValue> {
   equalityFn?: BitEqualityFn<TValue>;
   emitImmediately?: boolean;
+  paths?: string[];
+  autoTrackPaths?: boolean;
 }
 
 export interface BitValidationOptions {

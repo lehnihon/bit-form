@@ -68,6 +68,10 @@ export class BitStore<T extends object = any>
   private state: BitState<T>;
   private listeners: Set<() => void> = new Set();
   private selectorListeners: Set<SelectorListenerEntry<T>> = new Set();
+  private pathScopedSubscriptions: Map<SelectorListenerEntry<T>, string[]> =
+    new Map();
+  private pathSelectorIndex: Map<string, Set<SelectorListenerEntry<T>>> =
+    new Map();
   private persistMg: BitPersistManager<T>;
   private pluginMg: BitPluginManager<T>;
 
@@ -388,13 +392,49 @@ export class BitStore<T extends object = any>
       },
     };
 
-    this.selectorListeners.add(subscription);
+    const autoTrackedPaths =
+      options?.autoTrackPaths === false
+        ? []
+        : this.collectTrackedSelectorPaths(selector);
+
+    const scopedPaths = this.normalizeSubscriptionPaths([
+      ...(options?.paths ?? []),
+      ...autoTrackedPaths,
+    ]);
+
+    if (scopedPaths.length > 0) {
+      this.pathScopedSubscriptions.set(subscription, scopedPaths);
+      scopedPaths.forEach((pathKey) => {
+        const listeners = this.pathSelectorIndex.get(pathKey) ?? new Set();
+        listeners.add(subscription);
+        this.pathSelectorIndex.set(pathKey, listeners);
+      });
+    } else {
+      this.selectorListeners.add(subscription);
+    }
 
     if (options?.emitImmediately) {
       listener(lastSlice);
     }
 
-    return () => this.selectorListeners.delete(subscription);
+    return () => {
+      this.selectorListeners.delete(subscription);
+
+      const paths = this.pathScopedSubscriptions.get(subscription);
+      if (!paths) return;
+
+      paths.forEach((pathKey) => {
+        const listeners = this.pathSelectorIndex.get(pathKey);
+        if (!listeners) return;
+
+        listeners.delete(subscription);
+        if (listeners.size === 0) {
+          this.pathSelectorIndex.delete(pathKey);
+        }
+      });
+
+      this.pathScopedSubscriptions.delete(subscription);
+    };
   }
 
   subscribePath<P extends BitPath<T>>(
@@ -402,11 +442,16 @@ export class BitStore<T extends object = any>
     listener: (value: BitPathValue<T, P>) => void,
     options?: BitSelectorSubscriptionOptions<BitPathValue<T, P>>,
   ) {
+    const mergedPaths = [...(options?.paths ?? []), path as string];
+
     return this.subscribeSelector(
       (state) =>
         getDeepValue(state.values, path as string) as BitPathValue<T, P>,
       listener,
-      options,
+      {
+        ...options,
+        paths: mergedPaths,
+      },
     );
   }
 
@@ -713,7 +758,10 @@ export class BitStore<T extends object = any>
   // INTERNAL OPERATIONS
   // ============================================================================
 
-  internalUpdateState(partialState: Partial<BitState<T>>) {
+  internalUpdateState(
+    partialState: Partial<BitState<T>>,
+    changedPaths?: string[],
+  ) {
     const previousState = this.state;
     let nextState = { ...this.state, ...partialState };
 
@@ -731,7 +779,14 @@ export class BitStore<T extends object = any>
       this.persistMg.queueSave();
     }
 
-    this.notify(previousState, nextState);
+    const effectiveChangedPaths =
+      changedPaths && changedPaths.length > 0
+        ? changedPaths
+        : partialState.values
+          ? ["*"]
+          : undefined;
+
+    this.notify(previousState, nextState, effectiveChangedPaths);
 
     bitBus.dispatch(this.storeId, this.state);
   }
@@ -768,6 +823,8 @@ export class BitStore<T extends object = any>
   cleanup() {
     this.listeners.clear();
     this.selectorListeners.clear();
+    this.pathScopedSubscriptions.clear();
+    this.pathSelectorIndex.clear();
     this.validatorMg.cancelAll();
     this.devtoolsMg.destroy();
     this.persistMg.destroy();
@@ -779,11 +836,134 @@ export class BitStore<T extends object = any>
   private notify(
     previousState: BitState<T> = this.state,
     nextState: BitState<T> = this.state,
+    changedPaths?: string[],
   ) {
     this.listeners.forEach((listener) => listener());
 
     this.selectorListeners.forEach((subscription) => {
       subscription.notify(nextState);
     });
+
+    if (this.pathScopedSubscriptions.size === 0) {
+      return;
+    }
+
+    if (
+      !changedPaths ||
+      changedPaths.length === 0 ||
+      changedPaths.includes("*")
+    ) {
+      this.pathScopedSubscriptions.forEach((_paths, subscription) => {
+        subscription.notify(nextState);
+      });
+      return;
+    }
+
+    const scopedSubscribers =
+      this.collectSubscribersForChangedPaths(changedPaths);
+
+    scopedSubscribers.forEach((subscription) => {
+      subscription.notify(nextState);
+    });
+  }
+
+  private normalizeSubscriptionPaths(paths?: string[]): string[] {
+    if (!paths || paths.length === 0) return [];
+
+    return Array.from(
+      new Set(
+        paths.map((path) => path.trim()).filter((path) => path.length > 0),
+      ),
+    );
+  }
+
+  private collectTrackedSelectorPaths<TSlice>(
+    selector: BitSelector<T, TSlice>,
+  ): string[] {
+    const trackedPaths = new Set<string>();
+
+    const createTrackedProxy = (
+      value: unknown,
+      currentPath: string,
+    ): unknown => {
+      if (!value || typeof value !== "object") {
+        return value;
+      }
+
+      return new Proxy(value as Record<string, unknown>, {
+        get: (target, key) => {
+          if (typeof key !== "string") {
+            return Reflect.get(target, key);
+          }
+
+          const nextPath = currentPath ? `${currentPath}.${key}` : key;
+          trackedPaths.add(nextPath);
+
+          const nextValue = Reflect.get(target, key);
+          return createTrackedProxy(nextValue, nextPath);
+        },
+      });
+    };
+
+    const trackedState = new Proxy(
+      this.state as unknown as Record<string, unknown>,
+      {
+        get: (target, key) => {
+          if (typeof key !== "string") {
+            return Reflect.get(target, key);
+          }
+
+          const value = Reflect.get(target, key);
+
+          if (key === "values") {
+            return createTrackedProxy(value, "");
+          }
+
+          return value;
+        },
+      },
+    ) as Readonly<BitState<T>>;
+
+    try {
+      selector(trackedState);
+      return Array.from(trackedPaths);
+    } catch {
+      return [];
+    }
+  }
+
+  private collectSubscribersForChangedPaths(
+    changedPaths: string[],
+  ): Set<SelectorListenerEntry<T>> {
+    const scopedSubscribers = new Set<SelectorListenerEntry<T>>();
+
+    const addByPath = (path: string) => {
+      const listeners = this.pathSelectorIndex.get(path);
+      if (!listeners) return;
+      listeners.forEach((subscription) => scopedSubscribers.add(subscription));
+    };
+
+    const normalizedChangedPaths =
+      this.normalizeSubscriptionPaths(changedPaths);
+
+    normalizedChangedPaths.forEach((changedPath) => {
+      addByPath(changedPath);
+
+      const parts = changedPath.split(".");
+      while (parts.length > 1) {
+        parts.pop();
+        addByPath(parts.join("."));
+      }
+
+      this.pathSelectorIndex.forEach((listeners, indexedPath) => {
+        if (indexedPath.startsWith(`${changedPath}.`)) {
+          listeners.forEach((subscription) =>
+            scopedSubscribers.add(subscription),
+          );
+        }
+      });
+    });
+
+    return scopedSubscribers;
   }
 }

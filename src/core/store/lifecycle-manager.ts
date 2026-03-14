@@ -33,12 +33,15 @@ export class BitLifecycleManager<T extends object> {
       this.store.config.initialValues,
     );
 
-    this.store.internalUpdateState({
-      values: newValues,
-      errors: newErrors,
-      isValid: Object.keys(newErrors).length === 0,
-      isDirty,
-    });
+    this.store.internalUpdateState(
+      {
+        values: newValues,
+        errors: newErrors,
+        isValid: Object.keys(newErrors).length === 0,
+        isDirty,
+      },
+      [path, ...toggledFields],
+    );
 
     this.store.emitFieldChange({
       path,
@@ -71,14 +74,17 @@ export class BitLifecycleManager<T extends object> {
       this.store.config.initialValues,
     );
 
-    this.store.internalUpdateState({
-      values: clonedValues,
-      errors: {},
-      isValidating: {},
-      isValid: true,
-      isDirty,
-      isSubmitting: false,
-    });
+    this.store.internalUpdateState(
+      {
+        values: clonedValues,
+        errors: {},
+        isValidating: {},
+        isValid: true,
+        isDirty,
+        isSubmitting: false,
+      },
+      ["*"],
+    );
 
     this.store.internalSaveSnapshot();
     this.store.validateNow();
@@ -109,15 +115,18 @@ export class BitLifecycleManager<T extends object> {
 
     this.store.clearDirtyState();
 
-    this.store.internalUpdateState({
-      values: clonedValues,
-      errors: {},
-      touched: {},
-      isValidating: {},
-      isValid: true,
-      isDirty: false,
-      isSubmitting: false,
-    });
+    this.store.internalUpdateState(
+      {
+        values: clonedValues,
+        errors: {},
+        touched: {},
+        isValidating: {},
+        isValid: true,
+        isDirty: false,
+        isSubmitting: false,
+      },
+      ["*"],
+    );
 
     this.store.internalSaveSnapshot();
     this.store.validateNow();
@@ -229,15 +238,18 @@ export class BitLifecycleManager<T extends object> {
 
     this.store.clearDirtyState();
 
-    this.store.internalUpdateState({
-      values: initialCloned,
-      errors: {},
-      touched: {},
-      isValidating: {},
-      isValid: true,
-      isDirty: false,
-      isSubmitting: false,
-    });
+    this.store.internalUpdateState(
+      {
+        values: initialCloned,
+        errors: {},
+        touched: {},
+        isValidating: {},
+        isValid: true,
+        isDirty: false,
+        isSubmitting: false,
+      },
+      ["*"],
+    );
 
     this.store.resetHistory(initialCloned);
   }

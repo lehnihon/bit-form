@@ -22,7 +22,10 @@ export interface BitResolvedConfig<
 
 export interface BitLifecycleAdapter<T extends object> {
   getState: () => BitState<T>;
-  internalUpdateState: (partial: Partial<BitState<T>>) => void;
+  internalUpdateState: (
+    partial: Partial<BitState<T>>,
+    changedPaths?: string[],
+  ) => void;
   internalSaveSnapshot: () => void;
   getTransformEntries: () => [string, BitTransformFn<T>][];
   config: BitResolvedConfig<T>;
@@ -66,7 +69,10 @@ export interface BitStoreAdapter<T extends object = any> {
   setField(path: string, value: any): void;
   setFieldWithMeta(path: string, value: any, meta: BitFieldChangeMeta): void;
   emitFieldChange(event: BitFieldChangeEvent<T>): void;
-  internalUpdateState(partialState: Partial<BitState<T>>): void;
+  internalUpdateState(
+    partialState: Partial<BitState<T>>,
+    changedPaths?: string[],
+  ): void;
   internalSaveSnapshot(): void;
   unregisterPrefix?: (prefix: string) => void;
   triggerValidation: (scopeFields?: string[]) => void;

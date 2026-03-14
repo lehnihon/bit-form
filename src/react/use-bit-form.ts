@@ -6,7 +6,7 @@ import {
   useState,
 } from "react";
 import { useBitStore } from "./context";
-import { isValidationErrorShape, extractServerErrors } from "../core/utils";
+import { executeSubmitHandler } from "../core/submit-handler";
 import type { UseBitFormResult } from "./types";
 
 export function useBitForm<T extends object>(): UseBitFormResult<T> {
@@ -79,19 +79,18 @@ export function useBitForm<T extends object>(): UseBitFormResult<T> {
         setSubmitError(null);
 
         return store.submit(async (values, dirtyValues) => {
-          try {
-            const result = await handler(values, dirtyValues);
-            setLastResponse(result);
-            setSubmitError(null);
-          } catch (err) {
-            if (isValidationErrorShape(err)) {
-              store.setServerErrors(extractServerErrors(err));
-            } else {
-              setSubmitError(
-                err instanceof Error ? err : new Error(String(err)),
-              );
-            }
-          }
+          await executeSubmitHandler(handler, values, dirtyValues, {
+            onSuccess: (result) => {
+              setLastResponse(result);
+              setSubmitError(null);
+            },
+            onServerErrors: (serverErrors) => {
+              store.setServerErrors(serverErrors);
+            },
+            onUnhandledError: (error) => {
+              setSubmitError(error);
+            },
+          });
         });
       };
     },

@@ -21,6 +21,7 @@ export function injectBitField<
     (nextState) => {
       stateSignal.set(nextState);
     },
+    { paths: [path as string] },
   );
 
   inject(DestroyRef).onDestroy(() => {

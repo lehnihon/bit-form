@@ -60,6 +60,7 @@ export function useBitFieldBase<
       store.subscribeSelector(
         () => store.getFieldState(path),
         () => cb(),
+        { paths: [path as string] },
       ),
     [store, path],
   );

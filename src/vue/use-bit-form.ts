@@ -1,6 +1,6 @@
 import { computed, onUnmounted, shallowRef, ref } from "vue";
 import { useBitStore } from "./context";
-import { isValidationErrorShape, extractServerErrors } from "../core/utils";
+import { executeSubmitHandler } from "../core/submit-handler";
 import type { UseBitFormResult } from "./types";
 
 export function useBitForm<T extends object>(): UseBitFormResult<T> {
@@ -42,18 +42,18 @@ export function useBitForm<T extends object>(): UseBitFormResult<T> {
       e?.preventDefault?.();
       submitError.value = null;
       return store.submit(async (values, dirtyValues) => {
-        try {
-          const result = await handler(values, dirtyValues);
-          lastResponse.value = result;
-          submitError.value = null;
-        } catch (err) {
-          if (isValidationErrorShape(err)) {
-            store.setServerErrors(extractServerErrors(err));
-          } else {
-            submitError.value =
-              err instanceof Error ? err : new Error(String(err));
-          }
-        }
+        await executeSubmitHandler(handler, values, dirtyValues, {
+          onSuccess: (result) => {
+            lastResponse.value = result;
+            submitError.value = null;
+          },
+          onServerErrors: (serverErrors) => {
+            store.setServerErrors(serverErrors);
+          },
+          onUnhandledError: (error) => {
+            submitError.value = error;
+          },
+        });
       });
     };
   };

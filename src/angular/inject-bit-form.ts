@@ -1,6 +1,6 @@
 import { signal, computed, inject, DestroyRef } from "@angular/core";
 import { useBitStore } from "./provider";
-import { isValidationErrorShape, extractServerErrors } from "../core/utils";
+import { executeSubmitHandler } from "../core/submit-handler";
 import type { InjectBitFormResult } from "./types";
 
 export function injectBitForm<T extends object>(): InjectBitFormResult<T> {
@@ -54,19 +54,18 @@ export function injectBitForm<T extends object>(): InjectBitFormResult<T> {
       event?.stopPropagation();
       submitError.set(null);
       return store.submit(async (values, dirtyValues) => {
-        try {
-          const result = await handler(values, dirtyValues);
-          lastResponse.set(result);
-          submitError.set(null);
-        } catch (err) {
-          if (isValidationErrorShape(err)) {
-            store.setServerErrors(extractServerErrors(err));
-          } else {
-            submitError.set(
-              err instanceof Error ? err : new Error(String(err)),
-            );
-          }
-        }
+        await executeSubmitHandler(handler, values, dirtyValues, {
+          onSuccess: (result) => {
+            lastResponse.set(result);
+            submitError.set(null);
+          },
+          onServerErrors: (serverErrors) => {
+            store.setServerErrors(serverErrors);
+          },
+          onUnhandledError: (error) => {
+            submitError.set(error);
+          },
+        });
       });
     };
   };

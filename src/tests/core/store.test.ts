@@ -102,6 +102,61 @@ describe("BitStore Core", () => {
       unsubscribe();
     });
 
+    it("should auto-track selector paths and notify on matching nested updates", () => {
+      const store = new BitStore({
+        initialValues: { user: { name: "Leo", age: 30 }, city: "Tokyo" },
+      });
+      const listener = vi.fn();
+
+      const unsubscribe = store.subscribeSelector(
+        (state) => state.values.user.name,
+        listener,
+      );
+
+      store.setField("city", "Osaka");
+      expect(listener).not.toHaveBeenCalled();
+
+      store.setField("user.age", 31);
+      expect(listener).not.toHaveBeenCalled();
+
+      store.setField("user.name", "Leandro");
+      expect(listener).toHaveBeenCalledTimes(1);
+      expect(listener).toHaveBeenCalledWith("Leandro");
+
+      unsubscribe();
+    });
+
+    it("should notify field subscribers when dependency toggles hidden state", () => {
+      const store = new BitStore({
+        initialValues: { country: "BR", state: "SP" },
+      });
+
+      store.registerField("state", {
+        conditional: {
+          dependsOn: ["country"],
+          showIf: (values) => values.country === "BR",
+        },
+      });
+
+      const listener = vi.fn();
+
+      const unsubscribe = store.subscribeSelector(
+        () => store.getFieldState("state").isHidden,
+        listener,
+        { paths: ["state"] },
+      );
+
+      store.setField("country", "US");
+      expect(listener).toHaveBeenCalledTimes(1);
+      expect(listener).toHaveBeenCalledWith(true);
+
+      store.setField("country", "BR");
+      expect(listener).toHaveBeenCalledTimes(2);
+      expect(listener).toHaveBeenLastCalledWith(false);
+
+      unsubscribe();
+    });
+
     it("should support selector options emitImmediately and equalityFn", () => {
       const store = new BitStore({
         initialValues: { user: { name: "Leo" }, age: 30 },
