@@ -45,6 +45,7 @@ import { BitSubscriptionEngine } from "./subscription-engine";
 import { applyStateUpdate } from "./state-update-engine";
 import { BitStoreEffectEngine } from "./effect-engine";
 import { BitCapabilityRegistry } from "./capability-registry";
+import type { BitStoreCapabilities } from "./capabilities";
 import type { BitLifecycleStorePort } from "./lifecycle-manager";
 import type { BitValidationStorePort } from "./validation-manager";
 /**
@@ -67,15 +68,7 @@ export class BitStore<T extends object = any>
   private state: BitState<T>;
   private readonly subscriptions: BitSubscriptionEngine<T>;
   private readonly effects: BitStoreEffectEngine<T>;
-  private readonly capabilities: BitCapabilityRegistry<{
-    validation: BitValidationManager<T>;
-    lifecycle: BitLifecycleManager<T>;
-    history: BitHistoryManager<T>;
-    arrays: BitArrayManager<T>;
-    scope: BitScopeManager<T>;
-    query: BitFieldQueryManager<T>;
-    error: BitErrorManager<T>;
-  }>;
+  private readonly capabilities: BitCapabilityRegistry<BitStoreCapabilities<T>>;
 
   // ============================================================================
   // PUBLIC PROPERTIES
@@ -93,37 +86,41 @@ export class BitStore<T extends object = any>
   private readonly computedMg: BitComputedManager<T>;
   private readonly dirtyMg: BitDirtyManager<T>;
 
+  private getCapability<TKey extends keyof BitStoreCapabilities<T>>(key: TKey) {
+    return this.capabilities.get(key);
+  }
+
   // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   // Feature Managers
   // Managers for optional features like history, arrays, and scopes
   // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
   private get validation() {
-    return this.capabilities.get("validation");
+    return this.getCapability("validation");
   }
 
   private get lifecycle() {
-    return this.capabilities.get("lifecycle");
+    return this.getCapability("lifecycle");
   }
 
   private get history() {
-    return this.capabilities.get("history");
+    return this.getCapability("history");
   }
 
   private get arrays() {
-    return this.capabilities.get("arrays");
+    return this.getCapability("arrays");
   }
 
   private get scope() {
-    return this.capabilities.get("scope");
+    return this.getCapability("scope");
   }
 
   private get query() {
-    return this.capabilities.get("query");
+    return this.getCapability("query");
   }
 
   private get error() {
-    return this.capabilities.get("error");
+    return this.getCapability("error");
   }
 
   // ============================================================================
@@ -139,15 +136,7 @@ export class BitStore<T extends object = any>
       this.getComputedEntries(),
     );
     this.dirtyMg = new BitDirtyManager<T>();
-    this.capabilities = new BitCapabilityRegistry<{
-      validation: BitValidationManager<T>;
-      lifecycle: BitLifecycleManager<T>;
-      history: BitHistoryManager<T>;
-      arrays: BitArrayManager<T>;
-      scope: BitScopeManager<T>;
-      query: BitFieldQueryManager<T>;
-      error: BitErrorManager<T>;
-    }>();
+    this.capabilities = new BitCapabilityRegistry<BitStoreCapabilities<T>>();
 
     const validationManager = new BitValidationManager<T>(this);
     const lifecycleManager = new BitLifecycleManager<T>(this);
