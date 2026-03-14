@@ -392,7 +392,15 @@ export class BitStore<T extends object = any>
       },
     };
 
-    const scopedPaths = this.normalizeSubscriptionPaths(options?.paths);
+    const autoTrackedPaths =
+      options?.autoTrackPaths === false
+        ? []
+        : this.collectTrackedSelectorPaths(selector);
+
+    const scopedPaths = this.normalizeSubscriptionPaths([
+      ...(options?.paths ?? []),
+      ...autoTrackedPaths,
+    ]);
 
     if (scopedPaths.length > 0) {
       this.pathScopedSubscriptions.set(subscription, scopedPaths);
@@ -867,6 +875,61 @@ export class BitStore<T extends object = any>
         paths.map((path) => path.trim()).filter((path) => path.length > 0),
       ),
     );
+  }
+
+  private collectTrackedSelectorPaths<TSlice>(
+    selector: BitSelector<T, TSlice>,
+  ): string[] {
+    const trackedPaths = new Set<string>();
+
+    const createTrackedProxy = (
+      value: unknown,
+      currentPath: string,
+    ): unknown => {
+      if (!value || typeof value !== "object") {
+        return value;
+      }
+
+      return new Proxy(value as Record<string, unknown>, {
+        get: (target, key) => {
+          if (typeof key !== "string") {
+            return Reflect.get(target, key);
+          }
+
+          const nextPath = currentPath ? `${currentPath}.${key}` : key;
+          trackedPaths.add(nextPath);
+
+          const nextValue = Reflect.get(target, key);
+          return createTrackedProxy(nextValue, nextPath);
+        },
+      });
+    };
+
+    const trackedState = new Proxy(
+      this.state as unknown as Record<string, unknown>,
+      {
+        get: (target, key) => {
+          if (typeof key !== "string") {
+            return Reflect.get(target, key);
+          }
+
+          const value = Reflect.get(target, key);
+
+          if (key === "values") {
+            return createTrackedProxy(value, "");
+          }
+
+          return value;
+        },
+      },
+    ) as Readonly<BitState<T>>;
+
+    try {
+      selector(trackedState);
+      return Array.from(trackedPaths);
+    } catch {
+      return [];
+    }
   }
 
   private collectSubscribersForChangedPaths(

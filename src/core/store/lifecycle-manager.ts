@@ -40,7 +40,7 @@ export class BitLifecycleManager<T extends object> {
         isValid: Object.keys(newErrors).length === 0,
         isDirty,
       },
-      [path],
+      [path, ...toggledFields],
     );
 
     this.store.emitFieldChange({

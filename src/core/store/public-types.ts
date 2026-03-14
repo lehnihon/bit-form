@@ -27,6 +27,7 @@ export interface BitSelectorSubscriptionOptions<TValue> {
   equalityFn?: BitEqualityFn<TValue>;
   emitImmediately?: boolean;
   paths?: string[];
+  autoTrackPaths?: boolean;
 }
 
 export interface BitValidationOptions {
