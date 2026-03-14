@@ -49,6 +49,7 @@ import { createDevtoolsPlugin } from "./devtools-plugin";
 import { BitSubscriptionEngine } from "./subscription-engine";
 import { applyStateUpdate } from "./state-update-engine";
 import { BitStoreEffectEngine } from "./effect-engine";
+import { BitCapabilityRegistry } from "./capability-registry";
 /**
  * BitStore
  *
@@ -69,6 +70,10 @@ export class BitStore<T extends object = any>
   private state: BitState<T>;
   private readonly subscriptions: BitSubscriptionEngine<T>;
   private readonly effects: BitStoreEffectEngine<T>;
+  private readonly capabilities: BitCapabilityRegistry<{
+    validation: BitValidationManager<T>;
+    lifecycle: BitLifecycleManager<T>;
+  }>;
 
   // ============================================================================
   // PUBLIC PROPERTIES
@@ -83,10 +88,8 @@ export class BitStore<T extends object = any>
   // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
   private readonly depsMg: BitDependencyManager<T>;
-  private readonly validatorMg: BitValidationManager<T>;
   private readonly computedMg: BitComputedManager<T>;
   private readonly dirtyMg: BitDirtyManager<T>;
-  private readonly lifecycleMg: BitLifecycleManager<T>;
 
   // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   // Feature Managers
@@ -105,6 +108,14 @@ export class BitStore<T extends object = any>
   private readonly queryMg: BitFieldQueryManager<T>;
   private readonly errorMg: BitErrorManager<T>;
 
+  private get validation() {
+    return this.capabilities.get("validation");
+  }
+
+  private get lifecycle() {
+    return this.capabilities.get("lifecycle");
+  }
+
   // ============================================================================
   // CONSTRUCTOR
   // ============================================================================
@@ -117,9 +128,16 @@ export class BitStore<T extends object = any>
     this.computedMg = new BitComputedManager<T>(() =>
       this.getComputedEntries(),
     );
-    this.validatorMg = new BitValidationManager<T>(this);
     this.dirtyMg = new BitDirtyManager<T>();
-    this.lifecycleMg = new BitLifecycleManager<T>(this);
+    this.capabilities = new BitCapabilityRegistry<{
+      validation: BitValidationManager<T>;
+      lifecycle: BitLifecycleManager<T>;
+    }>();
+
+    const validationManager = new BitValidationManager<T>(this);
+    const lifecycleManager = new BitLifecycleManager<T>(this);
+    this.capabilities.register("validation", validationManager);
+    this.capabilities.register("lifecycle", lifecycleManager);
 
     // Initialize feature managers
     this.historyMg = new BitHistoryManager<T>(
@@ -428,7 +446,7 @@ export class BitStore<T extends object = any>
     value: any,
     meta: BitFieldChangeMeta = { origin: "setField" },
   ) {
-    this.lifecycleMg.updateField(path, value, meta);
+    this.lifecycle.updateField(path, value, meta);
   }
 
   blurField<P extends BitPath<T>>(path: P) {
@@ -440,7 +458,7 @@ export class BitStore<T extends object = any>
       });
     }
 
-    this.validatorMg.trigger([path]);
+    this.validation.trigger([path]);
   }
 
   markFieldsTouched(paths: string[]) {
@@ -451,15 +469,15 @@ export class BitStore<T extends object = any>
   }
 
   replaceValues(newValues: T) {
-    this.lifecycleMg.replaceValues(newValues);
+    this.lifecycle.replaceValues(newValues);
   }
 
   hydrate(values: DeepPartial<T>) {
-    this.lifecycleMg.hydrateValues(values);
+    this.lifecycle.hydrateValues(values);
   }
 
   rebase(newValues: T) {
-    this.lifecycleMg.rebaseValues(newValues);
+    this.lifecycle.rebaseValues(newValues);
   }
 
   // ============================================================================
@@ -483,13 +501,13 @@ export class BitStore<T extends object = any>
   // ============================================================================
 
   reset() {
-    this.lifecycleMg.reset();
+    this.lifecycle.reset();
   }
 
   async submit(
     onSuccess: (values: T, dirtyValues?: Partial<T>) => void | Promise<void>,
   ) {
-    return this.lifecycleMg.submit(onSuccess);
+    return this.lifecycle.submit(onSuccess);
   }
 
   registerMask(name: BitMaskName, mask: BitMask) {
@@ -577,7 +595,7 @@ export class BitStore<T extends object = any>
         this.config.initialValues,
       );
       this.internalUpdateState({ values: prevState, isDirty });
-      this.validatorMg.validate();
+      this.validation.validate();
     }
   }
 
@@ -589,7 +607,7 @@ export class BitStore<T extends object = any>
         this.config.initialValues,
       );
       this.internalUpdateState({ values: nextState, isDirty });
-      this.validatorMg.validate();
+      this.validation.validate();
     }
   }
 
@@ -602,7 +620,7 @@ export class BitStore<T extends object = any>
   // ============================================================================
 
   validate(options?: BitValidationOptions): Promise<boolean> {
-    return this.validatorMg.validate(options);
+    return this.validation.validate(options);
   }
 
   emitBeforeValidate(event: BitBeforeValidateEvent<T>): Promise<void> {
@@ -634,11 +652,11 @@ export class BitStore<T extends object = any>
   }
 
   hasValidationsInProgress(scopeFields?: string[]): boolean {
-    return this.validatorMg.hasValidationsInProgress(scopeFields);
+    return this.validation.hasValidationsInProgress(scopeFields);
   }
 
   triggerValidation(scopeFields?: string[]) {
-    this.validatorMg.trigger(scopeFields);
+    this.validation.trigger(scopeFields);
   }
 
   getStepStatus(scopeName: string) {
@@ -670,19 +688,19 @@ export class BitStore<T extends object = any>
   }
 
   clearFieldValidation(path: string): void {
-    this.validatorMg.clear(path);
+    this.validation.clear(path);
   }
 
   handleFieldAsyncValidation(path: string, value: any): void {
-    this.validatorMg.handleAsync(path, value);
+    this.validation.handleAsync(path, value);
   }
 
   cancelAllValidations(): void {
-    this.validatorMg.cancelAll();
+    this.validation.cancelAll();
   }
 
   validateNow(options?: BitValidationOptions): Promise<boolean> {
-    return this.validatorMg.validate(options);
+    return this.validation.validate(options);
   }
 
   updateDirtyForPath(path: string, nextValues: T, baselineValues: T): boolean {
@@ -736,7 +754,7 @@ export class BitStore<T extends object = any>
       ...values,
     } as T);
 
-    this.validatorMg.cancelAll();
+    this.validation.cancelAll();
     this.depsMg.evaluateAll(nextValues);
 
     const isDirty = this.dirtyMg.rebuild(nextValues, this.config.initialValues);
@@ -752,12 +770,13 @@ export class BitStore<T extends object = any>
     });
 
     this.internalSaveSnapshot();
-    this.validatorMg.validate();
+    this.validation.validate();
   }
 
   cleanup() {
     this.subscriptions.destroy();
-    this.validatorMg.cancelAll();
+    this.validation.cancelAll();
+    this.capabilities.clear();
     this.effects.destroy();
   }
 }
