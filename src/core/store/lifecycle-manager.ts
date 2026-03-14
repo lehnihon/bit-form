@@ -1,11 +1,62 @@
 import { BitErrors, BitFieldChangeMeta, DeepPartial } from "./types";
-import { BitLifecycleAdapter } from "./internal-types";
 import { deepClone, deepMerge, getDeepValue, setDeepValue } from "../utils";
 import {
   BitPipelineContext,
   BitPipelineRunner,
   BitSyncPipelineRunner,
 } from "./pipeline";
+import type { BitResolvedConfig } from "./internal-types";
+import type {
+  BitState,
+  BitTransformFn,
+  BitBeforeSubmitEvent,
+  BitAfterSubmitEvent,
+  BitFieldChangeEvent,
+} from "./types";
+import type { BitValidationOptions } from "./public-types";
+
+export interface BitLifecycleStorePort<T extends object> {
+  getState: () => BitState<T>;
+  internalUpdateState: (
+    partial: Partial<BitState<T>>,
+    changedPaths?: string[],
+  ) => void;
+  internalSaveSnapshot: () => void;
+  getTransformEntries: () => [string, BitTransformFn<T>][];
+  config: BitResolvedConfig<T>;
+
+  updateDependencies: (changedPath: string, newValues: T) => string[];
+  isFieldHidden: (path: string) => boolean;
+  evaluateAllDependencies: (values: T) => void;
+  getHiddenFields: () => string[];
+
+  clearFieldValidation: (path: string) => void;
+  triggerValidation: (scopeFields?: string[]) => void;
+  handleFieldAsyncValidation: (path: string, value: any) => void;
+  cancelAllValidations: () => void;
+  validateNow: (options?: BitValidationOptions) => Promise<boolean>;
+  hasValidationsInProgress: (scopeFields?: string[]) => boolean;
+
+  updateDirtyForPath: (
+    path: string,
+    nextValues: T,
+    baselineValues: T,
+  ) => boolean;
+  rebuildDirtyState: (nextValues: T, baselineValues: T) => boolean;
+  clearDirtyState: () => void;
+  buildDirtyValues: (values: T) => Partial<T>;
+
+  resetHistory: (initialValues: T) => void;
+
+  emitFieldChange: (event: BitFieldChangeEvent<T>) => void;
+  emitBeforeSubmit: (event: BitBeforeSubmitEvent<T>) => Promise<void>;
+  emitAfterSubmit: (event: BitAfterSubmitEvent<T>) => Promise<void>;
+  emitOperationalError: (event: {
+    source: "submit";
+    error: unknown;
+    payload?: unknown;
+  }) => Promise<void>;
+}
 
 interface SubmitPipelineContext<T extends object> extends BitPipelineContext {
   onSuccess: (values: T, dirtyValues?: Partial<T>) => void | Promise<void>;
@@ -30,7 +81,7 @@ interface FieldUpdatePipelineContext<
 }
 
 export class BitLifecycleManager<T extends object> {
-  constructor(private store: BitLifecycleAdapter<T>) {}
+  constructor(private store: BitLifecycleStorePort<T>) {}
 
   updateField(
     path: string,

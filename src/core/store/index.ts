@@ -50,6 +50,8 @@ import { BitSubscriptionEngine } from "./subscription-engine";
 import { applyStateUpdate } from "./state-update-engine";
 import { BitStoreEffectEngine } from "./effect-engine";
 import { BitCapabilityRegistry } from "./capability-registry";
+import type { BitLifecycleStorePort } from "./lifecycle-manager";
+import type { BitValidationStorePort } from "./validation-manager";
 /**
  * BitStore
  *
@@ -61,7 +63,12 @@ import { BitCapabilityRegistry } from "./capability-registry";
  * - Query/mutation managers organize domain-specific operations
  */
 export class BitStore<T extends object = any>
-  implements BitStoreAdapter<T>, BitValidationAdapter<T>, BitLifecycleAdapter<T>
+  implements
+    BitStoreAdapter<T>,
+    BitValidationAdapter<T>,
+    BitLifecycleAdapter<T>,
+    BitValidationStorePort<T>,
+    BitLifecycleStorePort<T>
 {
   // ============================================================================
   // PRIVATE PROPERTIES
@@ -73,6 +80,11 @@ export class BitStore<T extends object = any>
   private readonly capabilities: BitCapabilityRegistry<{
     validation: BitValidationManager<T>;
     lifecycle: BitLifecycleManager<T>;
+    history: BitHistoryManager<T>;
+    arrays: BitArrayManager<T>;
+    scope: BitScopeManager<T>;
+    query: BitFieldQueryManager<T>;
+    error: BitErrorManager<T>;
   }>;
 
   // ============================================================================
@@ -96,24 +108,32 @@ export class BitStore<T extends object = any>
   // Managers for optional features like history, arrays, and scopes
   // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-  private readonly historyMg: BitHistoryManager<T>;
-  private readonly arraysMg: BitArrayManager<T>;
-  private readonly scopeMg: BitScopeManager<T>;
-
-  // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  // Query & Mutation Managers
-  // Dedicated managers for specific operations
-  // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-  private readonly queryMg: BitFieldQueryManager<T>;
-  private readonly errorMg: BitErrorManager<T>;
-
   private get validation() {
     return this.capabilities.get("validation");
   }
 
   private get lifecycle() {
     return this.capabilities.get("lifecycle");
+  }
+
+  private get history() {
+    return this.capabilities.get("history");
+  }
+
+  private get arrays() {
+    return this.capabilities.get("arrays");
+  }
+
+  private get scope() {
+    return this.capabilities.get("scope");
+  }
+
+  private get query() {
+    return this.capabilities.get("query");
+  }
+
+  private get error() {
+    return this.capabilities.get("error");
   }
 
   // ============================================================================
@@ -132,6 +152,11 @@ export class BitStore<T extends object = any>
     this.capabilities = new BitCapabilityRegistry<{
       validation: BitValidationManager<T>;
       lifecycle: BitLifecycleManager<T>;
+      history: BitHistoryManager<T>;
+      arrays: BitArrayManager<T>;
+      scope: BitScopeManager<T>;
+      query: BitFieldQueryManager<T>;
+      error: BitErrorManager<T>;
     }>();
 
     const validationManager = new BitValidationManager<T>(this);
@@ -140,27 +165,33 @@ export class BitStore<T extends object = any>
     this.capabilities.register("lifecycle", lifecycleManager);
 
     // Initialize feature managers
-    this.historyMg = new BitHistoryManager<T>(
+    const historyManager = new BitHistoryManager<T>(
       !!this.config.enableHistory,
       this.config.historyLimit ?? 15,
     );
-    this.arraysMg = new BitArrayManager<T>(this);
+    const arraysManager = new BitArrayManager<T>(this);
 
     // Initialize query/mutation managers with state access
-    this.scopeMg = new BitScopeManager<T>(
+    const scopeManager = new BitScopeManager<T>(
       () => this.state,
       () => this.config.initialValues,
       (scopeName) => this.getScopeFields(scopeName),
     );
-    this.queryMg = new BitFieldQueryManager<T>(
+    const queryManager = new BitFieldQueryManager<T>(
       this.depsMg,
       () => this.state,
       () => this.config,
     );
-    this.errorMg = new BitErrorManager<T>(
+    const errorManager = new BitErrorManager<T>(
       () => this.state,
       (partial) => this.internalUpdateState(partial),
     );
+
+    this.capabilities.register("history", historyManager);
+    this.capabilities.register("arrays", arraysManager);
+    this.capabilities.register("scope", scopeManager);
+    this.capabilities.register("query", queryManager);
+    this.capabilities.register("error", errorManager);
     const persistManager = new BitPersistManager<T>(
       this.config.persist,
       () => this.state.values,
@@ -369,19 +400,19 @@ export class BitStore<T extends object = any>
   // ============================================================================
 
   isHidden<P extends BitPath<T>>(path: P): boolean {
-    return this.queryMg.isHidden(path);
+    return this.query.isHidden(path);
   }
 
   isRequired<P extends BitPath<T>>(path: P): boolean {
-    return this.queryMg.isRequired(path);
+    return this.query.isRequired(path);
   }
 
   isFieldDirty(path: string): boolean {
-    return this.queryMg.isFieldDirty(path);
+    return this.query.isFieldDirty(path);
   }
 
   isFieldValidating(path: string): boolean {
-    return this.queryMg.isFieldValidating(path);
+    return this.query.isFieldValidating(path);
   }
 
   // ============================================================================
@@ -485,15 +516,15 @@ export class BitStore<T extends object = any>
   // ============================================================================
 
   setError(path: string, message: string | undefined) {
-    this.errorMg.setError(path, message);
+    this.error.setError(path, message);
   }
 
   setErrors(errors: BitErrors<T>) {
-    this.errorMg.setErrors(errors);
+    this.error.setErrors(errors);
   }
 
   setServerErrors(serverErrors: Record<string, string[] | string>) {
-    this.errorMg.setServerErrors(serverErrors);
+    this.error.setServerErrors(serverErrors);
   }
 
   // ============================================================================
@@ -541,14 +572,14 @@ export class BitStore<T extends object = any>
     path: P,
     value: BitArrayItem<BitPathValue<T, P>>,
   ) {
-    this.arraysMg.pushItem(path, value);
+    this.arrays.pushItem(path, value);
   }
 
   prependItem<P extends BitArrayPath<T>>(
     path: P,
     value: BitArrayItem<BitPathValue<T, P>>,
   ) {
-    this.arraysMg.prependItem(path, value);
+    this.arrays.prependItem(path, value);
   }
 
   insertItem<P extends BitArrayPath<T>>(
@@ -556,11 +587,11 @@ export class BitStore<T extends object = any>
     index: number,
     value: BitArrayItem<BitPathValue<T, P>>,
   ) {
-    this.arraysMg.insertItem(path, index, value);
+    this.arrays.insertItem(path, index, value);
   }
 
   removeItem<P extends BitArrayPath<T>>(path: P, index: number) {
-    this.arraysMg.removeItem(path, index);
+    this.arrays.removeItem(path, index);
   }
 
   swapItems<P extends BitArrayPath<T>>(
@@ -568,11 +599,11 @@ export class BitStore<T extends object = any>
     indexA: number,
     indexB: number,
   ) {
-    this.arraysMg.swapItems(path, indexA, indexB);
+    this.arrays.swapItems(path, indexA, indexB);
   }
 
   moveItem<P extends BitArrayPath<T>>(path: P, from: number, to: number) {
-    this.arraysMg.moveItem(path, from, to);
+    this.arrays.moveItem(path, from, to);
   }
 
   // ============================================================================
@@ -580,15 +611,15 @@ export class BitStore<T extends object = any>
   // ============================================================================
 
   get canUndo(): boolean {
-    return this.historyMg.canUndo;
+    return this.history.canUndo;
   }
 
   get canRedo(): boolean {
-    return this.historyMg.canRedo;
+    return this.history.canRedo;
   }
 
   undo() {
-    const prevState = this.historyMg.undo();
+    const prevState = this.history.undo();
     if (prevState) {
       const isDirty = this.dirtyMg.rebuild(
         prevState,
@@ -600,7 +631,7 @@ export class BitStore<T extends object = any>
   }
 
   redo() {
-    const nextState = this.historyMg.redo();
+    const nextState = this.history.redo();
     if (nextState) {
       const isDirty = this.dirtyMg.rebuild(
         nextState,
@@ -612,7 +643,7 @@ export class BitStore<T extends object = any>
   }
 
   getHistoryMetadata(): BitHistoryMetadata {
-    return this.historyMg.getMetadata();
+    return this.history.getMetadata();
   }
 
   // ============================================================================
@@ -660,11 +691,11 @@ export class BitStore<T extends object = any>
   }
 
   getStepStatus(scopeName: string) {
-    return this.scopeMg.getStepStatus(scopeName);
+    return this.scope.getStepStatus(scopeName);
   }
 
   getStepErrors(scopeName: string): Record<string, string> {
-    return this.scopeMg.getStepErrors(scopeName);
+    return this.scope.getStepErrors(scopeName);
   }
 
   updateDependencies(changedPath: string, newValues: T): string[] {
@@ -720,7 +751,7 @@ export class BitStore<T extends object = any>
   }
 
   resetHistory(initialValues: T): void {
-    this.historyMg.reset(initialValues);
+    this.history.reset(initialValues);
   }
 
   // ============================================================================
@@ -745,7 +776,7 @@ export class BitStore<T extends object = any>
   }
 
   internalSaveSnapshot() {
-    this.historyMg.saveSnapshot(this.state.values);
+    this.history.saveSnapshot(this.state.values);
   }
 
   private applyPersistedValues(values: Partial<T>) {

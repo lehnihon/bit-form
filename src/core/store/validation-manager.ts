@@ -1,14 +1,34 @@
 import { BitErrors } from "./types";
-import { BitValidationAdapter } from "./internal-types";
 import { BitValidationOptions } from "./public-types";
 import { BitPipelineContext, BitPipelineRunner } from "./pipeline";
+import type {
+  BitAfterValidateEvent,
+  BitBeforeValidateEvent,
+  BitFieldDefinition,
+  BitState,
+} from "./types";
+import type { BitResolvedConfig } from "./internal-types";
+
+export interface BitValidationStorePort<T extends object> {
+  getState: () => BitState<T>;
+  internalUpdateState: (partial: Partial<BitState<T>>) => void;
+  setError: (path: string, message: string | undefined) => void;
+  validate: (opts: BitValidationOptions) => Promise<boolean>;
+  getFieldConfig: (path: string) => BitFieldDefinition<T> | undefined;
+  getScopeFields: (scopeName: string) => string[];
+  config: BitResolvedConfig<T>;
+  getRequiredErrors: (values: T) => BitErrors<T>;
+  getHiddenFields: () => string[];
+  emitBeforeValidate: (event: BitBeforeValidateEvent<T>) => Promise<void>;
+  emitAfterValidate: (event: BitAfterValidateEvent<T>) => Promise<void>;
+}
 
 interface ValidationPipelineContext<
   T extends object,
 > extends BitPipelineContext {
   options?: BitValidationOptions;
   validationId: number;
-  currentState: ReturnType<BitValidationAdapter<T>["getState"]>;
+  currentState: ReturnType<BitValidationStorePort<T>["getState"]>;
   targetFields?: string[];
   allErrors: Record<string, any>;
   isValid: boolean;
@@ -23,7 +43,7 @@ export class BitValidationManager<T extends object> {
   private asyncRequests: Record<string, number> = {};
   public asyncErrors: Record<string, string> = {};
 
-  constructor(private store: BitValidationAdapter<T>) {}
+  constructor(private store: BitValidationStorePort<T>) {}
 
   private updateFieldValidating(path: string, isValidating: boolean) {
     this.store.internalUpdateState({
