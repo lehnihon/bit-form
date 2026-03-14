@@ -1,4 +1,8 @@
-import { BitStoreAdapter } from "./internal-types";
+import type {
+  BitFieldChangeEvent,
+  BitFieldChangeMeta,
+  BitState,
+} from "./types";
 import {
   getDeepValue,
   setDeepValue,
@@ -7,8 +11,31 @@ import {
   moveKeys,
 } from "../utils";
 
+export interface BitArrayStorePort<T extends object> {
+  getState: () => BitState<T>;
+  setFieldWithMeta: (
+    path: string,
+    value: any,
+    meta: BitFieldChangeMeta,
+  ) => void;
+  emitFieldChange: (event: BitFieldChangeEvent<T>) => void;
+  internalUpdateState: (
+    partialState: Partial<BitState<T>>,
+    changedPaths?: string[],
+  ) => void;
+  internalSaveSnapshot: () => void;
+  unregisterPrefix?: (prefix: string) => void;
+  triggerValidation: (scopeFields?: string[]) => void;
+  updateDirtyForPath: (
+    path: string,
+    nextValues: T,
+    baselineValues: T,
+  ) => boolean;
+  getConfig: () => Readonly<{ initialValues: T }>;
+}
+
 export class BitArrayManager<T extends object = any> {
-  constructor(private store: BitStoreAdapter<T>) {}
+  constructor(private store: BitArrayStorePort<T>) {}
 
   pushItem(path: string, value: any) {
     const arr = getDeepValue(this.store.getState().values, path) || [];

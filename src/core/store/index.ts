@@ -25,7 +25,7 @@ import type {
   BitSelectorSubscriptionOptions,
   BitValidationOptions,
 } from "./public-types";
-import { BitResolvedConfig, BitStoreAdapter } from "./internal-types";
+import { BitResolvedConfig } from "./internal-types";
 import { deepClone, deepEqual, getDeepValue, valueEqual } from "../utils";
 import { normalizeConfig } from "./config";
 import { BitDependencyManager } from "./dependency-manager";
@@ -58,10 +58,7 @@ import type { BitValidationStorePort } from "./validation-manager";
  * - Query/mutation managers organize domain-specific operations
  */
 export class BitStore<T extends object = any>
-  implements
-    BitStoreAdapter<T>,
-    BitValidationStorePort<T>,
-    BitLifecycleStorePort<T>
+  implements BitValidationStorePort<T>, BitLifecycleStorePort<T>
 {
   // ============================================================================
   // PRIVATE PROPERTIES
