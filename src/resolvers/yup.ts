@@ -5,11 +5,15 @@ import {
   normalizeErrorPath,
   setFirstError,
 } from "./utils";
+import { BitResolverScopeOptions, BitYupResolverConfig } from "./types";
 
-export const yupResolver = <T extends object>(schema: Schema<any>) => {
+export const yupResolver = <T extends object>(
+  schema: Schema<T>,
+  config?: BitYupResolverConfig,
+) => {
   return async (
     values: T,
-    options?: { scopeFields?: string[] },
+    options?: BitResolverScopeOptions,
   ): Promise<BitErrors<T>> => {
     const errors: BitErrors<T> = {};
 
@@ -33,7 +37,10 @@ export const yupResolver = <T extends object>(schema: Schema<any>) => {
     }
 
     try {
-      await schema.validate(values, { abortEarly: false });
+      await schema.validate(values, {
+        abortEarly: config?.abortEarly ?? false,
+        stripUnknown: config?.stripUnknown ?? false,
+      });
       return {};
     } catch (error: unknown) {
       if (error instanceof ValidationError) {

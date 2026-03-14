@@ -64,6 +64,8 @@ export type {
 export { bitMasks } from "./mask/index";
 export type {
   BitMask,
+  BitMaskName,
+  BitBuiltInMaskName,
   CurrencyMaskConfig,
   PatternMaskOptions,
   DateMaskConfig,
@@ -89,6 +91,7 @@ export {
   maskInteger,
   maskCPF,
   maskCNPJ,
+  maskCPFCNPJ,
   maskPhone,
   maskLandline,
   maskCEP,
@@ -96,6 +99,7 @@ export {
   maskTime,
   maskCNH,
   maskRG,
+  maskPlate,
   maskUSPhone,
   maskZipCode,
   maskDateUS,

@@ -182,6 +182,7 @@ export class BitStore<T extends object = any>
     this.internalSaveSnapshot();
 
     this.storeId =
+      config.storeId ||
       this.config.name ||
       `bit-form-${Math.random().toString(36).substring(2, 9)}`;
 
