@@ -1,4 +1,3 @@
-import { bitBus } from "./bus";
 import { BitMask, BitMaskName } from "../mask/types";
 import {
   BitConfig,
@@ -49,6 +48,7 @@ import { BitPluginManager } from "./plugin-manager";
 import { createDevtoolsPlugin } from "./devtools-plugin";
 import { BitSubscriptionEngine } from "./subscription-engine";
 import { applyStateUpdate } from "./state-update-engine";
+import { BitStoreEffectEngine } from "./effect-engine";
 /**
  * BitStore
  *
@@ -68,8 +68,7 @@ export class BitStore<T extends object = any>
 
   private state: BitState<T>;
   private readonly subscriptions: BitSubscriptionEngine<T>;
-  private persistMg: BitPersistManager<T>;
-  private pluginMg: BitPluginManager<T>;
+  private readonly effects: BitStoreEffectEngine<T>;
 
   // ============================================================================
   // PUBLIC PROPERTIES
@@ -144,7 +143,7 @@ export class BitStore<T extends object = any>
       () => this.state,
       (partial) => this.internalUpdateState(partial),
     );
-    this.persistMg = new BitPersistManager<T>(
+    const persistManager = new BitPersistManager<T>(
       this.config.persist,
       () => this.state.values,
       () => this.getDirtyValues(),
@@ -191,15 +190,19 @@ export class BitStore<T extends object = any>
       runtimePlugins.push(devtoolsPlugin);
     }
 
-    this.pluginMg = new BitPluginManager<T>(runtimePlugins, () => ({
+    const pluginManager = new BitPluginManager<T>(runtimePlugins, () => ({
       storeId: this.storeId,
       getState: () => this.getState(),
       getConfig: () => this.getConfig(),
     }));
-    this.pluginMg.setupAll();
 
-    // Register store in global bus
-    bitBus.stores[this.storeId] = this;
+    this.effects = new BitStoreEffectEngine<T>(
+      this.storeId,
+      this,
+      persistManager,
+      pluginManager,
+    );
+    this.effects.initialize();
   }
 
   // ============================================================================
@@ -501,15 +504,15 @@ export class BitStore<T extends object = any>
   }
 
   async restorePersisted(): Promise<boolean> {
-    return this.persistMg.restore();
+    return this.effects.restorePersisted();
   }
 
   async forceSave(): Promise<void> {
-    await this.persistMg.saveNow();
+    await this.effects.savePersistedNow();
   }
 
   async clearPersisted(): Promise<void> {
-    await this.persistMg.clear();
+    await this.effects.clearPersisted();
   }
 
   // ============================================================================
@@ -603,23 +606,23 @@ export class BitStore<T extends object = any>
   }
 
   emitBeforeValidate(event: BitBeforeValidateEvent<T>): Promise<void> {
-    return this.pluginMg.beforeValidate(event);
+    return this.effects.beforeValidate(event);
   }
 
   emitAfterValidate(event: BitAfterValidateEvent<T>): Promise<void> {
-    return this.pluginMg.afterValidate(event);
+    return this.effects.afterValidate(event);
   }
 
   emitBeforeSubmit(event: BitBeforeSubmitEvent<T>): Promise<void> {
-    return this.pluginMg.beforeSubmit(event);
+    return this.effects.beforeSubmit(event);
   }
 
   emitAfterSubmit(event: BitAfterSubmitEvent<T>): Promise<void> {
-    return this.pluginMg.afterSubmit(event);
+    return this.effects.afterSubmit(event);
   }
 
   emitFieldChange(event: BitFieldChangeEvent<T>) {
-    this.pluginMg.onFieldChange(event);
+    this.effects.onFieldChange(event);
   }
 
   emitOperationalError(event: {
@@ -627,7 +630,7 @@ export class BitStore<T extends object = any>
     error: unknown;
     payload?: unknown;
   }) {
-    return this.pluginMg.reportError(event.source, event.error, event.payload);
+    return this.effects.reportOperationalError(event);
   }
 
   hasValidationsInProgress(scopeFields?: string[]): boolean {
@@ -719,13 +722,8 @@ export class BitStore<T extends object = any>
 
     this.state = updateResult.nextState;
 
-    if (updateResult.valuesChanged) {
-      this.persistMg.queueSave();
-    }
-
     this.subscriptions.notify(this.state, updateResult.changedPaths);
-
-    bitBus.dispatch(this.storeId, this.state);
+    this.effects.onStateUpdated(this.state, updateResult.valuesChanged);
   }
 
   internalSaveSnapshot() {
@@ -760,9 +758,6 @@ export class BitStore<T extends object = any>
   cleanup() {
     this.subscriptions.destroy();
     this.validatorMg.cancelAll();
-    this.persistMg.destroy();
-    this.pluginMg.destroy();
-
-    delete bitBus.stores[this.storeId];
+    this.effects.destroy();
   }
 }
