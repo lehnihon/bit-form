@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { createPatternMask } from "../../core";
+import { createPatternMask } from "../../core/mask/creators";
 import { BitStore } from "../../core/store";
 
 describe("Cross-Framework Consistency", () => {

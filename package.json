@@ -60,10 +60,10 @@
       "import": "./dist/angular/index.js",
       "require": "./dist/angular/index.cjs"
     },
-    "./core/light": {
-      "types": "./dist/core/light.d.ts",
-      "import": "./dist/core/light.js",
-      "require": "./dist/core/light.cjs"
+    "./mask": {
+      "types": "./dist/mask.d.ts",
+      "import": "./dist/mask.js",
+      "require": "./dist/mask.cjs"
     },
     "./resolvers/*": {
       "types": "./dist/resolvers/*.d.ts",

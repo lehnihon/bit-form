@@ -7,7 +7,7 @@ export default defineConfig([
   {
     entry: {
       index: "src/index.ts",
-      "core/light": "src/core/light.ts",
+      mask: "src/mask.ts",
       "react/index": "src/react/index.ts",
       "react-native/index": "src/react-native/index.ts",
       "vue/index": "src/vue/index.ts",
