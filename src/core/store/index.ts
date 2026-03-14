@@ -38,7 +38,11 @@ import { BitCapabilityRegistry } from "./capability-registry";
 import type { BitStoreCapabilities } from "./capabilities";
 import type { BitLifecycleStorePort } from "./lifecycle-manager";
 import type { BitValidationStorePort } from "./validation-manager";
-import { createStoreCapabilities, createStoreEffects } from "./store-bootstrap";
+import {
+  createInitialStoreState,
+  createStoreCapabilities,
+  createStoreEffects,
+} from "./store-bootstrap";
 /**
  * BitStore
  *
@@ -131,32 +135,11 @@ export class BitStore<T extends object = any>
       store: this,
       depsMg: this.depsMg,
     });
-
-    // Initialize form state
-    const initialValues = deepClone(this.config.initialValues);
-
-    // Register initial fields from config
-    if (this.config.fields) {
-      Object.entries(this.config.fields).forEach(([path, fieldConfig]) => {
-        this.depsMg.register(
-          path,
-          fieldConfig as BitFieldDefinition<T>,
-          initialValues,
-        );
-      });
-    }
-
-    const valuesWithComputeds = this.computedMg.apply(initialValues);
-
-    this.state = {
-      values: valuesWithComputeds,
-      errors: {},
-      touched: {},
-      isValidating: {},
-      isValid: true,
-      isSubmitting: false,
-      isDirty: false,
-    };
+    this.state = createInitialStoreState<T>({
+      config: this.config,
+      depsMg: this.depsMg,
+      computedMg: this.computedMg,
+    });
     this.subscriptions = new BitSubscriptionEngine<T>(() => this.state);
 
     this.internalSaveSnapshot();

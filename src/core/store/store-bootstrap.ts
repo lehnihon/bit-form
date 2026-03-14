@@ -6,16 +6,18 @@ import { BitValidationManager } from "./validation-manager";
 import { BitLifecycleManager } from "./lifecycle-manager";
 import { BitHistoryManager } from "./history-manager";
 import { BitArrayManager, type BitArrayStorePort } from "./array-manager";
+import { BitComputedManager } from "./computed-manager";
 import { BitScopeManager } from "./scope-manager";
 import { BitFieldQueryManager } from "./field-query-manager";
 import { BitErrorManager } from "./error-manager";
 import { BitCapabilityRegistry } from "./capability-registry";
 import { BitDependencyManager } from "./dependency-manager";
+import { deepClone } from "../utils";
 import type { BitStoreCapabilities } from "./capabilities";
 import type { BitResolvedConfig } from "./public-types";
 import type { BitLifecycleStorePort } from "./lifecycle-manager";
 import type { BitValidationStorePort } from "./validation-manager";
-import type { BitState } from "./types";
+import type { BitFieldDefinition, BitState } from "./types";
 
 type BitStoreCapabilityPorts<T extends object> = BitValidationStorePort<T> &
   BitLifecycleStorePort<T> &
@@ -119,4 +121,36 @@ export function createStoreEffects<T extends object>(args: {
   effects.initialize();
 
   return effects;
+}
+
+export function createInitialStoreState<T extends object>(args: {
+  config: BitResolvedConfig<T>;
+  depsMg: BitDependencyManager<T>;
+  computedMg: BitComputedManager<T>;
+}): BitState<T> {
+  const { config, depsMg, computedMg } = args;
+
+  const initialValues = deepClone(config.initialValues);
+
+  if (config.fields) {
+    Object.entries(config.fields).forEach(([path, fieldConfig]) => {
+      depsMg.register(
+        path,
+        fieldConfig as BitFieldDefinition<T>,
+        initialValues,
+      );
+    });
+  }
+
+  const valuesWithComputeds = computedMg.apply(initialValues);
+
+  return {
+    values: valuesWithComputeds,
+    errors: {},
+    touched: {},
+    isValidating: {},
+    isValid: true,
+    isSubmitting: false,
+    isDirty: false,
+  };
 }
