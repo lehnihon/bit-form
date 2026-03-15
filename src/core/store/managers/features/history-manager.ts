@@ -1,4 +1,4 @@
-import { deepClone, deepEqual } from "../utils";
+import { deepClone, deepEqual } from "../../../utils";
 
 export class BitHistoryManager<T extends object = any> {
   private history: T[] = [];

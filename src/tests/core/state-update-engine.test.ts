@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { applyStateUpdate } from "../../core/store/state-update-engine";
-import type { BitState } from "../../core/store/types";
+import { applyStateUpdate } from "../../core/store/engines/state-update-engine";
+import type { BitState } from "../../core/store/contracts/types";
 
 describe("applyStateUpdate", () => {
   const baseState: BitState<{ name: string; total: number }> = {

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
-import { BitSubscriptionEngine } from "../../core/store/subscription-engine";
-import type { BitState } from "../../core/store/types";
+import { BitSubscriptionEngine } from "../../core/store/engines/subscription-engine";
+import type { BitState } from "../../core/store/contracts/types";
 
 type Values = { user: { name: string; age: number } };
 

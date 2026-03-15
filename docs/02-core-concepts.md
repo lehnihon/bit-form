@@ -20,6 +20,20 @@ In V3, `BitStore` acts mainly as an orchestrator/facade over specialized runtime
 
 This separation reduces coupling inside `BitStore` and makes behavior easier to test in isolated units.
 
+Current internal folder layout in `src/core/store`:
+
+- `contracts/`: shared type contracts (`types`, `public-types`, `bus-types`).
+- `shared/`: cross-cutting runtime helpers (`config`, `pipeline`, `bus`).
+- `engines/`: orchestration engines (`subscription`, `state-update`, `effect`).
+- `managers/core/`: core domain managers (`dependency`, `computed`, `dirty`).
+- `managers/features/`: feature managers (`validation`, `lifecycle`, `history`, `array`, `scope`, `query`, `error`, `persist`, `plugin`).
+- `orchestration/`: composition and capability wiring (`store-bootstrap`, `capabilities`, `capability-registry`, `create-store`).
+
+Naming convention:
+
+- Runtime classes keep semantic suffixes: `Manager`, `Engine`, `Registry`, `StorePort`.
+- Internal instances use explicit names (for example `dependencyManager`, `computedManager`, `dirtyManager`) instead of abbreviated suffixes.
+
 ## 🧱 Shared Controllers (Framework-Agnostic)
 
 Bit-Form now centralizes shared UI orchestration into framework-agnostic controllers:

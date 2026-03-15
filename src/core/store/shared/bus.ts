@@ -1,4 +1,4 @@
-import { BitBusListener, BitFormGlobal } from "./bus-types";
+import { BitBusListener, BitFormGlobal } from "../contracts/bus-types";
 
 declare global {
   var __BIT_FORM__: BitFormGlobal | undefined;

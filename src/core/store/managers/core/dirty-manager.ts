@@ -3,7 +3,7 @@ import {
   getDeepValue,
   setDeepValue,
   valueEqual,
-} from "../utils";
+} from "../../../utils";
 
 /**
  * BitDirtyManager

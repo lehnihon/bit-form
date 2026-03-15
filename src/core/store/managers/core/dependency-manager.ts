@@ -1,5 +1,5 @@
-import { BitFieldDefinition } from "./types";
-import { getDeepValue } from "../utils";
+import { BitFieldDefinition } from "../../contracts/types";
+import { getDeepValue } from "../../../utils";
 
 export class BitDependencyManager<T extends object = any> {
   public fieldConfigs: Map<string, BitFieldDefinition<T>> = new Map();

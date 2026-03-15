@@ -1,7 +1,11 @@
 import { formatMaskedValue, parseMaskedInput } from "./mask/field-binding";
 import type { BitMask } from "./mask/types";
-import type { BitStoreHooksApi } from "./store/public-types";
-import type { BitFieldState, BitPath, BitPathValue } from "./store/types";
+import type { BitStoreHooksApi } from "./store/contracts/public-types";
+import type {
+  BitFieldState,
+  BitPath,
+  BitPathValue,
+} from "./store/contracts/types";
 
 export function subscribeFieldState<
   TForm extends object,

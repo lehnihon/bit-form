@@ -15,7 +15,7 @@ import {
   BitPlugin,
   DeepPartial,
 } from "./types";
-import { BitMask, BitMaskName } from "../mask/types";
+import { BitMask, BitMaskName } from "../../mask/types";
 
 export type BitSelector<T extends object, TSlice> = (
   state: Readonly<BitState<T>>,

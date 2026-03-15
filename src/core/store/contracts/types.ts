@@ -1,4 +1,4 @@
-import { BitMask, BitMaskName } from "../mask/types";
+import { BitMask, BitMaskName } from "../../mask/types";
 
 export type DeepPartial<T> = T extends object
   ? { [P in keyof T]?: DeepPartial<T[P]> }

@@ -1,13 +1,13 @@
-import { BitErrors } from "./types";
-import { BitValidationOptions } from "./public-types";
-import { BitPipelineContext, BitPipelineRunner } from "./pipeline";
+import { BitErrors } from "../../contracts/types";
+import { BitValidationOptions } from "../../contracts/public-types";
+import { BitPipelineContext, BitPipelineRunner } from "../../shared/pipeline";
 import type {
   BitAfterValidateEvent,
   BitBeforeValidateEvent,
   BitFieldDefinition,
   BitState,
-} from "./types";
-import type { BitResolvedConfig } from "./public-types";
+} from "../../contracts/types";
+import type { BitResolvedConfig } from "../../contracts/public-types";
 
 export interface BitValidationStorePort<T extends object> {
   getState: () => BitState<T>;

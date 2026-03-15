@@ -1,4 +1,7 @@
-export { createBitStore, resolveBitStoreForHooks } from "./store/create-store";
+export {
+  createBitStore,
+  resolveBitStoreForHooks,
+} from "./store/orchestration/create-store";
 export { BitStore } from "./store";
 export type {
   BitStoreApi,
@@ -10,9 +13,9 @@ export type {
   BitSelector,
   BitEqualityFn,
   BitSelectorSubscriptionOptions,
-} from "./store/public-types";
+} from "./store/contracts/public-types";
 
-export { bitBus } from "./store/bus";
+export { bitBus } from "./store/shared/bus";
 
 export {
   getDeepValue,
@@ -60,10 +63,10 @@ export type {
   BitAfterValidateEvent,
   BitBeforeSubmitEvent,
   BitAfterSubmitEvent,
-} from "./store/types";
+} from "./store/contracts/types";
 
 export type {
   BitUploadFn,
   BitDeleteUploadFn,
   BitUploadResult,
-} from "./upload/types";
+} from "./types/upload";

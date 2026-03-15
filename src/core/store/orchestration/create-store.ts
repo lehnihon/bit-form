@@ -1,6 +1,6 @@
-import { BitStore } from "./index";
-import { BitConfig } from "./types";
-import { BitStoreApi, BitStoreHooksApi } from "./public-types";
+import { BitStore } from "../index";
+import { BitConfig } from "../contracts/types";
+import { BitStoreApi, BitStoreHooksApi } from "../contracts/public-types";
 
 const BIT_STORE_ENGINE = Symbol.for("bit-form.store.engine");
 

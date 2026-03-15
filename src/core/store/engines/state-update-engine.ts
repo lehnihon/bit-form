@@ -1,4 +1,4 @@
-import type { BitState } from "./types";
+import type { BitState } from "../contracts/types";
 
 export interface BitStateUpdateResult<T extends object> {
   nextState: BitState<T>;

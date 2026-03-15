@@ -1,5 +1,5 @@
 import { executeSubmitHandler } from "./submit-handler";
-import type { BitStoreHooksApi } from "./store/public-types";
+import type { BitStoreHooksApi } from "./store/contracts/public-types";
 
 export type BitFormDomEvent = {
   preventDefault?: () => void;

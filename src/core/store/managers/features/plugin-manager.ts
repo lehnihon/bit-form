@@ -7,7 +7,7 @@ import type {
   BitPlugin,
   BitPluginContext,
   BitPluginErrorEvent,
-} from "./types";
+} from "../../contracts/types";
 
 export class BitPluginManager<T extends object = any> {
   private teardownFns: Array<() => void> = [];

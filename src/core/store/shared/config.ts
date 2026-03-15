@@ -1,7 +1,7 @@
-import type { BitConfig, BitPersistResolvedConfig } from "./types";
-import type { BitResolvedConfig } from "./public-types";
-import { deepClone } from "../utils";
-import { bitMasks } from "../mask";
+import type { BitConfig, BitPersistResolvedConfig } from "../contracts/types";
+import type { BitResolvedConfig } from "../contracts/public-types";
+import { deepClone } from "../../utils";
+import { bitMasks } from "../../mask";
 
 export function normalizeConfig<T extends object>(
   config: BitConfig<T> = {},
