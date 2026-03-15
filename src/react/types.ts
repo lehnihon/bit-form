@@ -22,11 +22,22 @@ export interface UseBitFieldMeta {
 }
 
 /**
+ * Accepted input for field change handlers.
+ * Covers native events (`e.target.value`), synthetic events, and direct values.
+ */
+export type BitFieldInputEvent =
+  | { target?: { value?: string | number | null } }
+  | string
+  | number
+  | null
+  | undefined;
+
+/**
  * Props that can be spread onto a native HTML input element.
  */
 export interface UseBitFieldBindProps {
   value: string;
-  onChange: (e: any) => void;
+  onChange: (e: BitFieldInputEvent) => void;
   onBlur: () => void;
 }
 
@@ -41,9 +52,11 @@ export interface UseBitFieldResult<
   // Main handlers and values (flat)
   value: BitPathValue<TForm, P>;
   displayValue: string;
-  setValue: (val: any) => void;
+  setValue: (
+    val: BitPathValue<TForm, P> | string | number | null | undefined,
+  ) => void;
   setBlur: () => void;
-  onChange: (e: any) => void;
+  onChange: (e: BitFieldInputEvent) => void;
   onBlur: () => void;
   // Props helper for native inputs
   props: UseBitFieldBindProps;
