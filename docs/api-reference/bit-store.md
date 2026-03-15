@@ -22,7 +22,8 @@ const store = createBitStore<MyFormValues>({
 });
 ```
 
-You can still instantiate `BitStore` directly for internal/advanced scenarios.
+Direct `BitStore` instantiation is considered internal and is not the recommended consumer path.
+For applications and framework integrations, use `createBitStore` and the official subpath exports.
 
 - **Type parameter**: `T` — the shape of `values`. Defaults to `any` if omitted.
 - **Parameter**: `config?: BitConfig<T>` — see [Types Reference](./types.md) for all options.

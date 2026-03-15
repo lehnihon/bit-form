@@ -1,4 +1,5 @@
-export { createBitStore } from "./store/create-store";
+export { createBitStore, resolveBitStoreForHooks } from "./store/create-store";
+export { BitStore } from "./store";
 export type {
   BitStoreApi,
   BitStoreHooksApi,

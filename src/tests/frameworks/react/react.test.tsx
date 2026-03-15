@@ -1,7 +1,7 @@
 import React from "react";
 import { describe, it, expect, vi } from "vitest";
 import { renderHook, act } from "@testing-library/react";
-import { BitStore } from "../../../core/store";
+import { BitStore } from "../../../core";
 import {
   BitFormProvider,
   useBitField,
