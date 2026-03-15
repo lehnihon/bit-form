@@ -3,7 +3,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import type { BitUploadFn } from "../../../core/upload";
+import type { BitUploadFn } from "../../../core/types/upload";
 
 describe("injectBitUpload (Angular)", () => {
   let mockUpload: ReturnType<typeof vi.fn> & BitUploadFn;

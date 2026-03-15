@@ -69,4 +69,4 @@ export type {
   BitUploadFn,
   BitDeleteUploadFn,
   BitUploadResult,
-} from "./upload/types";
+} from "./types/upload";
