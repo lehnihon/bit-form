@@ -2,14 +2,14 @@ import type {
   BitFieldChangeEvent,
   BitFieldChangeMeta,
   BitState,
-} from "./types";
+} from "../../contracts/types";
 import {
   getDeepValue,
   setDeepValue,
   shiftKeys,
   swapKeys,
   moveKeys,
-} from "../utils";
+} from "../../../utils";
 
 export interface BitArrayStorePort<T extends object> {
   getState: () => BitState<T>;

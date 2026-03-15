@@ -1,5 +1,5 @@
-import { getDeepValue, setDeepValue, deepEqual } from "../utils";
-import type { BitComputedFn } from "./types";
+import { getDeepValue, setDeepValue, deepEqual } from "../../../utils";
+import type { BitComputedFn } from "../../contracts/types";
 
 export class BitComputedManager<T extends object> {
   private static readonly MIN_PASSES = 4;

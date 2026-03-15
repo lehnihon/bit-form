@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { BitCapabilityRegistry } from "../../core/store/capability-registry";
+import { BitCapabilityRegistry } from "../../core/store/orchestration/capability-registry";
 
 describe("BitCapabilityRegistry", () => {
   it("registra e recupera capabilities", () => {

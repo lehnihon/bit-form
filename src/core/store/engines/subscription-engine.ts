@@ -1,8 +1,8 @@
 import type {
   BitSelector,
   BitSelectorSubscriptionOptions,
-} from "./public-types";
-import type { BitState } from "./types";
+} from "../contracts/public-types";
+import type { BitState } from "../contracts/types";
 
 interface SelectorListenerEntry<T extends object> {
   notify(nextState: Readonly<BitState<T>>): void;

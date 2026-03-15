@@ -1,4 +1,4 @@
-import type { BitPlugin, DevToolsOptions } from "./types";
+import type { BitPlugin, DevToolsOptions } from "../../contracts/types";
 
 function resolveDevToolsOptions(
   devTools: boolean | DevToolsOptions | undefined,
@@ -33,10 +33,11 @@ export function createDevtoolsPlugin<T extends object = any>(
       void (async () => {
         try {
           if (options.mode === "remote") {
-            const { setupRemoteBridge } = await import("../../devtools/bridge");
+            const { setupRemoteBridge } =
+              await import("../../../../devtools/bridge");
             cleanup = setupRemoteBridge(options.url || "ws://localhost:3000");
           } else {
-            const { initDevTools } = await import("../../devtools");
+            const { initDevTools } = await import("../../../../devtools");
             const instance = initDevTools();
             cleanup =
               instance && typeof instance.destroy === "function"

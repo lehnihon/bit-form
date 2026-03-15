@@ -1,8 +1,8 @@
-import { deepClone } from "../utils";
+import { deepClone } from "../../../utils";
 import type {
   BitPersistResolvedConfig,
   BitPersistStorageAdapter,
-} from "./types";
+} from "../../contracts/types";
 
 function getDefaultStorage(): BitPersistStorageAdapter | undefined {
   if (typeof globalThis === "undefined") return undefined;

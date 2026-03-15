@@ -1,4 +1,4 @@
-import { BitErrors, BitState } from "./types";
+import { BitErrors, BitState } from "../../contracts/types";
 
 /**
  * BitErrorManager

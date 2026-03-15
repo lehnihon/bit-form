@@ -18,31 +18,31 @@ import {
   BitAfterValidateEvent,
   BitBeforeSubmitEvent,
   BitAfterSubmitEvent,
-} from "./types";
+} from "./contracts/types";
 import type {
   BitResolvedConfig,
   BitHistoryMetadata,
   BitSelector,
   BitSelectorSubscriptionOptions,
   BitValidationOptions,
-} from "./public-types";
+} from "./contracts/public-types";
 import { deepClone, deepEqual, getDeepValue, valueEqual } from "../utils";
-import { normalizeConfig } from "./config";
-import { BitDependencyManager } from "./dependency-manager";
-import { BitComputedManager } from "./computed-manager";
-import { BitDirtyManager } from "./dirty-manager";
-import { BitSubscriptionEngine } from "./subscription-engine";
-import { applyStateUpdate } from "./state-update-engine";
-import { BitStoreEffectEngine } from "./effect-engine";
-import { BitCapabilityRegistry } from "./capability-registry";
-import type { BitStoreCapabilities } from "./capabilities";
-import type { BitLifecycleStorePort } from "./lifecycle-manager";
-import type { BitValidationStorePort } from "./validation-manager";
+import { normalizeConfig } from "./shared/config";
+import { BitDependencyManager } from "./managers/core/dependency-manager";
+import { BitComputedManager } from "./managers/core/computed-manager";
+import { BitDirtyManager } from "./managers/core/dirty-manager";
+import { BitSubscriptionEngine } from "./engines/subscription-engine";
+import { applyStateUpdate } from "./engines/state-update-engine";
+import { BitStoreEffectEngine } from "./engines/effect-engine";
+import { BitCapabilityRegistry } from "./orchestration/capability-registry";
+import type { BitStoreCapabilities } from "./orchestration/capabilities";
+import type { BitLifecycleStorePort } from "./managers/features/lifecycle-manager";
+import type { BitValidationStorePort } from "./managers/features/validation-manager";
 import {
   createInitialStoreState,
   createStoreCapabilities,
   createStoreEffects,
-} from "./store-bootstrap";
+} from "./orchestration/store-bootstrap";
 /**
  * BitStore
  *
@@ -77,9 +77,9 @@ export class BitStore<T extends object = any>
   // Managers for essential form state management
   // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-  private readonly depsMg: BitDependencyManager<T>;
-  private readonly computedMg: BitComputedManager<T>;
-  private readonly dirtyMg: BitDirtyManager<T>;
+  private readonly dependencyManager: BitDependencyManager<T>;
+  private readonly computedManager: BitComputedManager<T>;
+  private readonly dirtyManager: BitDirtyManager<T>;
 
   private getCapability<TKey extends keyof BitStoreCapabilities<T>>(key: TKey) {
     return this.capabilities.get(key);
@@ -126,19 +126,19 @@ export class BitStore<T extends object = any>
     this.config = normalizeConfig(config);
 
     // Initialize core managers
-    this.depsMg = new BitDependencyManager<T>();
-    this.computedMg = new BitComputedManager<T>(() =>
+    this.dependencyManager = new BitDependencyManager<T>();
+    this.computedManager = new BitComputedManager<T>(() =>
       this.getComputedEntries(),
     );
-    this.dirtyMg = new BitDirtyManager<T>();
+    this.dirtyManager = new BitDirtyManager<T>();
     this.capabilities = createStoreCapabilities<T>({
       store: this,
-      depsMg: this.depsMg,
+      dependencyManager: this.dependencyManager,
     });
     this.state = createInitialStoreState<T>({
       config: this.config,
-      depsMg: this.depsMg,
-      computedMg: this.computedMg,
+      dependencyManager: this.dependencyManager,
+      computedManager: this.computedManager,
     });
     this.subscriptions = new BitSubscriptionEngine<T>(() => this.state);
 
@@ -171,7 +171,7 @@ export class BitStore<T extends object = any>
 
   getFieldConfig(path: string): BitFieldDefinition<T> | undefined {
     return (
-      this.depsMg.fieldConfigs.get(path) ||
+      this.dependencyManager.fieldConfigs.get(path) ||
       this.config.fields?.[path as keyof typeof this.config.fields]
     );
   }
@@ -179,7 +179,7 @@ export class BitStore<T extends object = any>
   getScopeFields(scopeName: string): string[] {
     const result: string[] = [];
 
-    this.depsMg.fieldConfigs.forEach((cfg, path) => {
+    this.dependencyManager.fieldConfigs.forEach((cfg, path) => {
       if (cfg.scope === scopeName) {
         result.push(path);
       }
@@ -191,7 +191,7 @@ export class BitStore<T extends object = any>
   getComputedEntries(): [string, BitComputedFn<T>][] {
     const result: [string, BitComputedFn<T>][] = [];
 
-    this.depsMg.fieldConfigs.forEach((cfg, path) => {
+    this.dependencyManager.fieldConfigs.forEach((cfg, path) => {
       if (cfg.computed) {
         result.push([path, cfg.computed]);
       }
@@ -203,7 +203,7 @@ export class BitStore<T extends object = any>
   getTransformEntries(): [string, BitTransformFn<T>][] {
     const result: [string, BitTransformFn<T>][] = [];
 
-    this.depsMg.fieldConfigs.forEach((cfg, path) => {
+    this.dependencyManager.fieldConfigs.forEach((cfg, path) => {
       if (cfg.transform) {
         result.push([path, cfg.transform]);
       }
@@ -263,8 +263,8 @@ export class BitStore<T extends object = any>
   // ============================================================================
 
   registerField(path: string, config: BitFieldDefinition<T>) {
-    this.depsMg.register(path, config, this.state.values);
-    if (this.depsMg.isHidden(path)) {
+    this.dependencyManager.register(path, config, this.state.values);
+    if (this.dependencyManager.isHidden(path)) {
       this.subscriptions.notify(this.state, ["*"]);
     }
   }
@@ -274,7 +274,7 @@ export class BitStore<T extends object = any>
     if (this.config.fields?.[path as string]) {
       return;
     }
-    this.depsMg.unregister(path);
+    this.dependencyManager.unregister(path);
 
     const newErrors = { ...this.state.errors };
     const newTouched = { ...this.state.touched };
@@ -299,11 +299,11 @@ export class BitStore<T extends object = any>
   }
 
   unregisterPrefix(prefix: string) {
-    this.depsMg.unregisterPrefix(prefix);
+    this.dependencyManager.unregisterPrefix(prefix);
   }
 
   // ============================================================================
-  // FIELD QUERIES (Delegated to queryMg)
+  // FIELD QUERIES (Delegated to query manager)
   // ============================================================================
 
   isHidden<P extends BitPath<T>>(path: P): boolean {
@@ -456,7 +456,7 @@ export class BitStore<T extends object = any>
   }
 
   getDirtyValues(): Partial<T> {
-    return this.dirtyMg.buildDirtyValues(this.state.values);
+    return this.dirtyManager.buildDirtyValues(this.state.values);
   }
 
   async restorePersisted(): Promise<boolean> {
@@ -528,7 +528,7 @@ export class BitStore<T extends object = any>
   undo() {
     const prevState = this.history.undo();
     if (prevState) {
-      const isDirty = this.dirtyMg.rebuild(
+      const isDirty = this.dirtyManager.rebuild(
         prevState,
         this.config.initialValues,
       );
@@ -540,7 +540,7 @@ export class BitStore<T extends object = any>
   redo() {
     const nextState = this.history.redo();
     if (nextState) {
-      const isDirty = this.dirtyMg.rebuild(
+      const isDirty = this.dirtyManager.rebuild(
         nextState,
         this.config.initialValues,
       );
@@ -606,23 +606,23 @@ export class BitStore<T extends object = any>
   }
 
   updateDependencies(changedPath: string, newValues: T): string[] {
-    return this.depsMg.updateDependencies(changedPath, newValues);
+    return this.dependencyManager.updateDependencies(changedPath, newValues);
   }
 
   isFieldHidden(path: string): boolean {
-    return this.depsMg.isHidden(path);
+    return this.dependencyManager.isHidden(path);
   }
 
   evaluateAllDependencies(values: T): void {
-    this.depsMg.evaluateAll(values);
+    this.dependencyManager.evaluateAll(values);
   }
 
   getHiddenFields(): string[] {
-    return Array.from(this.depsMg.hiddenFields);
+    return Array.from(this.dependencyManager.hiddenFields);
   }
 
   getRequiredErrors(values: T): BitErrors<T> {
-    return this.depsMg.getRequiredErrors(values);
+    return this.dependencyManager.getRequiredErrors(values);
   }
 
   clearFieldValidation(path: string): void {
@@ -642,19 +642,19 @@ export class BitStore<T extends object = any>
   }
 
   updateDirtyForPath(path: string, nextValues: T, baselineValues: T): boolean {
-    return this.dirtyMg.updateForPath(path, nextValues, baselineValues);
+    return this.dirtyManager.updateForPath(path, nextValues, baselineValues);
   }
 
   rebuildDirtyState(nextValues: T, baselineValues: T): boolean {
-    return this.dirtyMg.rebuild(nextValues, baselineValues);
+    return this.dirtyManager.rebuild(nextValues, baselineValues);
   }
 
   clearDirtyState(): void {
-    this.dirtyMg.clear();
+    this.dirtyManager.clear();
   }
 
   buildDirtyValues(values: T): Partial<T> {
-    return this.dirtyMg.buildDirtyValues(values);
+    return this.dirtyManager.buildDirtyValues(values);
   }
 
   resetHistory(initialValues: T): void {
@@ -673,7 +673,7 @@ export class BitStore<T extends object = any>
       currentState: this.state,
       partialState,
       changedPaths,
-      applyComputedValues: (values) => this.computedMg.apply(values),
+      applyComputedValues: (values) => this.computedManager.apply(values),
     });
 
     this.state = updateResult.nextState;
@@ -693,9 +693,12 @@ export class BitStore<T extends object = any>
     } as T);
 
     this.validation.cancelAll();
-    this.depsMg.evaluateAll(nextValues);
+    this.dependencyManager.evaluateAll(nextValues);
 
-    const isDirty = this.dirtyMg.rebuild(nextValues, this.config.initialValues);
+    const isDirty = this.dirtyManager.rebuild(
+      nextValues,
+      this.config.initialValues,
+    );
 
     this.internalUpdateState({
       values: nextValues,

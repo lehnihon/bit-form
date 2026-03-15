@@ -1,7 +1,7 @@
-import { BitState } from "./types";
-import type { BitResolvedConfig } from "./public-types";
-import { BitDependencyManager } from "./dependency-manager";
-import { getDeepValue, valueEqual } from "../utils";
+import { BitState } from "../../contracts/types";
+import type { BitResolvedConfig } from "../../contracts/public-types";
+import { BitDependencyManager } from "../core/dependency-manager";
+import { getDeepValue, valueEqual } from "../../../utils";
 
 /**
  * BitFieldQueryManager
@@ -11,7 +11,7 @@ import { getDeepValue, valueEqual } from "../utils";
  */
 export class BitFieldQueryManager<T extends object = any> {
   constructor(
-    private depsMg: BitDependencyManager<T>,
+    private dependencyManager: BitDependencyManager<T>,
     private getState: () => BitState<T>,
     private getConfig: () => BitResolvedConfig<T>,
   ) {}
@@ -20,14 +20,14 @@ export class BitFieldQueryManager<T extends object = any> {
    * Check if a field is hidden based on conditional logic.
    */
   isHidden<P extends string>(path: P): boolean {
-    return this.depsMg.isHidden(path);
+    return this.dependencyManager.isHidden(path);
   }
 
   /**
    * Check if a field is required based on conditional logic.
    */
   isRequired<P extends string>(path: P): boolean {
-    return this.depsMg.isRequired(path, this.getState().values);
+    return this.dependencyManager.isRequired(path, this.getState().values);
   }
 
   /**

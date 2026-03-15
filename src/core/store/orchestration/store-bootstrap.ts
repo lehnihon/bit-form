@@ -1,23 +1,26 @@
-import { createDevtoolsPlugin } from "./devtools-plugin";
-import { BitPersistManager } from "./persist-manager";
-import { BitPluginManager } from "./plugin-manager";
-import { BitStoreEffectEngine } from "./effect-engine";
-import { BitValidationManager } from "./validation-manager";
-import { BitLifecycleManager } from "./lifecycle-manager";
-import { BitHistoryManager } from "./history-manager";
-import { BitArrayManager, type BitArrayStorePort } from "./array-manager";
-import { BitComputedManager } from "./computed-manager";
-import { BitScopeManager } from "./scope-manager";
-import { BitFieldQueryManager } from "./field-query-manager";
-import { BitErrorManager } from "./error-manager";
+import { createDevtoolsPlugin } from "../managers/features/devtools-plugin";
+import { BitPersistManager } from "../managers/features/persist-manager";
+import { BitPluginManager } from "../managers/features/plugin-manager";
+import { BitStoreEffectEngine } from "../engines/effect-engine";
+import { BitValidationManager } from "../managers/features/validation-manager";
+import { BitLifecycleManager } from "../managers/features/lifecycle-manager";
+import { BitHistoryManager } from "../managers/features/history-manager";
+import {
+  BitArrayManager,
+  type BitArrayStorePort,
+} from "../managers/features/array-manager";
+import { BitComputedManager } from "../managers/core/computed-manager";
+import { BitScopeManager } from "../managers/features/scope-manager";
+import { BitFieldQueryManager } from "../managers/features/field-query-manager";
+import { BitErrorManager } from "../managers/features/error-manager";
 import { BitCapabilityRegistry } from "./capability-registry";
-import { BitDependencyManager } from "./dependency-manager";
-import { deepClone } from "../utils";
+import { BitDependencyManager } from "../managers/core/dependency-manager";
+import { deepClone } from "../../utils";
 import type { BitStoreCapabilities } from "./capabilities";
-import type { BitResolvedConfig } from "./public-types";
-import type { BitLifecycleStorePort } from "./lifecycle-manager";
-import type { BitValidationStorePort } from "./validation-manager";
-import type { BitFieldDefinition, BitState } from "./types";
+import type { BitResolvedConfig } from "../contracts/public-types";
+import type { BitLifecycleStorePort } from "../managers/features/lifecycle-manager";
+import type { BitValidationStorePort } from "../managers/features/validation-manager";
+import type { BitFieldDefinition, BitState } from "../contracts/types";
 
 type BitStoreCapabilityPorts<T extends object> = BitValidationStorePort<T> &
   BitLifecycleStorePort<T> &
@@ -29,9 +32,9 @@ type BitStoreCapabilityPorts<T extends object> = BitValidationStorePort<T> &
 
 export function createStoreCapabilities<T extends object>(args: {
   store: BitStoreCapabilityPorts<T>;
-  depsMg: BitDependencyManager<T>;
+  dependencyManager: BitDependencyManager<T>;
 }): BitCapabilityRegistry<BitStoreCapabilities<T>> {
-  const { store, depsMg } = args;
+  const { store, dependencyManager } = args;
 
   const capabilities = new BitCapabilityRegistry<BitStoreCapabilities<T>>();
 
@@ -56,7 +59,7 @@ export function createStoreCapabilities<T extends object>(args: {
   capabilities.register(
     "query",
     new BitFieldQueryManager<T>(
-      depsMg,
+      dependencyManager,
       () => store.getState(),
       () => store.config,
     ),
@@ -125,16 +128,16 @@ export function createStoreEffects<T extends object>(args: {
 
 export function createInitialStoreState<T extends object>(args: {
   config: BitResolvedConfig<T>;
-  depsMg: BitDependencyManager<T>;
-  computedMg: BitComputedManager<T>;
+  dependencyManager: BitDependencyManager<T>;
+  computedManager: BitComputedManager<T>;
 }): BitState<T> {
-  const { config, depsMg, computedMg } = args;
+  const { config, dependencyManager, computedManager } = args;
 
   const initialValues = deepClone(config.initialValues);
 
   if (config.fields) {
     Object.entries(config.fields).forEach(([path, fieldConfig]) => {
-      depsMg.register(
+      dependencyManager.register(
         path,
         fieldConfig as BitFieldDefinition<T>,
         initialValues,
@@ -142,7 +145,7 @@ export function createInitialStoreState<T extends object>(args: {
     });
   }
 
-  const valuesWithComputeds = computedMg.apply(initialValues);
+  const valuesWithComputeds = computedManager.apply(initialValues);
 
   return {
     values: valuesWithComputeds,

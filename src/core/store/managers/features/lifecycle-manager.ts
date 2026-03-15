@@ -1,18 +1,30 @@
-import { BitErrors, BitFieldChangeMeta, DeepPartial } from "./types";
-import { deepClone, deepMerge, getDeepValue, setDeepValue } from "../utils";
+import {
+  BitErrors,
+  BitFieldChangeMeta,
+  DeepPartial,
+} from "../../contracts/types";
+import {
+  deepClone,
+  deepMerge,
+  getDeepValue,
+  setDeepValue,
+} from "../../../utils";
 import {
   BitPipelineContext,
   BitPipelineRunner,
   BitSyncPipelineRunner,
-} from "./pipeline";
+} from "../../shared/pipeline";
 import type {
   BitState,
   BitTransformFn,
   BitBeforeSubmitEvent,
   BitAfterSubmitEvent,
   BitFieldChangeEvent,
-} from "./types";
-import type { BitResolvedConfig, BitValidationOptions } from "./public-types";
+} from "../../contracts/types";
+import type {
+  BitResolvedConfig,
+  BitValidationOptions,
+} from "../../contracts/public-types";
 
 export interface BitLifecycleStorePort<T extends object> {
   getState: () => BitState<T>;

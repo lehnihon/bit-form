@@ -1,8 +1,8 @@
 import { describe, it, expect } from "vitest";
-import { normalizeConfig } from "../../core/store/config";
-import { BitDependencyManager } from "../../core/store/dependency-manager";
-import { BitComputedManager } from "../../core/store/computed-manager";
-import { createInitialStoreState } from "../../core/store/store-bootstrap";
+import { normalizeConfig } from "../../core/store/shared/config";
+import { BitDependencyManager } from "../../core/store/managers/core/dependency-manager";
+import { BitComputedManager } from "../../core/store/managers/core/computed-manager";
+import { createInitialStoreState } from "../../core/store/orchestration/store-bootstrap";
 
 describe("createInitialStoreState", () => {
   it("registra fields iniciais e aplica computeds", () => {
@@ -26,10 +26,10 @@ describe("createInitialStoreState", () => {
       },
     });
 
-    const depsMg = new BitDependencyManager<any>();
-    const computedMg = new BitComputedManager<any>(() => {
+    const dependencyManager = new BitDependencyManager<any>();
+    const computedManager = new BitComputedManager<any>(() => {
       const entries: [string, (values: any) => any][] = [];
-      depsMg.fieldConfigs.forEach((fieldConfig, path) => {
+      dependencyManager.fieldConfigs.forEach((fieldConfig, path) => {
         if (fieldConfig.computed) {
           entries.push([path, fieldConfig.computed]);
         }
@@ -39,13 +39,13 @@ describe("createInitialStoreState", () => {
 
     const initialState = createInitialStoreState({
       config,
-      depsMg,
-      computedMg,
+      dependencyManager,
+      computedManager,
     });
 
     expect(initialState.values.total).toBe(20);
-    expect(depsMg.fieldConfigs.has("total")).toBe(true);
-    expect(depsMg.fieldConfigs.has("extra")).toBe(true);
-    expect(depsMg.isHidden("extra")).toBe(true);
+    expect(dependencyManager.fieldConfigs.has("total")).toBe(true);
+    expect(dependencyManager.fieldConfigs.has("extra")).toBe(true);
+    expect(dependencyManager.isHidden("extra")).toBe(true);
   });
 });

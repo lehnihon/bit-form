@@ -5,10 +5,10 @@ import type {
   BitBeforeValidateEvent,
   BitFieldChangeEvent,
   BitState,
-} from "./types";
-import { bitBus } from "./bus";
-import { BitPersistManager } from "./persist-manager";
-import { BitPluginManager } from "./plugin-manager";
+} from "../contracts/types";
+import { bitBus } from "../shared/bus";
+import { BitPersistManager } from "../managers/features/persist-manager";
+import { BitPluginManager } from "../managers/features/plugin-manager";
 
 export class BitStoreEffectEngine<T extends object> {
   constructor(
