@@ -4,6 +4,7 @@ import { BitPath, BitPathValue } from "../core";
 import {
   formatMaskedValue,
   parseMaskedInput,
+  isBitFieldInputEventObject,
 } from "../core/mask/field-binding";
 import type {
   BitFieldInputEvent,
@@ -11,15 +12,6 @@ import type {
   UseBitFieldBindProps,
   UseBitFieldResult,
 } from "./types";
-
-function isBitFieldInputEventObject(
-  value: BitFieldInputEvent,
-): value is Extract<
-  BitFieldInputEvent,
-  { target?: { value?: string | number | null } }
-> {
-  return value != null && typeof value === "object" && "target" in value;
-}
 
 export function useBitField<
   TForm extends object = any,

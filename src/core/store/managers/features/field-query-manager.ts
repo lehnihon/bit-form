@@ -1,5 +1,5 @@
 import { BitState } from "../../contracts/types";
-import type { BitResolvedConfig } from "../../contracts/public-types";
+import type { BitFrameworkConfig } from "../../contracts/public-types";
 import { BitDependencyManager } from "../core/dependency-manager";
 import { getDeepValue, valueEqual } from "../../../utils";
 
@@ -13,7 +13,7 @@ export class BitFieldQueryManager<T extends object = any> {
   constructor(
     private dependencyManager: BitDependencyManager<T>,
     private getState: () => BitState<T>,
-    private getConfig: () => BitResolvedConfig<T>,
+    private getConfig: () => BitFrameworkConfig<T>,
   ) {}
 
   /**

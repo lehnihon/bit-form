@@ -4,12 +4,16 @@ export type DeepPartial<T> = T extends object
   ? { [P in keyof T]?: DeepPartial<T[P]> }
   : T;
 
-export type BitErrors<T> = { [key: string]: string | undefined };
-export type BitTouched<T> = { [key: string]: boolean | undefined };
+export type BitErrors<T extends object> = Partial<
+  Record<BitPath<T>, string | undefined>
+>;
+export type BitTouched<T extends object> = Partial<
+  Record<BitPath<T>, boolean | undefined>
+>;
 export type BitComputedFn<T> = (values: T) => any;
 export type BitTransformFn<T> = (value: any, allValues: T) => any;
 
-export interface BitState<T> {
+export interface BitState<T extends object> {
   values: T;
   errors: BitErrors<T>;
   touched: BitTouched<T>;
@@ -29,7 +33,7 @@ export interface BitFieldState<T extends object = any, TValue = unknown> {
   isValidating: boolean;
 }
 
-export type ValidatorFn<T> = (
+export type ValidatorFn<T extends object> = (
   values: T,
   options?: { scopeFields?: string[] },
 ) => Promise<BitErrors<T>> | BitErrors<T>;
@@ -224,7 +228,7 @@ export interface BitPersistResolvedConfig<T extends object = any> {
 }
 
 /** Validation config. */
-export interface BitValidationConfig<T> {
+export interface BitValidationConfig<T extends object> {
   resolver?: ValidatorFn<T>;
   delay?: number;
 }

@@ -1,5 +1,8 @@
 import { BitErrors } from "../../contracts/types";
-import { BitValidationOptions } from "../../contracts/public-types";
+import {
+  BitFrameworkConfig,
+  BitValidationOptions,
+} from "../../contracts/public-types";
 import { BitPipelineContext, BitPipelineRunner } from "../../shared/pipeline";
 import type {
   BitAfterValidateEvent,
@@ -7,7 +10,6 @@ import type {
   BitFieldDefinition,
   BitState,
 } from "../../contracts/types";
-import type { BitResolvedConfig } from "../../contracts/public-types";
 
 export interface BitValidationStorePort<T extends object> {
   getState: () => BitState<T>;
@@ -16,7 +18,7 @@ export interface BitValidationStorePort<T extends object> {
   validate: (opts: BitValidationOptions) => Promise<boolean>;
   getFieldConfig: (path: string) => BitFieldDefinition<T> | undefined;
   getScopeFields: (scopeName: string) => string[];
-  config: BitResolvedConfig<T>;
+  config: BitFrameworkConfig<T>;
   getRequiredErrors: (values: T) => BitErrors<T>;
   getHiddenFields: () => string[];
   emitBeforeValidate: (event: BitBeforeValidateEvent<T>) => Promise<void>;
@@ -41,7 +43,7 @@ export class BitValidationManager<T extends object> {
   private currentValidationId: number = 0;
   private asyncTimers: Record<string, ReturnType<typeof setTimeout>> = {};
   private asyncRequests: Record<string, number> = {};
-  public asyncErrors: Record<string, string> = {};
+  private asyncErrors: Record<string, string> = {};
 
   constructor(private store: BitValidationStorePort<T>) {}
 
@@ -61,6 +63,34 @@ export class BitValidationManager<T extends object> {
     }
 
     this.asyncRequests[path] = (this.asyncRequests[path] || 0) + 1;
+  }
+
+  cleanupField(path: string) {
+    this.cancelFieldAsync(path);
+    delete this.asyncTimers[path];
+    delete this.asyncRequests[path];
+    delete this.asyncErrors[path];
+    this.updateFieldValidating(path, false);
+  }
+
+  cleanupPrefix(prefix: string) {
+    Object.keys(this.asyncTimers).forEach((path) => {
+      if (path === prefix || path.startsWith(`${prefix}.`)) {
+        this.cleanupField(path);
+      }
+    });
+
+    Object.keys(this.asyncRequests).forEach((path) => {
+      if (path === prefix || path.startsWith(`${prefix}.`)) {
+        delete this.asyncRequests[path];
+      }
+    });
+
+    Object.keys(this.asyncErrors).forEach((path) => {
+      if (path === prefix || path.startsWith(`${prefix}.`)) {
+        delete this.asyncErrors[path];
+      }
+    });
   }
 
   beginExternalValidation(path: string) {
@@ -163,10 +193,10 @@ export class BitValidationManager<T extends object> {
 
     if (delay > 0) {
       this.validationTimeout = setTimeout(() => {
-        this.validate({ scopeFields });
+        void this.validate({ scopeFields });
       }, delay);
     } else {
-      this.validate({ scopeFields });
+      void this.validate({ scopeFields });
     }
   }
 

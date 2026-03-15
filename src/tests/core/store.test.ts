@@ -430,8 +430,8 @@ describe("BitStore Core", () => {
       expect(store.getState().errors.email).toBe("Invalid email");
       expect(store.isValid).toBe(false);
 
-      store.setErrors({ password: "Too short" });
-      expect(store.getState().errors.password).toBe("Too short");
+      store.setErrors({ email: "Too short" });
+      expect(store.getState().errors.email).toBe("Too short");
     });
 
     it("should clear field error instantly when value changes", () => {

@@ -15,10 +15,7 @@ export function useBitWatch<
       path as string,
     ) as BitPathValue<TForm, P>;
 
-    if (
-      lastValue.current !== null &&
-      deepEqual(lastValue.current, value)
-    ) {
+    if (lastValue.current !== null && deepEqual(lastValue.current, value)) {
       return lastValue.current;
     }
 
@@ -26,9 +23,11 @@ export function useBitWatch<
     return value;
   }, [store, path]);
 
+  // Assina apenas o path monitorado → evita executar getSnapshot em toda
+  // mudança de estado do store (blur, validation, outros campos, etc.)
   const subscribe = useCallback(
-    (cb: () => void) => store.subscribe(cb),
-    [store],
+    (cb: () => void) => store.subscribePath(path, () => cb()),
+    [store, path],
   );
 
   return useSyncExternalStore(

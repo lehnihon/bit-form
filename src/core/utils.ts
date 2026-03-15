@@ -154,17 +154,29 @@ export function collectDirtyPaths(
 const PATH_CACHE_MAX = 1000;
 const pathCache = new Map<string, string[]>();
 
+function getPathKeys(path: string): string[] {
+  const cached = pathCache.get(path);
+  if (cached) {
+    pathCache.delete(path);
+    pathCache.set(path, cached);
+    return cached;
+  }
+
+  const keys = path.split(".");
+  if (pathCache.size >= PATH_CACHE_MAX) {
+    const oldestKey = pathCache.keys().next().value;
+    if (oldestKey) {
+      pathCache.delete(oldestKey);
+    }
+  }
+  pathCache.set(path, keys);
+  return keys;
+}
+
 export function getDeepValue(obj: any, path: string): any {
   if (!path) return obj;
 
-  let keys = pathCache.get(path);
-  if (!keys) {
-    keys = path.split(".");
-    if (pathCache.size >= PATH_CACHE_MAX) {
-      pathCache.delete(pathCache.keys().next().value!);
-    }
-    pathCache.set(path, keys);
-  }
+  const keys = getPathKeys(path);
 
   let current = obj;
   for (const key of keys) {
@@ -177,14 +189,7 @@ export function getDeepValue(obj: any, path: string): any {
 export function setDeepValue(obj: any, path: string, value: any): any {
   if (!path) return value;
 
-  let keys = pathCache.get(path);
-  if (!keys) {
-    keys = path.split(".");
-    if (pathCache.size >= PATH_CACHE_MAX) {
-      pathCache.delete(pathCache.keys().next().value!);
-    }
-    pathCache.set(path, keys);
-  }
+  const keys = getPathKeys(path);
 
   const result = Array.isArray(obj) ? [...obj] : { ...obj };
   let current = result;
@@ -193,7 +198,9 @@ export function setDeepValue(obj: any, path: string, value: any): any {
     const key = keys[i];
     const nextKey = keys[i + 1];
 
-    const isNextNumeric = /^\d+$/.test(nextKey);
+    const nextAsNumber = Number(nextKey);
+    const isNextNumeric =
+      Number.isInteger(nextAsNumber) && String(nextAsNumber) === nextKey;
     const currentValue = current[key];
 
     if (currentValue === null || currentValue === undefined) {

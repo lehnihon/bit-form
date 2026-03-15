@@ -2,6 +2,9 @@ import { getDeepValue, setDeepValue, deepEqual } from "../../../utils";
 import type { BitComputedFn } from "../../contracts/types";
 
 export class BitComputedManager<T extends object> {
+  // Garantimos no mínimo alguns passes mesmo com poucos computeds para
+  // estabilizar cadeias curtas de dependência (A->B->C) sem depender apenas
+  // de computedEntries.length * 2.
   private static readonly MIN_PASSES = 4;
 
   constructor(private getComputedEntries: () => [string, BitComputedFn<T>][]) {}

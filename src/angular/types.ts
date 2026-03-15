@@ -10,6 +10,11 @@ import type {
   ValidateScopeResult,
 } from "../core";
 
+// BitFieldInputEvent é definido em core/mask/field-binding e re-exportado aqui
+// para evitar duplicação com a definição equivalente em react/types.ts
+import type { BitFieldInputEvent } from "../core/mask/field-binding";
+export type { BitFieldInputEvent };
+
 /**
  * Metadata describing the current state of a form field (Angular Signal).
  */
@@ -28,17 +33,6 @@ export interface InjectBitFieldMeta {
  * Result from injectBitField in Angular.
  * Provides field state, value, handlers, and metadata using Angular Signals.
  */
-/**
- * Accepted input for Angular field update handlers.
- * Covers native events (`e.target.value`), synthetic events, and direct values.
- */
-export type BitFieldInputEvent =
-  | { target?: { value?: string | number | null } }
-  | string
-  | number
-  | null
-  | undefined;
-
 export interface InjectBitFieldResult<
   TForm extends object = any,
   P extends BitPath<TForm> = BitPath<TForm>,

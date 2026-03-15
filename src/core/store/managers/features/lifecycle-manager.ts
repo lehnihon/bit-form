@@ -22,7 +22,7 @@ import type {
   BitFieldChangeEvent,
 } from "../../contracts/types";
 import type {
-  BitResolvedConfig,
+  BitFrameworkConfig,
   BitValidationOptions,
 } from "../../contracts/public-types";
 
@@ -34,7 +34,7 @@ export interface BitLifecycleStorePort<T extends object> {
   ) => void;
   internalSaveSnapshot: () => void;
   getTransformEntries: () => [string, BitTransformFn<T>][];
-  config: BitResolvedConfig<T>;
+  config: BitFrameworkConfig<T>;
 
   updateDependencies: (changedPath: string, newValues: T) => string[];
   isFieldHidden: (path: string) => boolean;
