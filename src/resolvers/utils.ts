@@ -31,7 +31,8 @@ export function filterErrorsByScope<T extends object>(
 
   for (const [key, message] of Object.entries(errors)) {
     if (scopeSet.has(key) && message) {
-      filtered[key as keyof BitErrors<T>] = message;
+      const typedKey = key as keyof BitErrors<T>;
+      filtered[typedKey] = message as BitErrors<T>[typeof typedKey];
     }
   }
 

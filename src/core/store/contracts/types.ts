@@ -33,7 +33,7 @@ export interface BitFieldState<T extends object = any, TValue = unknown> {
   isValidating: boolean;
 }
 
-export type ValidatorFn<T> = (
+export type ValidatorFn<T extends object> = (
   values: T,
   options?: { scopeFields?: string[] },
 ) => Promise<BitErrors<T>> | BitErrors<T>;
@@ -228,7 +228,7 @@ export interface BitPersistResolvedConfig<T extends object = any> {
 }
 
 /** Validation config. */
-export interface BitValidationConfig<T> {
+export interface BitValidationConfig<T extends object> {
   resolver?: ValidatorFn<T>;
   delay?: number;
 }
