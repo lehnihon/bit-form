@@ -2,7 +2,6 @@ export {
   createBitStore,
   resolveBitStoreForHooks,
 } from "./store/orchestration/create-store";
-export { BitStore } from "./store";
 export type {
   BitStoreApi,
   BitStoreHooksApi,

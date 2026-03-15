@@ -1,0 +1,1 @@
+export { BitStore } from "./store";
