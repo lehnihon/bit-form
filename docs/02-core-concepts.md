@@ -40,8 +40,17 @@ Bit-Form now centralizes shared UI orchestration into framework-agnostic control
 
 - `form-controller`: submit/onSubmit/reset orchestration and server error normalization.
 - `field-controller`: field subscription and mask parse/format orchestration.
+- `adapters/upload-kernel`: shared upload/remove side effects reused by React, Vue and Angular bindings.
 
 Framework adapters (React/Vue/Angular) become thin bindings over these controllers, reducing duplicated behavior and drift across integrations.
+
+## 🔒 Public vs Internal Boundaries
+
+- `src/core/index.ts` is the public core entrypoint and should expose stable contracts only.
+- `BitStore` is intentionally internal and now lives behind `src/core/internal.ts` for tests and low-level runtime wiring.
+- Devtools and framework bindings should prefer `BitStoreApi` / `BitStoreHooksApi` instead of importing concrete store internals.
+
+This keeps the public API centered on `createBitStore()` while preserving an explicit escape hatch for internal integration code.
 
 ## 📊 Form State (`BitState`)
 

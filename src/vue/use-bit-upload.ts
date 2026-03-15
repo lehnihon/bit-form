@@ -8,6 +8,7 @@ import { computed, ComputedRef, ref } from "vue";
 import { useBitField } from "./use-bit-field";
 import { useBitStore } from "./context";
 import { BitUploadFn, BitDeleteUploadFn } from "../core";
+import { createUploadHandler, createRemoveHandler } from "../core/adapters";
 import type { UseBitUploadResult } from "./types";
 
 export function useBitUpload(
@@ -20,42 +21,21 @@ export function useBitUpload(
   let uploadKey: string | null = null;
   const isUploading = ref(false);
 
-  const upload = async (file: File | null | undefined) => {
-    if (!file) return;
-
-    isUploading.value = true;
-    store.setError(fieldPath, undefined);
-
-    try {
-      const result = await uploadFn(file);
-
-      field.setValue(result.url);
-      uploadKey = result.key;
-      store.setError(fieldPath, undefined);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Upload failed";
-      store.setError(fieldPath, message);
-    } finally {
-      isUploading.value = false;
-    }
+  const kernelCallbacks = {
+    setLoading: (val: boolean) => {
+      isUploading.value = val;
+    },
+    setError: (path: string, msg: string | undefined) =>
+      store.setError(path, msg),
+    setValue: (val: string | null) => field.setValue(val),
+    getUploadKey: () => uploadKey,
+    setUploadKey: (key: string | null) => {
+      uploadKey = key;
+    },
   };
 
-  const remove = async () => {
-    if (uploadKey && deleteFile) {
-      try {
-        await deleteFile(uploadKey);
-      } catch (error) {
-        const message =
-          error instanceof Error ? error.message : "Delete failed";
-        store.setError(fieldPath, message);
-        return;
-      }
-    }
-
-    field.setValue(null);
-    uploadKey = null;
-    store.setError(fieldPath, undefined);
-  };
+  const upload = createUploadHandler(fieldPath, uploadFn, kernelCallbacks);
+  const remove = createRemoveHandler(fieldPath, deleteFile, kernelCallbacks);
 
   return {
     value: field.value as ComputedRef<string | File | null>,

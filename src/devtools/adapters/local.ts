@@ -1,19 +1,19 @@
 import { bitBus } from "../../core";
-import type { BitStore } from "../../core/store";
+import type { BitStoreHooksApi } from "../../core";
 import { BitFormDevToolsUI } from "../ui";
 
 export function setupLocalDevTools(container: HTMLElement) {
   const ui = new BitFormDevToolsUI(container, {
-    onUndo: (id) => (bitBus.stores[id] as BitStore<any>)?.undo(),
-    onRedo: (id) => (bitBus.stores[id] as BitStore<any>)?.redo(),
-    onReset: (id) => (bitBus.stores[id] as BitStore<any>)?.reset(),
+    onUndo: (id) => (bitBus.stores[id] as BitStoreHooksApi<any>)?.undo(),
+    onRedo: (id) => (bitBus.stores[id] as BitStoreHooksApi<any>)?.redo(),
+    onReset: (id) => (bitBus.stores[id] as BitStoreHooksApi<any>)?.reset(),
   });
 
   const getFullSnapshot = () => {
-    const states: Record<string, any> = {};
+    const states: Record<string, unknown> = {};
 
     for (const [id, instance] of Object.entries(bitBus.stores)) {
-      const storeInstance = instance as any;
+      const storeInstance = instance as BitStoreHooksApi<any>;
       const state = storeInstance.getState();
 
       const historyMeta = storeInstance?.getHistoryMetadata?.() || {

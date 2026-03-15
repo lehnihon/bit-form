@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { TestBed } from "@angular/core/testing";
 import { Component, DestroyRef } from "@angular/core";
-import { BitStore } from "../../../core";
+import { BitStore } from "../../../core/internal";
 import {
   injectBitField,
   injectBitForm,

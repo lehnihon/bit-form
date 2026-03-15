@@ -6,10 +6,20 @@ import {
   parseMaskedInput,
 } from "../core/mask/field-binding";
 import type {
+  BitFieldInputEvent,
   UseBitFieldMeta,
   UseBitFieldBindProps,
   UseBitFieldResult,
 } from "./types";
+
+function isBitFieldInputEventObject(
+  value: BitFieldInputEvent,
+): value is Extract<
+  BitFieldInputEvent,
+  { target?: { value?: string | number | null } }
+> {
+  return value != null && typeof value === "object" && "target" in value;
+}
 
 export function useBitField<
   TForm extends object = any,
@@ -32,8 +42,13 @@ export function useBitField<
   );
 
   const setValue = useCallback(
-    (val: any) =>
-      rawSetValue(parseMaskedInput(val, resolvedMask ?? undefined) as any),
+    (val: BitPathValue<TForm, P> | string | number | null | undefined) =>
+      rawSetValue(
+        parseMaskedInput(val, resolvedMask ?? undefined) as BitPathValue<
+          TForm,
+          P
+        >,
+      ),
     [resolvedMask, rawSetValue],
   );
 
@@ -44,8 +59,8 @@ export function useBitField<
   const visibleError = touched ? error : undefined;
 
   const onChange = useCallback(
-    (e: any) => {
-      const val = e?.target ? e.target.value : e;
+    (e: BitFieldInputEvent) => {
+      const val = isBitFieldInputEventObject(e) ? e.target?.value : e;
       setValue(val);
     },
     [setValue],

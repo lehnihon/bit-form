@@ -8,6 +8,7 @@ import { computed, inject, signal } from "@angular/core";
 import { BIT_STORE_TOKEN } from "./provider";
 import { injectBitField } from "./inject-bit-field";
 import { BitUploadFn, BitDeleteUploadFn } from "../core";
+import { createUploadHandler, createRemoveHandler } from "../core/adapters";
 import type { InjectBitUploadResult } from "./types";
 
 export function injectBitUpload(
@@ -20,42 +21,19 @@ export function injectBitUpload(
   let uploadKey: string | null = null;
   const isUploading = signal(false);
 
-  const upload = async (file: File | null | undefined) => {
-    if (!file) return;
-
-    isUploading.set(true);
-    store.setError(fieldPath, undefined);
-
-    try {
-      const result = await uploadFn(file);
-
-      field.setValue(result.url);
-      uploadKey = result.key;
-      store.setError(fieldPath, undefined);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Upload failed";
-      store.setError(fieldPath, message);
-    } finally {
-      isUploading.set(false);
-    }
+  const kernelCallbacks = {
+    setLoading: (val: boolean) => isUploading.set(val),
+    setError: (path: string, msg: string | undefined) =>
+      store.setError(path, msg),
+    setValue: (val: string | null) => field.setValue(val),
+    getUploadKey: () => uploadKey,
+    setUploadKey: (key: string | null) => {
+      uploadKey = key;
+    },
   };
 
-  const remove = async () => {
-    if (uploadKey && deleteFile) {
-      try {
-        await deleteFile(uploadKey);
-      } catch (error) {
-        const message =
-          error instanceof Error ? error.message : "Delete failed";
-        store.setError(fieldPath, message);
-        return;
-      }
-    }
-
-    field.setValue(null);
-    uploadKey = null;
-    store.setError(fieldPath, undefined);
-  };
+  const upload = createUploadHandler(fieldPath, uploadFn, kernelCallbacks);
+  const remove = createRemoveHandler(fieldPath, deleteFile, kernelCallbacks);
 
   return {
     value: computed(() => field.value()),

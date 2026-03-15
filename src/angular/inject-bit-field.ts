@@ -5,7 +5,20 @@ import {
   createMaskedFieldController,
   subscribeFieldState,
 } from "../core/field-controller";
-import type { InjectBitFieldMeta, InjectBitFieldResult } from "./types";
+import type {
+  BitFieldInputEvent,
+  InjectBitFieldMeta,
+  InjectBitFieldResult,
+} from "./types";
+
+function isBitFieldInputEventObject(
+  value: BitFieldInputEvent,
+): value is Extract<
+  BitFieldInputEvent,
+  { target?: { value?: string | number | null } }
+> {
+  return value != null && typeof value === "object" && "target" in value;
+}
 
 export function injectBitField<
   TValue = any,
@@ -51,7 +64,9 @@ export function injectBitField<
 
   const displayValue = computed(() => fieldController.displayValue(value()));
 
-  const setValue = (val: any) => {
+  const setValue = (
+    val: BitPathValue<TForm, P> | string | number | null | undefined,
+  ) => {
     fieldController.setValue(val);
   };
 
@@ -59,7 +74,8 @@ export function injectBitField<
 
   const hasError = computed(() => !!rawError());
 
-  const update = (e: any) => setValue(e?.target?.value ?? e);
+  const update = (e: BitFieldInputEvent) =>
+    setValue(isBitFieldInputEventObject(e) ? (e.target?.value ?? null) : e);
 
   return {
     // Main handlers and values (flat)

@@ -28,6 +28,17 @@ export interface InjectBitFieldMeta {
  * Result from injectBitField in Angular.
  * Provides field state, value, handlers, and metadata using Angular Signals.
  */
+/**
+ * Accepted input for Angular field update handlers.
+ * Covers native events (`e.target.value`), synthetic events, and direct values.
+ */
+export type BitFieldInputEvent =
+  | { target?: { value?: string | number | null } }
+  | string
+  | number
+  | null
+  | undefined;
+
 export interface InjectBitFieldResult<
   TForm extends object = any,
   P extends BitPath<TForm> = BitPath<TForm>,
@@ -35,9 +46,11 @@ export interface InjectBitFieldResult<
   // Main handlers and values (flat)
   value: () => BitPathValue<TForm, P>;
   displayValue: () => string;
-  setValue: (val: any) => void;
+  setValue: (
+    val: BitPathValue<TForm, P> | string | number | null | undefined,
+  ) => void;
   setBlur: () => void;
-  update: (e: any) => void;
+  update: (e: BitFieldInputEvent) => void;
   // Readonly metadata (grouped)
   meta: InjectBitFieldMeta;
 }

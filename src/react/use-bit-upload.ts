@@ -24,6 +24,7 @@ import { useCallback, useRef, useState } from "react";
 import { useBitField } from "./use-bit-field";
 import { useBitStore } from "./context";
 import { BitUploadFn, BitDeleteUploadFn } from "../core";
+import { createUploadHandler, createRemoveHandler } from "../core/adapters";
 import type { UseBitUploadResult } from "./types";
 
 export function useBitUpload(
@@ -36,48 +37,26 @@ export function useBitUpload(
   const uploadKeyRef = useRef<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
 
-  const upload = useCallback(
-    async (file: File | null | undefined) => {
-      if (!file) return;
-
-      setIsUploading(true);
-      store.setError(fieldPath, undefined);
-
-      try {
-        const result = await uploadFn(file);
-
-        field.setValue(result.url);
-        uploadKeyRef.current = result.key;
-        store.setError(fieldPath, undefined);
-      } catch (error) {
-        const message =
-          error instanceof Error ? error.message : "Upload failed";
-        store.setError(fieldPath, message);
-      } finally {
-        setIsUploading(false);
-      }
+  const kernelCallbacks = {
+    setLoading: setIsUploading,
+    setError: (path: string, msg: string | undefined) =>
+      store.setError(path, msg),
+    setValue: (val: string | null) => field.setValue(val as any),
+    getUploadKey: () => uploadKeyRef.current,
+    setUploadKey: (key: string | null) => {
+      uploadKeyRef.current = key;
     },
+  };
+
+  const upload = useCallback(
+    createUploadHandler(fieldPath, uploadFn, kernelCallbacks),
     [uploadFn, field, fieldPath, store],
   );
 
-  const remove = useCallback(async () => {
-    const uploadKey = uploadKeyRef.current;
-
-    if (uploadKey && deleteFile) {
-      try {
-        await deleteFile(uploadKey);
-      } catch (error) {
-        const message =
-          error instanceof Error ? error.message : "Delete failed";
-        store.setError(fieldPath, message);
-        return;
-      }
-    }
-
-    field.setValue(null);
-    uploadKeyRef.current = null;
-    store.setError(fieldPath, undefined);
-  }, [deleteFile, field, fieldPath, store]);
+  const remove = useCallback(
+    createRemoveHandler(fieldPath, deleteFile, kernelCallbacks),
+    [deleteFile, field, fieldPath, store],
+  );
 
   return {
     value: field.value,
