@@ -29,8 +29,20 @@ export function useBitScope(scopeName: string) {
     return nextStatus;
   }, [store, scopeName]);
 
+  // Assina apenas os slices de estado relevantes para o escopo (errors e
+  // isDirty), evitando execuções desnecessárias do getStatusSnapshot em
+  // mudanças não relacionadas (isSubmitting, isValidating de outros campos…)
+  const subscribe = useCallback(
+    (cb: () => void) =>
+      store.subscribeSelector(
+        (state) => ({ errors: state.errors, isDirty: state.isDirty }),
+        () => cb(),
+      ),
+    [store],
+  );
+
   const status = useSyncExternalStore(
-    store.subscribe.bind(store),
+    subscribe,
     getStatusSnapshot,
     getStatusSnapshot,
   );

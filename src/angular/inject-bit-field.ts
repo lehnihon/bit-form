@@ -5,20 +5,12 @@ import {
   createMaskedFieldController,
   subscribeFieldState,
 } from "../core/field-controller";
+import { isBitFieldInputEventObject } from "../core/mask/field-binding";
 import type {
   BitFieldInputEvent,
   InjectBitFieldMeta,
   InjectBitFieldResult,
 } from "./types";
-
-function isBitFieldInputEventObject(
-  value: BitFieldInputEvent,
-): value is Extract<
-  BitFieldInputEvent,
-  { target?: { value?: string | number | null } }
-> {
-  return value != null && typeof value === "object" && "target" in value;
-}
 
 export function injectBitField<
   TValue = any,

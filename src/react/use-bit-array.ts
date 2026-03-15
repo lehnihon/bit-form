@@ -1,10 +1,4 @@
-import {
-  useCallback,
-  useSyncExternalStore,
-  useState,
-  useMemo,
-  useEffect,
-} from "react";
+import { useCallback, useSyncExternalStore, useRef, useMemo } from "react";
 import { useBitStore } from "./context";
 import {
   getDeepValue,
@@ -21,6 +15,7 @@ export function useBitArray<
   P extends BitArrayPath<TForm> = BitArrayPath<TForm>,
 >(path: P) {
   const store = useBitStore<TForm>();
+  const idsRef = useRef<string[]>([]);
 
   type Item = BitArrayItem<BitPathValue<TForm, P>>;
 
@@ -29,7 +24,21 @@ export function useBitArray<
     const value = getDeepValue(state.values, path as string) as
       | BitPathValue<TForm, P>
       | undefined;
-    return Array.isArray(value) ? (value as Item[]) : [];
+    const arrayValue = Array.isArray(value) ? (value as Item[]) : [];
+
+    if (arrayValue.length !== idsRef.current.length) {
+      if (arrayValue.length > idsRef.current.length) {
+        const diff = arrayValue.length - idsRef.current.length;
+        idsRef.current = [
+          ...idsRef.current,
+          ...Array(diff).fill(null).map(generateId),
+        ];
+      } else {
+        idsRef.current = idsRef.current.slice(0, arrayValue.length);
+      }
+    }
+
+    return arrayValue;
   }, [store, path]);
 
   const subscribeArray = useCallback(
@@ -39,70 +48,48 @@ export function useBitArray<
 
   const data = useSyncExternalStore(subscribeArray, getSnapshot, getSnapshot);
 
-  const [ids, setIds] = useState<string[]>(() =>
-    (data as Item[]).map(generateId),
-  );
-
-  useEffect(() => {
-    if (data.length !== ids.length) {
-      setIds((prevIds) => {
-        if (data.length > prevIds.length) {
-          const diff = data.length - prevIds.length;
-          return [...prevIds, ...Array(diff).fill(null).map(generateId)];
-        }
-        return prevIds.slice(0, data.length);
-      });
-    }
-  }, [data.length]);
-
   const methods = useMemo(
     () => ({
       append: (value: Item) => {
-        setIds((prev) => [...prev, generateId()]);
+        idsRef.current = [...idsRef.current, generateId()];
         store.pushItem(path, value);
       },
       prepend: (value: Item) => {
-        setIds((prev) => [generateId(), ...prev]);
+        idsRef.current = [generateId(), ...idsRef.current];
         store.prependItem(path, value);
       },
       insert: (index: number, value: Item) => {
-        setIds((prev) => {
-          const newIds = [...prev];
-          newIds.splice(index, 0, generateId());
-          return newIds;
-        });
+        const newIds = [...idsRef.current];
+        newIds.splice(index, 0, generateId());
+        idsRef.current = newIds;
         store.insertItem(path, index, value);
       },
       remove: (index: number) => {
-        setIds((prev) => prev.filter((_, i) => i !== index));
+        idsRef.current = idsRef.current.filter((_, i) => i !== index);
         store.removeItem(path, index);
       },
       move: (from: number, to: number) => {
-        setIds((prev) => {
-          const newIds = [...prev];
-          const [item] = newIds.splice(from, 1);
-          newIds.splice(to, 0, item);
-          return newIds;
-        });
+        const newIds = [...idsRef.current];
+        const [item] = newIds.splice(from, 1);
+        newIds.splice(to, 0, item);
+        idsRef.current = newIds;
         store.moveItem(path, from, to);
       },
       swap: (indexA: number, indexB: number) => {
-        setIds((prev) => {
-          const newIds = [...prev];
-          [newIds[indexA], newIds[indexB]] = [newIds[indexB], newIds[indexA]];
-          return newIds;
-        });
+        const newIds = [...idsRef.current];
+        [newIds[indexA], newIds[indexB]] = [newIds[indexB], newIds[indexA]];
+        idsRef.current = newIds;
         store.swapItems(path, indexA, indexB);
       },
       replace: (items: Item[]) => {
-        setIds(items.map(generateId));
+        idsRef.current = items.map(generateId);
         store.setField(
           path as unknown as BitPath<TForm>,
           items as unknown as BitPathValue<TForm, BitPath<TForm>>,
         );
       },
       clear: () => {
-        setIds([]);
+        idsRef.current = [];
         store.setField(
           path as unknown as BitPath<TForm>,
           [] as unknown as BitPathValue<TForm, BitPath<TForm>>,
@@ -115,11 +102,11 @@ export function useBitArray<
   const fields = useMemo(
     () =>
       (data as Item[]).map((item: Item, index: number) => ({
-        key: ids[index] || `temp-${index}`,
+        key: idsRef.current[index] || `temp-${index}`,
         value: item,
         index,
       })),
-    [data, ids],
+    [data],
   );
 
   return {

@@ -2,9 +2,27 @@ import { BitFieldDefinition } from "../../contracts/types";
 import { getDeepValue } from "../../../utils";
 
 export class BitDependencyManager<T extends object = any> {
-  public fieldConfigs: Map<string, BitFieldDefinition<T>> = new Map();
-  public dependencies: Map<string, Set<string>> = new Map();
-  public hiddenFields: Set<string> = new Set();
+  private readonly fieldConfigs: Map<string, BitFieldDefinition<T>> = new Map();
+  private readonly dependencies: Map<string, Set<string>> = new Map();
+  private readonly hiddenFields: Set<string> = new Set();
+
+  getFieldConfig(path: string): BitFieldDefinition<T> | undefined {
+    return this.fieldConfigs.get(path);
+  }
+
+  forEachFieldConfig(
+    callback: (config: BitFieldDefinition<T>, path: string) => void,
+  ) {
+    this.fieldConfigs.forEach((config, path) => callback(config, path));
+  }
+
+  hasFieldConfig(path: string): boolean {
+    return this.fieldConfigs.has(path);
+  }
+
+  getHiddenFields(): string[] {
+    return Array.from(this.hiddenFields);
+  }
 
   register(path: string, config: BitFieldDefinition<T>, currentValues: T) {
     this.fieldConfigs.set(path, config);

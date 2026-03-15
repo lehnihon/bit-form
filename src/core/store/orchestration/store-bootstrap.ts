@@ -17,7 +17,7 @@ import { BitCapabilityRegistry } from "./capability-registry";
 import { BitDependencyManager } from "../managers/core/dependency-manager";
 import { deepClone } from "../../utils";
 import type { BitStoreCapabilities } from "./capabilities";
-import type { BitResolvedConfig } from "../contracts/public-types";
+import type { BitFrameworkConfig } from "../contracts/public-types";
 import type { BitLifecycleStorePort } from "../managers/features/lifecycle-manager";
 import type { BitValidationStorePort } from "../managers/features/validation-manager";
 import type { BitFieldDefinition, BitState } from "../contracts/types";
@@ -78,9 +78,9 @@ export function createStoreCapabilities<T extends object>(args: {
 export function createStoreEffects<T extends object>(args: {
   storeId: string;
   storeInstance: unknown;
-  config: BitResolvedConfig<T>;
+  config: BitFrameworkConfig<T>;
   getState: () => BitState<T>;
-  getConfig: () => BitResolvedConfig<T>;
+  getConfig: () => BitFrameworkConfig<T>;
   getValues: () => T;
   getDirtyValues: () => Partial<T>;
   applyPersistedValues: (values: Partial<T>) => void;
@@ -127,7 +127,7 @@ export function createStoreEffects<T extends object>(args: {
 }
 
 export function createInitialStoreState<T extends object>(args: {
-  config: BitResolvedConfig<T>;
+  config: BitFrameworkConfig<T>;
   dependencyManager: BitDependencyManager<T>;
   computedManager: BitComputedManager<T>;
 }): BitState<T> {

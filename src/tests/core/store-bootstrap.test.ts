@@ -29,7 +29,7 @@ describe("createInitialStoreState", () => {
     const dependencyManager = new BitDependencyManager<any>();
     const computedManager = new BitComputedManager<any>(() => {
       const entries: [string, (values: any) => any][] = [];
-      dependencyManager.fieldConfigs.forEach((fieldConfig, path) => {
+      dependencyManager.forEachFieldConfig((fieldConfig, path) => {
         if (fieldConfig.computed) {
           entries.push([path, fieldConfig.computed]);
         }
@@ -44,8 +44,8 @@ describe("createInitialStoreState", () => {
     });
 
     expect(initialState.values.total).toBe(20);
-    expect(dependencyManager.fieldConfigs.has("total")).toBe(true);
-    expect(dependencyManager.fieldConfigs.has("extra")).toBe(true);
+    expect(dependencyManager.hasFieldConfig("total")).toBe(true);
+    expect(dependencyManager.hasFieldConfig("extra")).toBe(true);
     expect(dependencyManager.isHidden("extra")).toBe(true);
   });
 });

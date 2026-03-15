@@ -54,6 +54,12 @@ if (typeof window !== "undefined") {
 
 afterEach(() => {
   cleanup();
+
+  const bitFormGlobal = (globalThis as any).__BIT_FORM__;
+  if (bitFormGlobal) {
+    bitFormGlobal.listeners?.clear?.();
+    bitFormGlobal.stores = {};
+  }
 });
 
 const testBed = getTestBed();

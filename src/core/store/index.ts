@@ -20,7 +20,7 @@ import {
   BitAfterSubmitEvent,
 } from "./contracts/types";
 import type {
-  BitResolvedConfig,
+  BitFrameworkConfig,
   BitHistoryMetadata,
   BitSelector,
   BitSelectorSubscriptionOptions,
@@ -69,8 +69,8 @@ export class BitStore<T extends object = any>
   // PUBLIC PROPERTIES
   // ============================================================================
 
-  public config: BitResolvedConfig<T>;
-  public storeId: string;
+  public config: BitFrameworkConfig<T>;
+  public readonly storeId: string;
 
   // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   // Core Managers
@@ -80,6 +80,15 @@ export class BitStore<T extends object = any>
   private readonly dependencyManager: BitDependencyManager<T>;
   private readonly computedManager: BitComputedManager<T>;
   private readonly dirtyManager: BitDirtyManager<T>;
+  private scopeFieldsIndex: Map<string, string[]> | null = null;
+  private computedEntriesCache: [string, BitComputedFn<T>][] | null = null;
+  private transformEntriesCache: [string, BitTransformFn<T>][] | null = null;
+
+  private invalidateFieldIndexes() {
+    this.scopeFieldsIndex = null;
+    this.computedEntriesCache = null;
+    this.transformEntriesCache = null;
+  }
 
   private getCapability<TKey extends keyof BitStoreCapabilities<T>>(key: TKey) {
     return this.capabilities.get(key);
@@ -171,45 +180,54 @@ export class BitStore<T extends object = any>
 
   getFieldConfig(path: string): BitFieldDefinition<T> | undefined {
     return (
-      this.dependencyManager.fieldConfigs.get(path) ||
+      this.dependencyManager.getFieldConfig(path) ||
       this.config.fields?.[path as keyof typeof this.config.fields]
     );
   }
 
   getScopeFields(scopeName: string): string[] {
-    const result: string[] = [];
+    if (!this.scopeFieldsIndex) {
+      const index = new Map<string, string[]>();
+      this.dependencyManager.forEachFieldConfig((cfg, path) => {
+        if (!cfg.scope) {
+          return;
+        }
+        const list = index.get(cfg.scope) ?? [];
+        list.push(path);
+        index.set(cfg.scope, list);
+      });
+      this.scopeFieldsIndex = index;
+    }
 
-    this.dependencyManager.fieldConfigs.forEach((cfg, path) => {
-      if (cfg.scope === scopeName) {
-        result.push(path);
-      }
-    });
-
-    return result;
+    return this.scopeFieldsIndex.get(scopeName) ?? [];
   }
 
   getComputedEntries(): [string, BitComputedFn<T>][] {
-    const result: [string, BitComputedFn<T>][] = [];
+    if (!this.computedEntriesCache) {
+      const result: [string, BitComputedFn<T>][] = [];
+      this.dependencyManager.forEachFieldConfig((cfg, path) => {
+        if (cfg.computed) {
+          result.push([path, cfg.computed]);
+        }
+      });
+      this.computedEntriesCache = result;
+    }
 
-    this.dependencyManager.fieldConfigs.forEach((cfg, path) => {
-      if (cfg.computed) {
-        result.push([path, cfg.computed]);
-      }
-    });
-
-    return result;
+    return this.computedEntriesCache;
   }
 
   getTransformEntries(): [string, BitTransformFn<T>][] {
-    const result: [string, BitTransformFn<T>][] = [];
+    if (!this.transformEntriesCache) {
+      const result: [string, BitTransformFn<T>][] = [];
+      this.dependencyManager.forEachFieldConfig((cfg, path) => {
+        if (cfg.transform) {
+          result.push([path, cfg.transform]);
+        }
+      });
+      this.transformEntriesCache = result;
+    }
 
-    this.dependencyManager.fieldConfigs.forEach((cfg, path) => {
-      if (cfg.transform) {
-        result.push([path, cfg.transform]);
-      }
-    });
-
-    return result;
+    return this.transformEntriesCache;
   }
 
   resolveMask(path: string): BitMask | undefined {
@@ -264,6 +282,7 @@ export class BitStore<T extends object = any>
 
   registerField(path: string, config: BitFieldDefinition<T>) {
     this.dependencyManager.register(path, config, this.state.values);
+    this.invalidateFieldIndexes();
     if (this.dependencyManager.isHidden(path)) {
       this.subscriptions.notify(this.state, ["*"]);
     }
@@ -274,7 +293,9 @@ export class BitStore<T extends object = any>
     if (this.config.fields?.[path as string]) {
       return;
     }
+    this.validation.cleanupField(path as string);
     this.dependencyManager.unregister(path);
+    this.invalidateFieldIndexes();
 
     const newErrors = { ...this.state.errors };
     const newTouched = { ...this.state.touched };
@@ -299,7 +320,9 @@ export class BitStore<T extends object = any>
   }
 
   unregisterPrefix(prefix: string) {
+    this.validation.cleanupPrefix(prefix);
     this.dependencyManager.unregisterPrefix(prefix);
+    this.invalidateFieldIndexes();
   }
 
   // ============================================================================
@@ -618,7 +641,7 @@ export class BitStore<T extends object = any>
   }
 
   getHiddenFields(): string[] {
-    return Array.from(this.dependencyManager.hiddenFields);
+    return this.dependencyManager.getHiddenFields();
   }
 
   getRequiredErrors(values: T): BitErrors<T> {

@@ -4,12 +4,16 @@ export type DeepPartial<T> = T extends object
   ? { [P in keyof T]?: DeepPartial<T[P]> }
   : T;
 
-export type BitErrors<T> = { [key: string]: string | undefined };
-export type BitTouched<T> = { [key: string]: boolean | undefined };
+export type BitErrors<T extends object> = Partial<
+  Record<BitPath<T>, string | undefined>
+>;
+export type BitTouched<T extends object> = Partial<
+  Record<BitPath<T>, boolean | undefined>
+>;
 export type BitComputedFn<T> = (values: T) => any;
 export type BitTransformFn<T> = (value: any, allValues: T) => any;
 
-export interface BitState<T> {
+export interface BitState<T extends object> {
   values: T;
   errors: BitErrors<T>;
   touched: BitTouched<T>;

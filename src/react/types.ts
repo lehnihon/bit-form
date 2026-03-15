@@ -6,6 +6,8 @@ import type {
   BitPersistMetadata,
   BitTouched,
 } from "../core";
+import type { BitFieldInputEvent } from "../core/mask/field-binding";
+export type { BitFieldInputEvent };
 
 /**
  * Metadata describing the current state of a form field.
@@ -20,17 +22,6 @@ export interface UseBitFieldMeta {
   isRequired: boolean;
   hasError: boolean;
 }
-
-/**
- * Accepted input for field change handlers.
- * Covers native events (`e.target.value`), synthetic events, and direct values.
- */
-export type BitFieldInputEvent =
-  | { target?: { value?: string | number | null } }
-  | string
-  | number
-  | null
-  | undefined;
 
 /**
  * Props that can be spread onto a native HTML input element.

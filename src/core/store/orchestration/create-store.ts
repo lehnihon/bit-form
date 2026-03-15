@@ -4,6 +4,48 @@ import { BitStoreApi, BitStoreHooksApi } from "../contracts/public-types";
 
 const BIT_STORE_ENGINE = Symbol.for("bit-form.store.engine");
 
+const PUBLIC_FACADE_KEYS = new Set<string>([
+  "config",
+  "getConfig",
+  "getState",
+  "subscribe",
+  "setField",
+  "blurField",
+  "replaceValues",
+  "hydrate",
+  "rebase",
+  "setError",
+  "setErrors",
+  "setServerErrors",
+  "validate",
+  "reset",
+  "submit",
+  "registerMask",
+  "getDirtyValues",
+  "restorePersisted",
+  "forceSave",
+  "clearPersisted",
+  "cleanup",
+  "registerField",
+  "unregisterField",
+  "isHidden",
+  "isRequired",
+  "isFieldDirty",
+  "isFieldValidating",
+  "watch",
+  "pushItem",
+  "prependItem",
+  "insertItem",
+  "removeItem",
+  "moveItem",
+  "swapItems",
+  "getHistoryMetadata",
+  "undo",
+  "redo",
+  "getStepStatus",
+  "getStepErrors",
+]);
+
 type BitStoreFacade<T extends object> = BitStoreApi<T> & {
   [BIT_STORE_ENGINE]?: BitStore<T>;
 };
@@ -20,7 +62,9 @@ export function resolveBitStoreForHooks<T extends object>(
     return facade[BIT_STORE_ENGINE] as BitStoreHooksApi<T>;
   }
 
-  return store as unknown as BitStoreHooksApi<T>;
+  throw new Error(
+    "BitStore: store facade without engine reference cannot be resolved for hooks API.",
+  );
 }
 
 export function createBitStore<T extends object = any>(
@@ -28,67 +72,35 @@ export function createBitStore<T extends object = any>(
 ): BitStoreApi<T> {
   const engine = new BitStore<T>(config);
 
-  const facade: BitStoreFacade<T> = {
-    get config() {
-      return engine.config;
+  const facade = new Proxy(engine as BitStore<T>, {
+    get(target, prop, receiver) {
+      if (prop === BIT_STORE_ENGINE) {
+        return engine;
+      }
+
+      if (typeof prop === "string" && !PUBLIC_FACADE_KEYS.has(prop)) {
+        return undefined;
+      }
+
+      const value = Reflect.get(target, prop, receiver);
+      if (typeof value === "function") {
+        return value.bind(engine);
+      }
+
+      return value;
     },
+    has(_target, prop) {
+      if (prop === BIT_STORE_ENGINE) {
+        return false;
+      }
 
-    getConfig: () => engine.getConfig(),
-    getState: () => engine.getState(),
-    subscribe: engine.subscribe.bind(engine),
+      if (typeof prop === "string") {
+        return PUBLIC_FACADE_KEYS.has(prop);
+      }
 
-    setField: engine.setField.bind(engine),
-    blurField: engine.blurField.bind(engine),
-    replaceValues: engine.replaceValues.bind(engine),
-    hydrate: engine.hydrate.bind(engine),
-    rebase: engine.rebase.bind(engine),
+      return false;
+    },
+  }) as unknown as BitStoreFacade<T>;
 
-    setError: engine.setError.bind(engine),
-    setErrors: engine.setErrors.bind(engine),
-    setServerErrors: engine.setServerErrors.bind(engine),
-
-    validate: engine.validate.bind(engine),
-    reset: engine.reset.bind(engine),
-    submit: engine.submit.bind(engine),
-
-    registerMask: engine.registerMask.bind(engine),
-    getDirtyValues: engine.getDirtyValues.bind(engine),
-    restorePersisted: engine.restorePersisted.bind(engine),
-    forceSave: engine.forceSave.bind(engine),
-    clearPersisted: engine.clearPersisted.bind(engine),
-
-    registerField: engine.registerField.bind(engine),
-    unregisterField: engine.unregisterField.bind(engine),
-
-    isHidden: engine.isHidden.bind(engine),
-    isRequired: engine.isRequired.bind(engine),
-    isFieldDirty: engine.isFieldDirty.bind(engine),
-    isFieldValidating: engine.isFieldValidating.bind(engine),
-    watch: engine.watch.bind(engine),
-
-    pushItem: engine.pushItem.bind(engine),
-    prependItem: engine.prependItem.bind(engine),
-    insertItem: engine.insertItem.bind(engine),
-    removeItem: engine.removeItem.bind(engine),
-    moveItem: engine.moveItem.bind(engine),
-    swapItems: engine.swapItems.bind(engine),
-
-    getHistoryMetadata: engine.getHistoryMetadata.bind(engine),
-    undo: engine.undo.bind(engine),
-    redo: engine.redo.bind(engine),
-
-    getStepStatus: engine.getStepStatus.bind(engine),
-    getStepErrors: engine.getStepErrors.bind(engine),
-
-    cleanup: engine.cleanup.bind(engine),
-  };
-
-  Object.defineProperty(facade, BIT_STORE_ENGINE, {
-    value: engine,
-    enumerable: false,
-    configurable: false,
-    writable: false,
-  });
-
-  return facade;
+  return facade as BitStoreApi<T>;
 }
