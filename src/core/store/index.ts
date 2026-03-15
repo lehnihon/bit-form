@@ -425,7 +425,9 @@ export class BitStore<T extends object = any>
   markFieldsTouched(paths: string[]) {
     if (paths.length === 0) return;
     const newTouched = { ...this.state.touched };
-    paths.forEach((path) => (newTouched[path] = true));
+    paths.forEach((path) => {
+      newTouched[path as keyof typeof newTouched] = true;
+    });
     this.internalUpdateState({ touched: newTouched });
   }
 
