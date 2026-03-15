@@ -1,7 +1,6 @@
 import { inject, provide, InjectionKey } from "vue";
-import type { BitStoreApi } from "../core";
-import type { BitStoreHooksApi } from "../core/store/public-types";
-import { resolveBitStoreForHooks } from "../core/store/create-store";
+import type { BitStoreApi, BitStoreHooksApi } from "../core";
+import { resolveBitStoreForHooks } from "../core";
 
 // Chave única para evitar colisões
 export const BIT_STORE_KEY: InjectionKey<BitStoreHooksApi<any>> =

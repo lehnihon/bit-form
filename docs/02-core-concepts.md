@@ -8,6 +8,18 @@ The `BitStore` is a plain TypeScript class that acts as the single source of tru
 
 When you use framework-specific wrappers like `useBitForm` (React/Vue) or `injectBitForm` (Angular), they are simply subscribing to the `BitStore` and triggering re-renders only when necessary. This architecture is what makes Bit-Form incredibly performant and cross-compatible.
 
+### V3 Runtime Architecture
+
+In V3, `BitStore` acts mainly as an orchestrator/facade over specialized runtime modules:
+
+- `subscription-engine`: handles `subscribe`, selector subscriptions, scoped path subscriptions and auto-tracked paths.
+- `state-update-engine`: normalizes state updates (`changedPaths`, `valuesChanged`, computed apply).
+- `effect-engine`: centralizes side effects (persist, plugin lifecycle hooks, bus dispatch).
+- `store-bootstrap`: builds capabilities and initial state during store construction.
+- `capability-registry`: resolves feature managers (`validation`, `lifecycle`, `history`, `arrays`, `scope`, `query`, `error`).
+
+This separation reduces coupling inside `BitStore` and makes behavior easier to test in isolated units.
+
 ## 🧱 Shared Controllers (Framework-Agnostic)
 
 Bit-Form now centralizes shared UI orchestration into framework-agnostic controllers:
@@ -62,9 +74,9 @@ When you call the `submit(onSuccess)` method, the `BitStore` executes a staged p
 
 This explicit stage model makes behavior easier to reason about and safer to extend.
 
-## 🧩 The Managers
+## 🧩 Managers and Engines
 
-To keep the `BitStore` clean and modular, its logic is divided into specialized managers:
+Bit-Form uses both specialized managers (domain behavior) and runtime engines (orchestration behavior):
 
 - **Dependency Manager**: Evaluates `showIf` and `requiredIf` conditions.
 - **Validation Manager**: Handles synchronous resolvers (Zod, Yup, Joi) and debounced asynchronous API validations.

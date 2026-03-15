@@ -1,7 +1,6 @@
 import { inject, InjectionToken, Provider } from "@angular/core";
-import type { BitStoreApi } from "../core";
-import type { BitStoreHooksApi } from "../core/store/public-types";
-import { resolveBitStoreForHooks } from "../core/store/create-store";
+import type { BitStoreApi, BitStoreHooksApi } from "../core";
+import { resolveBitStoreForHooks } from "../core";
 
 export const BIT_STORE_TOKEN = new InjectionToken<BitStoreHooksApi<any>>(
   "BIT_STORE",

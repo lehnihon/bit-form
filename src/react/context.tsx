@@ -1,7 +1,6 @@
 import React, { createContext, useContext } from "react";
-import type { BitStoreApi } from "../core";
-import type { BitStoreHooksApi } from "../core/store/public-types";
-import { resolveBitStoreForHooks } from "../core/store/create-store";
+import type { BitStoreApi, BitStoreHooksApi } from "../core";
+import { resolveBitStoreForHooks } from "../core";
 
 const BitContext = createContext<BitStoreHooksApi<any> | null>(null);
 
