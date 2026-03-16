@@ -47,11 +47,17 @@ function createConsumer(name, files) {
 }
 
 function packLibrary() {
-  const result = spawnSync("npm", ["pack", "--json"], {
+  run("npm", ["run", "build"], repoRoot);
+
+  const result = spawnSync(
+    "npm",
+    ["pack", "--json", "--pack-destination", tempRoot],
+    {
     cwd: repoRoot,
     encoding: "utf-8",
     env: process.env,
-  });
+    },
+  );
 
   if (result.status !== 0) {
     throw new Error(result.stderr || "npm pack failed");
@@ -64,7 +70,7 @@ function packLibrary() {
     throw new Error("Unable to detect generated tarball from npm pack");
   }
 
-  return path.join(repoRoot, fileName);
+  return path.join(tempRoot, fileName);
 }
 
 try {
