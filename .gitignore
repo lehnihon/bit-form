@@ -32,3 +32,5 @@ repomix-output.txt
 # Quality & E2E Testing
 test-results/
 .playwright/
+playwright-report/
+quality/e2e/quality/
