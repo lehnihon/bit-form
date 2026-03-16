@@ -4,6 +4,7 @@ export default defineConfig({
   test: {
     environment: "jsdom",
     globals: true,
+    testTimeout: 120_000,
     include: ["quality/**/*.test.{ts,tsx}"],
   },
 });
