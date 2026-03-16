@@ -1,4 +1,10 @@
 import { defineConfig, devices } from "@playwright/test";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const projectRoot = path.resolve(__dirname, "../..");
 
 export default defineConfig({
   testDir: "./tests",
@@ -10,7 +16,7 @@ export default defineConfig({
     trace: "retain-on-failure",
   },
   webServer: {
-    command: "npm run quality:e2e:serve",
+    command: `cd ${projectRoot} && npm run quality:e2e:serve`,
     url: "http://127.0.0.1:4173",
     reuseExistingServer: !process.env.CI,
     timeout: 90_000,
