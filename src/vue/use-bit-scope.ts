@@ -20,16 +20,19 @@ export function useBitScope(scopeName: string) {
   let unsubscribe: () => void;
 
   onMounted(() => {
-    unsubscribe = store.subscribe(() => {
-      const newStatus = store.getStepStatus(scopeName);
-      if (
-        newStatus.hasErrors !== status.value.hasErrors ||
-        newStatus.isDirty !== status.value.isDirty ||
-        !errorsEqual(newStatus.errors, status.value.errors)
-      ) {
-        status.value = newStatus;
-      }
-    });
+    unsubscribe = store.subscribeSelector(
+      (state) => ({ errors: state.errors, isDirty: state.isDirty }),
+      () => {
+        const newStatus = store.getStepStatus(scopeName);
+        if (
+          newStatus.hasErrors !== status.value.hasErrors ||
+          newStatus.isDirty !== status.value.isDirty ||
+          !errorsEqual(newStatus.errors, status.value.errors)
+        ) {
+          status.value = newStatus;
+        }
+      },
+    );
   });
 
   onUnmounted(() => {

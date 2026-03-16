@@ -16,6 +16,7 @@ export default defineConfig([
       "resolvers/yup": "src/resolvers/yup.ts",
       "resolvers/joi": "src/resolvers/joi.ts",
       "resolvers/types": "src/resolvers/types.ts",
+      "resolvers/index": "src/resolvers/index.ts",
       "devtools/index": "src/devtools/index.ts",
       "devtools/bridge": "src/devtools/bridge.ts",
     },

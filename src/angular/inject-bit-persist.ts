@@ -1,4 +1,4 @@
-import { signal } from "@angular/core";
+import { computed, inject, signal, DestroyRef } from "@angular/core";
 import { useBitStore } from "./provider";
 import type { InjectBitPersistResult } from "./types";
 
@@ -6,45 +6,29 @@ export function injectBitPersist<
   T extends object = any,
 >(): InjectBitPersistResult {
   const store = useBitStore<T>();
-  const isSaving = signal(false);
-  const isRestoring = signal(false);
-  const error = signal<Error | null>(null);
+  const persist = signal(store.getPersistMetadata());
+
+  const unsubscribe = store.subscribeSelector(
+    (state) => state.persist,
+    (nextPersist) => {
+      persist.set(nextPersist);
+    },
+  );
+
+  try {
+    inject(DestroyRef).onDestroy(() => unsubscribe());
+  } catch {}
 
   const restore = async (): Promise<boolean> => {
-    isRestoring.set(true);
-    error.set(null);
-
-    try {
-      return await store.restorePersisted();
-    } catch (err) {
-      error.set(err instanceof Error ? err : new Error(String(err)));
-      return false;
-    } finally {
-      isRestoring.set(false);
-    }
+    return store.restorePersisted();
   };
 
   const save = async (): Promise<void> => {
-    isSaving.set(true);
-    error.set(null);
-
-    try {
-      await store.forceSave();
-    } catch (err) {
-      error.set(err instanceof Error ? err : new Error(String(err)));
-    } finally {
-      isSaving.set(false);
-    }
+    await store.forceSave();
   };
 
   const clear = async (): Promise<void> => {
-    error.set(null);
-
-    try {
-      await store.clearPersisted();
-    } catch (err) {
-      error.set(err instanceof Error ? err : new Error(String(err)));
-    }
+    await store.clearPersisted();
   };
 
   return {
@@ -52,9 +36,9 @@ export function injectBitPersist<
     save,
     clear,
     meta: {
-      isSaving: isSaving.asReadonly(),
-      isRestoring: isRestoring.asReadonly(),
-      error: error.asReadonly(),
+      isSaving: computed(() => persist().isSaving),
+      isRestoring: computed(() => persist().isRestoring),
+      error: computed(() => persist().error),
     },
   };
 }

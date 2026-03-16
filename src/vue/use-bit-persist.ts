@@ -1,48 +1,30 @@
-import { ref, readonly } from "vue";
+import { computed, onUnmounted, ref } from "vue";
 import { useBitStore } from "./context";
 import type { UseBitPersistResult } from "./types";
 
 export function useBitPersist<T extends object = any>(): UseBitPersistResult {
   const store = useBitStore<T>();
-  const isSaving = ref(false);
-  const isRestoring = ref(false);
-  const error = ref<Error | null>(null);
+  const meta = ref(store.getPersistMetadata());
+
+  const unsubscribe = store.subscribeSelector(
+    (state) => state.persist,
+    (nextMeta) => {
+      meta.value = nextMeta;
+    },
+  );
+
+  onUnmounted(() => unsubscribe());
 
   const restore = async (): Promise<boolean> => {
-    isRestoring.value = true;
-    error.value = null;
-
-    try {
-      return await store.restorePersisted();
-    } catch (err) {
-      error.value = err instanceof Error ? err : new Error(String(err));
-      return false;
-    } finally {
-      isRestoring.value = false;
-    }
+    return store.restorePersisted();
   };
 
   const save = async (): Promise<void> => {
-    isSaving.value = true;
-    error.value = null;
-
-    try {
-      await store.forceSave();
-    } catch (err) {
-      error.value = err instanceof Error ? err : new Error(String(err));
-    } finally {
-      isSaving.value = false;
-    }
+    await store.forceSave();
   };
 
   const clear = async (): Promise<void> => {
-    error.value = null;
-
-    try {
-      await store.clearPersisted();
-    } catch (err) {
-      error.value = err instanceof Error ? err : new Error(String(err));
-    }
+    await store.clearPersisted();
   };
 
   return {
@@ -50,9 +32,9 @@ export function useBitPersist<T extends object = any>(): UseBitPersistResult {
     save,
     clear,
     meta: {
-      isSaving: readonly(isSaving),
-      isRestoring: readonly(isRestoring),
-      error: readonly(error),
+      isSaving: computed(() => meta.value.isSaving),
+      isRestoring: computed(() => meta.value.isRestoring),
+      error: computed(() => meta.value.error),
     },
   };
 }

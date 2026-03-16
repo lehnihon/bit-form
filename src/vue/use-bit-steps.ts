@@ -38,7 +38,10 @@ export function useBitSteps(scopeNames: string[]): UseBitStepsResult {
   };
 
   onMounted(() => {
-    unsubscribe = store.subscribe(updateStatus);
+    unsubscribe = store.subscribeSelector(
+      (state) => ({ errors: state.errors, isDirty: state.isDirty }),
+      updateStatus,
+    );
   });
 
   onUnmounted(() => {

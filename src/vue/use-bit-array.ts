@@ -8,13 +8,18 @@ import {
   BitPath,
 } from "../core";
 
-const generateId = () => Math.random().toString(36).substring(2, 9);
-
 export function useBitArray<
   TForm extends object = any,
   P extends BitArrayPath<TForm> = BitArrayPath<TForm>,
 >(path: P) {
   const store = useBitStore<TForm>();
+
+  const createId = (index?: number) =>
+    store.config.idFactory({
+      scope: "array",
+      path: path as string,
+      index,
+    });
 
   type Item = BitArrayItem<BitPathValue<TForm, P>>;
 
@@ -27,7 +32,7 @@ export function useBitArray<
 
   const initialValues = getSnapshot();
   const values = ref<Item[]>(initialValues);
-  const ids = ref<string[]>(initialValues.map(generateId));
+  const ids = ref<string[]>(initialValues.map((_, index) => createId(index)));
 
   const unsubscribe = store.subscribePath(path, (newValues) => {
     const nextValues = (Array.isArray(newValues) ? newValues : []) as Item[];
@@ -38,7 +43,9 @@ export function useBitArray<
       const currentIds = [...ids.value];
       if (nextValues.length > currentIds.length) {
         const diff = nextValues.length - currentIds.length;
-        const newIds = Array.from({ length: diff }, generateId);
+        const newIds = Array.from({ length: diff }, (_, i) =>
+          createId(currentIds.length + i),
+        );
         ids.value = [...currentIds, ...newIds];
       } else {
         ids.value = currentIds.slice(0, nextValues.length);
@@ -67,15 +74,15 @@ export function useBitArray<
     fields,
     length,
     append: (val: Item) => {
-      ids.value.push(generateId());
+      ids.value.push(createId(ids.value.length));
       store.pushItem(path, val);
     },
     prepend: (val: Item) => {
-      ids.value.unshift(generateId());
+      ids.value.unshift(createId(0));
       store.prependItem(path, val);
     },
     insert: (index: number, val: Item) => {
-      ids.value.splice(index, 0, generateId());
+      ids.value.splice(index, 0, createId(index));
       store.insertItem(path, index, val);
     },
     remove: (index: number) => {
@@ -96,7 +103,7 @@ export function useBitArray<
       store.swapItems(path, a, b);
     },
     replace: (items: Item[]) => {
-      ids.value = items.map(generateId);
+      ids.value = items.map((_, index) => createId(index));
       store.setField(
         path as unknown as BitPath<TForm>,
         items as unknown as BitPathValue<TForm, BitPath<TForm>>,

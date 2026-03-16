@@ -57,9 +57,11 @@ export class BitSubscriptionEngine<T extends object> {
     if (scopedPaths.length > 0) {
       this.pathScopedSubscriptions.set(subscription, scopedPaths);
       scopedPaths.forEach((pathKey) => {
-        const listeners = this.pathSelectorIndex.get(pathKey) ?? new Set();
-        listeners.add(subscription);
-        this.pathSelectorIndex.set(pathKey, listeners);
+        this.expandPathForIndexing(pathKey).forEach((indexPath) => {
+          const listeners = this.pathSelectorIndex.get(indexPath) ?? new Set();
+          listeners.add(subscription);
+          this.pathSelectorIndex.set(indexPath, listeners);
+        });
       });
     } else {
       this.selectorListeners.add(subscription);
@@ -76,13 +78,15 @@ export class BitSubscriptionEngine<T extends object> {
       if (!paths) return;
 
       paths.forEach((pathKey) => {
-        const listeners = this.pathSelectorIndex.get(pathKey);
-        if (!listeners) return;
+        this.expandPathForIndexing(pathKey).forEach((indexPath) => {
+          const listeners = this.pathSelectorIndex.get(indexPath);
+          if (!listeners) return;
 
-        listeners.delete(subscription);
-        if (listeners.size === 0) {
-          this.pathSelectorIndex.delete(pathKey);
-        }
+          listeners.delete(subscription);
+          if (listeners.size === 0) {
+            this.pathSelectorIndex.delete(indexPath);
+          }
+        });
       });
 
       this.pathScopedSubscriptions.delete(subscription);
@@ -214,15 +218,18 @@ export class BitSubscriptionEngine<T extends object> {
         addByPath(parts.join("."));
       }
 
-      this.pathSelectorIndex.forEach((listeners, indexedPath) => {
-        if (indexedPath.startsWith(`${changedPath}.`)) {
-          listeners.forEach((subscription) =>
-            scopedSubscribers.add(subscription),
-          );
-        }
-      });
     });
 
     return scopedSubscribers;
   }
+
+  private expandPathForIndexing(path: string): string[] {
+    const segments = path.split(".");
+    const keys: string[] = [];
+    for (let i = 1; i <= segments.length; i++) {
+      keys.push(segments.slice(0, i).join("."));
+    }
+    return keys;
+  }
+
 }

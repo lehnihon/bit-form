@@ -14,8 +14,12 @@ import {
   BitPersistResolvedConfig,
   BitPlugin,
   DeepPartial,
+  BitPersistMetadata,
+  BitIdFactory,
 } from "./types";
 import { BitMask, BitMaskName } from "../../mask/types";
+
+export type { BitPersistMetadata } from "./types";
 
 export type BitSelector<T extends object, TSlice> = (
   state: Readonly<BitState<T>>,
@@ -43,12 +47,6 @@ export interface BitHistoryMetadata {
   historySize: number;
 }
 
-export interface BitPersistMetadata {
-  isSaving: boolean;
-  isRestoring: boolean;
-  error: Error | null;
-}
-
 export interface BitFrameworkConfig<
   T extends object = any,
 > extends BitConfig<T> {
@@ -61,6 +59,7 @@ export interface BitFrameworkConfig<
   fields?: Record<string, BitFieldDefinition<T>>;
   devTools?: boolean | DevToolsOptions;
   persist: BitPersistResolvedConfig<T>;
+  idFactory: BitIdFactory;
   plugins: BitPlugin<T>[];
 }
 
@@ -92,6 +91,7 @@ export interface BitStoreApi<T extends object = any> {
 
   registerMask(name: BitMaskName, mask: BitMask): void;
   getDirtyValues(): Partial<T>;
+  getPersistMetadata(): BitPersistMetadata;
   restorePersisted(): Promise<boolean>;
   forceSave(): Promise<void>;
   clearPersisted(): Promise<void>;

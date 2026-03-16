@@ -14,6 +14,7 @@ export class BitFieldQueryManager<T extends object = any> {
     private dependencyManager: BitDependencyManager<T>,
     private getState: () => BitState<T>,
     private getConfig: () => BitFrameworkConfig<T>,
+    private isPathDirty: (path: string) => boolean,
   ) {}
 
   /**
@@ -34,9 +35,7 @@ export class BitFieldQueryManager<T extends object = any> {
    * Check if a field has been modified from its initial value.
    */
   isFieldDirty(path: string): boolean {
-    const currentValue = getDeepValue(this.getState().values, path);
-    const initialValue = getDeepValue(this.getConfig().initialValues, path);
-    return !valueEqual(currentValue, initialValue);
+    return this.isPathDirty(path);
   }
 
   /**

@@ -15,6 +15,7 @@ import { BitFieldQueryManager } from "../managers/features/field-query-manager";
 import { BitErrorManager } from "../managers/features/error-manager";
 import { BitCapabilityRegistry } from "./capability-registry";
 import { BitDependencyManager } from "../managers/core/dependency-manager";
+import { BitDirtyManager } from "../managers/core/dirty-manager";
 import { deepClone } from "../../utils";
 import type { BitStoreCapabilities } from "./capabilities";
 import type { BitFrameworkConfig } from "../contracts/public-types";
@@ -33,8 +34,9 @@ type BitStoreCapabilityPorts<T extends object> = BitValidationStorePort<T> &
 export function createStoreCapabilities<T extends object>(args: {
   store: BitStoreCapabilityPorts<T>;
   dependencyManager: BitDependencyManager<T>;
+  dirtyManager: BitDirtyManager<T>;
 }): BitCapabilityRegistry<BitStoreCapabilities<T>> {
-  const { store, dependencyManager } = args;
+  const { store, dependencyManager, dirtyManager } = args;
 
   const capabilities = new BitCapabilityRegistry<BitStoreCapabilities<T>>();
 
@@ -54,6 +56,7 @@ export function createStoreCapabilities<T extends object>(args: {
       () => store.getState(),
       () => store.config.initialValues,
       (scopeName) => store.getScopeFields(scopeName),
+      (path) => dirtyManager.isPathDirty(path),
     ),
   );
   capabilities.register(
@@ -62,6 +65,7 @@ export function createStoreCapabilities<T extends object>(args: {
       dependencyManager,
       () => store.getState(),
       () => store.config,
+      (path) => dirtyManager.isPathDirty(path),
     ),
   );
   capabilities.register(
@@ -152,6 +156,11 @@ export function createInitialStoreState<T extends object>(args: {
     errors: {},
     touched: {},
     isValidating: {},
+    persist: {
+      isSaving: false,
+      isRestoring: false,
+      error: null,
+    },
     isValid: true,
     isSubmitting: false,
     isDirty: false,

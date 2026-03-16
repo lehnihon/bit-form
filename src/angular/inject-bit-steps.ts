@@ -35,7 +35,10 @@ export function injectBitSteps(scopeNames: string[]): InjectBitStepsResult {
     }
   };
 
-  const unsubscribe = store.subscribe(updateStatus);
+  const unsubscribe = store.subscribeSelector(
+    (state) => ({ errors: state.errors, isDirty: state.isDirty }),
+    updateStatus,
+  );
 
   try {
     const destroyRef = inject(DestroyRef);
