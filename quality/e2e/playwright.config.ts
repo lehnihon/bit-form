@@ -17,7 +17,7 @@ export default defineConfig({
   },
   reporter: [
     ["list"],
-    ["html", { open: "never", outputFolder: "quality/e2e/playwright-report" }],
+    ["html", { open: "never", outputFolder: "./playwright-report" }],
   ],
   projects: [
     {
