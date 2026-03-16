@@ -9,6 +9,16 @@ import { useBitStore } from "./context";
 import { createFormController } from "../core/form-controller";
 import type { UseBitFormResult } from "./types";
 
+const selectFormMeta = <T extends object>(state: {
+  isValid: boolean;
+  isDirty: boolean;
+  isSubmitting: boolean;
+}) => ({
+  isValid: state.isValid,
+  isDirty: state.isDirty,
+  isSubmitting: state.isSubmitting,
+});
+
 export function useBitForm<T extends object>(): UseBitFormResult<T> {
   const store = useBitStore<T>();
 
@@ -42,15 +52,7 @@ export function useBitForm<T extends object>(): UseBitFormResult<T> {
   }, [store]);
 
   const subscribeMeta = useCallback(
-    (cb: () => void) =>
-      store.subscribeSelector(
-        (state) => ({
-          isValid: state.isValid,
-          isDirty: state.isDirty,
-          isSubmitting: state.isSubmitting,
-        }),
-        () => cb(),
-      ),
+    (cb: () => void) => store.subscribeSelector(selectFormMeta, () => cb()),
     [store],
   );
 

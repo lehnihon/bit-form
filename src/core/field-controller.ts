@@ -23,7 +23,7 @@ export function subscribeFieldState<
         BitFieldState<TForm, BitPathValue<TForm, P>>
       >,
     listener,
-    { paths: [path as string] },
+    { paths: [path as string], autoTrackPaths: false },
   );
 }
 

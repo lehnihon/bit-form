@@ -10,6 +10,8 @@ import { getDeepValue, valueEqual } from "../../../utils";
  * All methods are read-only and delegate to appropriate managers.
  */
 export class BitFieldQueryManager<T extends object = any> {
+  private requiredValuesRef: T | null = null;
+
   constructor(
     private dependencyManager: BitDependencyManager<T>,
     private getState: () => BitState<T>,
@@ -28,7 +30,13 @@ export class BitFieldQueryManager<T extends object = any> {
    * Check if a field is required based on conditional logic.
    */
   isRequired<P extends string>(path: P): boolean {
-    return this.dependencyManager.isRequired(path, this.getState().values);
+    const values = this.getState().values;
+
+    if (this.requiredValuesRef !== values) {
+      this.requiredValuesRef = values;
+    }
+
+    return this.dependencyManager.isRequired(path, values);
   }
 
   /**

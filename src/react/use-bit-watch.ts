@@ -1,6 +1,6 @@
 import { useCallback, useSyncExternalStore, useRef } from "react";
 import { useBitStore } from "./context";
-import { getDeepValue, deepEqual, BitPath, BitPathValue } from "../core";
+import { getDeepValue, valueEqual, BitPath, BitPathValue } from "../core";
 
 export function useBitWatch<
   TForm extends object = any,
@@ -15,7 +15,7 @@ export function useBitWatch<
       path as string,
     ) as BitPathValue<TForm, P>;
 
-    if (lastValue.current !== null && deepEqual(lastValue.current, value)) {
+    if (lastValue.current !== null && valueEqual(lastValue.current, value)) {
       return lastValue.current;
     }
 
