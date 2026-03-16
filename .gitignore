@@ -28,3 +28,7 @@ yarn-error.log*
 # Repomix context file
 bit-form-context.txt
 repomix-output.txt
+
+# Quality & E2E Testing
+test-results/
+.playwright/
