@@ -217,7 +217,6 @@ export class BitSubscriptionEngine<T extends object> {
         parts.pop();
         addByPath(parts.join("."));
       }
-
     });
 
     return scopedSubscribers;
@@ -231,5 +230,4 @@ export class BitSubscriptionEngine<T extends object> {
     }
     return keys;
   }
-
 }
