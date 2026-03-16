@@ -47,7 +47,7 @@ Framework adapters (React/Vue/Angular) become thin bindings over these controlle
 ## 🔒 Public vs Internal Boundaries
 
 - `src/core/index.ts` is the public core entrypoint and should expose stable contracts only.
-- `BitStore` is intentionally internal and now lives behind `src/core/internal.ts` for tests and low-level runtime wiring.
+- `BitStore` is intentionally internal and exposed to consumers through the `createBitStore()` facade.
 - Devtools and framework bindings should prefer `BitStoreApi` / `BitStoreHooksApi` instead of importing concrete store internals.
 
 This keeps the public API centered on `createBitStore()` while preserving an explicit escape hatch for internal integration code.
@@ -65,6 +65,7 @@ Here are the key properties of the form state:
 - **`isDirty`**: A boolean that returns `true` if the current `values` deeply differ from the `initialValues` provided when the store was created.
 - **`isSubmitting`**: A boolean indicating if the form is currently processing the `submit` callback.
 - **`isValidating`**: A record indicating which specific fields are currently undergoing asynchronous validation.
+- **`persist`**: Runtime persistence metadata (`isSaving`, `isRestoring`, `error`) used by persistence adapters.
 
 ## 🔄 The Form Lifecycle
 
@@ -106,6 +107,8 @@ Bit-Form uses both specialized managers (domain behavior) and runtime engines (o
 - **History Manager**: Tracks state snapshots, enabling the Time-Travel (`undo` / `redo`) features.
 - **Array Manager**: Exposes native methods to securely append, prepend, insert, remove, move, and swap items within array fields.
 - **Computed Manager**: Reactively calculates derived field values on every state update.
+
+`subscription-engine` now uses path-prefix indexing for scoped subscriptions, reducing notification overhead in large forms.
 
 ---
 
