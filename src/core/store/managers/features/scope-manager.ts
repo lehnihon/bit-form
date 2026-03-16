@@ -13,6 +13,7 @@ export class BitScopeManager<T extends object = any> {
     private getState: () => BitState<T>,
     private getInitialValues: () => T,
     private getScopeFields: (scopeName: string) => string[],
+    private isPathDirty: (path: string) => boolean,
   ) {}
 
   /**
@@ -27,11 +28,7 @@ export class BitScopeManager<T extends object = any> {
       (f) => !!state.errors[f as keyof BitErrors<T>],
     );
 
-    const isDirty = fields.some((f) => {
-      const current = getDeepValue(state.values, f);
-      const initial = getDeepValue(this.getInitialValues(), f);
-      return !valueEqual(current, initial);
-    });
+    const isDirty = fields.some((f) => this.isPathDirty(f));
 
     const errors = this.getStepErrors(scopeName);
 

@@ -20,17 +20,20 @@ export function injectBitScope(scopeName: string) {
 
   const status = signal<ScopeStatus>(initialStatus);
 
-  const unsubscribe = store.subscribe(() => {
-    const newStatus = store.getStepStatus(scopeName);
-    const current = status();
-    if (
-      newStatus.hasErrors !== current.hasErrors ||
-      newStatus.isDirty !== current.isDirty ||
-      !errorsEqual(newStatus.errors, current.errors)
-    ) {
-      status.set(newStatus);
-    }
-  });
+  const unsubscribe = store.subscribeSelector(
+    (state) => ({ errors: state.errors, isDirty: state.isDirty }),
+    () => {
+      const newStatus = store.getStepStatus(scopeName);
+      const current = status();
+      if (
+        newStatus.hasErrors !== current.hasErrors ||
+        newStatus.isDirty !== current.isDirty ||
+        !errorsEqual(newStatus.errors, current.errors)
+      ) {
+        status.set(newStatus);
+      }
+    },
+  );
 
   try {
     const destroyRef = inject(DestroyRef);

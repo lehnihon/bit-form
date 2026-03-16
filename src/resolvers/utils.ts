@@ -1,7 +1,18 @@
 import { BitErrors } from "../core";
 
 export function normalizeErrorPath(path: string): string {
-  return path.replace(/\[(\d+)\]/g, ".$1");
+  return path
+    .replace(/\[(\d+)\]/g, ".$1")
+    .replace(/^\.+/, "")
+    .replace(/\.{2,}/g, ".");
+}
+
+function matchScopePath(errorPath: string, scopePath: string): boolean {
+  return (
+    errorPath === scopePath ||
+    errorPath.startsWith(`${scopePath}.`) ||
+    scopePath.startsWith(`${errorPath}.`)
+  );
 }
 
 export function setFirstError<T extends object>(
@@ -9,12 +20,14 @@ export function setFirstError<T extends object>(
   path: string,
   message: string | undefined,
 ) {
-  if (!path || !message) {
+  const normalizedPath = normalizeErrorPath(path);
+
+  if (!normalizedPath || !message) {
     return;
   }
 
-  if (!errors[path as keyof BitErrors<T>]) {
-    errors[path as keyof BitErrors<T>] = message;
+  if (!errors[normalizedPath as keyof BitErrors<T>]) {
+    errors[normalizedPath as keyof BitErrors<T>] = message;
   }
 }
 
@@ -30,7 +43,13 @@ export function filterErrorsByScope<T extends object>(
   const filtered: BitErrors<T> = {};
 
   for (const [key, message] of Object.entries(errors)) {
-    if (scopeSet.has(key) && message) {
+    const normalizedKey = normalizeErrorPath(key);
+    if (
+      message &&
+      Array.from(scopeSet).some((scopeField) =>
+        matchScopePath(normalizedKey, normalizeErrorPath(scopeField)),
+      )
+    ) {
       const typedKey = key as keyof BitErrors<T>;
       filtered[typedKey] = message as BitErrors<T>[typeof typedKey];
     }

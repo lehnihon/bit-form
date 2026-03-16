@@ -94,6 +94,7 @@ form.reset();
 
 // Array operations are handled by useBitArray
 const skills = useBitArray("skills");
+// Keys come from store idFactory (deterministic when customized)
 skills.append("React");
 skills.remove(0);
 
@@ -174,6 +175,8 @@ See [Scopes](../features/scopes.md) for full documentation.
 ## 5. Draft Persistence with `useBitPersist`
 
 `useBitPersist` gives explicit draft actions and reactive meta refs.
+
+Its `meta` refs are sourced from the core persistence metadata (`state.persist`).
 
 ```vue
 <script setup lang="ts">

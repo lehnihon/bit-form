@@ -10,6 +10,11 @@ function createState(values: Values): BitState<Values> {
     errors: {},
     touched: {},
     isValidating: {},
+    persist: {
+      isSaving: false,
+      isRestoring: false,
+      error: null,
+    },
     isValid: true,
     isSubmitting: false,
     isDirty: false,

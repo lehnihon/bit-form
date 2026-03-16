@@ -70,6 +70,11 @@
       "import": "./dist/resolvers/*.js",
       "require": "./dist/resolvers/*.cjs"
     },
+    "./resolvers": {
+      "types": "./dist/resolvers/index.d.ts",
+      "import": "./dist/resolvers/index.js",
+      "require": "./dist/resolvers/index.cjs"
+    },
     "./devtools": {
       "types": "./dist/devtools/index.d.ts",
       "import": "./dist/devtools/index.js",

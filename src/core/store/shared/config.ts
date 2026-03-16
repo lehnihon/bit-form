@@ -3,6 +3,10 @@ import type { BitFrameworkConfig } from "../contracts/public-types";
 import { deepClone } from "../../utils";
 import { bitMasks } from "../../mask";
 
+function defaultIdFactory() {
+  return `bit-form-${Math.random().toString(36).slice(2, 9)}`;
+}
+
 export function normalizeConfig<T extends object>(
   config: BitConfig<T> = {},
 ): BitFrameworkConfig<T> {
@@ -39,6 +43,7 @@ export function normalizeConfig<T extends object>(
     fields: config.fields,
     devTools: config.devTools,
     persist,
+    idFactory: config.idFactory ?? defaultIdFactory,
     plugins: config.plugins ?? [],
   } as BitFrameworkConfig<T>;
 }

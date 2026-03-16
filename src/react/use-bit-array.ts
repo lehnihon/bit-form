@@ -8,13 +8,20 @@ import {
   BitPath,
 } from "../core";
 
-const generateId = () => Math.random().toString(36).substring(2, 9);
-
 export function useBitArray<
   TForm extends object = any,
   P extends BitArrayPath<TForm> = BitArrayPath<TForm>,
 >(path: P) {
   const store = useBitStore<TForm>();
+  const createId = useCallback(
+    (index?: number) =>
+      store.config.idFactory({
+        scope: "array",
+        path: path as string,
+        index,
+      }),
+    [store, path],
+  );
   const idsRef = useRef<string[]>([]);
 
   type Item = BitArrayItem<BitPathValue<TForm, P>>;
@@ -31,7 +38,9 @@ export function useBitArray<
         const diff = arrayValue.length - idsRef.current.length;
         idsRef.current = [
           ...idsRef.current,
-          ...Array(diff).fill(null).map(generateId),
+          ...Array(diff)
+            .fill(null)
+            .map((_, i) => createId(idsRef.current.length + i)),
         ];
       } else {
         idsRef.current = idsRef.current.slice(0, arrayValue.length);
@@ -39,7 +48,7 @@ export function useBitArray<
     }
 
     return arrayValue;
-  }, [store, path]);
+  }, [store, path, createId]);
 
   const subscribeArray = useCallback(
     (cb: () => void) => store.subscribePath(path, () => cb()),
@@ -51,16 +60,16 @@ export function useBitArray<
   const methods = useMemo(
     () => ({
       append: (value: Item) => {
-        idsRef.current = [...idsRef.current, generateId()];
+        idsRef.current = [...idsRef.current, createId(idsRef.current.length)];
         store.pushItem(path, value);
       },
       prepend: (value: Item) => {
-        idsRef.current = [generateId(), ...idsRef.current];
+        idsRef.current = [createId(0), ...idsRef.current];
         store.prependItem(path, value);
       },
       insert: (index: number, value: Item) => {
         const newIds = [...idsRef.current];
-        newIds.splice(index, 0, generateId());
+        newIds.splice(index, 0, createId(index));
         idsRef.current = newIds;
         store.insertItem(path, index, value);
       },
@@ -82,7 +91,7 @@ export function useBitArray<
         store.swapItems(path, indexA, indexB);
       },
       replace: (items: Item[]) => {
-        idsRef.current = items.map(generateId);
+        idsRef.current = items.map((_, index) => createId(index));
         store.setField(
           path as unknown as BitPath<TForm>,
           items as unknown as BitPathValue<TForm, BitPath<TForm>>,
@@ -96,7 +105,7 @@ export function useBitArray<
         );
       },
     }),
-    [store, path],
+    [store, path, createId],
   );
 
   const fields = useMemo(

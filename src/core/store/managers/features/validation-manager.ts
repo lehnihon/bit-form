@@ -41,6 +41,7 @@ interface ValidationPipelineContext<
 export class BitValidationManager<T extends object> {
   private validationTimeout?: ReturnType<typeof setTimeout>;
   private currentValidationId: number = 0;
+  private asyncEpoch: number = 0;
   private asyncTimers: Record<string, ReturnType<typeof setTimeout>> = {};
   private asyncRequests: Record<string, number> = {};
   private asyncErrors: Record<string, string> = {};
@@ -140,6 +141,7 @@ export class BitValidationManager<T extends object> {
 
     this.asyncTimers[path] = setTimeout(async () => {
       delete this.asyncTimers[path];
+      const requestEpoch = this.asyncEpoch;
 
       const currentRequestId = (this.asyncRequests[path] || 0) + 1;
       this.asyncRequests[path] = currentRequestId;
@@ -150,7 +152,12 @@ export class BitValidationManager<T extends object> {
           this.store.getState().values,
         );
 
-        if (this.asyncRequests[path] !== currentRequestId) return;
+        if (
+          this.asyncRequests[path] !== currentRequestId ||
+          requestEpoch !== this.asyncEpoch
+        ) {
+          return;
+        }
 
         if (errorMessage) {
           this.asyncErrors[path] = errorMessage;
@@ -169,7 +176,10 @@ export class BitValidationManager<T extends object> {
           }
         }
       } finally {
-        if (this.asyncRequests[path] === currentRequestId) {
+        if (
+          this.asyncRequests[path] === currentRequestId &&
+          requestEpoch === this.asyncEpoch
+        ) {
           this.updateFieldValidating(path, false);
         }
       }
@@ -360,9 +370,13 @@ export class BitValidationManager<T extends object> {
   }
 
   cancelAll() {
+    this.asyncEpoch += 1;
+
     if (this.validationTimeout) clearTimeout(this.validationTimeout);
     Object.values(this.asyncTimers).forEach((t) => clearTimeout(t));
     this.asyncTimers = {};
+    this.asyncRequests = {};
+    this.asyncErrors = {};
     this.store.internalUpdateState({ isValidating: {} });
   }
 }

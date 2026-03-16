@@ -3,6 +3,7 @@ import {
   BitConfig,
   BitComputedFn,
   BitErrors,
+  BitPersistMetadata,
   BitFieldState,
   BitTransformFn,
   BitState,
@@ -143,6 +144,7 @@ export class BitStore<T extends object = any>
     this.capabilities = createStoreCapabilities<T>({
       store: this,
       dependencyManager: this.dependencyManager,
+      dirtyManager: this.dirtyManager,
     });
     this.state = createInitialStoreState<T>({
       config: this.config,
@@ -156,7 +158,10 @@ export class BitStore<T extends object = any>
     this.storeId =
       config.storeId ||
       this.config.name ||
-      `bit-form-${Math.random().toString(36).substring(2, 9)}`;
+      this.config.idFactory({
+        scope: "store",
+        storeName: this.config.name,
+      });
 
     this.effects = createStoreEffects<T>({
       storeId: this.storeId,
@@ -288,7 +293,7 @@ export class BitStore<T extends object = any>
     }
   }
 
-  unregisterField<P extends BitPath<T>>(path: P) {
+  unregisterField(path: string) {
     // Fields from initial config are never unregistered
     if (this.config.fields?.[path as string]) {
       return;
@@ -484,16 +489,71 @@ export class BitStore<T extends object = any>
     return this.dirtyManager.buildDirtyValues(this.state.values);
   }
 
+  getPersistMetadata(): BitPersistMetadata {
+    return this.state.persist;
+  }
+
   async restorePersisted(): Promise<boolean> {
-    return this.effects.restorePersisted();
+    this.internalUpdateState({
+      persist: { ...this.state.persist, isRestoring: true, error: null },
+    });
+
+    try {
+      return await this.effects.restorePersisted();
+    } catch (error) {
+      this.internalUpdateState({
+        persist: {
+          ...this.state.persist,
+          isRestoring: false,
+          error: error instanceof Error ? error : new Error(String(error)),
+        },
+      });
+      return false;
+    } finally {
+      this.internalUpdateState({
+        persist: { ...this.state.persist, isRestoring: false },
+      });
+    }
   }
 
   async forceSave(): Promise<void> {
-    await this.effects.savePersistedNow();
+    this.internalUpdateState({
+      persist: { ...this.state.persist, isSaving: true, error: null },
+    });
+
+    try {
+      await this.effects.savePersistedNow();
+    } catch (error) {
+      this.internalUpdateState({
+        persist: {
+          ...this.state.persist,
+          isSaving: false,
+          error: error instanceof Error ? error : new Error(String(error)),
+        },
+      });
+      return;
+    }
+
+    this.internalUpdateState({
+      persist: { ...this.state.persist, isSaving: false },
+    });
   }
 
   async clearPersisted(): Promise<void> {
-    await this.effects.clearPersisted();
+    this.internalUpdateState({
+      persist: { ...this.state.persist, error: null },
+    });
+
+    try {
+      await this.effects.clearPersisted();
+    } catch (error) {
+      this.internalUpdateState({
+        persist: {
+          ...this.state.persist,
+          error: error instanceof Error ? error : new Error(String(error)),
+        },
+      });
+    }
   }
 
   // ============================================================================
@@ -730,6 +790,7 @@ export class BitStore<T extends object = any>
       errors: {},
       touched: {},
       isValidating: {},
+      persist: { ...this.state.persist, error: null },
       isValid: true,
       isDirty,
       isSubmitting: false,

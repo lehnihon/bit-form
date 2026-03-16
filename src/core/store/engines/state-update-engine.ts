@@ -1,4 +1,18 @@
-import type { BitState } from "../contracts/types";
+import type { BitErrors, BitState } from "../contracts/types";
+
+function normalizeErrors<T extends object>(errors: BitErrors<T>): BitErrors<T> {
+  const normalized: BitErrors<T> = {};
+
+  Object.entries(errors).forEach(([path, message]) => {
+    if (message === undefined) {
+      return;
+    }
+
+    normalized[path as keyof BitErrors<T>] = message as any;
+  });
+
+  return normalized;
+}
 
 export interface BitStateUpdateResult<T extends object> {
   nextState: BitState<T>;
@@ -23,8 +37,10 @@ export function applyStateUpdate<T extends object>(args: {
   }
 
   if (partialState.errors) {
-    nextState.isValid = Object.keys(nextState.errors).length === 0;
+    nextState.errors = normalizeErrors(partialState.errors as BitErrors<T>);
   }
+
+  nextState.isValid = Object.keys(nextState.errors).length === 0;
 
   const effectiveChangedPaths =
     changedPaths && changedPaths.length > 0

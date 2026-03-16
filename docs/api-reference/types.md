@@ -38,6 +38,7 @@ interface BitState<T> {
   errors: BitErrors<T>;
   touched: BitTouched<T>;
   isValidating: Record<string, boolean>;
+  persist: BitPersistMetadata;
   isValid: boolean;
   isSubmitting: boolean;
   isDirty: boolean;
@@ -48,9 +49,24 @@ interface BitState<T> {
 - **`errors`** — map of field errors (see `BitErrors<T>`).
 - **`touched`** — map of which fields were interacted with.
 - **`isValidating`** — flags for fields that are currently running async validation.
+- **`persist`** — runtime persistence metadata (`isSaving`, `isRestoring`, `error`).
 - **`isValid`** — `true` when there are no error entries.
 - **`isSubmitting`** — `true` while a submission is in progress.
 - **`isDirty`** — `true` if `values` differs from `initialValues`.
+
+---
+
+## `BitPersistMetadata`
+
+Runtime metadata for draft persistence operations.
+
+```ts
+interface BitPersistMetadata {
+  isSaving: boolean;
+  isRestoring: boolean;
+  error: Error | null;
+}
+```
 
 ---
 
@@ -155,6 +171,7 @@ Primary configuration object passed to the `BitStore` constructor. `fields` is t
 interface BitConfig<T extends object = any> {
   name?: string;
   initialValues?: T;
+  idFactory?: BitIdFactory;
   fields?: Record<string, BitFieldDefinition<T>>;
   validation?: {
     resolver?: ValidatorFn<T>;
@@ -168,6 +185,19 @@ interface BitConfig<T extends object = any> {
   persist?: BitPersistConfig<T>;
   plugins?: BitPlugin<T>[];
 }
+```
+
+`idFactory` customizes runtime id generation for internal store ids and array field keys.
+
+```ts
+type BitIdFactoryContext = {
+  scope: "store" | "array";
+  path?: string;
+  index?: number;
+  storeName?: string;
+};
+
+type BitIdFactory = (context: BitIdFactoryContext) => string;
 ```
 
 ### Example

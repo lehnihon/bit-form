@@ -13,11 +13,27 @@ export type BitTouched<T extends object> = Partial<
 export type BitComputedFn<T> = (values: T) => any;
 export type BitTransformFn<T> = (value: any, allValues: T) => any;
 
+export interface BitPersistMetadata {
+  isSaving: boolean;
+  isRestoring: boolean;
+  error: Error | null;
+}
+
+export interface BitIdFactoryContext {
+  scope: "store" | "array";
+  path?: string;
+  index?: number;
+  storeName?: string;
+}
+
+export type BitIdFactory = (context: BitIdFactoryContext) => string;
+
 export interface BitState<T extends object> {
   values: T;
   errors: BitErrors<T>;
   touched: BitTouched<T>;
   isValidating: Record<string, boolean>;
+  persist: BitPersistMetadata;
   isValid: boolean;
   isSubmitting: boolean;
   isDirty: boolean;
@@ -247,6 +263,7 @@ export interface BitConfig<T extends object = any> {
   /** Core */
   name?: string;
   storeId?: string;
+  idFactory?: BitIdFactory;
   initialValues?: T;
 
   /** Central field config: conditional, validation, transform, computed, mask, scope. */

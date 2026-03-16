@@ -31,7 +31,11 @@ export function useBitSteps(scopeNames: string[]): UseBitStepsResult {
   }, [store, scope]);
 
   const status = useSyncExternalStore(
-    store.subscribe.bind(store),
+    (cb) =>
+      store.subscribeSelector(
+        (state) => ({ errors: state.errors, isDirty: state.isDirty }),
+        () => cb(),
+      ),
     getStatusSnapshot,
     getStatusSnapshot,
   );

@@ -71,6 +71,23 @@ export class BitDirtyManager<T extends object = any> {
     return this.dirtyPaths;
   }
 
+  isPathDirty(path: string): boolean {
+    if (this.dirtyPaths.has(path)) {
+      return true;
+    }
+
+    for (const dirtyPath of this.dirtyPaths) {
+      if (
+        dirtyPath.startsWith(`${path}.`) ||
+        path.startsWith(`${dirtyPath}.`)
+      ) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
   /**
    * Builds a partial object containing only dirty values.
    * For arrays, returns the entire array if any index changed.

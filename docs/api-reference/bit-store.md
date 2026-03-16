@@ -99,6 +99,8 @@ const unsubscribe = store.subscribeSelector(
 
 - `equalityFn?: (previous, next) => boolean` to customize change detection.
 - `emitImmediately?: boolean` to emit current slice right after subscription.
+- `paths?: string[]` to scope notifications to specific value paths.
+- `autoTrackPaths?: boolean` to enable/disable selector path auto-tracking (enabled by default).
 
 ### `subscribePath(path, listener, options?): () => void`
 
@@ -161,6 +163,15 @@ await store.clearPersisted();
 ```
 
 See [Draft Persistence feature guide](../features/persistence.md) for full configuration details.
+
+### `getPersistMetadata(): BitPersistMetadata`
+
+Returns the latest persistence metadata snapshot from core state.
+
+```ts
+const meta = store.getPersistMetadata();
+console.log(meta.isSaving, meta.isRestoring, meta.error);
+```
 
 ### `getDirtyValues(): Partial<T>`
 
