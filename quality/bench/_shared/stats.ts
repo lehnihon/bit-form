@@ -12,6 +12,12 @@ export interface BenchmarkOptions {
   samples?: number;
 }
 
+export interface BenchmarkLifecycle<TContext> {
+  setup: () => TContext | Promise<TContext>;
+  run: (context: TContext) => void | Promise<void>;
+  teardown?: (context: TContext) => void | Promise<void>;
+}
+
 export function percentile(values: number[], target: number): number {
   if (values.length === 0) return 0;
   const sorted = [...values].sort((a, b) => a - b);
@@ -51,6 +57,24 @@ export async function runMeasuredScenario(
     minMs: Math.min(...valuesMs),
     maxMs: Math.max(...valuesMs),
   };
+}
+
+export async function runMeasuredScenarioWithLifecycle<TContext>(
+  name: string,
+  lifecycle: BenchmarkLifecycle<TContext>,
+  options: BenchmarkOptions = {},
+): Promise<BenchmarkSample> {
+  const context = await lifecycle.setup();
+
+  try {
+    return await runMeasuredScenario(
+      name,
+      () => lifecycle.run(context),
+      options,
+    );
+  } finally {
+    await lifecycle.teardown?.(context);
+  }
 }
 
 export function formatSampleSummary(sample: BenchmarkSample) {

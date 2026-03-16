@@ -42,7 +42,7 @@ describe("quality perf baseline", () => {
     }
 
     const duration = performance.now() - start;
-    expect(duration).toBeLessThan(2500);
+    expect(duration).toBeLessThan(250);
   });
 
   it("handles async validation burst under baseline budget", async () => {
@@ -80,6 +80,6 @@ describe("quality perf baseline", () => {
     await store.validate();
 
     const duration = performance.now() - start;
-    expect(duration).toBeLessThan(4000);
+    expect(duration).toBeLessThan(50);
   });
 });

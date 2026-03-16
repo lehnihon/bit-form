@@ -1,23 +1,34 @@
 import { describe, expect, it } from "vitest";
-import { formatSampleSummary, runMeasuredScenario } from "./_shared/stats";
 import {
-  runBitFormAsyncBurst,
-  runBitFormBulkUpdate,
-  runRhfAsyncBurst,
-  runRhfBulkUpdate,
+  formatSampleSummary,
+  runMeasuredScenarioWithLifecycle,
+} from "./_shared/stats";
+import {
+  createBitFormAsyncBurstHarness,
+  createBitFormBulkHarness,
+  createRhfAsyncBurstHarness,
+  createRhfBulkHarness,
 } from "./_shared/scenarios";
 
 describe("quality benchmark: bit-form vs react-hook-form", () => {
   it("compares bulk update scenario with robust percentiles", async () => {
-    const bitSample = await runMeasuredScenario(
+    const bitSample = await runMeasuredScenarioWithLifecycle(
       "bit-form bulk update (300)",
-      () => runBitFormBulkUpdate(300),
+      {
+        setup: () => createBitFormBulkHarness(300),
+        run: (harness) => harness.run(),
+        teardown: (harness) => harness.teardown?.(),
+      },
       { warmups: 5, samples: 30 },
     );
 
-    const rhfSample = await runMeasuredScenario(
+    const rhfSample = await runMeasuredScenarioWithLifecycle(
       "rhf bulk update (300)",
-      () => runRhfBulkUpdate(300),
+      {
+        setup: () => createRhfBulkHarness(300),
+        run: (harness) => harness.run(),
+        teardown: (harness) => harness.teardown?.(),
+      },
       { warmups: 5, samples: 30 },
     );
 
@@ -43,15 +54,23 @@ describe("quality benchmark: bit-form vs react-hook-form", () => {
   });
 
   it("compares async burst scenario with robust percentiles", async () => {
-    const bitSample = await runMeasuredScenario(
+    const bitSample = await runMeasuredScenarioWithLifecycle(
       "bit-form async burst (120)",
-      () => runBitFormAsyncBurst(120),
+      {
+        setup: () => createBitFormAsyncBurstHarness(120),
+        run: (harness) => harness.run(),
+        teardown: (harness) => harness.teardown?.(),
+      },
       { warmups: 5, samples: 25 },
     );
 
-    const rhfSample = await runMeasuredScenario(
+    const rhfSample = await runMeasuredScenarioWithLifecycle(
       "rhf async burst (120)",
-      () => runRhfAsyncBurst(120),
+      {
+        setup: () => createRhfAsyncBurstHarness(120),
+        run: (harness) => harness.run(),
+        teardown: (harness) => harness.teardown?.(),
+      },
       { warmups: 5, samples: 25 },
     );
 
