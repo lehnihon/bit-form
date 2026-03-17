@@ -33,6 +33,14 @@ export interface BitStateUpdateResult<T extends object> {
   valuesChanged: boolean;
 }
 
+function hasErrors(errors: Record<string, unknown>) {
+  for (const _path in errors) {
+    return true;
+  }
+
+  return false;
+}
+
 export function applyStateUpdate<T extends object>(args: {
   currentState: BitState<T>;
   partialState: Partial<BitState<T>>;
@@ -51,7 +59,7 @@ export function applyStateUpdate<T extends object>(args: {
 
   if (partialState.errors) {
     nextState.errors = normalizeErrors(partialState.errors as BitErrors<T>);
-    nextState.isValid = Object.keys(nextState.errors).length === 0;
+    nextState.isValid = !hasErrors(nextState.errors as Record<string, unknown>);
   }
 
   const effectiveChangedPaths =

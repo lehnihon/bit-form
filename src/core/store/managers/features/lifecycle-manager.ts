@@ -25,6 +25,7 @@ import type {
   BitFrameworkConfig,
   BitValidationOptions,
 } from "../../contracts/public-types";
+import type { BitValidationTriggerOptions } from "./validation-manager";
 
 interface BitLifecycleStatePort<T extends object> {
   getState: () => BitState<T>;
@@ -47,7 +48,10 @@ interface BitLifecycleDependencyPort<T extends object> {
 
 interface BitLifecycleValidationPort<T extends object> {
   clearFieldValidation: (path: string) => void;
-  triggerValidation: (scopeFields?: string[]) => void;
+  triggerValidation: (
+    scopeFields?: string[],
+    options?: BitValidationTriggerOptions,
+  ) => void;
   handleFieldAsyncValidation: (path: string, value: any) => void;
   cancelAllValidations: () => void;
   validateNow: (options?: BitValidationOptions) => Promise<boolean>;

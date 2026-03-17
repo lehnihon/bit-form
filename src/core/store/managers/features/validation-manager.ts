@@ -37,6 +37,18 @@ interface ValidationPipelineContext<T extends object>
   aborted: boolean;
 }
 
+export interface BitValidationTriggerOptions {
+  forceDebounce?: boolean;
+}
+
+function hasErrors(errors: Record<string, unknown>) {
+  for (const _path in errors) {
+    return true;
+  }
+
+  return false;
+}
+
 export class BitValidationManager<T extends object> {
   private validationTimeout?: ReturnType<typeof setTimeout>;
   private currentValidationId: number = 0;
@@ -160,7 +172,7 @@ export class BitValidationManager<T extends object> {
     delete newErrors[path as keyof BitErrors<T>];
     this.store.internalUpdateState({
       errors: newErrors,
-      isValid: Object.keys(newErrors).length === 0,
+      isValid: !hasErrors(newErrors),
     });
   }
 
@@ -213,7 +225,7 @@ export class BitValidationManager<T extends object> {
               delete newErrors[path as keyof BitErrors<T>];
               this.store.internalUpdateState({
                 errors: newErrors,
-                isValid: Object.keys(newErrors).length === 0,
+                isValid: !hasErrors(newErrors),
               });
             }
           }
@@ -239,10 +251,13 @@ export class BitValidationManager<T extends object> {
     return this.validatingCount > 0;
   }
 
-  trigger(scopeFields?: string[]) {
+  trigger(scopeFields?: string[], options?: BitValidationTriggerOptions) {
     if (this.validationTimeout) clearTimeout(this.validationTimeout);
 
-    const delay = this.store.config.validationDelay ?? 300;
+    const configuredDelay = this.store.config.validationDelay ?? 300;
+    const delay = options?.forceDebounce
+      ? Math.max(1, configuredDelay)
+      : configuredDelay;
 
     if (delay > 0) {
       this.validationTimeout = setTimeout(() => {
@@ -366,7 +381,7 @@ export class BitValidationManager<T extends object> {
       }
     });
 
-    ctx.isValid = Object.keys(newErrors).length === 0;
+    ctx.isValid = !hasErrors(newErrors);
     ctx.result = ctx.targetFields.every(
       (field) => !ctx.allErrors[field] && !this.asyncErrors.has(field),
     );
@@ -393,7 +408,7 @@ export class BitValidationManager<T extends object> {
       ...Object.fromEntries(this.asyncErrors.entries()),
       ...ctx.allErrors,
     };
-    ctx.isValid = Object.keys(ctx.allErrors).length === 0;
+    ctx.isValid = !hasErrors(ctx.allErrors);
     ctx.result = ctx.isValid;
 
     this.store.internalUpdateState({

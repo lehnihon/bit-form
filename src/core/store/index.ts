@@ -42,6 +42,7 @@ import { BitCapabilityRegistry } from "./orchestration/capability-registry";
 import type { BitStoreCapabilities } from "./orchestration/capabilities";
 import type { BitLifecycleStorePort } from "./managers/features/lifecycle-manager";
 import type { BitValidationStorePort } from "./managers/features/validation-manager";
+import type { BitValidationTriggerOptions } from "./managers/features/validation-manager";
 import {
   createInitialStoreState,
   createStoreCapabilities,
@@ -113,7 +114,7 @@ export class BitStore<T extends object = any>
       this.computedEntriesCache.push({
         path,
         compute: config.computed,
-        dependsOn: config.conditional?.dependsOn,
+        dependsOn: config.computedDependsOn ?? config.conditional?.dependsOn,
       });
     }
 
@@ -280,7 +281,7 @@ export class BitStore<T extends object = any>
           result.push({
             path,
             compute: cfg.computed,
-            dependsOn: cfg.conditional?.dependsOn,
+            dependsOn: cfg.computedDependsOn ?? cfg.conditional?.dependsOn,
           });
         }
       });
@@ -396,8 +397,11 @@ export class BitStore<T extends object = any>
 
   unregisterPrefix(prefix: string) {
     this.validation.cleanupPrefix(prefix);
-    this.dependencyManager.unregisterPrefix(prefix);
-    this.invalidateFieldIndexes();
+    const removedEntries = this.dependencyManager.unregisterPrefix(prefix);
+
+    removedEntries.forEach(([path, config]) => {
+      this.unregisterCachedFieldIndexes(path, config);
+    });
   }
 
   // ============================================================================
@@ -690,7 +694,7 @@ export class BitStore<T extends object = any>
         this.config.initialValues,
       );
       this.internalUpdateState({ values: prevState, isDirty });
-      this.validation.trigger();
+      this.validation.trigger(undefined, { forceDebounce: true });
     }
   }
 
@@ -702,7 +706,7 @@ export class BitStore<T extends object = any>
         this.config.initialValues,
       );
       this.internalUpdateState({ values: nextState, isDirty });
-      this.validation.trigger();
+      this.validation.trigger(undefined, { forceDebounce: true });
     }
   }
 
@@ -750,8 +754,11 @@ export class BitStore<T extends object = any>
     return this.validation.hasValidationsInProgress(scopeFields);
   }
 
-  triggerValidation(scopeFields?: string[]) {
-    this.validation.trigger(scopeFields);
+  triggerValidation(
+    scopeFields?: string[],
+    options?: BitValidationTriggerOptions,
+  ) {
+    this.validation.trigger(scopeFields, options);
   }
 
   getStepStatus(scopeName: string) {

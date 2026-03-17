@@ -229,12 +229,48 @@ export function setDeepValues(
     return obj;
   }
 
-  let nextValue = obj;
-  for (const [path, value] of updates) {
-    nextValue = setDeepValue(nextValue, path, value);
+  const root = Array.isArray(obj) ? [...obj] : { ...obj };
+  const clonedNodes = new WeakSet<object>();
+  if (root && typeof root === "object") {
+    clonedNodes.add(root);
   }
 
-  return nextValue;
+  for (const [path, value] of updates) {
+    const keys = getPathKeys(path);
+    let current: any = root;
+
+    for (let i = 0; i < keys.length - 1; i++) {
+      const key = keys[i];
+      const nextKey = keys[i + 1];
+
+      const nextAsNumber = Number(nextKey);
+      const isNextNumeric =
+        Number.isInteger(nextAsNumber) && String(nextAsNumber) === nextKey;
+
+      const currentValue = current[key];
+
+      if (currentValue === null || currentValue === undefined) {
+        current[key] = isNextNumeric ? [] : {};
+        clonedNodes.add(current[key]);
+      } else if (typeof currentValue === "object") {
+        if (!clonedNodes.has(currentValue)) {
+          current[key] = Array.isArray(currentValue)
+            ? [...currentValue]
+            : { ...currentValue };
+          clonedNodes.add(current[key]);
+        }
+      } else {
+        current[key] = isNextNumeric ? [] : {};
+        clonedNodes.add(current[key]);
+      }
+
+      current = current[key];
+    }
+
+    current[keys[keys.length - 1]] = value;
+  }
+
+  return root;
 }
 
 export function cleanPrefixedKeys(
@@ -317,11 +353,63 @@ export function reindexFieldArrayMeta(
   path: string,
   remapIndex: (index: number) => number | null,
 ) {
+  const nextErrors: Record<string, any> = {};
+  const nextTouched: Record<string, any> = {};
+  const nextIsValidating: Record<string, any> = {};
+
+  const allKeys = new Set<string>();
+  Object.keys(state.errors).forEach((key) => allKeys.add(key));
+  Object.keys(state.touched).forEach((key) => allKeys.add(key));
+  Object.keys(state.isValidating).forEach((key) => allKeys.add(key));
+
+  const prefix = `${path}.`;
+
+  for (const key of allKeys) {
+    const nextKey = remapIndexedPath(key, prefix, remapIndex);
+    if (!nextKey) {
+      continue;
+    }
+
+    if (Object.prototype.hasOwnProperty.call(state.errors, key)) {
+      nextErrors[nextKey] = state.errors[key];
+    }
+
+    if (Object.prototype.hasOwnProperty.call(state.touched, key)) {
+      nextTouched[nextKey] = state.touched[key];
+    }
+
+    if (Object.prototype.hasOwnProperty.call(state.isValidating, key)) {
+      nextIsValidating[nextKey] = state.isValidating[key];
+    }
+  }
+
   return {
-    errors: reindexObjectKeys(state.errors, path, remapIndex),
-    touched: reindexObjectKeys(state.touched, path, remapIndex),
-    isValidating: reindexObjectKeys(state.isValidating, path, remapIndex),
+    errors: nextErrors,
+    touched: nextTouched,
+    isValidating: nextIsValidating,
   };
+}
+
+function remapIndexedPath(
+  key: string,
+  prefix: string,
+  remapIndex: (index: number) => number | null,
+) {
+  if (!key.startsWith(prefix)) {
+    return key;
+  }
+
+  const remaining = key.substring(prefix.length);
+  const parts = remaining.split(".");
+  const currentIdx = parseInt(parts[0], 10);
+  const nextIdx = remapIndex(currentIdx);
+
+  if (nextIdx === null) {
+    return null;
+  }
+
+  const rest = parts.slice(1).join(".");
+  return rest ? `${prefix}${nextIdx}.${rest}` : `${prefix}${nextIdx}`;
 }
 
 function reindexObjectKeys(
