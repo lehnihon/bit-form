@@ -135,7 +135,15 @@ function mergeChangedPaths(
     return explicitChangedPaths;
   }
 
-  return Array.from(
-    new Set([...explicitChangedPaths, ...inferredChangedPaths]),
-  );
+  const merged = new Set<string>();
+
+  for (const path of explicitChangedPaths) {
+    merged.add(path);
+  }
+
+  for (const path of inferredChangedPaths) {
+    merged.add(path);
+  }
+
+  return Array.from(merged);
 }

@@ -54,6 +54,8 @@ export class BitValidationManager<T extends object> {
   private currentValidationId: number = 0;
   private asyncEpoch: number = 0;
   private validatingCount = 0;
+  /** Paths acumulados durante o debounce — evita descartar paths de calls anteriores */
+  private pendingScopeFields: Set<string> | null = null;
   private readonly asyncTimers = new Map<
     string,
     ReturnType<typeof setTimeout>
@@ -138,11 +140,11 @@ export class BitValidationManager<T extends object> {
   }
 
   cleanupPrefix(prefix: string) {
-    Array.from(this.asyncTimers.keys()).forEach((path) => {
+    for (const path of this.asyncTimers.keys()) {
       if (path === prefix || path.startsWith(`${prefix}.`)) {
         this.cleanupField(path);
       }
-    });
+    }
   }
 
   beginExternalValidation(path: string) {
@@ -260,10 +262,29 @@ export class BitValidationManager<T extends object> {
       : configuredDelay;
 
     if (delay > 0) {
+      // Acumula paths em vez de substituir — garante que paths de calls
+      // anteriores dentro do mesmo debounce não sejam descartados.
+      if (scopeFields && scopeFields.length > 0) {
+        if (!this.pendingScopeFields) {
+          this.pendingScopeFields = new Set(scopeFields);
+        } else {
+          for (const f of scopeFields) this.pendingScopeFields.add(f);
+        }
+      } else {
+        // Sem scope = validação global, descarta paths acumulados
+        this.pendingScopeFields = null;
+      }
+
+      const resolvedScopeFields = this.pendingScopeFields
+        ? Array.from(this.pendingScopeFields)
+        : undefined;
+
       this.validationTimeout = setTimeout(() => {
-        void this.validate({ scopeFields });
+        this.pendingScopeFields = null;
+        void this.validate({ scopeFields: resolvedScopeFields });
       }, delay);
     } else {
+      this.pendingScopeFields = null;
       void this.validate({ scopeFields });
     }
   }
@@ -296,6 +317,7 @@ export class BitValidationManager<T extends object> {
   cancelAll() {
     this.asyncEpoch += 1;
     this.validatingCount = 0;
+    this.pendingScopeFields = null;
 
     if (this.validationTimeout) clearTimeout(this.validationTimeout);
     this.asyncTimers.forEach((timer) => clearTimeout(timer));

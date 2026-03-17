@@ -25,6 +25,42 @@ export class BitComputedManager<T extends object> {
   private readonly computedDependencyCache = new Map<string, Set<string>>();
 
   constructor(private getComputedEntries: () => BitComputedEntryInput<T>[]) {}
+  /**
+   * Cache de dependências reversas (entry.path → Set<paths que dependem dela>).
+   * Construído uma vez e reutilizado em todos os apply() subsequentes.
+   * Invalidado via invalidateReverseDeps() quando os computed entries mudam
+   * (registro/unregistro de campos).
+   */
+  private reverseDepsCache: Map<string, Set<string>> | null = null;
+
+  /** Chamado por BitStore.invalidateFieldIndexes() ao registrar/desregistrar campos. */
+  invalidateReverseDeps(): void {
+    this.reverseDepsCache = null;
+  }
+
+  /** Constrói (ou retorna cacheado) o mapa de dependências reversas para as entries dadas. */
+  private getReverseDependencies(
+    entries: BitComputedEntry<T>[],
+  ): Map<string, Set<string>> {
+    if (this.reverseDepsCache) return this.reverseDepsCache;
+
+    const map = new Map<string, Set<string>>();
+
+    for (const entry of entries) {
+      const dependencies = this.getDependenciesForEntry(entry);
+      for (const dep of dependencies) {
+        let dependents = map.get(dep);
+        if (!dependents) {
+          dependents = new Set();
+          map.set(dep, dependents);
+        }
+        dependents.add(entry.path);
+      }
+    }
+
+    this.reverseDepsCache = map;
+    return map;
+  }
 
   apply(values: T, changedPaths?: readonly string[]): T {
     const computedEntries = this.normalizeEntries(this.getComputedEntries());
@@ -59,7 +95,18 @@ export class BitComputedManager<T extends object> {
         }
 
         if (trackedDependencies) {
+          const previousDeps = this.computedDependencyCache.get(entry.path);
           this.computedDependencyCache.set(entry.path, trackedDependencies);
+
+          if (
+            !previousDeps ||
+            previousDeps.size !== trackedDependencies.size ||
+            Array.from(previousDeps).some(
+              (dep) => !trackedDependencies.has(dep),
+            )
+          ) {
+            this.invalidateReverseDeps();
+          }
         }
       }
 
@@ -91,7 +138,7 @@ export class BitComputedManager<T extends object> {
       };
     }
 
-    const reverseDependencies = new Map<string, Set<string>>();
+    const reverseDependencies = this.getReverseDependencies(entries);
     let shouldTrackDependencies = false;
 
     for (const entry of entries) {
@@ -99,12 +146,6 @@ export class BitComputedManager<T extends object> {
 
       if (dependencies.length === 0) {
         shouldTrackDependencies = true;
-      }
-
-      for (const dependency of dependencies) {
-        const dependents = reverseDependencies.get(dependency) ?? new Set();
-        dependents.add(entry.path);
-        reverseDependencies.set(dependency, dependents);
       }
     }
 
@@ -152,16 +193,17 @@ export class BitComputedManager<T extends object> {
   }
 
   private normalizeEntries(entries: BitComputedEntryInput<T>[]) {
-    return entries.map((entry) => {
-      if (Array.isArray(entry)) {
-        return {
-          path: entry[0],
-          compute: entry[1],
-        } satisfies BitComputedEntry<T>;
-      }
-
-      return entry;
-    });
+    // Fast path: se o primeiro elemento já é um objeto normalizado (caso típico
+    // quando getComputedEntries retorna BitComputedEntry[] do cache do BitStore),
+    // evita o .map() e a alocação de array intermediário.
+    if (entries.length === 0 || !Array.isArray(entries[0])) {
+      return entries as BitComputedEntry<T>[];
+    }
+    return entries.map((entry) =>
+      Array.isArray(entry)
+        ? ({ path: entry[0], compute: entry[1] } satisfies BitComputedEntry<T>)
+        : entry,
+    );
   }
 
   private getDependenciesForEntry(entry: BitComputedEntry<T>) {

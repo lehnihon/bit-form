@@ -592,6 +592,30 @@ describe("BitStore Core", () => {
       expect(history.historyIndex).toBe(1);
       expect(history.canUndo).toBe(true);
     });
+
+    it("should not allow redo after undo followed by new write", () => {
+      const store = new BitStore({
+        initialValues: { name: "A" },
+        history: { enabled: true },
+      });
+
+      store.setField("name", "B");
+      store.blurField("name");
+
+      store.setField("name", "C");
+      store.blurField("name");
+
+      store.undo();
+      expect(store.getState().values.name).toBe("B");
+      expect(store.canRedo).toBe(true);
+
+      store.setField("name", "D");
+      store.blurField("name");
+
+      expect(store.canRedo).toBe(false);
+      expect(store.redo()).toBeUndefined();
+      expect(store.getState().values.name).toBe("D");
+    });
   });
 
   describe("Form Lifecycle & Submissions", () => {
@@ -908,6 +932,35 @@ describe("BitStore Core", () => {
 
       expect(store.getState().errors.email).toBeUndefined();
       expect(store.isFieldValidating("email")).toBe(false);
+    });
+
+    it("deve acumular scopeFields no debounce de triggerValidation", async () => {
+      const resolver = vi.fn().mockResolvedValue({
+        email: "Email inválido",
+        name: "Nome inválido",
+      });
+
+      const store = new BitStore({
+        initialValues: { email: "", name: "" },
+        validation: {
+          resolver,
+          delay: 20,
+        },
+      });
+
+      store.triggerValidation(["email"]);
+      await vi.advanceTimersByTimeAsync(10);
+      store.triggerValidation(["name"]);
+
+      await vi.advanceTimersByTimeAsync(25);
+
+      expect(resolver).toHaveBeenCalledTimes(1);
+      const calledScopeFields = resolver.mock.calls[0]?.[1]?.scopeFields ?? [];
+      expect(calledScopeFields).toEqual(
+        expect.arrayContaining(["email", "name"]),
+      );
+      expect(store.getState().errors.email).toBe("Email inválido");
+      expect(store.getState().errors.name).toBe("Nome inválido");
     });
 
     it("deve fazer o MERGE perfeito entre erros Síncronos (Zod) e Assíncronos (API)", async () => {

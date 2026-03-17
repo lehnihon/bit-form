@@ -93,6 +93,7 @@ export class BitStore<T extends object = any> {
     this.scopeFieldsIndex = null;
     this.computedEntriesCache = null;
     this.transformEntriesCache = null;
+    this.computedManager.invalidateReverseDeps();
   }
 
   private registerCachedFieldIndexes(
@@ -853,8 +854,7 @@ export class BitStore<T extends object = any> {
         currentState: this.batchedState ?? this.state,
         partialState,
         changedPaths,
-        applyComputedValues: (values) =>
-          this.computedManager.apply(values, changedPaths),
+        applyComputedValues: (values) => values,
       });
 
       this.batchedState = updateResult.nextState;
@@ -928,11 +928,18 @@ export class BitStore<T extends object = any> {
       return;
     }
 
-    const nextState = this.batchedState;
+    let nextState = this.batchedState;
     const changedPaths = this.batchedChangedPaths
       ? Array.from(this.batchedChangedPaths)
       : undefined;
     const valuesChanged = this.batchedValuesChanged;
+
+    if (valuesChanged) {
+      nextState = {
+        ...nextState,
+        values: this.computedManager.apply(nextState.values, changedPaths),
+      };
+    }
 
     this.batchedState = null;
     this.batchedChangedPaths = null;

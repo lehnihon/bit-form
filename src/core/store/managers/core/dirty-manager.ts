@@ -14,6 +14,7 @@ import {
 export class BitDirtyManager<T extends object = any> {
   private dirtyPaths: Set<string> = new Set();
   private dirtyPathIndex: Set<string> = new Set();
+  private dirtyPrefixRefCount: Map<string, number> = new Map();
 
   /**
    * Updates dirty state for a single path change.
@@ -21,23 +22,16 @@ export class BitDirtyManager<T extends object = any> {
    * @returns true if any fields are dirty
    */
   updateForPath(path: string, values: T, initialValues: T): boolean {
-    // Remove child paths when parent changes
-    for (const p of this.dirtyPaths) {
-      if (p.startsWith(path + ".")) {
-        this.dirtyPaths.delete(p);
-      }
-    }
+    this.removeDirtyChildren(path);
 
     const current = getDeepValue(values, path);
     const initial = getDeepValue(initialValues, path);
 
     if (valueEqual(current, initial)) {
-      this.dirtyPaths.delete(path);
+      this.removeDirtyPath(path);
     } else {
-      this.dirtyPaths.add(path);
+      this.addDirtyPath(path);
     }
-
-    this.rebuildIndex();
 
     return this.dirtyPaths.size > 0;
   }
@@ -49,6 +43,7 @@ export class BitDirtyManager<T extends object = any> {
    */
   rebuild(values: T, initialValues: T): boolean {
     this.dirtyPaths = collectDirtyPaths(values, initialValues);
+    this.dirtyPrefixRefCount.clear();
     this.rebuildIndex();
     return this.dirtyPaths.size > 0;
   }
@@ -60,6 +55,7 @@ export class BitDirtyManager<T extends object = any> {
   clear(): void {
     this.dirtyPaths.clear();
     this.dirtyPathIndex.clear();
+    this.dirtyPrefixRefCount.clear();
   }
 
   /**
@@ -123,14 +119,73 @@ export class BitDirtyManager<T extends object = any> {
 
   private rebuildIndex() {
     const nextIndex = new Set<string>();
+    const nextRefCount = new Map<string, number>();
 
     for (const dirtyPath of this.dirtyPaths) {
-      const segments = dirtyPath.split(".");
-      for (let i = 1; i <= segments.length; i++) {
-        nextIndex.add(segments.slice(0, i).join("."));
-      }
+      this.forEachPathPrefix(dirtyPath, (prefix) => {
+        nextIndex.add(prefix);
+        nextRefCount.set(prefix, (nextRefCount.get(prefix) ?? 0) + 1);
+      });
     }
 
     this.dirtyPathIndex = nextIndex;
+    this.dirtyPrefixRefCount = nextRefCount;
+  }
+
+  private removeDirtyChildren(parentPath: string) {
+    const childrenToRemove: string[] = [];
+
+    for (const dirtyPath of this.dirtyPaths) {
+      if (dirtyPath.startsWith(`${parentPath}.`)) {
+        childrenToRemove.push(dirtyPath);
+      }
+    }
+
+    childrenToRemove.forEach((path) => this.removeDirtyPath(path));
+  }
+
+  private addDirtyPath(path: string) {
+    if (this.dirtyPaths.has(path)) {
+      return;
+    }
+
+    this.dirtyPaths.add(path);
+    this.forEachPathPrefix(path, (prefix) => {
+      this.dirtyPathIndex.add(prefix);
+      this.dirtyPrefixRefCount.set(
+        prefix,
+        (this.dirtyPrefixRefCount.get(prefix) ?? 0) + 1,
+      );
+    });
+  }
+
+  private removeDirtyPath(path: string) {
+    if (!this.dirtyPaths.has(path)) {
+      return;
+    }
+
+    this.dirtyPaths.delete(path);
+
+    this.forEachPathPrefix(path, (prefix) => {
+      const nextCount = (this.dirtyPrefixRefCount.get(prefix) ?? 0) - 1;
+
+      if (nextCount <= 0) {
+        this.dirtyPrefixRefCount.delete(prefix);
+        this.dirtyPathIndex.delete(prefix);
+        return;
+      }
+
+      this.dirtyPrefixRefCount.set(prefix, nextCount);
+    });
+  }
+
+  private forEachPathPrefix(path: string, callback: (prefix: string) => void) {
+    const segments = path.split(".");
+    let current = "";
+
+    for (const segment of segments) {
+      current = current ? `${current}.${segment}` : segment;
+      callback(current);
+    }
   }
 }

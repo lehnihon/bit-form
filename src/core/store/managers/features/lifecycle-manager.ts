@@ -105,6 +105,7 @@ interface FieldUpdatePipelineContext<T extends object>
   previousValue: unknown;
   nextValues: T;
   nextErrors: BitErrors<T>;
+  hasMutatedErrors: boolean;
   toggledFields: string[];
   isDirty: boolean;
 }
@@ -175,7 +176,8 @@ export class BitLifecycleManager<T extends object> {
       meta,
       previousValue: getDeepValue(state.values, path),
       nextValues: setDeepValue(state.values, path, value),
-      nextErrors: { ...state.errors },
+      nextErrors: state.errors,
+      hasMutatedErrors: false,
       toggledFields: [],
       isDirty: false,
     };
@@ -333,6 +335,11 @@ export class BitLifecycleManager<T extends object> {
   }
 
   private clearCurrentError(ctx: FieldUpdatePipelineContext<T>) {
+    if (!ctx.hasMutatedErrors) {
+      ctx.nextErrors = { ...ctx.nextErrors };
+      ctx.hasMutatedErrors = true;
+    }
+
     delete ctx.nextErrors[ctx.path as keyof BitErrors<T>];
     this.store.clearFieldValidation(ctx.path);
   }
@@ -342,6 +349,11 @@ export class BitLifecycleManager<T extends object> {
 
     ctx.toggledFields.forEach((depPath) => {
       if (this.store.isFieldHidden(depPath)) {
+        if (!ctx.hasMutatedErrors) {
+          ctx.nextErrors = { ...ctx.nextErrors };
+          ctx.hasMutatedErrors = true;
+        }
+
         delete ctx.nextErrors[depPath as keyof BitErrors<T>];
         this.store.clearFieldValidation(depPath);
       }

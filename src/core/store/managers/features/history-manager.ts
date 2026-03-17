@@ -45,12 +45,16 @@ export class BitHistoryManager<T extends object = any> {
     return this.enableHistory ? this.historyIndex > 0 : false;
   }
 
+  /**
+   * Usa historySize (lógico) e não history.length (físico).
+   * Após undo + nova escrita, entries além de historySize ficam stale no array,
+   * provocando canRedo=true incorreto e redo() devolvendo snapshot descartado.
+   */
   get canRedo(): boolean {
     return this.enableHistory
-      ? this.historyIndex < this.history.length - 1
+      ? this.historyIndex < this.historySize - 1
       : false;
   }
-
   undo(): T | null {
     if (this.canUndo) {
       this.historyIndex--;
