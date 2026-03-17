@@ -40,8 +40,6 @@ import { applyStateUpdate } from "./engines/state-update-engine";
 import { BitStoreEffectEngine } from "./engines/effect-engine";
 import { BitCapabilityRegistry } from "./orchestration/capability-registry";
 import type { BitStoreCapabilities } from "./orchestration/capabilities";
-import type { BitLifecycleStorePort } from "./managers/features/lifecycle-manager";
-import type { BitValidationStorePort } from "./managers/features/validation-manager";
 import type { BitValidationTriggerOptions } from "./managers/features/validation-manager";
 import {
   createInitialStoreState,
@@ -58,9 +56,7 @@ import {
  * - Feature managers provide optional enhancements (history, arrays, scopes)
  * - Query/mutation managers organize domain-specific operations
  */
-export class BitStore<T extends object = any>
-  implements BitValidationStorePort<T>, BitLifecycleStorePort<T>
-{
+export class BitStore<T extends object = any> {
   // ============================================================================
   // PRIVATE PROPERTIES
   // ============================================================================

@@ -40,8 +40,60 @@ export function createStoreCapabilities<T extends object>(args: {
 
   const capabilities = new BitCapabilityRegistry<BitStoreCapabilities<T>>();
 
-  capabilities.register("validation", new BitValidationManager<T>(store));
-  capabilities.register("lifecycle", new BitLifecycleManager<T>(store));
+  const validationPort: BitValidationStorePort<T> = {
+    getState: () => store.getState(),
+    internalUpdateState: (partial) => store.internalUpdateState(partial),
+    setError: (path, message) => store.setError(path, message),
+    validate: (opts) => store.validate(opts),
+    getFieldConfig: (path) => store.getFieldConfig(path),
+    getScopeFields: (scopeName) => store.getScopeFields(scopeName),
+    config: store.config,
+    getRequiredErrors: (values) => store.getRequiredErrors(values),
+    getHiddenFields: () => store.getHiddenFields(),
+    emitBeforeValidate: (event) => store.emitBeforeValidate(event),
+    emitAfterValidate: (event) => store.emitAfterValidate(event),
+  };
+
+  const lifecyclePort: BitLifecycleStorePort<T> = {
+    getState: () => store.getState(),
+    internalUpdateState: (partial, changedPaths) =>
+      store.internalUpdateState(partial, changedPaths),
+    internalSaveSnapshot: () => store.internalSaveSnapshot(),
+    batchStateUpdates: (callback) => store.batchStateUpdates(callback),
+    config: store.config,
+    getTransformEntries: () => store.getTransformEntries(),
+    updateDependencies: (changedPath, newValues) =>
+      store.updateDependencies(changedPath, newValues),
+    isFieldHidden: (path) => store.isFieldHidden(path),
+    evaluateAllDependencies: (values) => store.evaluateAllDependencies(values),
+    getHiddenFields: () => store.getHiddenFields(),
+    clearFieldValidation: (path) => store.clearFieldValidation(path),
+    triggerValidation: (scopeFields, options) =>
+      store.triggerValidation(scopeFields, options),
+    handleFieldAsyncValidation: (path, value) =>
+      store.handleFieldAsyncValidation(path, value),
+    cancelAllValidations: () => store.cancelAllValidations(),
+    validateNow: (options) => store.validateNow(options),
+    hasValidationsInProgress: (scopeFields) =>
+      store.hasValidationsInProgress(scopeFields),
+    updateDirtyForPath: (path, nextValues, baselineValues) =>
+      store.updateDirtyForPath(path, nextValues, baselineValues),
+    rebuildDirtyState: (nextValues, baselineValues) =>
+      store.rebuildDirtyState(nextValues, baselineValues),
+    clearDirtyState: () => store.clearDirtyState(),
+    buildDirtyValues: (values) => store.buildDirtyValues(values),
+    resetHistory: (initialValues) => store.resetHistory(initialValues),
+    emitFieldChange: (event) => store.emitFieldChange(event),
+    emitBeforeSubmit: (event) => store.emitBeforeSubmit(event),
+    emitAfterSubmit: (event) => store.emitAfterSubmit(event),
+    emitOperationalError: (event) => store.emitOperationalError(event),
+  };
+
+  capabilities.register(
+    "validation",
+    new BitValidationManager<T>(validationPort),
+  );
+  capabilities.register("lifecycle", new BitLifecycleManager<T>(lifecyclePort));
   capabilities.register(
     "history",
     new BitHistoryManager<T>(
