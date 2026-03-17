@@ -1,8 +1,10 @@
 import { deepClone, deepEqual } from "../../../utils";
 
 export class BitHistoryManager<T extends object = any> {
-  private history: T[] = [];
+  private history: Array<T | undefined> = [];
   private historyIndex: number = -1;
+  private historySize = 0;
+  private historyHead = 0;
 
   constructor(
     private enableHistory: boolean,
@@ -12,22 +14,30 @@ export class BitHistoryManager<T extends object = any> {
   saveSnapshot(values: T) {
     if (!this.enableHistory) return;
 
-    const currentSnapshot = this.history[this.historyIndex];
+    const currentSnapshot = this.getSnapshotAt(this.historyIndex);
 
     if (currentSnapshot && deepEqual(currentSnapshot, values)) {
       return;
     }
 
-    if (this.historyIndex < this.history.length - 1) {
-      this.history = this.history.slice(0, this.historyIndex + 1);
+    const snapshot = deepClone(values);
+    const capacity = this.getCapacity();
+
+    if (this.historyIndex < this.historySize - 1) {
+      this.historySize = this.historyIndex + 1;
     }
 
-    this.history.push(deepClone(values));
+    const nextIndex = this.historyIndex + 1;
 
-    if (this.history.length > this.maxHistory) {
-      this.history.shift();
+    if (nextIndex < capacity) {
+      this.history[this.toPhysicalIndex(nextIndex)] = snapshot;
+      this.historySize = Math.max(this.historySize, nextIndex + 1);
+      this.historyIndex = nextIndex;
     } else {
-      this.historyIndex++;
+      this.historyHead = (this.historyHead + 1) % capacity;
+      this.history[this.toPhysicalIndex(capacity - 1)] = snapshot;
+      this.historySize = capacity;
+      this.historyIndex = capacity - 1;
     }
   }
 
@@ -44,7 +54,7 @@ export class BitHistoryManager<T extends object = any> {
   undo(): T | null {
     if (this.canUndo) {
       this.historyIndex--;
-      return deepClone(this.history[this.historyIndex]);
+      return deepClone(this.getSnapshotAt(this.historyIndex)!);
     }
     return null;
   }
@@ -52,7 +62,7 @@ export class BitHistoryManager<T extends object = any> {
   redo(): T | null {
     if (this.canRedo) {
       this.historyIndex++;
-      return deepClone(this.history[this.historyIndex]);
+      return deepClone(this.getSnapshotAt(this.historyIndex)!);
     }
     return null;
   }
@@ -60,6 +70,8 @@ export class BitHistoryManager<T extends object = any> {
   reset(initialValues: T) {
     this.history = [];
     this.historyIndex = -1;
+    this.historySize = 0;
+    this.historyHead = 0;
     this.saveSnapshot(initialValues);
   }
 
@@ -75,7 +87,23 @@ export class BitHistoryManager<T extends object = any> {
       canUndo: this.canUndo,
       canRedo: this.canRedo,
       historyIndex: this.historyIndex,
-      historySize: this.history.length,
+      historySize: this.historySize,
     };
+  }
+
+  private getCapacity() {
+    return Math.max(1, this.maxHistory);
+  }
+
+  private toPhysicalIndex(logicalIndex: number) {
+    return (this.historyHead + logicalIndex) % this.getCapacity();
+  }
+
+  private getSnapshotAt(logicalIndex: number) {
+    if (logicalIndex < 0 || logicalIndex >= this.historySize) {
+      return undefined;
+    }
+
+    return this.history[this.toPhysicalIndex(logicalIndex)];
   }
 }

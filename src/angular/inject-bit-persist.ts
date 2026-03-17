@@ -13,6 +13,7 @@ export function injectBitPersist<
     (nextPersist) => {
       persist.set(nextPersist);
     },
+    { paths: ["persist"] },
   );
 
   try {

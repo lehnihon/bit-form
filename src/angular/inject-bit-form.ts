@@ -1,6 +1,9 @@
 import { signal, computed, inject, DestroyRef } from "@angular/core";
 import { useBitStore } from "./provider";
-import { createFormController } from "../core/form-controller";
+import {
+  createFormController,
+  createStoreFormActions,
+} from "../core/form-controller";
 import type { InjectBitFormResult } from "./types";
 
 export function injectBitForm<T extends object>(): InjectBitFormResult<T> {
@@ -23,6 +26,7 @@ export function injectBitForm<T extends object>(): InjectBitFormResult<T> {
     (nextState) => {
       stateSignal.set(nextState);
     },
+    { paths: ["isValid", "isSubmitting", "isDirty"] },
   );
 
   destroyRef.onDestroy(() => sub());
@@ -47,6 +51,7 @@ export function injectBitForm<T extends object>(): InjectBitFormResult<T> {
     },
     { stopPropagation: true },
   );
+  const actions = createStoreFormActions(store);
 
   const meta = {
     isValid,
@@ -68,14 +73,6 @@ export function injectBitForm<T extends object>(): InjectBitFormResult<T> {
     submit: controller.submit,
     onSubmit: controller.onSubmit,
     reset: controller.reset,
-    replaceValues: store.replaceValues.bind(store),
-    hydrate: store.hydrate.bind(store),
-    rebase: store.rebase.bind(store),
-    setError: store.setError.bind(store),
-    setErrors: store.setErrors.bind(store),
-    setServerErrors: store.setServerErrors.bind(store),
-    setField: store.setField.bind(store),
-    blurField: store.blurField.bind(store),
-    validate: store.validate.bind(store),
+    ...actions,
   };
 }

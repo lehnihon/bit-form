@@ -1,6 +1,9 @@
 import { computed, onUnmounted, shallowRef, ref } from "vue";
 import { useBitStore } from "./context";
-import { createFormController } from "../core/form-controller";
+import {
+  createFormController,
+  createStoreFormActions,
+} from "../core/form-controller";
 import type { UseBitFormResult } from "./types";
 
 export function useBitForm<T extends object>(): UseBitFormResult<T> {
@@ -22,6 +25,7 @@ export function useBitForm<T extends object>(): UseBitFormResult<T> {
     (nextState) => {
       state.value = nextState;
     },
+    { paths: ["isValid", "isSubmitting", "isDirty"] },
   );
 
   onUnmounted(unsubscribe);
@@ -38,6 +42,7 @@ export function useBitForm<T extends object>(): UseBitFormResult<T> {
       submitError.value = error;
     },
   });
+  const actions = createStoreFormActions(store);
 
   const isValid = computed(() => state.value.isValid);
   const isSubmitting = computed(() => state.value.isSubmitting);
@@ -66,14 +71,6 @@ export function useBitForm<T extends object>(): UseBitFormResult<T> {
     submit: controller.submit,
     onSubmit,
     reset,
-    replaceValues: store.replaceValues.bind(store),
-    hydrate: store.hydrate.bind(store),
-    rebase: store.rebase.bind(store),
-    setError: store.setError.bind(store),
-    setErrors: store.setErrors.bind(store),
-    setServerErrors: store.setServerErrors.bind(store),
-    setField: store.setField.bind(store),
-    blurField: store.blurField.bind(store),
-    validate: store.validate.bind(store),
+    ...actions,
   };
 }

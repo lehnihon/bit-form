@@ -1,17 +1,11 @@
 import { ref, computed, watch, onMounted, onUnmounted } from "vue";
 import type { ScopeStatus, ValidateScopeResult } from "../core";
+import {
+  getScopeSubscriptionPaths,
+  isScopeStatusEqual,
+} from "../core/scope-status";
 import { useBitStore } from "./context";
 import type { UseBitStepsResult } from "./types";
-
-function errorsEqual(
-  a: Record<string, string>,
-  b: Record<string, string>,
-): boolean {
-  const keysA = Object.keys(a);
-  const keysB = Object.keys(b);
-  if (keysA.length !== keysB.length) return false;
-  return keysA.every((k) => a[k] === b[k]);
-}
 
 export function useBitSteps(scopeNames: string[]): UseBitStepsResult {
   const store = useBitStore();
@@ -28,11 +22,7 @@ export function useBitSteps(scopeNames: string[]): UseBitStepsResult {
   const updateStatus = () => {
     const scopeName = scope.value;
     const newStatus = store.getStepStatus(scopeName);
-    if (
-      newStatus.hasErrors !== status.value.hasErrors ||
-      newStatus.isDirty !== status.value.isDirty ||
-      !errorsEqual(newStatus.errors, status.value.errors)
-    ) {
+    if (!isScopeStatusEqual(status.value, newStatus)) {
       status.value = newStatus;
     }
   };
@@ -41,6 +31,7 @@ export function useBitSteps(scopeNames: string[]): UseBitStepsResult {
     unsubscribe = store.subscribeSelector(
       (state) => ({ errors: state.errors, isDirty: state.isDirty }),
       updateStatus,
+      { paths: getScopeSubscriptionPaths(store.getScopeFields(scope.value)) },
     );
   });
 

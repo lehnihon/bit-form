@@ -1,4 +1,3 @@
-import { deepClone } from "../../../utils";
 import type {
   BitPersistResolvedConfig,
   BitPersistStorageAdapter,
@@ -50,7 +49,7 @@ export class BitPersistManager<T extends object = any> {
         this.config.mode === "dirtyValues"
           ? this.getDirtyValues()
           : this.getValues();
-      const serialized = this.config.serialize(deepClone(payload));
+      const serialized = this.config.serialize(payload);
       await storage.setItem(this.config.key, serialized);
     } catch (error) {
       this.handleError(error);

@@ -39,6 +39,7 @@ describe("BitStore Core", () => {
       expect("replaceValues" in store).toBe(true);
       expect("hydrate" in store).toBe(true);
       expect("rebase" in store).toBe(true);
+      expect("transaction" in store).toBe(true);
       expect("historyMg" in store).toBe(false);
       expect("depsMg" in store).toBe(false);
     });
@@ -67,6 +68,21 @@ describe("BitStore Core", () => {
       expect(listener).toHaveBeenCalled();
     });
 
+    it("should batch updates inside transaction and notify once", () => {
+      const store = new BitStore({ initialValues: { name: "Leo", age: 30 } });
+      const listener = vi.fn();
+
+      store.subscribe(listener);
+
+      store.transaction(() => {
+        store.setField("name", "Leandro");
+        store.setField("age", 31);
+      });
+
+      expect(store.getState().values).toEqual({ name: "Leandro", age: 31 });
+      expect(listener).toHaveBeenCalledTimes(1);
+    });
+
     it("should allow watching specific fields", () => {
       const store = new BitStore({
         initialValues: { user: { name: "Leo", age: 30 } },
@@ -91,6 +107,7 @@ describe("BitStore Core", () => {
       const unsubscribe = store.subscribeSelector(
         (state) => state.values.user.name,
         listener,
+        { autoTrackPaths: true },
       );
 
       store.setField("age", 31);
@@ -321,6 +338,25 @@ describe("BitStore Core", () => {
 
       expect(store.getState().values.tax).toBe(20);
       expect(store.getState().values.finalPrice).toBe(220);
+    });
+
+    it("should fail fast on explicit cyclic computed dependencies", () => {
+      expect(
+        () =>
+          new BitStore({
+            initialValues: { price: 10, total: 0, grandTotal: 0 },
+            fields: {
+              total: {
+                computed: (vals) => vals.grandTotal,
+                computedDependsOn: ["grandTotal"],
+              },
+              grandTotal: {
+                computed: (vals) => vals.total,
+                computedDependsOn: ["total"],
+              },
+            },
+          }),
+      ).toThrow(/cyclic computed dependencies/i);
     });
   });
 

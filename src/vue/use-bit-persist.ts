@@ -11,6 +11,7 @@ export function useBitPersist<T extends object = any>(): UseBitPersistResult {
     (nextMeta) => {
       meta.value = nextMeta;
     },
+    { paths: ["persist"] },
   );
 
   onUnmounted(() => unsubscribe());

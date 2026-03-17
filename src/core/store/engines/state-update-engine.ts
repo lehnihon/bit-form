@@ -62,16 +62,80 @@ export function applyStateUpdate<T extends object>(args: {
     nextState.isValid = !hasErrors(nextState.errors as Record<string, unknown>);
   }
 
-  const effectiveChangedPaths =
-    changedPaths && changedPaths.length > 0
-      ? changedPaths
-      : partialState.values
-      ? ["*"]
-      : undefined;
+  const explicitChangedPaths =
+    changedPaths && changedPaths.length > 0 ? changedPaths : undefined;
+  const inferredChangedPaths = inferChangedPaths(
+    partialState,
+    !explicitChangedPaths,
+  );
+  const effectiveChangedPaths = mergeChangedPaths(
+    explicitChangedPaths,
+    inferredChangedPaths,
+  );
 
   return {
     nextState,
     changedPaths: effectiveChangedPaths,
     valuesChanged,
   };
+}
+
+function inferChangedPaths<T extends object>(
+  partialState: Partial<BitState<T>>,
+  includeValuesWildcard: boolean,
+): string[] | undefined {
+  if (includeValuesWildcard && partialState.values) {
+    return ["*"];
+  }
+
+  const changedPaths = new Set<string>();
+
+  if (partialState.errors) {
+    Object.keys(partialState.errors).forEach((path) => changedPaths.add(path));
+  }
+
+  if (partialState.touched) {
+    Object.keys(partialState.touched).forEach((path) => changedPaths.add(path));
+  }
+
+  if (partialState.isValidating) {
+    Object.keys(partialState.isValidating).forEach((path) =>
+      changedPaths.add(path),
+    );
+  }
+
+  if (partialState.persist) {
+    changedPaths.add("persist");
+  }
+
+  if ("isValid" in partialState) {
+    changedPaths.add("isValid");
+  }
+
+  if ("isDirty" in partialState) {
+    changedPaths.add("isDirty");
+  }
+
+  if ("isSubmitting" in partialState) {
+    changedPaths.add("isSubmitting");
+  }
+
+  return changedPaths.size > 0 ? Array.from(changedPaths) : undefined;
+}
+
+function mergeChangedPaths(
+  explicitChangedPaths?: string[],
+  inferredChangedPaths?: string[],
+): string[] | undefined {
+  if (!explicitChangedPaths?.length) {
+    return inferredChangedPaths;
+  }
+
+  if (!inferredChangedPaths?.length) {
+    return explicitChangedPaths;
+  }
+
+  return Array.from(
+    new Set([...explicitChangedPaths, ...inferredChangedPaths]),
+  );
 }

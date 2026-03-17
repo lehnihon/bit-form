@@ -1,11 +1,16 @@
 import { useCallback, useSyncExternalStore, useRef } from "react";
 import type { ScopeStatus, ValidateScopeResult } from "../core";
+import {
+  getScopeSubscriptionPaths,
+  isScopeStatusEqual,
+} from "../core/scope-status";
 import { useBitStore } from "./context";
 
 export type { ScopeStatus, ValidateScopeResult };
 
 export function useBitScope(scopeName: string) {
   const store = useBitStore();
+  const scopeFields = store.getScopeFields(scopeName);
 
   const lastStatus = useRef<ScopeStatus | null>(null);
 
@@ -14,13 +19,7 @@ export function useBitScope(scopeName: string) {
 
     if (
       lastStatus.current &&
-      lastStatus.current.hasErrors === nextStatus.hasErrors &&
-      lastStatus.current.isDirty === nextStatus.isDirty &&
-      Object.keys(lastStatus.current.errors).length ===
-        Object.keys(nextStatus.errors).length &&
-      Object.entries(nextStatus.errors).every(
-        ([k, v]) => lastStatus.current!.errors[k] === v,
-      )
+      isScopeStatusEqual(lastStatus.current, nextStatus)
     ) {
       return lastStatus.current;
     }
@@ -37,8 +36,9 @@ export function useBitScope(scopeName: string) {
       store.subscribeSelector(
         (state) => ({ errors: state.errors, isDirty: state.isDirty }),
         () => cb(),
+        { paths: getScopeSubscriptionPaths(scopeFields) },
       ),
-    [store],
+    [store, scopeFields],
   );
 
   const status = useSyncExternalStore(

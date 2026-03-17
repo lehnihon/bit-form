@@ -130,6 +130,7 @@ export interface UseBitFormResult<T extends object = any> {
     handler: (values: T, dirtyValues?: Partial<T>) => Promise<unknown>,
   ) => (e?: { preventDefault: () => void }) => Promise<void>;
   reset: () => void;
+  transaction: <TResult>(callback: () => TResult) => TResult;
   setField: <P extends BitPath<T>>(path: P, value: BitPathValue<T, P>) => void;
   blurField: <P extends BitPath<T>>(path: P) => void;
   replaceValues: (values: T) => void;

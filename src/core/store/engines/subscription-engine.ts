@@ -44,10 +44,9 @@ export class BitSubscriptionEngine<T extends object> {
       },
     };
 
-    const autoTrackedPaths =
-      options?.autoTrackPaths === false
-        ? []
-        : this.collectTrackedSelectorPaths(selector);
+    const autoTrackedPaths = options?.autoTrackPaths
+      ? this.collectTrackedSelectorPaths(selector)
+      : [];
 
     const scopedPaths = this.normalizeSubscriptionPaths([
       ...(options?.paths ?? []),

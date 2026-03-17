@@ -6,7 +6,10 @@ import {
   useState,
 } from "react";
 import { useBitStore } from "./context";
-import { createFormController } from "../core/form-controller";
+import {
+  createFormController,
+  createStoreFormActions,
+} from "../core/form-controller";
 import type { UseBitFormResult } from "./types";
 
 const selectFormMeta = <T extends object>(state: {
@@ -52,7 +55,10 @@ export function useBitForm<T extends object>(): UseBitFormResult<T> {
   }, [store]);
 
   const subscribeMeta = useCallback(
-    (cb: () => void) => store.subscribeSelector(selectFormMeta, () => cb()),
+    (cb: () => void) =>
+      store.subscribeSelector(selectFormMeta, () => cb(), {
+        paths: ["isValid", "isDirty", "isSubmitting"],
+      }),
     [store],
   );
 
@@ -78,6 +84,8 @@ export function useBitForm<T extends object>(): UseBitFormResult<T> {
       }),
     [store],
   );
+
+  const actions = useMemo(() => createStoreFormActions(store), [store]);
 
   const submit = useCallback(controller.submit, [controller]);
   const onSubmit = useCallback(controller.onSubmit, [controller]);
@@ -109,14 +117,6 @@ export function useBitForm<T extends object>(): UseBitFormResult<T> {
     submit,
     onSubmit,
     reset,
-    setField: store.setField.bind(store),
-    blurField: store.blurField.bind(store),
-    replaceValues: store.replaceValues.bind(store),
-    hydrate: store.hydrate.bind(store),
-    rebase: store.rebase.bind(store),
-    setError: store.setError.bind(store),
-    setErrors: store.setErrors.bind(store),
-    setServerErrors: store.setServerErrors.bind(store),
-    validate: store.validate.bind(store),
+    ...actions,
   };
 }

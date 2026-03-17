@@ -10,6 +10,7 @@ export function useBitPersist(): UseBitPersistResult {
       store.subscribeSelector(
         (state) => state.persist,
         () => cb(),
+        { paths: ["persist"] },
       ),
     () => store.getPersistMetadata(),
     () => store.getPersistMetadata(),

@@ -267,6 +267,7 @@ export interface BitConfig<T extends object = any> {
   storeId?: string;
   idFactory?: BitIdFactory;
   initialValues?: T;
+  masks?: Record<string, BitMask>;
 
   /** Central field config: conditional, validation, transform, computed, mask, scope. */
   fields?: Record<string, BitFieldDefinition<T>>;

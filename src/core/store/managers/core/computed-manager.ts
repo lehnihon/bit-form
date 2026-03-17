@@ -1,4 +1,4 @@
-import { getDeepValue, setDeepValues, deepEqual } from "../../../utils";
+import { getDeepValue, setDeepValue, deepEqual } from "../../../utils";
 import type { BitComputedFn } from "../../contracts/types";
 
 export interface BitComputedEntry<T extends object> {
@@ -14,6 +14,7 @@ type BitComputedEntryInput<T extends object> =
 interface BitComputedResolution<T extends object> {
   entries: BitComputedEntry<T>[];
   shouldTrackDependencies: boolean;
+  requiresStabilizationPasses: boolean;
 }
 
 export class BitComputedManager<T extends object> {
@@ -37,13 +38,12 @@ export class BitComputedManager<T extends object> {
     }
 
     let nextValues = values;
-    const maxPasses = Math.max(
-      BitComputedManager.MIN_PASSES,
-      entriesToRun.length * 2,
-    );
+    const maxPasses = resolution.requiresStabilizationPasses
+      ? Math.max(BitComputedManager.MIN_PASSES, entriesToRun.length * 2)
+      : 1;
 
     for (let i = 0; i < maxPasses; i++) {
-      const pendingUpdates: [string, unknown][] = [];
+      let hasUpdates = false;
 
       for (const entry of entriesToRun) {
         const { newValue, trackedDependencies } = this.computeWithTracking(
@@ -54,7 +54,8 @@ export class BitComputedManager<T extends object> {
         const currentValue = getDeepValue(nextValues, entry.path);
 
         if (!deepEqual(currentValue, newValue)) {
-          pendingUpdates.push([entry.path, newValue]);
+          nextValues = setDeepValue(nextValues, entry.path, newValue);
+          hasUpdates = true;
         }
 
         if (trackedDependencies) {
@@ -62,11 +63,9 @@ export class BitComputedManager<T extends object> {
         }
       }
 
-      if (pendingUpdates.length === 0) break;
+      if (!hasUpdates) break;
 
-      nextValues = setDeepValues(nextValues, pendingUpdates);
-
-      if (i === maxPasses - 1) {
+      if (resolution.requiresStabilizationPasses && i === maxPasses - 1) {
         throw new Error(
           "BitStore: computed fields did not stabilize. Check for cyclic computed definitions.",
         );
@@ -86,8 +85,9 @@ export class BitComputedManager<T extends object> {
       changedPaths.includes("*")
     ) {
       return {
-        entries,
+        entries: this.orderEntries(entries),
         shouldTrackDependencies: true,
+        requiresStabilizationPasses: true,
       };
     }
 
@@ -136,12 +136,18 @@ export class BitComputedManager<T extends object> {
       return {
         entries: [],
         shouldTrackDependencies,
+        requiresStabilizationPasses: false,
       };
     }
 
+    const affectedEntries = entries.filter((entry) =>
+      affectedPaths.has(entry.path),
+    );
+
     return {
-      entries: entries.filter((entry) => affectedPaths.has(entry.path)),
+      entries: this.orderEntries(affectedEntries),
       shouldTrackDependencies,
+      requiresStabilizationPasses: shouldTrackDependencies,
     };
   }
 
@@ -163,6 +169,67 @@ export class BitComputedManager<T extends object> {
       entry.dependsOn ??
       Array.from(this.computedDependencyCache.get(entry.path) ?? [])
     );
+  }
+
+  private orderEntries(entries: BitComputedEntry<T>[]) {
+    if (entries.length <= 1) {
+      return entries;
+    }
+
+    const entryByPath = new Map(entries.map((entry) => [entry.path, entry]));
+    const inDegree = new Map<string, number>();
+    const dependents = new Map<string, Set<string>>();
+
+    entries.forEach((entry) => inDegree.set(entry.path, 0));
+
+    entries.forEach((entry) => {
+      const dependencies = this.getDependenciesForEntry(entry);
+
+      dependencies.forEach((dependencyPath) => {
+        if (!entryByPath.has(dependencyPath)) {
+          return;
+        }
+
+        const nextDependents = dependents.get(dependencyPath) ?? new Set();
+        if (!nextDependents.has(entry.path)) {
+          nextDependents.add(entry.path);
+          dependents.set(dependencyPath, nextDependents);
+          inDegree.set(entry.path, (inDegree.get(entry.path) ?? 0) + 1);
+        }
+      });
+    });
+
+    const queue = entries
+      .filter((entry) => (inDegree.get(entry.path) ?? 0) === 0)
+      .map((entry) => entry.path);
+    const orderedPaths: string[] = [];
+
+    while (queue.length > 0) {
+      const currentPath = queue.shift()!;
+      orderedPaths.push(currentPath);
+
+      const nextDependents = dependents.get(currentPath);
+      if (!nextDependents) {
+        continue;
+      }
+
+      nextDependents.forEach((dependentPath) => {
+        const nextDegree = (inDegree.get(dependentPath) ?? 0) - 1;
+        inDegree.set(dependentPath, nextDegree);
+
+        if (nextDegree === 0) {
+          queue.push(dependentPath);
+        }
+      });
+    }
+
+    if (orderedPaths.length !== entries.length) {
+      throw new Error(
+        "BitStore: cyclic computed dependencies detected. Check computedDependsOn definitions.",
+      );
+    }
+
+    return orderedPaths.map((path) => entryByPath.get(path)!);
   }
 
   private getDependentsForPath(
