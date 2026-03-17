@@ -5,6 +5,10 @@ export class BitDependencyManager<T extends object = any> {
   private readonly fieldConfigs: Map<string, BitFieldDefinition<T>> = new Map();
   private readonly dependencies: Map<string, Set<string>> = new Map();
   private readonly hiddenFields: Set<string> = new Set();
+  private readonly requiredPathsByDependency: Map<string, Set<string>> =
+    new Map();
+  private readonly requiredConditionalPaths: Set<string> = new Set();
+  private requiredEvaluationCache = new WeakMap<T, Map<string, boolean>>();
 
   getFieldConfig(path: string): BitFieldDefinition<T> | undefined {
     return this.fieldConfigs.get(path);
@@ -20,8 +24,8 @@ export class BitDependencyManager<T extends object = any> {
     return this.fieldConfigs.has(path);
   }
 
-  getHiddenFields(): string[] {
-    return Array.from(this.hiddenFields);
+  getHiddenFields(): ReadonlySet<string> {
+    return this.hiddenFields;
   }
 
   register(path: string, config: BitFieldDefinition<T>, currentValues: T) {
@@ -37,6 +41,19 @@ export class BitDependencyManager<T extends object = any> {
       });
     }
 
+    const requiredDependsOn = config.conditional?.dependsOn;
+    if (requiredDependsOn && config.conditional?.requiredIf) {
+      this.requiredConditionalPaths.add(path);
+      requiredDependsOn.forEach((dep) => {
+        if (!this.requiredPathsByDependency.has(dep)) {
+          this.requiredPathsByDependency.set(dep, new Set());
+        }
+        this.requiredPathsByDependency.get(dep)!.add(path);
+      });
+    }
+
+    this.requiredEvaluationCache = new WeakMap();
+
     this.evaluateFieldCondition(path, currentValues);
   }
 
@@ -47,13 +64,35 @@ export class BitDependencyManager<T extends object = any> {
   isRequired(path: string, values: T): boolean {
     const config = this.fieldConfigs.get(path);
     if (!config || this.isHidden(path)) return false;
-    return !!config.conditional?.requiredIf?.(values);
+
+    if (!config.conditional?.requiredIf) {
+      return false;
+    }
+
+    let cache = this.requiredEvaluationCache.get(values);
+    if (!cache) {
+      cache = new Map<string, boolean>();
+      this.requiredEvaluationCache.set(values, cache);
+    }
+
+    if (cache.has(path)) {
+      return cache.get(path)!;
+    }
+
+    const result = !!config.conditional.requiredIf(values);
+    cache.set(path, result);
+    return result;
   }
 
   getRequiredErrors(values: T): Record<string, string> {
     const errors: Record<string, string> = {};
 
-    this.fieldConfigs.forEach((config, path) => {
+    this.requiredConditionalPaths.forEach((path) => {
+      const config = this.fieldConfigs.get(path);
+      if (!config) {
+        return;
+      }
+
       if (this.isRequired(path, values)) {
         const val = getDeepValue(values, path);
         if (this.isEmpty(val)) {
@@ -109,9 +148,25 @@ export class BitDependencyManager<T extends object = any> {
   }
 
   unregister(path: string) {
+    const config = this.fieldConfigs.get(path);
+
     this.fieldConfigs.delete(path);
     this.hiddenFields.delete(path);
     this.dependencies.delete(path);
+    this.requiredEvaluationCache = new WeakMap();
+    this.requiredConditionalPaths.delete(path);
+
+    config?.conditional?.dependsOn?.forEach((dep) => {
+      const requiredPaths = this.requiredPathsByDependency.get(dep);
+      if (!requiredPaths) {
+        return;
+      }
+
+      requiredPaths.delete(path);
+      if (requiredPaths.size === 0) {
+        this.requiredPathsByDependency.delete(dep);
+      }
+    });
 
     this.dependencies.forEach((dependentsSet) => {
       dependentsSet.delete(path);
@@ -119,15 +174,17 @@ export class BitDependencyManager<T extends object = any> {
   }
 
   unregisterPrefix(prefix: string) {
-    const pathsToRemove: string[] = [];
+    const removedEntries: [string, BitFieldDefinition<T>][] = [];
 
-    this.fieldConfigs.forEach((_, path) => {
+    this.fieldConfigs.forEach((config, path) => {
       if (path.startsWith(prefix)) {
-        pathsToRemove.push(path);
+        removedEntries.push([path, config]);
       }
     });
 
-    pathsToRemove.forEach((path) => this.unregister(path));
+    removedEntries.forEach(([path]) => this.unregister(path));
+
+    return removedEntries;
   }
 
   private evaluateFieldCondition(path: string, values: T) {

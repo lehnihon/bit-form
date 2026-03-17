@@ -3,6 +3,10 @@ export function deepClone<T>(obj: T): T {
     return obj;
   }
 
+  if (typeof structuredClone === "function") {
+    return structuredClone(obj);
+  }
+
   if (obj instanceof Date) {
     return new Date(obj.getTime()) as any as T;
   }
@@ -140,10 +144,13 @@ export function collectDirtyPaths(
     if (!valueEqual(obj, initial) && prefix) result.add(prefix);
     return result;
   }
-  const allKeys = new Set([
-    ...Object.keys(obj || {}),
-    ...Object.keys(initial || {}),
-  ]);
+  const allKeys = new Set<string>();
+  for (const key of Object.keys(obj || {})) {
+    allKeys.add(key);
+  }
+  for (const key of Object.keys(initial || {})) {
+    allKeys.add(key);
+  }
   for (const k of allKeys) {
     const p = prefix ? `${prefix}.${k}` : k;
     collectDirtyPaths((obj as any)?.[k], (initial as any)?.[k], p, result);
@@ -157,17 +164,12 @@ const pathCache = new Map<string, string[]>();
 function getPathKeys(path: string): string[] {
   const cached = pathCache.get(path);
   if (cached) {
-    pathCache.delete(path);
-    pathCache.set(path, cached);
     return cached;
   }
 
   const keys = path.split(".");
   if (pathCache.size >= PATH_CACHE_MAX) {
-    const oldestKey = pathCache.keys().next().value;
-    if (oldestKey) {
-      pathCache.delete(oldestKey);
-    }
+    pathCache.clear();
   }
   pathCache.set(path, keys);
   return keys;
@@ -219,6 +221,58 @@ export function setDeepValue(obj: any, path: string, value: any): any {
   return result;
 }
 
+export function setDeepValues(
+  obj: any,
+  updates: ReadonlyArray<readonly [path: string, value: any]>,
+): any {
+  if (updates.length === 0) {
+    return obj;
+  }
+
+  const root = Array.isArray(obj) ? [...obj] : { ...obj };
+  const clonedNodes = new WeakSet<object>();
+  if (root && typeof root === "object") {
+    clonedNodes.add(root);
+  }
+
+  for (const [path, value] of updates) {
+    const keys = getPathKeys(path);
+    let current: any = root;
+
+    for (let i = 0; i < keys.length - 1; i++) {
+      const key = keys[i];
+      const nextKey = keys[i + 1];
+
+      const nextAsNumber = Number(nextKey);
+      const isNextNumeric =
+        Number.isInteger(nextAsNumber) && String(nextAsNumber) === nextKey;
+
+      const currentValue = current[key];
+
+      if (currentValue === null || currentValue === undefined) {
+        current[key] = isNextNumeric ? [] : {};
+        clonedNodes.add(current[key]);
+      } else if (typeof currentValue === "object") {
+        if (!clonedNodes.has(currentValue)) {
+          current[key] = Array.isArray(currentValue)
+            ? [...currentValue]
+            : { ...currentValue };
+          clonedNodes.add(current[key]);
+        }
+      } else {
+        current[key] = isNextNumeric ? [] : {};
+        clonedNodes.add(current[key]);
+      }
+
+      current = current[key];
+    }
+
+    current[keys[keys.length - 1]] = value;
+  }
+
+  return root;
+}
+
 export function cleanPrefixedKeys(
   obj: Record<string, any>,
   prefix: string,
@@ -239,30 +293,13 @@ export const shiftKeys = (
   path: string,
   removedIndex: number,
 ) => {
-  const newObj: Record<string, any> = {};
-  const prefix = `${path}.`;
-
-  Object.keys(obj).forEach((key) => {
-    if (!key.startsWith(prefix)) {
-      newObj[key] = obj[key];
-      return;
+  return reindexObjectKeys(obj, path, (currentIdx) => {
+    if (currentIdx === removedIndex) {
+      return null;
     }
-    const remaining = key.substring(prefix.length);
-    const parts = remaining.split(".");
-    const currentIdx = parseInt(parts[0], 10);
-    const rest = parts.slice(1).join(".");
 
-    if (currentIdx === removedIndex) return;
-
-    if (currentIdx > removedIndex) {
-      const newIdx = currentIdx - 1;
-      const newKey = rest ? `${prefix}${newIdx}.${rest}` : `${prefix}${newIdx}`;
-      newObj[newKey] = obj[key];
-    } else {
-      newObj[key] = obj[key];
-    }
+    return currentIdx > removedIndex ? currentIdx - 1 : currentIdx;
   });
-  return newObj;
 };
 
 export const swapKeys = (
@@ -271,30 +308,17 @@ export const swapKeys = (
   indexA: number,
   indexB: number,
 ) => {
-  const newObj: Record<string, any> = {};
-  const prefix = `${path}.`;
-
-  Object.keys(obj).forEach((key) => {
-    if (!key.startsWith(prefix)) {
-      newObj[key] = obj[key];
-      return;
-    }
-    const remaining = key.substring(prefix.length);
-    const parts = remaining.split(".");
-    const currentIdx = parseInt(parts[0], 10);
-    const rest = parts.slice(1).join(".");
-
+  return reindexObjectKeys(obj, path, (currentIdx) => {
     if (currentIdx === indexA) {
-      const newKey = rest ? `${prefix}${indexB}.${rest}` : `${prefix}${indexB}`;
-      newObj[newKey] = obj[key];
-    } else if (currentIdx === indexB) {
-      const newKey = rest ? `${prefix}${indexA}.${rest}` : `${prefix}${indexA}`;
-      newObj[newKey] = obj[key];
-    } else {
-      newObj[key] = obj[key];
+      return indexB;
     }
+
+    if (currentIdx === indexB) {
+      return indexA;
+    }
+
+    return currentIdx;
   });
-  return newObj;
 };
 
 export const moveKeys = (
@@ -303,33 +327,123 @@ export const moveKeys = (
   from: number,
   to: number,
 ) => {
-  const newObj: Record<string, any> = {};
+  return reindexObjectKeys(obj, path, (currentIdx) => {
+    if (currentIdx === from) {
+      return to;
+    }
+
+    if (from < to && currentIdx > from && currentIdx <= to) {
+      return currentIdx - 1;
+    }
+
+    if (from > to && currentIdx >= to && currentIdx < from) {
+      return currentIdx + 1;
+    }
+
+    return currentIdx;
+  });
+};
+
+export function reindexFieldArrayMeta(
+  state: {
+    errors: Record<string, any>;
+    touched: Record<string, any>;
+    isValidating: Record<string, any>;
+  },
+  path: string,
+  remapIndex: (index: number) => number | null,
+) {
+  const nextErrors: Record<string, any> = {};
+  const nextTouched: Record<string, any> = {};
+  const nextIsValidating: Record<string, any> = {};
+
+  const allKeys = new Set<string>();
+  Object.keys(state.errors).forEach((key) => allKeys.add(key));
+  Object.keys(state.touched).forEach((key) => allKeys.add(key));
+  Object.keys(state.isValidating).forEach((key) => allKeys.add(key));
+
   const prefix = `${path}.`;
 
-  Object.keys(obj).forEach((key) => {
-    if (!key.startsWith(prefix)) {
-      newObj[key] = obj[key];
-      return;
+  for (const key of allKeys) {
+    const nextKey = remapIndexedPath(key, prefix, remapIndex);
+    if (!nextKey) {
+      continue;
     }
+
+    if (Object.prototype.hasOwnProperty.call(state.errors, key)) {
+      nextErrors[nextKey] = state.errors[key];
+    }
+
+    if (Object.prototype.hasOwnProperty.call(state.touched, key)) {
+      nextTouched[nextKey] = state.touched[key];
+    }
+
+    if (Object.prototype.hasOwnProperty.call(state.isValidating, key)) {
+      nextIsValidating[nextKey] = state.isValidating[key];
+    }
+  }
+
+  return {
+    errors: nextErrors,
+    touched: nextTouched,
+    isValidating: nextIsValidating,
+  };
+}
+
+function remapIndexedPath(
+  key: string,
+  prefix: string,
+  remapIndex: (index: number) => number | null,
+) {
+  if (!key.startsWith(prefix)) {
+    return key;
+  }
+
+  const remaining = key.substring(prefix.length);
+  const parts = remaining.split(".");
+  const currentIdx = parseInt(parts[0], 10);
+  const nextIdx = remapIndex(currentIdx);
+
+  if (nextIdx === null) {
+    return null;
+  }
+
+  const rest = parts.slice(1).join(".");
+  return rest ? `${prefix}${nextIdx}.${rest}` : `${prefix}${nextIdx}`;
+}
+
+function reindexObjectKeys(
+  obj: Record<string, any>,
+  path: string,
+  remapIndex: (index: number) => number | null,
+) {
+  const nextObject: Record<string, any> = {};
+  const prefix = `${path}.`;
+
+  for (const key of Object.keys(obj)) {
+    if (!key.startsWith(prefix)) {
+      nextObject[key] = obj[key];
+      continue;
+    }
+
     const remaining = key.substring(prefix.length);
     const parts = remaining.split(".");
     const currentIdx = parseInt(parts[0], 10);
-    const rest = parts.slice(1).join(".");
+    const nextIdx = remapIndex(currentIdx);
 
-    let newIdx = currentIdx;
-    if (currentIdx === from) {
-      newIdx = to;
-    } else if (from < to && currentIdx > from && currentIdx <= to) {
-      newIdx = currentIdx - 1;
-    } else if (from > to && currentIdx >= to && currentIdx < from) {
-      newIdx = currentIdx + 1;
+    if (nextIdx === null) {
+      continue;
     }
 
-    const newKey = rest ? `${prefix}${newIdx}.${rest}` : `${prefix}${newIdx}`;
-    newObj[newKey] = obj[key];
-  });
-  return newObj;
-};
+    const rest = parts.slice(1).join(".");
+    const nextKey = rest
+      ? `${prefix}${nextIdx}.${rest}`
+      : `${prefix}${nextIdx}`;
+    nextObject[nextKey] = obj[key];
+  }
+
+  return nextObject;
+}
 
 /**
  * Checks if a value looks like a server validation error response.

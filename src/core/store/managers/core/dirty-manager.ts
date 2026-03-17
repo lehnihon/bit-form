@@ -13,6 +13,7 @@ import {
  */
 export class BitDirtyManager<T extends object = any> {
   private dirtyPaths: Set<string> = new Set();
+  private dirtyPathIndex: Set<string> = new Set();
 
   /**
    * Updates dirty state for a single path change.
@@ -36,6 +37,8 @@ export class BitDirtyManager<T extends object = any> {
       this.dirtyPaths.add(path);
     }
 
+    this.rebuildIndex();
+
     return this.dirtyPaths.size > 0;
   }
 
@@ -46,6 +49,7 @@ export class BitDirtyManager<T extends object = any> {
    */
   rebuild(values: T, initialValues: T): boolean {
     this.dirtyPaths = collectDirtyPaths(values, initialValues);
+    this.rebuildIndex();
     return this.dirtyPaths.size > 0;
   }
 
@@ -55,6 +59,7 @@ export class BitDirtyManager<T extends object = any> {
    */
   clear(): void {
     this.dirtyPaths.clear();
+    this.dirtyPathIndex.clear();
   }
 
   /**
@@ -72,15 +77,14 @@ export class BitDirtyManager<T extends object = any> {
   }
 
   isPathDirty(path: string): boolean {
-    if (this.dirtyPaths.has(path)) {
+    if (this.dirtyPathIndex.has(path)) {
       return true;
     }
 
-    for (const dirtyPath of this.dirtyPaths) {
-      if (
-        dirtyPath.startsWith(`${path}.`) ||
-        path.startsWith(`${dirtyPath}.`)
-      ) {
+    const segments = path.split(".");
+    while (segments.length > 1) {
+      segments.pop();
+      if (this.dirtyPaths.has(segments.join("."))) {
         return true;
       }
     }
@@ -115,5 +119,18 @@ export class BitDirtyManager<T extends object = any> {
     }
 
     return result;
+  }
+
+  private rebuildIndex() {
+    const nextIndex = new Set<string>();
+
+    for (const dirtyPath of this.dirtyPaths) {
+      const segments = dirtyPath.split(".");
+      for (let i = 1; i <= segments.length; i++) {
+        nextIndex.add(segments.slice(0, i).join("."));
+      }
+    }
+
+    this.dirtyPathIndex = nextIndex;
   }
 }

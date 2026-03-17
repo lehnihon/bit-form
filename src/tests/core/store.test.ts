@@ -25,15 +25,15 @@ describe("BitStore Core", () => {
       expect(submittedDirtyValues).toEqual({ name: "Leandro" });
     });
 
-    it("should expose only public facade methods without leaking internals", () => {
+    it("should expose core public methods from store instance", () => {
       const store = createBitStore({ initialValues: { name: "Leo" } }) as any;
 
       expect("undo" in store).toBe(true);
       expect("redo" in store).toBe(true);
       expect("getHistoryMetadata" in store).toBe(true);
-      expect("subscribeSelector" in store).toBe(false);
-      expect("subscribePath" in store).toBe(false);
-      expect("getFieldState" in store).toBe(false);
+      expect("subscribeSelector" in store).toBe(true);
+      expect("subscribePath" in store).toBe(true);
+      expect("getFieldState" in store).toBe(true);
       expect("setValues" in store).toBe(false);
       expect("beginFieldValidation" in store).toBe(false);
       expect("replaceValues" in store).toBe(true);

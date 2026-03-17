@@ -6,9 +6,7 @@ import type {
 import {
   getDeepValue,
   setDeepValue,
-  shiftKeys,
-  swapKeys,
-  moveKeys,
+  reindexFieldArrayMeta,
 } from "../../../utils";
 
 export interface BitArrayStorePort<T extends object> {
@@ -86,10 +84,19 @@ export class BitArrayManager<T extends object = any> {
       this.store.getConfig().initialValues,
     );
 
+    const reindexedMeta = reindexFieldArrayMeta(state, path, (currentIdx) => {
+      if (currentIdx === index) {
+        return null;
+      }
+
+      return currentIdx > index ? currentIdx - 1 : currentIdx;
+    });
+
     this.store.internalUpdateState({
       values: newValues,
-      errors: shiftKeys(state.errors, path, index),
-      touched: shiftKeys(state.touched, path, index),
+      errors: reindexedMeta.errors,
+      touched: reindexedMeta.touched,
+      isValidating: reindexedMeta.isValidating,
       isDirty,
     });
 
@@ -120,10 +127,23 @@ export class BitArrayManager<T extends object = any> {
       this.store.getConfig().initialValues,
     );
 
+    const reindexedMeta = reindexFieldArrayMeta(state, path, (currentIdx) => {
+      if (currentIdx === indexA) {
+        return indexB;
+      }
+
+      if (currentIdx === indexB) {
+        return indexA;
+      }
+
+      return currentIdx;
+    });
+
     this.store.internalUpdateState({
       values: newValues,
-      errors: swapKeys(state.errors, path, indexA, indexB),
-      touched: swapKeys(state.touched, path, indexA, indexB),
+      errors: reindexedMeta.errors,
+      touched: reindexedMeta.touched,
+      isValidating: reindexedMeta.isValidating,
       isDirty,
     });
 
@@ -160,10 +180,27 @@ export class BitArrayManager<T extends object = any> {
       this.store.getConfig().initialValues,
     );
 
+    const reindexedMeta = reindexFieldArrayMeta(state, path, (currentIdx) => {
+      if (currentIdx === from) {
+        return to;
+      }
+
+      if (from < to && currentIdx > from && currentIdx <= to) {
+        return currentIdx - 1;
+      }
+
+      if (from > to && currentIdx >= to && currentIdx < from) {
+        return currentIdx + 1;
+      }
+
+      return currentIdx;
+    });
+
     this.store.internalUpdateState({
       values: newValues,
-      errors: moveKeys(state.errors, path, from, to),
-      touched: moveKeys(state.touched, path, from, to),
+      errors: reindexedMeta.errors,
+      touched: reindexedMeta.touched,
+      isValidating: reindexedMeta.isValidating,
       isDirty,
     });
 

@@ -25,29 +25,40 @@ import type {
   BitFrameworkConfig,
   BitValidationOptions,
 } from "../../contracts/public-types";
+import type { BitValidationTriggerOptions } from "./validation-manager";
 
-export interface BitLifecycleStorePort<T extends object> {
+interface BitLifecycleStatePort<T extends object> {
   getState: () => BitState<T>;
   internalUpdateState: (
     partial: Partial<BitState<T>>,
     changedPaths?: string[],
   ) => void;
   internalSaveSnapshot: () => void;
-  getTransformEntries: () => [string, BitTransformFn<T>][];
+  batchStateUpdates<TResult>(callback: () => TResult): TResult;
   config: BitFrameworkConfig<T>;
+}
 
+interface BitLifecycleDependencyPort<T extends object> {
+  getTransformEntries: () => [string, BitTransformFn<T>][];
   updateDependencies: (changedPath: string, newValues: T) => string[];
   isFieldHidden: (path: string) => boolean;
   evaluateAllDependencies: (values: T) => void;
-  getHiddenFields: () => string[];
+  getHiddenFields: () => ReadonlySet<string>;
+}
 
+interface BitLifecycleValidationPort<T extends object> {
   clearFieldValidation: (path: string) => void;
-  triggerValidation: (scopeFields?: string[]) => void;
+  triggerValidation: (
+    scopeFields?: string[],
+    options?: BitValidationTriggerOptions,
+  ) => void;
   handleFieldAsyncValidation: (path: string, value: any) => void;
   cancelAllValidations: () => void;
   validateNow: (options?: BitValidationOptions) => Promise<boolean>;
   hasValidationsInProgress: (scopeFields?: string[]) => boolean;
+}
 
+interface BitLifecycleDirtyPort<T extends object> {
   updateDirtyForPath: (
     path: string,
     nextValues: T,
@@ -58,7 +69,9 @@ export interface BitLifecycleStorePort<T extends object> {
   buildDirtyValues: (values: T) => Partial<T>;
 
   resetHistory: (initialValues: T) => void;
+}
 
+interface BitLifecycleEffectsPort<T extends object> {
   emitFieldChange: (event: BitFieldChangeEvent<T>) => void;
   emitBeforeSubmit: (event: BitBeforeSubmitEvent<T>) => Promise<void>;
   emitAfterSubmit: (event: BitAfterSubmitEvent<T>) => Promise<void>;
@@ -69,6 +82,12 @@ export interface BitLifecycleStorePort<T extends object> {
   }) => Promise<void>;
 }
 
+export type BitLifecycleStorePort<T extends object> = BitLifecycleStatePort<T> &
+  BitLifecycleDependencyPort<T> &
+  BitLifecycleValidationPort<T> &
+  BitLifecycleDirtyPort<T> &
+  BitLifecycleEffectsPort<T>;
+
 interface SubmitPipelineContext<T extends object> extends BitPipelineContext {
   onSuccess: (values: T, dirtyValues?: Partial<T>) => void | Promise<void>;
   isValid: boolean;
@@ -78,9 +97,8 @@ interface SubmitPipelineContext<T extends object> extends BitPipelineContext {
   invalid?: boolean;
 }
 
-interface FieldUpdatePipelineContext<
-  T extends object,
-> extends BitPipelineContext {
+interface FieldUpdatePipelineContext<T extends object>
+  extends BitPipelineContext {
   path: string;
   value: any;
   meta: BitFieldChangeMeta;
@@ -92,7 +110,57 @@ interface FieldUpdatePipelineContext<
 }
 
 export class BitLifecycleManager<T extends object> {
-  constructor(private store: BitLifecycleStorePort<T>) {}
+  private readonly fieldUpdatePipeline: BitSyncPipelineRunner<
+    FieldUpdatePipelineContext<T>
+  >;
+  private readonly submitPipeline: BitPipelineRunner<SubmitPipelineContext<T>>;
+
+  constructor(private store: BitLifecycleStorePort<T>) {
+    this.fieldUpdatePipeline = new BitSyncPipelineRunner<
+      FieldUpdatePipelineContext<T>
+    >([
+      {
+        name: "field:clear-current-error",
+        run: (ctx) => this.clearCurrentError(ctx),
+      },
+      {
+        name: "field:update-dependencies",
+        run: (ctx) => this.updateDependencies(ctx),
+      },
+      { name: "field:update-dirty", run: (ctx) => this.updateDirtyState(ctx) },
+      { name: "field:commit-state", run: (ctx) => this.commitFieldState(ctx) },
+      { name: "field:emit-change", run: (ctx) => this.emitFieldChange(ctx) },
+      {
+        name: "field:trigger-validate",
+        run: (ctx) => this.triggerResolverValidation(ctx),
+      },
+      {
+        name: "field:trigger-async-validate",
+        run: (ctx) => this.triggerAsyncValidation(ctx),
+      },
+    ]);
+
+    this.submitPipeline = new BitPipelineRunner<SubmitPipelineContext<T>>([
+      { name: "submit:start", run: async (ctx) => this.startSubmit(ctx) },
+      {
+        name: "submit:invalid",
+        run: async (ctx) => this.handleInvalidSubmit(ctx),
+      },
+      { name: "submit:prepare", run: (ctx) => this.prepareSubmitValues(ctx) },
+      {
+        name: "submit:before-hooks",
+        run: async (ctx) => this.runBeforeSubmitHooks(ctx),
+      },
+      {
+        name: "submit:user-handler",
+        run: async (ctx) => this.runSubmitHandler(ctx),
+      },
+      {
+        name: "submit:after-hooks",
+        run: async (ctx) => this.runAfterSubmitHooks(ctx),
+      },
+    ]);
+  }
 
   updateField(
     path: string,
@@ -112,84 +180,7 @@ export class BitLifecycleManager<T extends object> {
       isDirty: false,
     };
 
-    const pipeline = new BitSyncPipelineRunner<FieldUpdatePipelineContext<T>>([
-      {
-        name: "field:clear-current-error",
-        run: (ctx) => {
-          delete ctx.nextErrors[ctx.path as keyof BitErrors<T>];
-          this.store.clearFieldValidation(ctx.path);
-        },
-      },
-      {
-        name: "field:update-dependencies",
-        run: (ctx) => {
-          ctx.toggledFields = this.store.updateDependencies(
-            ctx.path,
-            ctx.nextValues,
-          );
-
-          ctx.toggledFields.forEach((depPath) => {
-            if (this.store.isFieldHidden(depPath)) {
-              delete ctx.nextErrors[depPath as keyof BitErrors<T>];
-              this.store.clearFieldValidation(depPath);
-            }
-          });
-        },
-      },
-      {
-        name: "field:update-dirty",
-        run: (ctx) => {
-          ctx.isDirty = this.store.updateDirtyForPath(
-            ctx.path,
-            ctx.nextValues,
-            this.store.config.initialValues,
-          );
-        },
-      },
-      {
-        name: "field:commit-state",
-        run: (ctx) => {
-          this.store.internalUpdateState(
-            {
-              values: ctx.nextValues,
-              errors: ctx.nextErrors,
-              isValid: Object.keys(ctx.nextErrors).length === 0,
-              isDirty: ctx.isDirty,
-            },
-            [ctx.path, ...ctx.toggledFields],
-          );
-        },
-      },
-      {
-        name: "field:emit-change",
-        run: (ctx) => {
-          this.store.emitFieldChange({
-            path: ctx.path,
-            previousValue: ctx.previousValue,
-            nextValue: ctx.value,
-            values: this.store.getState().values,
-            state: this.store.getState(),
-            meta: ctx.meta,
-          });
-        },
-      },
-      {
-        name: "field:trigger-validate",
-        run: (ctx) => {
-          if (this.store.config.resolver) {
-            this.store.triggerValidation([ctx.path]);
-          }
-        },
-      },
-      {
-        name: "field:trigger-async-validate",
-        run: (ctx) => {
-          this.store.handleFieldAsyncValidation(ctx.path, ctx.value);
-        },
-      },
-    ]);
-
-    pipeline.run(context);
+    this.fieldUpdatePipeline.run(context);
   }
 
   replaceValues(
@@ -292,98 +283,8 @@ export class BitLifecycleManager<T extends object> {
       dirtyValues: {},
     };
 
-    const pipeline = new BitPipelineRunner<SubmitPipelineContext<T>>([
-      {
-        name: "submit:start",
-        run: async (ctx) => {
-          this.store.internalUpdateState({ isSubmitting: true });
-          ctx.isValid = await this.store.validateNow();
-        },
-      },
-      {
-        name: "submit:invalid",
-        run: async (ctx) => {
-          if (ctx.isValid) return;
-
-          const currentErrors = this.store.getState().errors;
-          const newTouched = { ...this.store.getState().touched };
-
-          Object.keys(currentErrors).forEach((path) => {
-            newTouched[path as keyof typeof newTouched] = true;
-          });
-
-          this.store.internalUpdateState({ touched: newTouched });
-
-          ctx.dirtyValues = this.store.buildDirtyValues(
-            this.store.getState().values,
-          );
-          ctx.invalid = true;
-
-          await this.store.emitAfterSubmit({
-            values: this.store.getState().values,
-            dirtyValues: ctx.dirtyValues,
-            state: this.store.getState(),
-            success: false,
-            invalid: true,
-          });
-
-          ctx.halted = true;
-        },
-      },
-      {
-        name: "submit:prepare",
-        run: (ctx) => {
-          this.store.getHiddenFields().forEach((hiddenPath) => {
-            ctx.valuesToSubmit = setDeepValue(
-              ctx.valuesToSubmit,
-              hiddenPath,
-              undefined,
-            );
-          });
-
-          for (const [path, transformer] of this.store.getTransformEntries()) {
-            const currentVal = getDeepValue(ctx.valuesToSubmit, path);
-            ctx.valuesToSubmit = setDeepValue(
-              ctx.valuesToSubmit,
-              path,
-              transformer(currentVal, this.store.getState().values),
-            );
-          }
-
-          ctx.dirtyValues = this.store.buildDirtyValues(ctx.valuesToSubmit);
-        },
-      },
-      {
-        name: "submit:before-hooks",
-        run: async (ctx) => {
-          await this.store.emitBeforeSubmit({
-            values: ctx.valuesToSubmit,
-            dirtyValues: ctx.dirtyValues,
-            state: this.store.getState(),
-          });
-        },
-      },
-      {
-        name: "submit:user-handler",
-        run: async (ctx) => {
-          await ctx.onSuccess(ctx.valuesToSubmit, ctx.dirtyValues);
-        },
-      },
-      {
-        name: "submit:after-hooks",
-        run: async (ctx) => {
-          await this.store.emitAfterSubmit({
-            values: ctx.valuesToSubmit,
-            dirtyValues: ctx.dirtyValues,
-            state: this.store.getState(),
-            success: true,
-          });
-        },
-      },
-    ]);
-
     try {
-      await pipeline.run(context);
+      await this.submitPipeline.run(context);
     } catch (error) {
       context.error = error;
 
@@ -429,5 +330,136 @@ export class BitLifecycleManager<T extends object> {
     );
 
     this.store.resetHistory(initialCloned);
+  }
+
+  private clearCurrentError(ctx: FieldUpdatePipelineContext<T>) {
+    delete ctx.nextErrors[ctx.path as keyof BitErrors<T>];
+    this.store.clearFieldValidation(ctx.path);
+  }
+
+  private updateDependencies(ctx: FieldUpdatePipelineContext<T>) {
+    ctx.toggledFields = this.store.updateDependencies(ctx.path, ctx.nextValues);
+
+    ctx.toggledFields.forEach((depPath) => {
+      if (this.store.isFieldHidden(depPath)) {
+        delete ctx.nextErrors[depPath as keyof BitErrors<T>];
+        this.store.clearFieldValidation(depPath);
+      }
+    });
+  }
+
+  private updateDirtyState(ctx: FieldUpdatePipelineContext<T>) {
+    ctx.isDirty = this.store.updateDirtyForPath(
+      ctx.path,
+      ctx.nextValues,
+      this.store.config.initialValues,
+    );
+  }
+
+  private commitFieldState(ctx: FieldUpdatePipelineContext<T>) {
+    this.store.internalUpdateState(
+      {
+        values: ctx.nextValues,
+        errors: ctx.nextErrors,
+        isDirty: ctx.isDirty,
+      },
+      [ctx.path, ...ctx.toggledFields],
+    );
+  }
+
+  private emitFieldChange(ctx: FieldUpdatePipelineContext<T>) {
+    this.store.emitFieldChange({
+      path: ctx.path,
+      previousValue: ctx.previousValue,
+      nextValue: ctx.value,
+      values: this.store.getState().values,
+      state: this.store.getState(),
+      meta: ctx.meta,
+    });
+  }
+
+  private triggerResolverValidation(ctx: FieldUpdatePipelineContext<T>) {
+    if (this.store.config.resolver) {
+      this.store.triggerValidation([ctx.path]);
+    }
+  }
+
+  private triggerAsyncValidation(ctx: FieldUpdatePipelineContext<T>) {
+    this.store.handleFieldAsyncValidation(ctx.path, ctx.value);
+  }
+
+  private async startSubmit(ctx: SubmitPipelineContext<T>) {
+    this.store.internalUpdateState({ isSubmitting: true });
+    ctx.isValid = await this.store.validateNow();
+  }
+
+  private async handleInvalidSubmit(ctx: SubmitPipelineContext<T>) {
+    if (ctx.isValid) return;
+
+    const currentErrors = this.store.getState().errors;
+    const newTouched = { ...this.store.getState().touched };
+
+    Object.keys(currentErrors).forEach((path) => {
+      newTouched[path as keyof typeof newTouched] = true;
+    });
+
+    this.store.batchStateUpdates(() => {
+      this.store.internalUpdateState({ touched: newTouched });
+    });
+
+    ctx.dirtyValues = this.store.buildDirtyValues(this.store.getState().values);
+    ctx.invalid = true;
+
+    await this.store.emitAfterSubmit({
+      values: this.store.getState().values,
+      dirtyValues: ctx.dirtyValues,
+      state: this.store.getState(),
+      success: false,
+      invalid: true,
+    });
+
+    ctx.halted = true;
+  }
+
+  private prepareSubmitValues(ctx: SubmitPipelineContext<T>) {
+    this.store.getHiddenFields().forEach((hiddenPath) => {
+      ctx.valuesToSubmit = setDeepValue(
+        ctx.valuesToSubmit,
+        hiddenPath,
+        undefined,
+      );
+    });
+
+    for (const [path, transformer] of this.store.getTransformEntries()) {
+      const currentVal = getDeepValue(ctx.valuesToSubmit, path);
+      ctx.valuesToSubmit = setDeepValue(
+        ctx.valuesToSubmit,
+        path,
+        transformer(currentVal, this.store.getState().values),
+      );
+    }
+
+    ctx.dirtyValues = this.store.buildDirtyValues(ctx.valuesToSubmit);
+  }
+
+  private async runBeforeSubmitHooks(ctx: SubmitPipelineContext<T>) {
+    await this.store.emitBeforeSubmit({
+      values: ctx.valuesToSubmit,
+      dirtyValues: ctx.dirtyValues,
+      state: this.store.getState(),
+    });
+  }
+
+  private async runSubmitHandler(ctx: SubmitPipelineContext<T>) {
+    await ctx.onSuccess(ctx.valuesToSubmit, ctx.dirtyValues);
+  }
+
+  private async runAfterSubmitHooks(ctx: SubmitPipelineContext<T>) {
+    await this.store.emitAfterSubmit({
+      values: ctx.valuesToSubmit,
+      dirtyValues: ctx.dirtyValues,
+      state: this.store.getState(),
+      success: true,
+    });
   }
 }
