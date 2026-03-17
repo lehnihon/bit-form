@@ -38,6 +38,7 @@ export function injectBitSteps(scopeNames: string[]): InjectBitStepsResult {
   const unsubscribe = store.subscribeSelector(
     (state) => ({ errors: state.errors, isDirty: state.isDirty }),
     updateStatus,
+    { paths: [...store.getScopeFields(getCurrentScope()), "isDirty"] },
   );
 
   try {

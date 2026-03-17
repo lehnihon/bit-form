@@ -39,6 +39,7 @@ describe("BitStore Core", () => {
       expect("replaceValues" in store).toBe(true);
       expect("hydrate" in store).toBe(true);
       expect("rebase" in store).toBe(true);
+      expect("transaction" in store).toBe(true);
       expect("historyMg" in store).toBe(false);
       expect("depsMg" in store).toBe(false);
     });
@@ -91,6 +92,7 @@ describe("BitStore Core", () => {
       const unsubscribe = store.subscribeSelector(
         (state) => state.values.user.name,
         listener,
+        { autoTrackPaths: true },
       );
 
       store.setField("age", 31);

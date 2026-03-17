@@ -116,6 +116,7 @@ export interface UseBitFormResult<T extends object = any> {
     handler: (values: T, dirtyValues?: Partial<T>) => Promise<unknown>,
   ) => (e?: Event) => Promise<void>;
   reset: () => void;
+  transaction: <TResult>(callback: () => TResult) => TResult;
   replaceValues: (values: T) => void;
   hydrate: (values: import("../core").DeepPartial<T>) => void;
   rebase: (values: T) => void;

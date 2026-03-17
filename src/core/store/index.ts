@@ -544,6 +544,10 @@ export class BitStore<T extends object = any> {
     this.lifecycle.reset();
   }
 
+  transaction<TResult>(callback: () => TResult): TResult {
+    return this.batchStateUpdates(callback);
+  }
+
   async submit(
     onSuccess: (values: T, dirtyValues?: Partial<T>) => void | Promise<void>,
   ) {

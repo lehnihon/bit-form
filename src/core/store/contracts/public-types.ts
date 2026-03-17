@@ -31,6 +31,10 @@ export interface BitSelectorSubscriptionOptions<TValue> {
   equalityFn?: BitEqualityFn<TValue>;
   emitImmediately?: boolean;
   paths?: string[];
+  /**
+   * Quando `true`, o store tenta inferir paths acessados pelo selector via Proxy.
+   * Mantido como opt-in para reduzir custo de inscrição e complexidade implícita.
+   */
   autoTrackPaths?: boolean;
 }
 
@@ -47,9 +51,8 @@ export interface BitHistoryMetadata {
   historySize: number;
 }
 
-export interface BitFrameworkConfig<
-  T extends object = any,
-> extends BitConfig<T> {
+export interface BitFrameworkConfig<T extends object = any>
+  extends BitConfig<T> {
   initialValues: T;
   resolver?: ValidatorFn<T>;
   validationDelay: number;
@@ -84,6 +87,8 @@ export interface BitStoreApi<T extends object = any> {
   validate(options?: BitValidationOptions): Promise<boolean>;
 
   reset(): void;
+
+  transaction<TResult>(callback: () => TResult): TResult;
 
   submit(
     onSuccess: (values: T, dirtyValues?: Partial<T>) => void | Promise<void>,
@@ -140,9 +145,8 @@ export interface BitStoreApi<T extends object = any> {
   getStepErrors(scopeName: string): Record<string, string>;
 }
 
-export interface BitStoreHooksApi<
-  T extends object = any,
-> extends BitStoreApi<T> {
+export interface BitStoreHooksApi<T extends object = any>
+  extends BitStoreApi<T> {
   getFieldState<P extends BitPath<T>>(
     path: P,
   ): Readonly<BitFieldState<T, BitPathValue<T, P>>>;

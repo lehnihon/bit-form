@@ -41,6 +41,7 @@ export function useBitSteps(scopeNames: string[]): UseBitStepsResult {
     unsubscribe = store.subscribeSelector(
       (state) => ({ errors: state.errors, isDirty: state.isDirty }),
       updateStatus,
+      { paths: [...store.getScopeFields(scope.value), "isDirty"] },
     );
   });
 

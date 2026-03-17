@@ -8,6 +8,7 @@ export function useBitSteps(scopeNames: string[]): UseBitStepsResult {
   const [stepIndex, setStepIndex] = useState(0);
 
   const scope = scopeNames[stepIndex] ?? "";
+  const scopeFields = store.getScopeFields(scope);
   const lastStatus = useRef<ScopeStatus | null>(null);
 
   const getStatusSnapshot = useCallback(() => {
@@ -31,11 +32,15 @@ export function useBitSteps(scopeNames: string[]): UseBitStepsResult {
   }, [store, scope]);
 
   const status = useSyncExternalStore(
-    (cb) =>
-      store.subscribeSelector(
-        (state) => ({ errors: state.errors, isDirty: state.isDirty }),
-        () => cb(),
-      ),
+    useCallback(
+      (cb: () => void) =>
+        store.subscribeSelector(
+          (state) => ({ errors: state.errors, isDirty: state.isDirty }),
+          () => cb(),
+          { paths: [...scopeFields, "isDirty"] },
+        ),
+      [store, scopeFields],
+    ),
     getStatusSnapshot,
     getStatusSnapshot,
   );

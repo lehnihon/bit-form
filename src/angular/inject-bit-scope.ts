@@ -16,6 +16,7 @@ function errorsEqual(
 
 export function injectBitScope(scopeName: string) {
   const store = useBitStore();
+  const scopeFields = store.getScopeFields(scopeName);
   const initialStatus = store.getStepStatus(scopeName);
 
   const status = signal<ScopeStatus>(initialStatus);
@@ -33,6 +34,7 @@ export function injectBitScope(scopeName: string) {
         status.set(newStatus);
       }
     },
+    { paths: [...scopeFields, "isDirty"] },
   );
 
   try {

@@ -16,6 +16,7 @@ function errorsEqual(
 
 export function useBitScope(scopeName: string) {
   const store = useBitStore();
+  const scopeFields = store.getScopeFields(scopeName);
   const status = ref<ScopeStatus>(store.getStepStatus(scopeName));
   let unsubscribe: () => void;
 
@@ -32,6 +33,7 @@ export function useBitScope(scopeName: string) {
           status.value = newStatus;
         }
       },
+      { paths: [...scopeFields, "isDirty"] },
     );
   });
 

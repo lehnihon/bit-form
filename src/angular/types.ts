@@ -132,6 +132,7 @@ export interface InjectBitFormResult<T extends object = any> {
     handler: (values: T, dirtyValues?: Partial<T>) => Promise<unknown>,
   ) => (event?: Event) => Promise<void>;
   reset: () => void;
+  transaction: <TResult>(callback: () => TResult) => TResult;
   replaceValues: (values: T) => void;
   hydrate: (values: import("../core").DeepPartial<T>) => void;
   rebase: (values: T) => void;

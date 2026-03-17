@@ -6,6 +6,7 @@ export type { ScopeStatus, ValidateScopeResult };
 
 export function useBitScope(scopeName: string) {
   const store = useBitStore();
+  const scopeFields = store.getScopeFields(scopeName);
 
   const lastStatus = useRef<ScopeStatus | null>(null);
 
@@ -37,8 +38,9 @@ export function useBitScope(scopeName: string) {
       store.subscribeSelector(
         (state) => ({ errors: state.errors, isDirty: state.isDirty }),
         () => cb(),
+        { paths: [...scopeFields, "isDirty"] },
       ),
-    [store],
+    [store, scopeFields],
   );
 
   const status = useSyncExternalStore(

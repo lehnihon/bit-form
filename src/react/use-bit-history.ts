@@ -35,11 +35,12 @@ export function useBitHistory<T extends object = any>(): UseBitHistoryResult {
     return stableMeta;
   }, [store]);
 
-  const meta = useSyncExternalStore(
-    store.subscribe.bind(store),
-    getSnapshot,
-    getSnapshot,
+  const subscribe = useCallback(
+    (cb: () => void) => store.subscribe(cb),
+    [store],
   );
+
+  const meta = useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
 
   const undo = useCallback(() => {
     store.undo();
