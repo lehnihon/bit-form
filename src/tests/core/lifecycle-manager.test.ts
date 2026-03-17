@@ -79,7 +79,10 @@ describe("BitLifecycleManager", () => {
       },
       internalSaveSnapshot: () => {},
       batchStateUpdates: (cb) => cb(),
-      config: { initialValues: { hidden: "secret", amount: 10 }, resolver: undefined } as any,
+      config: {
+        initialValues: { hidden: "secret", amount: 10 },
+        resolver: undefined,
+      } as any,
       getTransformEntries: () => [["amount", (val: number) => val * 2]],
       updateDependencies: () => [],
       isFieldHidden: () => false,

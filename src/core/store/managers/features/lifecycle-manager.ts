@@ -459,7 +459,10 @@ export class BitLifecycleManager<T extends object> {
 
     for (const [path, transformer] of this.store.getTransformEntries()) {
       const currentVal = getDeepValue(ctx.valuesToSubmit, path);
-      updates.push([path, transformer(currentVal, this.store.getState().values)]);
+      updates.push([
+        path,
+        transformer(currentVal, this.store.getState().values),
+      ]);
     }
 
     if (updates.length > 0) {

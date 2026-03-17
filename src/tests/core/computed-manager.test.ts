@@ -45,7 +45,8 @@ describe("BitComputedManager", () => {
 
     const manager = new BitComputedManager(() => entries);
 
-    expect(() => manager.apply({ a: 1, b: 2 }, ["a"]))
-      .toThrow("cyclic computed dependencies detected");
+    expect(() => manager.apply({ a: 1, b: 2 }, ["a"])).toThrow(
+      "cyclic computed dependencies detected",
+    );
   });
 });

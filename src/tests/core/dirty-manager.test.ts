@@ -6,8 +6,16 @@ describe("BitDirtyManager", () => {
     const manager = new BitDirtyManager<any>();
     const initial = { user: { name: "A", age: 10 } };
 
-    manager.updateForPath("user.name", { user: { name: "B", age: 10 } }, initial);
-    manager.updateForPath("user.age", { user: { name: "B", age: 11 } }, initial);
+    manager.updateForPath(
+      "user.name",
+      { user: { name: "B", age: 10 } },
+      initial,
+    );
+    manager.updateForPath(
+      "user.age",
+      { user: { name: "B", age: 11 } },
+      initial,
+    );
 
     expect(manager.getDirtyPaths()).toEqual(new Set(["user.name", "user.age"]));
 
