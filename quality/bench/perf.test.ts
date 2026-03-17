@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createBitStore } from "../../src";
+import { createBitStore, resolveBitStoreForHooks } from "../../src";
 
 type BigForm = Record<string, string> & {
   email: string;
@@ -74,18 +74,21 @@ describe("quality perf baseline", () => {
   });
 
   it("handles 400 scoped subscribers under baseline budget", () => {
-    const store = createBitStore<BigForm>({
-      initialValues: createBigValues(450),
-    });
+    const hooksStore = resolveBitStoreForHooks(
+      createBitStore<BigForm>({ initialValues: createBigValues(450) }),
+    );
 
     const unsubs = Array.from({ length: 400 }, (_, index) =>
-      store.subscribePath(`field_${index}` as keyof BigForm & string, () => {}),
+      hooksStore.subscribePath(
+        `field_${index}` as keyof BigForm & string,
+        () => {},
+      ),
     );
 
     const start = performance.now();
 
     for (let index = 0; index < 200; index++) {
-      store.setField("field_200", `value-${index}`);
+      hooksStore.setField("field_200", `value-${index}`);
     }
 
     const duration = performance.now() - start;
@@ -177,16 +180,22 @@ describe("quality perf baseline", () => {
     }
 
     const store = createBitStore<FanoutForm>({ initialValues });
+    const hooksStore = resolveBitStoreForHooks(
+      createBitStore<FanoutForm>({ initialValues }),
+    );
 
     // 200 subscribers diferentes, todos escutando "trigger".
     const unsubs = Array.from({ length: 200 }, () =>
-      store.subscribePath("trigger" as keyof FanoutForm & string, () => {}),
+      hooksStore.subscribePath(
+        "trigger" as keyof FanoutForm & string,
+        () => {},
+      ),
     );
 
     const start = performance.now();
 
     for (let i = 0; i < 200; i++) {
-      store.setField("trigger", `v${i}`);
+      hooksStore.setField("trigger", `v${i}`);
     }
 
     const duration = performance.now() - start;
