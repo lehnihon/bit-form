@@ -1,3 +1,5 @@
+// @vitest-environment jsdom
+
 /**
  * Angular "injectBitUpload" Injectable Tests
  */

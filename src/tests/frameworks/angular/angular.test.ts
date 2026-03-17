@@ -1,3 +1,5 @@
+// @vitest-environment jsdom
+
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { TestBed } from "@angular/core/testing";
 import { Component, DestroyRef } from "@angular/core";

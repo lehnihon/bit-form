@@ -1,3 +1,5 @@
+// @vitest-environment jsdom
+
 import { describe, it, expect, vi } from "vitest";
 import { renderHook, act } from "@testing-library/react";
 import { BitStore } from "../../../core/store";
