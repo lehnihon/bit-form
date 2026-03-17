@@ -56,4 +56,87 @@ describe("BitSubscriptionEngine", () => {
 
     expect(listener).toHaveBeenCalledTimes(1);
   });
+
+  // --- Stress tests ---
+
+  it("fanout: 100 subscribers scoped no mesmo path são todos notificados", () => {
+    let state = createState({ user: { name: "Leo", age: 30 } });
+    const engine = new BitSubscriptionEngine<Values>(() => state);
+
+    const listeners = Array.from({ length: 100 }, () => vi.fn());
+
+    for (const listener of listeners) {
+      engine.subscribeSelector(
+        (s) => s.values.user.name,
+        listener,
+        { paths: ["user.name"] },
+        (a, b) => a === b,
+      );
+    }
+
+    state = createState({ user: { name: "Ana", age: 30 } });
+    engine.notify(state, ["user.name"]);
+
+    for (const listener of listeners) {
+      expect(listener).toHaveBeenCalledTimes(1);
+      expect(listener).toHaveBeenCalledWith("Ana");
+    }
+  });
+
+  it("fanout: subscribers em paths distintos não recebem notificação cruzada", () => {
+    let state = createState({ user: { name: "Leo", age: 30 } });
+    const engine = new BitSubscriptionEngine<Values>(() => state);
+
+    const nameFn = vi.fn();
+    const ageFn = vi.fn();
+
+    engine.subscribeSelector(
+      (s) => s.values.user.name,
+      nameFn,
+      { paths: ["user.name"] },
+      (a, b) => a === b,
+    );
+    engine.subscribeSelector(
+      (s) => s.values.user.age,
+      ageFn,
+      { paths: ["user.age"] },
+      (a, b) => a === b,
+    );
+
+    // Muda apenas age — nameFn NÃO deve ser chamado; ageFn deve ser chamado.
+    state = createState({ user: { name: "Leo", age: 99 } });
+    engine.notify(state, ["user.age"]);
+
+    expect(nameFn).not.toHaveBeenCalled();
+    expect(ageFn).toHaveBeenCalledTimes(1);
+    expect(ageFn).toHaveBeenCalledWith(99);
+  });
+
+  it("notify com changedPaths=undefined (wildcard) notifica todos os scoped subscribers", () => {
+    let state = createState({ user: { name: "Leo", age: 30 } });
+    const engine = new BitSubscriptionEngine<Values>(() => state);
+
+    const nameFn = vi.fn();
+    const ageFn = vi.fn();
+
+    engine.subscribeSelector(
+      (s) => s.values.user.name,
+      nameFn,
+      { paths: ["user.name"] },
+      (a, b) => a === b,
+    );
+    engine.subscribeSelector(
+      (s) => s.values.user.age,
+      ageFn,
+      { paths: ["user.age"] },
+      (a, b) => a === b,
+    );
+
+    state = createState({ user: { name: "Ana", age: 99 } });
+    // changedPaths undefined => notify global que deve acionar todos
+    engine.notify(state, undefined);
+
+    expect(nameFn).toHaveBeenCalledTimes(1);
+    expect(ageFn).toHaveBeenCalledTimes(1);
+  });
 });
