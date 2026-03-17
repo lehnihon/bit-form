@@ -8,6 +8,7 @@ import {
   deepMerge,
   getDeepValue,
   setDeepValue,
+  setDeepValues,
 } from "../../../utils";
 import {
   BitPipelineContext,
@@ -105,6 +106,7 @@ interface FieldUpdatePipelineContext<T extends object>
   previousValue: unknown;
   nextValues: T;
   nextErrors: BitErrors<T>;
+  hasMutatedErrors: boolean;
   toggledFields: string[];
   isDirty: boolean;
 }
@@ -175,7 +177,8 @@ export class BitLifecycleManager<T extends object> {
       meta,
       previousValue: getDeepValue(state.values, path),
       nextValues: setDeepValue(state.values, path, value),
-      nextErrors: { ...state.errors },
+      nextErrors: state.errors,
+      hasMutatedErrors: false,
       toggledFields: [],
       isDirty: false,
     };
@@ -333,7 +336,20 @@ export class BitLifecycleManager<T extends object> {
   }
 
   private clearCurrentError(ctx: FieldUpdatePipelineContext<T>) {
-    delete ctx.nextErrors[ctx.path as keyof BitErrors<T>];
+    const hasCurrentError = Object.prototype.hasOwnProperty.call(
+      ctx.nextErrors,
+      ctx.path,
+    );
+
+    if (hasCurrentError && !ctx.hasMutatedErrors) {
+      ctx.nextErrors = { ...ctx.nextErrors };
+      ctx.hasMutatedErrors = true;
+    }
+
+    if (hasCurrentError) {
+      delete ctx.nextErrors[ctx.path as keyof BitErrors<T>];
+    }
+
     this.store.clearFieldValidation(ctx.path);
   }
 
@@ -342,7 +358,20 @@ export class BitLifecycleManager<T extends object> {
 
     ctx.toggledFields.forEach((depPath) => {
       if (this.store.isFieldHidden(depPath)) {
-        delete ctx.nextErrors[depPath as keyof BitErrors<T>];
+        const hasDependencyError = Object.prototype.hasOwnProperty.call(
+          ctx.nextErrors,
+          depPath,
+        );
+
+        if (hasDependencyError && !ctx.hasMutatedErrors) {
+          ctx.nextErrors = { ...ctx.nextErrors };
+          ctx.hasMutatedErrors = true;
+        }
+
+        if (hasDependencyError) {
+          delete ctx.nextErrors[depPath as keyof BitErrors<T>];
+        }
+
         this.store.clearFieldValidation(depPath);
       }
     });
@@ -422,21 +451,22 @@ export class BitLifecycleManager<T extends object> {
   }
 
   private prepareSubmitValues(ctx: SubmitPipelineContext<T>) {
+    const updates: Array<[string, unknown]> = [];
+
     this.store.getHiddenFields().forEach((hiddenPath) => {
-      ctx.valuesToSubmit = setDeepValue(
-        ctx.valuesToSubmit,
-        hiddenPath,
-        undefined,
-      );
+      updates.push([hiddenPath, undefined]);
     });
 
     for (const [path, transformer] of this.store.getTransformEntries()) {
       const currentVal = getDeepValue(ctx.valuesToSubmit, path);
-      ctx.valuesToSubmit = setDeepValue(
-        ctx.valuesToSubmit,
+      updates.push([
         path,
         transformer(currentVal, this.store.getState().values),
-      );
+      ]);
+    }
+
+    if (updates.length > 0) {
+      ctx.valuesToSubmit = setDeepValues(ctx.valuesToSubmit, updates);
     }
 
     ctx.dirtyValues = this.store.buildDirtyValues(ctx.valuesToSubmit);

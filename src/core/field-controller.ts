@@ -23,7 +23,18 @@ export function subscribeFieldState<
         BitFieldState<TForm, BitPathValue<TForm, P>>
       >,
     listener,
-    { paths: [path as string], autoTrackPaths: false },
+    {
+      paths: [path as string],
+      autoTrackPaths: false,
+      equalityFn: (prev, next) =>
+        prev.value === next.value &&
+        prev.error === next.error &&
+        prev.touched === next.touched &&
+        prev.isHidden === next.isHidden &&
+        prev.isRequired === next.isRequired &&
+        prev.isDirty === next.isDirty &&
+        prev.isValidating === next.isValidating,
+    },
   );
 }
 

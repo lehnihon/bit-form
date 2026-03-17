@@ -15,6 +15,10 @@ export class BitSubscriptionEngine<T extends object> {
     new Map();
   private pathSelectorIndex: Map<string, Set<SelectorListenerEntry<T>>> =
     new Map();
+  private readonly expandedPathCache = new Map<string, string[]>();
+  private readonly notifyScopedSubscribers = new Set<
+    SelectorListenerEntry<T>
+  >();
 
   constructor(private readonly getState: () => Readonly<BitState<T>>) {}
 
@@ -127,16 +131,27 @@ export class BitSubscriptionEngine<T extends object> {
     this.selectorListeners.clear();
     this.pathScopedSubscriptions.clear();
     this.pathSelectorIndex.clear();
+    this.expandedPathCache.clear();
+    this.notifyScopedSubscribers.clear();
   }
 
   private normalizeSubscriptionPaths(paths?: string[]): string[] {
     if (!paths || paths.length === 0) return [];
 
-    return Array.from(
-      new Set(
-        paths.map((path) => path.trim()).filter((path) => path.length > 0),
-      ),
-    );
+    const seen = new Set<string>();
+    const normalized: string[] = [];
+
+    for (const path of paths) {
+      const trimmed = path.trim();
+      if (trimmed.length === 0 || seen.has(trimmed)) {
+        continue;
+      }
+
+      seen.add(trimmed);
+      normalized.push(trimmed);
+    }
+
+    return normalized;
   }
 
   private collectTrackedSelectorPaths<TSlice>(
@@ -197,7 +212,8 @@ export class BitSubscriptionEngine<T extends object> {
   private collectSubscribersForChangedPaths(
     changedPaths: string[],
   ): Set<SelectorListenerEntry<T>> {
-    const scopedSubscribers = new Set<SelectorListenerEntry<T>>();
+    const scopedSubscribers = this.notifyScopedSubscribers;
+    scopedSubscribers.clear();
 
     const addByPath = (path: string) => {
       const listeners = this.pathSelectorIndex.get(path);
@@ -222,11 +238,17 @@ export class BitSubscriptionEngine<T extends object> {
   }
 
   private expandPathForIndexing(path: string): string[] {
+    const cached = this.expandedPathCache.get(path);
+    if (cached) {
+      return cached;
+    }
+
     const segments = path.split(".");
     const keys: string[] = [];
     for (let i = 1; i <= segments.length; i++) {
       keys.push(segments.slice(0, i).join("."));
     }
+    this.expandedPathCache.set(path, keys);
     return keys;
   }
 }

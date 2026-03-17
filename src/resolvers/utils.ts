@@ -39,15 +39,22 @@ export function filterErrorsByScope<T extends object>(
     return errors;
   }
 
-  const scopeSet = new Set(scopeFields);
+  const normalizedScopeFields = scopeFields
+    .map((scopeField) => normalizeErrorPath(scopeField))
+    .filter((scopeField) => scopeField.length > 0);
+
+  if (normalizedScopeFields.length === 0) {
+    return {};
+  }
+
   const filtered: BitErrors<T> = {};
 
   for (const [key, message] of Object.entries(errors)) {
     const normalizedKey = normalizeErrorPath(key);
     if (
       message &&
-      Array.from(scopeSet).some((scopeField) =>
-        matchScopePath(normalizedKey, normalizeErrorPath(scopeField)),
+      normalizedScopeFields.some((scopeField) =>
+        matchScopePath(normalizedKey, scopeField),
       )
     ) {
       const typedKey = key as keyof BitErrors<T>;

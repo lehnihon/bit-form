@@ -5,10 +5,12 @@ export class BitDependencyManager<T extends object = any> {
   private readonly fieldConfigs: Map<string, BitFieldDefinition<T>> = new Map();
   private readonly dependencies: Map<string, Set<string>> = new Map();
   private readonly hiddenFields: Set<string> = new Set();
+  private readonly conditionalVisibilityPaths: Set<string> = new Set();
   private readonly requiredPathsByDependency: Map<string, Set<string>> =
     new Map();
   private readonly requiredConditionalPaths: Set<string> = new Set();
   private requiredEvaluationCache = new WeakMap<T, Map<string, boolean>>();
+  private requiredEvaluationCacheDirty = false;
 
   getFieldConfig(path: string): BitFieldDefinition<T> | undefined {
     return this.fieldConfigs.get(path);
@@ -31,6 +33,10 @@ export class BitDependencyManager<T extends object = any> {
   register(path: string, config: BitFieldDefinition<T>, currentValues: T) {
     this.fieldConfigs.set(path, config);
 
+    if (config.conditional?.showIf) {
+      this.conditionalVisibilityPaths.add(path);
+    }
+
     const dependsOn = config.conditional?.dependsOn;
     if (dependsOn) {
       dependsOn.forEach((dep) => {
@@ -52,7 +58,7 @@ export class BitDependencyManager<T extends object = any> {
       });
     }
 
-    this.requiredEvaluationCache = new WeakMap();
+    this.requiredEvaluationCacheDirty = true;
 
     this.evaluateFieldCondition(path, currentValues);
   }
@@ -67,6 +73,11 @@ export class BitDependencyManager<T extends object = any> {
 
     if (!config.conditional?.requiredIf) {
       return false;
+    }
+
+    if (this.requiredEvaluationCacheDirty) {
+      this.requiredEvaluationCache = new WeakMap();
+      this.requiredEvaluationCacheDirty = false;
     }
 
     let cache = this.requiredEvaluationCache.get(values);
@@ -106,7 +117,7 @@ export class BitDependencyManager<T extends object = any> {
   }
 
   evaluateAll(values: T) {
-    this.fieldConfigs.forEach((_, path) => {
+    this.conditionalVisibilityPaths.forEach((path) => {
       this.evaluateFieldCondition(path, values);
     });
   }
@@ -152,8 +163,9 @@ export class BitDependencyManager<T extends object = any> {
 
     this.fieldConfigs.delete(path);
     this.hiddenFields.delete(path);
+    this.conditionalVisibilityPaths.delete(path);
     this.dependencies.delete(path);
-    this.requiredEvaluationCache = new WeakMap();
+    this.requiredEvaluationCacheDirty = true;
     this.requiredConditionalPaths.delete(path);
 
     config?.conditional?.dependsOn?.forEach((dep) => {
