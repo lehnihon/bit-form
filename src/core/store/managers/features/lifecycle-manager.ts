@@ -8,6 +8,7 @@ import {
   deepMerge,
   getDeepValue,
   setDeepValue,
+  setDeepValues,
 } from "../../../utils";
 import {
   BitPipelineContext,
@@ -335,12 +336,20 @@ export class BitLifecycleManager<T extends object> {
   }
 
   private clearCurrentError(ctx: FieldUpdatePipelineContext<T>) {
-    if (!ctx.hasMutatedErrors) {
+    const hasCurrentError = Object.prototype.hasOwnProperty.call(
+      ctx.nextErrors,
+      ctx.path,
+    );
+
+    if (hasCurrentError && !ctx.hasMutatedErrors) {
       ctx.nextErrors = { ...ctx.nextErrors };
       ctx.hasMutatedErrors = true;
     }
 
-    delete ctx.nextErrors[ctx.path as keyof BitErrors<T>];
+    if (hasCurrentError) {
+      delete ctx.nextErrors[ctx.path as keyof BitErrors<T>];
+    }
+
     this.store.clearFieldValidation(ctx.path);
   }
 
@@ -349,12 +358,20 @@ export class BitLifecycleManager<T extends object> {
 
     ctx.toggledFields.forEach((depPath) => {
       if (this.store.isFieldHidden(depPath)) {
-        if (!ctx.hasMutatedErrors) {
+        const hasDependencyError = Object.prototype.hasOwnProperty.call(
+          ctx.nextErrors,
+          depPath,
+        );
+
+        if (hasDependencyError && !ctx.hasMutatedErrors) {
           ctx.nextErrors = { ...ctx.nextErrors };
           ctx.hasMutatedErrors = true;
         }
 
-        delete ctx.nextErrors[depPath as keyof BitErrors<T>];
+        if (hasDependencyError) {
+          delete ctx.nextErrors[depPath as keyof BitErrors<T>];
+        }
+
         this.store.clearFieldValidation(depPath);
       }
     });
@@ -434,21 +451,19 @@ export class BitLifecycleManager<T extends object> {
   }
 
   private prepareSubmitValues(ctx: SubmitPipelineContext<T>) {
+    const updates: Array<[string, unknown]> = [];
+
     this.store.getHiddenFields().forEach((hiddenPath) => {
-      ctx.valuesToSubmit = setDeepValue(
-        ctx.valuesToSubmit,
-        hiddenPath,
-        undefined,
-      );
+      updates.push([hiddenPath, undefined]);
     });
 
     for (const [path, transformer] of this.store.getTransformEntries()) {
       const currentVal = getDeepValue(ctx.valuesToSubmit, path);
-      ctx.valuesToSubmit = setDeepValue(
-        ctx.valuesToSubmit,
-        path,
-        transformer(currentVal, this.store.getState().values),
-      );
+      updates.push([path, transformer(currentVal, this.store.getState().values)]);
+    }
+
+    if (updates.length > 0) {
+      ctx.valuesToSubmit = setDeepValues(ctx.valuesToSubmit, updates);
     }
 
     ctx.dirtyValues = this.store.buildDirtyValues(ctx.valuesToSubmit);
