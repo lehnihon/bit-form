@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 import { TestBed } from "@angular/core/testing";
 import { Component, DestroyRef } from "@angular/core";
 import { BitStore } from "../../../core/store";
+import { maskBRL } from "../../../mask";
 import {
   injectBitField,
   injectBitForm,
@@ -43,6 +44,7 @@ describe("Angular Integration (Signals)", () => {
         hasBonus: false,
         bonusValue: 0,
       },
+      masks: { brl: maskBRL },
       fields: {
         salary: { mask: "brl" },
       },

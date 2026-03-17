@@ -1,7 +1,6 @@
 import type { BitConfig, BitPersistResolvedConfig } from "../contracts/types";
 import type { BitFrameworkConfig } from "../contracts/public-types";
 import { deepClone } from "../../utils";
-import { bitMasks } from "../../mask";
 
 function defaultIdFactory() {
   return `bit-form-${Math.random().toString(36).slice(2, 9)}`;
@@ -39,7 +38,7 @@ export function normalizeConfig<T extends object>(
     validationDelay: validation?.delay ?? 300,
     enableHistory: history?.enabled ?? false,
     historyLimit: history?.limit ?? 15,
-    masks: bitMasks,
+    masks: config.masks,
     fields: config.fields,
     devTools: config.devTools,
     persist,

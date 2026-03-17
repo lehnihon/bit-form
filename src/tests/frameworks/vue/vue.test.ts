@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from "vitest";
 import { mount } from "@vue/test-utils";
 import { defineComponent, nextTick } from "vue";
 import { BitStore } from "../../../core/store";
+import { maskBRL } from "../../../mask";
 import {
   useBitField,
   useBitForm,
@@ -83,6 +84,7 @@ describe("Vue Integration", () => {
   it("should apply masks and handle displayValue vs raw value", async () => {
     const store = new BitStore({
       initialValues: { salary: 10 },
+      masks: { brl: maskBRL },
       fields: { salary: { mask: "brl" } },
     });
     const wrapper = createWrapper(store, () => ({

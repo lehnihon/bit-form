@@ -85,8 +85,9 @@ export class BitStore<T extends object = any> {
   private computedEntriesCache: BitComputedEntry<T>[] | null = null;
   private transformEntriesCache: [string, BitTransformFn<T>][] | null = null;
   private batchDepth = 0;
-  private batchedPartialState: Partial<BitState<T>> | null = null;
+  private batchedState: BitState<T> | null = null;
   private batchedChangedPaths: Set<string> | null = null;
+  private batchedValuesChanged = false;
 
   private invalidateFieldIndexes() {
     this.scopeFieldsIndex = null;
@@ -313,7 +314,7 @@ export class BitStore<T extends object = any> {
   }
 
   getState(): BitState<T> {
-    return this.state;
+    return this.batchedState ?? this.state;
   }
 
   getFieldState<P extends BitPath<T>>(
@@ -848,14 +849,20 @@ export class BitStore<T extends object = any> {
     changedPaths?: string[],
   ) {
     if (this.batchDepth > 0) {
-      this.batchedPartialState = {
-        ...(this.batchedPartialState ?? {}),
-        ...partialState,
-      };
+      const updateResult = applyStateUpdate({
+        currentState: this.batchedState ?? this.state,
+        partialState,
+        changedPaths,
+        applyComputedValues: (values) =>
+          this.computedManager.apply(values, changedPaths),
+      });
 
-      if (changedPaths && changedPaths.length > 0) {
+      this.batchedState = updateResult.nextState;
+      this.batchedValuesChanged ||= updateResult.valuesChanged;
+
+      if (updateResult.changedPaths && updateResult.changedPaths.length > 0) {
         const pathSet = this.batchedChangedPaths ?? new Set<string>();
-        changedPaths.forEach((path) => pathSet.add(path));
+        updateResult.changedPaths.forEach((path) => pathSet.add(path));
         this.batchedChangedPaths = pathSet;
       }
 
@@ -917,18 +924,22 @@ export class BitStore<T extends object = any> {
   }
 
   private flushBatchedStateUpdates() {
-    if (!this.batchedPartialState) {
+    if (!this.batchedState) {
       return;
     }
 
-    const partialState = this.batchedPartialState;
+    const nextState = this.batchedState;
     const changedPaths = this.batchedChangedPaths
       ? Array.from(this.batchedChangedPaths)
       : undefined;
+    const valuesChanged = this.batchedValuesChanged;
 
-    this.batchedPartialState = null;
+    this.batchedState = null;
     this.batchedChangedPaths = null;
+    this.batchedValuesChanged = false;
 
-    this.internalUpdateState(partialState, changedPaths);
+    this.state = nextState;
+    this.subscriptions.notify(this.state, changedPaths);
+    this.effects.onStateUpdated(this.state, valuesChanged);
   }
 }

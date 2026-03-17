@@ -2,6 +2,7 @@ import React from "react";
 import { describe, it, expect, vi } from "vitest";
 import { renderHook, act } from "@testing-library/react";
 import { BitStore } from "../../../core/store";
+import { maskBRL } from "../../../mask";
 import {
   BitFormProvider,
   useBitField,
@@ -39,6 +40,7 @@ describe("React Integration (Context + Hooks)", () => {
         bonusValue: 0,
         ...initialValues,
       },
+      masks: { brl: maskBRL },
       fields,
       validation: { delay: 0 },
     });

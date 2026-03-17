@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
 import { createPatternMask } from "../../core/mask/creators";
 import { BitStore } from "../../core/store";
+import { maskBRL } from "../../mask";
 
 describe("Cross-Framework Consistency", () => {
   it("should maintain data integrity and case sensitivity across adapters", async () => {
@@ -17,7 +18,10 @@ describe("Cross-Framework Consistency", () => {
   });
 
   it("should exhibit identical behavior for currency between frameworks", () => {
-    const store = new BitStore({ initialValues: { balance: 10 } });
+    const store = new BitStore({
+      initialValues: { balance: 10 },
+      masks: { brl: maskBRL },
+    });
     const brl = store.config.masks!.brl;
 
     const display = brl.format(store.getState().values.balance);
