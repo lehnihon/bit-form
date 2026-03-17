@@ -45,6 +45,54 @@ describe("quality perf baseline", () => {
     expect(duration).toBeLessThan(250);
   });
 
+  it("updates 1000 fields in transaction with history under budget", () => {
+    const store = createBitStore<BigForm>({
+      initialValues: createBigValues(1000),
+      history: { enabled: true, limit: 30 },
+      validation: {
+        resolver: (values) => {
+          const errors: Record<string, string | undefined> = {};
+          if (!values.email) errors.email = "required";
+          return errors;
+        },
+      },
+    });
+
+    const start = performance.now();
+
+    store.transaction(() => {
+      for (let index = 0; index < 1000; index++) {
+        store.setField(
+          `field_${index}` as keyof BigForm & string,
+          `value-${index}`,
+        );
+      }
+    });
+
+    const duration = performance.now() - start;
+    expect(duration).toBeLessThan(230);
+  });
+
+  it("handles 400 scoped subscribers under baseline budget", () => {
+    const store = createBitStore<BigForm>({
+      initialValues: createBigValues(450),
+    });
+
+    const unsubs = Array.from({ length: 400 }, (_, index) =>
+      store.subscribePath(`field_${index}` as keyof BigForm & string, () => {}),
+    );
+
+    const start = performance.now();
+
+    for (let index = 0; index < 200; index++) {
+      store.setField("field_200", `value-${index}`);
+    }
+
+    const duration = performance.now() - start;
+    unsubs.forEach((unsubscribe) => unsubscribe());
+    expect(duration).toBeLessThan(80);
+  });
+
   it("handles async validation burst under baseline budget", async () => {
     const store = createBitStore<BigForm>({
       initialValues: createBigValues(220),

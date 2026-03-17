@@ -1,5 +1,9 @@
 import { useCallback, useSyncExternalStore, useRef, useState } from "react";
 import type { ScopeStatus, ValidateScopeResult } from "../core";
+import {
+  getScopeSubscriptionPaths,
+  isScopeStatusEqual,
+} from "../core/scope-status";
 import { useBitStore } from "./context";
 import type { UseBitStepsResult } from "./types";
 
@@ -16,13 +20,7 @@ export function useBitSteps(scopeNames: string[]): UseBitStepsResult {
 
     if (
       lastStatus.current &&
-      lastStatus.current.hasErrors === nextStatus.hasErrors &&
-      lastStatus.current.isDirty === nextStatus.isDirty &&
-      Object.keys(lastStatus.current.errors).length ===
-        Object.keys(nextStatus.errors).length &&
-      Object.entries(nextStatus.errors).every(
-        ([k, v]) => lastStatus.current!.errors[k] === v,
-      )
+      isScopeStatusEqual(lastStatus.current, nextStatus)
     ) {
       return lastStatus.current;
     }
@@ -37,7 +35,7 @@ export function useBitSteps(scopeNames: string[]): UseBitStepsResult {
         store.subscribeSelector(
           (state) => ({ errors: state.errors, isDirty: state.isDirty }),
           () => cb(),
-          { paths: [...scopeFields, "isDirty"] },
+          { paths: getScopeSubscriptionPaths(scopeFields) },
         ),
       [store, scopeFields],
     ),

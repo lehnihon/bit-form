@@ -1,18 +1,12 @@
 import { signal, computed, DestroyRef, inject } from "@angular/core";
 import type { ScopeStatus, ValidateScopeResult } from "../core";
+import {
+  getScopeSubscriptionPaths,
+  isScopeStatusEqual,
+} from "../core/scope-status";
 import { useBitStore } from "./provider";
 
 export type { ScopeStatus, ValidateScopeResult };
-
-function errorsEqual(
-  a: Record<string, string>,
-  b: Record<string, string>,
-): boolean {
-  const keysA = Object.keys(a);
-  const keysB = Object.keys(b);
-  if (keysA.length !== keysB.length) return false;
-  return keysA.every((k) => a[k] === b[k]);
-}
 
 export function injectBitScope(scopeName: string) {
   const store = useBitStore();
@@ -26,15 +20,11 @@ export function injectBitScope(scopeName: string) {
     () => {
       const newStatus = store.getStepStatus(scopeName);
       const current = status();
-      if (
-        newStatus.hasErrors !== current.hasErrors ||
-        newStatus.isDirty !== current.isDirty ||
-        !errorsEqual(newStatus.errors, current.errors)
-      ) {
+      if (!isScopeStatusEqual(current, newStatus)) {
         status.set(newStatus);
       }
     },
-    { paths: [...scopeFields, "isDirty"] },
+    { paths: getScopeSubscriptionPaths(scopeFields) },
   );
 
   try {
