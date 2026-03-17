@@ -33,9 +33,17 @@ export class BitComputedManager<T extends object> {
    */
   private reverseDepsCache: Map<string, Set<string>> | null = null;
 
+  /**
+   * Índice de filhos: prefix → Set de chaves em reverseDepsCache que
+   * _começam_ com `prefix + "."`. Construído junto com reverseDepsCache
+   * para substituir a varredura linear `forEach(startsWith)` por O(1).
+   */
+  private childDepsIndex: Map<string, Set<string>> | null = null;
+
   /** Chamado por BitStore.invalidateFieldIndexes() ao registrar/desregistrar campos. */
   invalidateReverseDeps(): void {
     this.reverseDepsCache = null;
+    this.childDepsIndex = null;
   }
 
   /** Constrói (ou retorna cacheado) o mapa de dependências reversas para as entries dadas. */
@@ -58,7 +66,27 @@ export class BitComputedManager<T extends object> {
       }
     }
 
+    // Constrói o índice de prefixos filho uma única vez junto com o mapa reverso.
+    // Para cada chave `dep` (ex.: "a.b.c"), registra `dep` sob todos os seus
+    // segmentos pai ("a", "a.b") para que getDependentsForPath possa responder
+    // "quem depende de coisas abaixo de X?" em O(filhos) em vez de O(n).
+    const childIdx = new Map<string, Set<string>>();
+
+    for (const dep of map.keys()) {
+      const segments = dep.split(".");
+      for (let len = 1; len < segments.length; len++) {
+        const prefix = segments.slice(0, len).join(".");
+        let children = childIdx.get(prefix);
+        if (!children) {
+          children = new Set();
+          childIdx.set(prefix, children);
+        }
+        children.add(dep);
+      }
+    }
+
     this.reverseDepsCache = map;
+    this.childDepsIndex = childIdx;
     return map;
   }
 
@@ -297,11 +325,13 @@ export class BitComputedManager<T extends object> {
       collect(parentSegments.join("."));
     }
 
-    reverseDependencies.forEach((_listeners, dependencyPath) => {
-      if (dependencyPath.startsWith(`${changedPath}.`)) {
-        collect(dependencyPath);
+    // Usa o índice de filhos (O(filhos)) em vez de varredura linear O(n).
+    const childKeys = this.childDepsIndex?.get(changedPath);
+    if (childKeys) {
+      for (const childDep of childKeys) {
+        collect(childDep);
       }
-    });
+    }
 
     return dependents;
   }

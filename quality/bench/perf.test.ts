@@ -130,4 +130,67 @@ describe("quality perf baseline", () => {
     const duration = performance.now() - start;
     expect(duration).toBeLessThan(50);
   });
+
+  it("computed fanout: 50 computed com dependências em cadeia sob budget", () => {
+    type ChainForm = Record<string, number>;
+
+    // Constrói 50 campos base + 50 campos computed em cadeia: c_0 depende de base_0,
+    // c_1 depende de c_0, ..., c_49 depende de c_48.
+    const initialValues: ChainForm = {};
+    const fieldsConfig: Record<string, any> = {};
+
+    for (let i = 0; i < 50; i++) {
+      initialValues[`base_${i}`] = i;
+      initialValues[`c_${i}`] = 0;
+      const dep = i === 0 ? "base_0" : `c_${i - 1}`;
+      fieldsConfig[`c_${i}`] = {
+        computed: (values: ChainForm) =>
+          i === 0
+            ? (values[`base_0`] as number) + 1
+            : (values[`c_${i - 1}`] as number) + 1,
+        computedDependsOn: [dep],
+      };
+    }
+
+    const store = createBitStore<ChainForm>({
+      initialValues,
+      fields: fieldsConfig,
+    });
+
+    const start = performance.now();
+
+    // Atualiza o campo raiz da cadeia 100 vezes — propaga por todos os 50 computeds.
+    for (let i = 0; i < 100; i++) {
+      store.setField("base_0", i);
+    }
+
+    const duration = performance.now() - start;
+    expect(duration).toBeLessThan(400);
+  });
+
+  it("subscription notify fanout: 200 subscribers path-scoped sob budget", () => {
+    type FanoutForm = Record<string, string> & { trigger: string };
+
+    const initialValues: FanoutForm = { trigger: "" };
+    for (let i = 0; i < 200; i++) {
+      initialValues[`listener_${i}`] = "";
+    }
+
+    const store = createBitStore<FanoutForm>({ initialValues });
+
+    // 200 subscribers diferentes, todos escutando "trigger".
+    const unsubs = Array.from({ length: 200 }, () =>
+      store.subscribePath("trigger" as keyof FanoutForm & string, () => {}),
+    );
+
+    const start = performance.now();
+
+    for (let i = 0; i < 200; i++) {
+      store.setField("trigger", `v${i}`);
+    }
+
+    const duration = performance.now() - start;
+    unsubs.forEach((u) => u());
+    expect(duration).toBeLessThan(150);
+  });
 });

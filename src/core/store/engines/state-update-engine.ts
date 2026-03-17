@@ -90,18 +90,19 @@ function inferChangedPaths<T extends object>(
 
   const changedPaths = new Set<string>();
 
-  if (partialState.errors) {
-    Object.keys(partialState.errors).forEach((path) => changedPaths.add(path));
-  }
-
-  if (partialState.touched) {
-    Object.keys(partialState.touched).forEach((path) => changedPaths.add(path));
-  }
-
-  if (partialState.isValidating) {
-    Object.keys(partialState.isValidating).forEach((path) =>
-      changedPaths.add(path),
-    );
+  // Itera os três dicionários de path em único passo para evitar
+  // três Object.keys() + três forEach() separados.
+  const pathMaps = [
+    partialState.errors,
+    partialState.touched,
+    partialState.isValidating,
+  ] as const;
+  for (const map of pathMaps) {
+    if (map) {
+      for (const path in map) {
+        changedPaths.add(path);
+      }
+    }
   }
 
   if (partialState.persist) {

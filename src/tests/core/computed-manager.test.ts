@@ -49,4 +49,94 @@ describe("BitComputedManager", () => {
       "cyclic computed dependencies detected",
     );
   });
+
+  // --- Stress & edge-case tests ---
+
+  it("fanout: 30 computeds dependendo da mesma source são todos recalculados", () => {
+    const entries: BitComputedEntry<any>[] = Array.from(
+      { length: 30 },
+      (_, i) => ({
+        path: `out_${i}`,
+        dependsOn: ["source"],
+        compute: (values: any) => values.source + i,
+      }),
+    );
+
+    const manager = new BitComputedManager(() => entries);
+
+    const initial: Record<string, number> = { source: 0 };
+    for (let i = 0; i < 30; i++) initial[`out_${i}`] = 0;
+
+    const result = manager.apply(initial, ["source"]);
+
+    for (let i = 0; i < 30; i++) {
+      expect(result[`out_${i}`]).toBe(i);
+    }
+  });
+
+  it("cadeia profunda: propagação através de 10 nós sequenciais", () => {
+    // c_0 = source+1, c_1 = c_0+1, ..., c_9 = c_8+1
+    const entries: BitComputedEntry<any>[] = Array.from(
+      { length: 10 },
+      (_, i) => ({
+        path: `c_${i}`,
+        dependsOn: [i === 0 ? "source" : `c_${i - 1}`],
+        compute: (values: any) =>
+          i === 0 ? values.source + 1 : values[`c_${i - 1}`] + 1,
+      }),
+    );
+
+    const manager = new BitComputedManager(() => entries);
+
+    const initial: Record<string, number> = { source: 0 };
+    for (let i = 0; i < 10; i++) initial[`c_${i}`] = 0;
+
+    const result = manager.apply(initial, ["source"]);
+
+    // source=0 → c_0=1, c_1=2, ..., c_9=10
+    for (let i = 0; i < 10; i++) {
+      expect(result[`c_${i}`]).toBe(i + 1);
+    }
+  });
+
+  it("childDepsIndex: computed com dep 'user.name' é acionado quando 'user' muda", () => {
+    // Verifica que o novo índice de prefixo-filho captura dependências aninhadas.
+    const entries: BitComputedEntry<any>[] = [
+      {
+        path: "label",
+        dependsOn: ["user.name"],
+        compute: (values: any) => `Olá, ${values.user.name}`,
+      },
+    ];
+
+    const manager = new BitComputedManager(() => entries);
+
+    const initial = { user: { name: "Leo" }, label: "" };
+    // "user" é pai de "user.name" — deve propagar via childDepsIndex
+    const result = manager.apply({ user: { name: "Ana" }, label: "" }, [
+      "user",
+    ]);
+
+    expect(result.label).toBe("Olá, Ana");
+  });
+
+  it("invalidateReverseDeps é chamado quando deps de rastreamento mudam", () => {
+    // Garante que após invalidação o cache é reconstruído corretamente.
+    const entries: BitComputedEntry<any>[] = [
+      {
+        path: "out",
+        dependsOn: ["a"],
+        compute: (values: any) => values.a * 10,
+      },
+    ];
+
+    const manager = new BitComputedManager(() => entries);
+
+    manager.apply({ a: 1, out: 0 }, ["a"]);
+    // Invalida manualmente (simula registro de novo campo).
+    manager.invalidateReverseDeps();
+    // Após invalidação deve reconstruir e propagar corretamente.
+    const result = manager.apply({ a: 5, out: 0 }, ["a"]);
+    expect(result.out).toBe(50);
+  });
 });
