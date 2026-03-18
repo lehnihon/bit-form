@@ -16,9 +16,6 @@ export class BitSubscriptionEngine<T extends object> {
   private pathSelectorIndex: Map<string, Set<SelectorListenerEntry<T>>> =
     new Map();
   private readonly expandedPathCache = new Map<string, string[]>();
-  private readonly notifyScopedSubscribers = new Set<
-    SelectorListenerEntry<T>
-  >();
 
   constructor(private readonly getState: () => Readonly<BitState<T>>) {}
 
@@ -132,7 +129,6 @@ export class BitSubscriptionEngine<T extends object> {
     this.pathScopedSubscriptions.clear();
     this.pathSelectorIndex.clear();
     this.expandedPathCache.clear();
-    this.notifyScopedSubscribers.clear();
   }
 
   private normalizeSubscriptionPaths(paths?: string[]): string[] {
@@ -212,8 +208,9 @@ export class BitSubscriptionEngine<T extends object> {
   private collectSubscribersForChangedPaths(
     changedPaths: string[],
   ): Set<SelectorListenerEntry<T>> {
-    const scopedSubscribers = this.notifyScopedSubscribers;
-    scopedSubscribers.clear();
+    // Use a fresh Set per call to be safe against reentrant notify() calls
+    // (e.g. a plugin that calls setField inside onFieldChange).
+    const scopedSubscribers = new Set<SelectorListenerEntry<T>>();
 
     const addByPath = (path: string) => {
       const listeners = this.pathSelectorIndex.get(path);

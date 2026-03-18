@@ -357,7 +357,9 @@ export class BitStore<T extends object = any> {
     this.dependencyManager.register(path, config, this.state.values);
     this.registerCachedFieldIndexes(path, config);
     if (this.dependencyManager.isHidden(path)) {
-      this.subscriptions.notify(this.state, ["*"]);
+      // Notify only the registered path instead of a full wildcard broadcast,
+      // avoiding O(all-subscribers) re-evaluation on every conditional field mount.
+      this.subscriptions.notify(this.state, [path]);
     }
   }
 
