@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { createBitStore } from "../../core";
+import { createBitStore, resolveBitStoreForHooks } from "../../core";
 import { BitStore } from "../../core/store";
 
 describe("BitStore Core", () => {
@@ -31,9 +31,9 @@ describe("BitStore Core", () => {
       expect("undo" in store).toBe(true);
       expect("redo" in store).toBe(true);
       expect("getHistoryMetadata" in store).toBe(true);
-      expect("subscribeSelector" in store).toBe(true);
-      expect("subscribePath" in store).toBe(true);
-      expect("getFieldState" in store).toBe(true);
+      expect("subscribeSelector" in store).toBe(false);
+      expect("subscribePath" in store).toBe(false);
+      expect("getFieldState" in store).toBe(false);
       expect("setValues" in store).toBe(false);
       expect("beginFieldValidation" in store).toBe(false);
       expect("replaceValues" in store).toBe(true);
@@ -42,6 +42,18 @@ describe("BitStore Core", () => {
       expect("transaction" in store).toBe(true);
       expect("historyMg" in store).toBe(false);
       expect("depsMg" in store).toBe(false);
+    });
+
+    it("should resolve hook API from public facade without exposing hook methods", () => {
+      const store = createBitStore({ initialValues: { name: "Leo" } }) as any;
+
+      expect(store.subscribeSelector).toBeUndefined();
+
+      const hooksStore = resolveBitStoreForHooks(store);
+
+      expect(typeof hooksStore.subscribeSelector).toBe("function");
+      expect(typeof hooksStore.subscribePath).toBe("function");
+      expect(typeof hooksStore.getFieldState).toBe("function");
     });
   });
 
