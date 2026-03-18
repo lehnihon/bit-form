@@ -26,6 +26,7 @@ const PUBLIC_API_KEYS = new Set<string>([
   "transaction",
   "submit",
   "registerMask",
+  "getMasksVersion",
   "getDirtyValues",
   "getPersistMetadata",
   "restorePersisted",

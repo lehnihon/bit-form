@@ -68,6 +68,10 @@ interface BitLifecycleDirtyPort<T extends object> {
   rebuildDirtyState: (nextValues: T, baselineValues: T) => boolean;
   clearDirtyState: () => void;
   buildDirtyValues: (values: T) => Partial<T>;
+  /** Returns the current baseline used for dirty comparisons. */
+  getInitialValues: () => T;
+  /** Updates the baseline (called by rebaseValues). */
+  setInitialValues: (values: T) => void;
 
   resetHistory: (initialValues: T) => void;
 }
@@ -198,7 +202,7 @@ export class BitLifecycleManager<T extends object> {
 
     const isDirty = this.store.rebuildDirtyState(
       clonedValues,
-      this.store.config.initialValues,
+      this.store.getInitialValues(),
     );
 
     this.store.internalUpdateState(
@@ -235,7 +239,7 @@ export class BitLifecycleManager<T extends object> {
     const previousValues = this.store.getState().values;
     const clonedValues = deepClone(newValues);
 
-    this.store.config.initialValues = deepClone(clonedValues);
+    this.store.setInitialValues(deepClone(clonedValues));
 
     this.store.cancelAllValidations();
     this.store.evaluateAllDependencies(clonedValues);
@@ -313,7 +317,7 @@ export class BitLifecycleManager<T extends object> {
   reset() {
     this.store.cancelAllValidations();
 
-    const initialCloned = deepClone(this.store.config.initialValues);
+    const initialCloned = deepClone(this.store.getInitialValues());
 
     this.store.evaluateAllDependencies(initialCloned);
 
@@ -381,7 +385,7 @@ export class BitLifecycleManager<T extends object> {
     ctx.isDirty = this.store.updateDirtyForPath(
       ctx.path,
       ctx.nextValues,
-      this.store.config.initialValues,
+      this.store.getInitialValues(),
     );
   }
 

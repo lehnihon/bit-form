@@ -15,6 +15,8 @@ export class BitDirtyManager<T extends object = any> {
   private dirtyPaths: Set<string> = new Set();
   private dirtyPathIndex: Set<string> = new Set();
   private dirtyPrefixRefCount: Map<string, number> = new Map();
+  /** Maps each strict ancestor prefix → set of dirty paths that are its descendants. */
+  private childrenByPrefix: Map<string, Set<string>> = new Map();
 
   /**
    * Updates dirty state for a single path change.
@@ -56,6 +58,7 @@ export class BitDirtyManager<T extends object = any> {
     this.dirtyPaths.clear();
     this.dirtyPathIndex.clear();
     this.dirtyPrefixRefCount.clear();
+    this.childrenByPrefix.clear();
   }
 
   /**
@@ -120,28 +123,37 @@ export class BitDirtyManager<T extends object = any> {
   private rebuildIndex() {
     const nextIndex = new Set<string>();
     const nextRefCount = new Map<string, number>();
+    const nextChildrenByPrefix = new Map<string, Set<string>>();
 
     for (const dirtyPath of this.dirtyPaths) {
       this.forEachPathPrefix(dirtyPath, (prefix) => {
         nextIndex.add(prefix);
         nextRefCount.set(prefix, (nextRefCount.get(prefix) ?? 0) + 1);
       });
+
+      this.forEachAncestorPrefix(dirtyPath, (ancestor) => {
+        const set = nextChildrenByPrefix.get(ancestor);
+        if (set) {
+          set.add(dirtyPath);
+        } else {
+          nextChildrenByPrefix.set(ancestor, new Set([dirtyPath]));
+        }
+      });
     }
 
     this.dirtyPathIndex = nextIndex;
     this.dirtyPrefixRefCount = nextRefCount;
+    this.childrenByPrefix = nextChildrenByPrefix;
   }
 
   private removeDirtyChildren(parentPath: string) {
-    const childrenToRemove: string[] = [];
+    const children = this.childrenByPrefix.get(parentPath);
+    if (!children || children.size === 0) return;
 
-    for (const dirtyPath of this.dirtyPaths) {
-      if (dirtyPath.startsWith(`${parentPath}.`)) {
-        childrenToRemove.push(dirtyPath);
-      }
+    // Snapshot to avoid mutating the set while iterating
+    for (const path of [...children]) {
+      this.removeDirtyPath(path);
     }
-
-    childrenToRemove.forEach((path) => this.removeDirtyPath(path));
   }
 
   private addDirtyPath(path: string) {
@@ -156,6 +168,16 @@ export class BitDirtyManager<T extends object = any> {
         prefix,
         (this.dirtyPrefixRefCount.get(prefix) ?? 0) + 1,
       );
+    });
+
+    // Keep childrenByPrefix up to date for O(1) removeDirtyChildren
+    this.forEachAncestorPrefix(path, (ancestor) => {
+      const set = this.childrenByPrefix.get(ancestor);
+      if (set) {
+        set.add(path);
+      } else {
+        this.childrenByPrefix.set(ancestor, new Set([path]));
+      }
     });
   }
 
@@ -177,6 +199,11 @@ export class BitDirtyManager<T extends object = any> {
 
       this.dirtyPrefixRefCount.set(prefix, nextCount);
     });
+
+    // Remove from childrenByPrefix
+    this.forEachAncestorPrefix(path, (ancestor) => {
+      this.childrenByPrefix.get(ancestor)?.delete(path);
+    });
   }
 
   private forEachPathPrefix(path: string, callback: (prefix: string) => void) {
@@ -185,6 +212,23 @@ export class BitDirtyManager<T extends object = any> {
 
     for (const segment of segments) {
       current = current ? `${current}.${segment}` : segment;
+      callback(current);
+    }
+  }
+
+  /**
+   * Iterates over all strict ancestor prefixes of `path` (i.e., excludes the path itself).
+   * Used to maintain childrenByPrefix.
+   */
+  private forEachAncestorPrefix(
+    path: string,
+    callback: (prefix: string) => void,
+  ) {
+    const segments = path.split(".");
+    let current = "";
+
+    for (let i = 0; i < segments.length - 1; i++) {
+      current = current ? `${current}.${segments[i]}` : segments[i];
       callback(current);
     }
   }

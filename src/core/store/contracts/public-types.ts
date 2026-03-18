@@ -164,5 +164,8 @@ export interface BitStoreHooksApi<T extends object = any>
   markFieldsTouched(paths: string[]): void;
   hasValidationsInProgress(scopeFields?: string[]): boolean;
   resolveMask(path: string): BitMask | undefined;
+  /** Returns a version counter that increments on every registerMask() call.
+   * Used by React hooks to track mask config changes reactively. */
+  getMasksVersion(): number;
   getScopeFields(scopeName: string): string[];
 }

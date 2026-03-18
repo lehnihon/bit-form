@@ -357,30 +357,22 @@ export function reindexFieldArrayMeta(
   const nextTouched: Record<string, any> = {};
   const nextIsValidating: Record<string, any> = {};
 
-  const allKeys = new Set<string>();
-  Object.keys(state.errors).forEach((key) => allKeys.add(key));
-  Object.keys(state.touched).forEach((key) => allKeys.add(key));
-  Object.keys(state.isValidating).forEach((key) => allKeys.add(key));
-
   const prefix = `${path}.`;
 
-  for (const key of allKeys) {
+  // Iterate each dictionary directly to avoid building a union Set of all keys.
+  for (const key of Object.keys(state.errors)) {
     const nextKey = remapIndexedPath(key, prefix, remapIndex);
-    if (!nextKey) {
-      continue;
-    }
+    if (nextKey) nextErrors[nextKey] = state.errors[key];
+  }
 
-    if (Object.prototype.hasOwnProperty.call(state.errors, key)) {
-      nextErrors[nextKey] = state.errors[key];
-    }
+  for (const key of Object.keys(state.touched)) {
+    const nextKey = remapIndexedPath(key, prefix, remapIndex);
+    if (nextKey) nextTouched[nextKey] = state.touched[key];
+  }
 
-    if (Object.prototype.hasOwnProperty.call(state.touched, key)) {
-      nextTouched[nextKey] = state.touched[key];
-    }
-
-    if (Object.prototype.hasOwnProperty.call(state.isValidating, key)) {
-      nextIsValidating[nextKey] = state.isValidating[key];
-    }
+  for (const key of Object.keys(state.isValidating)) {
+    const nextKey = remapIndexedPath(key, prefix, remapIndex);
+    if (nextKey) nextIsValidating[nextKey] = state.isValidating[key];
   }
 
   return {
