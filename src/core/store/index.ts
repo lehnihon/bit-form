@@ -65,6 +65,9 @@ export class BitStore<T extends object = any> {
   private readonly subscriptions: BitSubscriptionEngine<T>;
   private readonly effects: BitStoreEffectEngine<T>;
   private readonly capabilities: BitCapabilityRegistry<BitStoreCapabilities<T>>;
+  /** Baseline for dirty tracking. Decoupled from config so that rebaseValues
+   * can update it without mutating the user-provided config object. */
+  private _initialValues!: T;
 
   // ============================================================================
   // PUBLIC PROPERTIES
@@ -198,6 +201,7 @@ export class BitStore<T extends object = any> {
 
   constructor(config: BitConfig<T> = {}) {
     this.config = normalizeConfig(config);
+    this._initialValues = this.config.initialValues;
 
     // Initialize core managers
     this.dependencyManager = new BitDependencyManager<T>();
@@ -695,7 +699,7 @@ export class BitStore<T extends object = any> {
     if (prevState) {
       const isDirty = this.dirtyManager.rebuild(
         prevState,
-        this.config.initialValues,
+        this._initialValues,
       );
       this.internalUpdateState({ values: prevState, isDirty });
       this.validation.trigger(undefined, { forceDebounce: true });
@@ -707,7 +711,7 @@ export class BitStore<T extends object = any> {
     if (nextState) {
       const isDirty = this.dirtyManager.rebuild(
         nextState,
-        this.config.initialValues,
+        this._initialValues,
       );
       this.internalUpdateState({ values: nextState, isDirty });
       this.validation.trigger(undefined, { forceDebounce: true });
@@ -843,6 +847,28 @@ export class BitStore<T extends object = any> {
     this.history.reset(initialValues);
   }
 
+  /** Current baseline used for dirty-state comparisons. */
+  get initialValues(): T {
+    return this._initialValues;
+  }
+
+  /** Returns the current baseline (usable as a port method). */
+  getInitialValues(): T {
+    return this._initialValues;
+  }
+
+  /**
+   * Updates the baseline used for dirty comparisons.
+   * Called by rebaseValues so that config is never mutated directly by managers.
+   * Also syncs config.initialValues so getConfig() reflects the new baseline.
+   */
+  setInitialValues(values: T): void {
+    this._initialValues = values;
+    // Keep the public config reference consistent so that getConfig().initialValues
+    // continues to return the current baseline after a rebase.
+    this.config.initialValues = values;
+  }
+
   // ============================================================================
   // INTERNAL OPERATIONS
   // ============================================================================
@@ -891,7 +917,7 @@ export class BitStore<T extends object = any> {
 
   private applyPersistedValues(values: Partial<T>) {
     const nextValues = deepClone({
-      ...this.config.initialValues,
+      ...this._initialValues,
       ...values,
     } as T);
 
@@ -900,7 +926,7 @@ export class BitStore<T extends object = any> {
 
     const isDirty = this.dirtyManager.rebuild(
       nextValues,
-      this.config.initialValues,
+      this._initialValues,
     );
 
     this.internalUpdateState({

@@ -82,6 +82,8 @@ export function createStoreCapabilities<T extends object>(args: {
       store.rebuildDirtyState(nextValues, baselineValues),
     clearDirtyState: () => store.clearDirtyState(),
     buildDirtyValues: (values) => store.buildDirtyValues(values),
+    getInitialValues: () => store.getInitialValues(),
+    setInitialValues: (values) => store.setInitialValues(values),
     resetHistory: (initialValues) => store.resetHistory(initialValues),
     emitFieldChange: (event) => store.emitFieldChange(event),
     emitBeforeSubmit: (event) => store.emitBeforeSubmit(event),
@@ -106,7 +108,7 @@ export function createStoreCapabilities<T extends object>(args: {
     "scope",
     new BitScopeManager<T>(
       () => store.getState(),
-      () => store.config.initialValues,
+      () => store.getInitialValues(),
       (scopeName) => store.getScopeFields(scopeName),
       (path) => dirtyManager.isPathDirty(path),
     ),

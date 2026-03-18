@@ -49,6 +49,19 @@ export class BitSubscriptionEngine<T extends object> {
       ? this.collectTrackedSelectorPaths(selector)
       : [];
 
+    if (
+      options?.autoTrackPaths &&
+      typeof process !== "undefined" &&
+      process.env?.["NODE_ENV"] !== "production"
+    ) {
+      console.warn(
+        "[bit-form] subscribeSelector: autoTrackPaths creates Proxy wrappers " +
+          "to detect accessed paths at subscription time. For high-frequency " +
+          "or dynamically-rendered fields (e.g. field arrays), prefer " +
+          "explicit `paths: [...]` to avoid mount-time overhead.",
+      );
+    }
+
     const scopedPaths = this.normalizeSubscriptionPaths([
       ...(options?.paths ?? []),
       ...autoTrackedPaths,

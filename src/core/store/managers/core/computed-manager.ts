@@ -159,10 +159,20 @@ export class BitComputedManager<T extends object> {
       changedPaths.length === 0 ||
       changedPaths.includes("*")
     ) {
+      // If every entry already has known dependencies (either declared via
+      // `computedDependsOn` or cached from a previous Proxy-tracked apply),
+      // we can rely on the topological order produced by orderEntries() and
+      // skip re-tracking + multi-pass stabilization — a single pass is enough.
+      const allDepsKnown = entries.every(
+        (e) =>
+          e.dependsOn !== undefined ||
+          this.computedDependencyCache.has(e.path),
+      );
+
       return {
         entries: this.orderEntries(entries),
-        shouldTrackDependencies: true,
-        requiresStabilizationPasses: true,
+        shouldTrackDependencies: !allDepsKnown,
+        requiresStabilizationPasses: !allDepsKnown,
       };
     }
 
