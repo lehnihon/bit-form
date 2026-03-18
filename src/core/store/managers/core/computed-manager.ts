@@ -165,8 +165,7 @@ export class BitComputedManager<T extends object> {
       // skip re-tracking + multi-pass stabilization — a single pass is enough.
       const allDepsKnown = entries.every(
         (e) =>
-          e.dependsOn !== undefined ||
-          this.computedDependencyCache.has(e.path),
+          e.dependsOn !== undefined || this.computedDependencyCache.has(e.path),
       );
 
       return {

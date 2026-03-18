@@ -1,4 +1,4 @@
-import { useMemo, useCallback } from "react";
+import { useMemo, useCallback, useSyncExternalStore } from "react";
 import { useBitFieldBase } from "./use-bit-field-base";
 import { BitPath, BitPathValue } from "../core";
 import {
@@ -24,9 +24,20 @@ export function useBitField<
     store,
   } = useBitFieldBase<BitPathValue<TForm, P>, TForm, P>(path);
 
+  // Track mask registrations reactively. getMasksVersion() returns a counter
+  // that increments on every registerMask() call. useSyncExternalStore fires
+  // the snapshot on every store notification; the integer comparison is O(1)
+  // so this only triggers a re-render when a mask is actually added.
+  const masksVersion = useSyncExternalStore(
+    // store.subscribe fires on every state change (global listener)
+    (cb) => store.subscribe(cb),
+    () => store.getMasksVersion(),
+    () => store.getMasksVersion(),
+  );
+
   const resolvedMask = useMemo(() => {
     return store.resolveMask(path as string);
-  }, [store.config.masks, store.config.fields, path]);
+  }, [masksVersion, store.config.fields, path]);
 
   const displayValue = useMemo(
     () => formatMaskedValue(fieldState.value, resolvedMask ?? undefined),

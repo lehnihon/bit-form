@@ -68,6 +68,10 @@ export class BitStore<T extends object = any> {
   /** Baseline for dirty tracking. Decoupled from config so that rebaseValues
    * can update it without mutating the user-provided config object. */
   private _initialValues!: T;
+  /** Incremented on every registerMask() call so React hooks can track mask
+   * configuration changes via useSyncExternalStore without putting masks in
+   * BitState and triggering a full re-render of all fields. */
+  private _masksVersion = 0;
 
   // ============================================================================
   // PUBLIC PROPERTIES
@@ -567,6 +571,11 @@ export class BitStore<T extends object = any> {
       ...(this.config.masks || {}),
       [name]: mask,
     };
+    this._masksVersion += 1;
+    // Fire global listeners so useSyncExternalStore subscribers tracking
+    // getMasksVersion() can pick up the change without broadcasting to all
+    // path-scoped field subscribers (the sentinel path matches no real field).
+    this.subscriptions.notify(this.state, ["__masks__"]);
   }
 
   getDirtyValues(): Partial<T> {
@@ -697,10 +706,7 @@ export class BitStore<T extends object = any> {
   undo() {
     const prevState = this.history.undo();
     if (prevState) {
-      const isDirty = this.dirtyManager.rebuild(
-        prevState,
-        this._initialValues,
-      );
+      const isDirty = this.dirtyManager.rebuild(prevState, this._initialValues);
       this.internalUpdateState({ values: prevState, isDirty });
       this.validation.trigger(undefined, { forceDebounce: true });
     }
@@ -709,10 +715,7 @@ export class BitStore<T extends object = any> {
   redo() {
     const nextState = this.history.redo();
     if (nextState) {
-      const isDirty = this.dirtyManager.rebuild(
-        nextState,
-        this._initialValues,
-      );
+      const isDirty = this.dirtyManager.rebuild(nextState, this._initialValues);
       this.internalUpdateState({ values: nextState, isDirty });
       this.validation.trigger(undefined, { forceDebounce: true });
     }
@@ -869,6 +872,13 @@ export class BitStore<T extends object = any> {
     this.config.initialValues = values;
   }
 
+  /** Returns a monotonically increasing counter that increments every time a
+   * mask is registered via registerMask(). Used by React components to track
+   * mask configuration changes reactively without storing masks in BitState. */
+  getMasksVersion(): number {
+    return this._masksVersion;
+  }
+
   // ============================================================================
   // INTERNAL OPERATIONS
   // ============================================================================
@@ -924,10 +934,7 @@ export class BitStore<T extends object = any> {
     this.validation.cancelAll();
     this.dependencyManager.evaluateAll(nextValues);
 
-    const isDirty = this.dirtyManager.rebuild(
-      nextValues,
-      this._initialValues,
-    );
+    const isDirty = this.dirtyManager.rebuild(nextValues, this._initialValues);
 
     this.internalUpdateState({
       values: nextValues,
