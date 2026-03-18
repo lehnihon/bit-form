@@ -82,38 +82,6 @@ const unsubscribe = store.subscribe(() => {
 unsubscribe();
 ```
 
-### `subscribeSelector(selector, listener, options?): () => void`
-
-Subscribes to a derived slice of state and only notifies when that slice changes.
-
-```ts
-const unsubscribe = store.subscribeSelector(
-  (state) => state.values.user.name,
-  (name) => {
-    console.log("User name changed:", name);
-  },
-);
-```
-
-`options` supports:
-
-- `equalityFn?: (previous, next) => boolean` to customize change detection.
-- `emitImmediately?: boolean` to emit current slice right after subscription.
-- `paths?: string[]` to scope notifications to specific value paths.
-- `autoTrackPaths?: boolean` to enable/disable selector path auto-tracking (enabled by default).
-
-### `subscribePath(path, listener, options?): () => void`
-
-Convenience subscription for a path inside `state.values`.
-
-```ts
-const unsubscribe = store.subscribePath("user.address.city", (city) => {
-  console.log("City changed:", city);
-});
-```
-
-`options` is the same as `subscribeSelector` (`equalityFn`, `emitImmediately`).
-
 ### `watch<P extends BitPath<T>>(path: P, callback: (value: BitPathValue<T, P>) => void): () => void`
 
 Subscribes to changes for a specific field path. The callback is only called when the value at that path actually changes (deep comparison).
@@ -125,6 +93,8 @@ const stopWatching = store.watch("user.address.city", (city) => {
 ```
 
 Use this for side-effects like analytics, autosave, or cross-form coordination.
+
+> Note: advanced selector subscriptions (`subscribeSelector` / `subscribePath`) are internal integration APIs used by framework adapters and are not part of the direct `createBitStore` public facade.
 
 ---
 
@@ -417,15 +387,6 @@ Unregisters a single field from the dependency manager and removes its `errors` 
 
 ```ts
 store.unregisterField("company.name");
-```
-
-### `unregisterPrefix(prefix: string): void`
-
-Unregisters all fields whose path starts with the given prefix. Useful for dynamic sections.
-
-```ts
-// Unregister all fields under "items[0]"
-store.unregisterPrefix("items[0]");
 ```
 
 ---

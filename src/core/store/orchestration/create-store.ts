@@ -3,7 +3,7 @@ import { BitConfig } from "../contracts/types";
 import { BitStoreApi, BitStoreHooksApi } from "../contracts/public-types";
 
 /**
- * Conjunto estático de chaves públicas de BitStoreApi + BitStoreHooksApi.
+ * Conjunto estático de chaves públicas de BitStoreApi.
  * Usado pelo Proxy da façade para impedir acesso a métodos internos em runtime,
  * complementando a restrição de tipo em tempo de compilação.
  */
@@ -51,21 +51,14 @@ const PUBLIC_API_KEYS = new Set<string>([
   "redo",
   "getStepStatus",
   "getStepErrors",
-  // BitStoreHooksApi
-  "getFieldState",
-  "subscribePath",
-  "subscribeSelector",
-  "unregisterPrefix",
-  "markFieldsTouched",
-  "hasValidationsInProgress",
-  "resolveMask",
-  "getScopeFields",
 ]);
+
+const facadeToInternalStore = new WeakMap<object, BitStore<any>>();
 
 function createPublicFacade<T extends object>(
   store: BitStore<T>,
 ): BitStoreApi<T> {
-  return new Proxy(store, {
+  const facade = new Proxy(store, {
     get(target, prop) {
       if (typeof prop === "string" && !PUBLIC_API_KEYS.has(prop)) {
         return undefined;
@@ -80,6 +73,9 @@ function createPublicFacade<T extends object>(
       return false;
     },
   }) as unknown as BitStoreApi<T>;
+
+  facadeToInternalStore.set(facade as object, store);
+  return facade;
 }
 
 function isHookCompatibleStore<T extends object>(
@@ -104,7 +100,16 @@ function isHookCompatibleStore<T extends object>(
 export function resolveBitStoreForHooks<T extends object>(
   store: BitStoreApi<T> | BitStore<T>,
 ): BitStoreHooksApi<T> {
-  if (store instanceof BitStore || isHookCompatibleStore(store)) {
+  const internalStore = facadeToInternalStore.get(store as object);
+  if (internalStore) {
+    return internalStore as BitStoreHooksApi<T>;
+  }
+
+  if (store instanceof BitStore) {
+    return store;
+  }
+
+  if (isHookCompatibleStore(store)) {
     return store;
   }
 
