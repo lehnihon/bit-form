@@ -26,7 +26,7 @@ export function resolveBitStoreForHooks<T extends object>(
   store: unknown,
 ): BitStoreHooksApi<T> {
   if (isHookCompatibleStore(store)) {
-    return store;
+    return store as unknown as BitStoreHooksApi<T>;
   }
 
   throw new Error(
