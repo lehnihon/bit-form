@@ -5,6 +5,7 @@ import {
   formatMaskedValue,
   parseMaskedInput,
 } from "../core/mask/field-binding";
+import { deriveFieldMeta } from "../core/utils/field-meta";
 import type { UseBitFieldNativeResult } from "./types";
 
 export function useBitField<
@@ -39,10 +40,8 @@ export function useBitField<
     [resolvedMask, rawSetValue],
   );
 
-  const { isHidden, isRequired, value, error, touched, isDirty, isValidating } =
-    fieldState;
-  const invalid = !!(touched && error);
-  const visibleError = touched ? error : undefined;
+  const { value } = fieldState;
+  const metaState = deriveFieldMeta(fieldState);
 
   const onBlur = useCallback(() => {
     setBlur();
@@ -56,14 +55,14 @@ export function useBitField<
     onChangeText: handleChange,
     onBlur,
     meta: {
-      error: visibleError,
-      touched,
-      invalid,
-      isValidating,
-      isDirty,
-      isHidden,
-      isRequired,
-      hasError: !!error,
+      error: metaState.error,
+      touched: metaState.touched,
+      invalid: metaState.invalid,
+      isValidating: metaState.isValidating,
+      isDirty: metaState.isDirty,
+      isHidden: metaState.isHidden,
+      isRequired: metaState.isRequired,
+      hasError: metaState.hasError,
     },
     props: {
       value: displayValue,
