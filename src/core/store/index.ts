@@ -38,6 +38,10 @@ import { BitDirtyManager } from "./managers/core/dirty-manager";
 import { BitMaskManager } from "./managers/features/mask-manager";
 import { BitSubscriptionEngine } from "./engines/subscription-engine";
 import { applyStateUpdate } from "./engines/state-update-engine";
+import {
+  BitStoreOperation,
+  patchStateOperation,
+} from "./engines/operation-engine";
 import { BitStoreEffectEngine } from "./engines/effect-engine";
 import { BitCapabilityRegistry } from "./orchestration/capability-registry";
 import type { BitStoreCapabilities } from "./orchestration/capabilities";
@@ -958,11 +962,19 @@ export class BitStore<T extends object = any> {
     partialState: Partial<BitState<T>>,
     changedPaths?: string[],
   ) {
+    this.dispatch(patchStateOperation(partialState, changedPaths));
+  }
+
+  dispatch(operation: BitStoreOperation<T>) {
+    if (operation.kind !== "state.patch") {
+      return;
+    }
+
     if (this.batchDepth > 0) {
       const updateResult = applyStateUpdate({
         currentState: this.batchedState ?? this.state,
-        partialState,
-        changedPaths,
+        partialState: operation.partialState,
+        changedPaths: operation.changedPaths,
         applyComputedValues: (values) => values,
       });
 
@@ -980,10 +992,12 @@ export class BitStore<T extends object = any> {
 
     const updateResult = applyStateUpdate({
       currentState: this.state,
-      partialState,
-      changedPaths,
+      partialState: operation.partialState,
+      changedPaths: operation.changedPaths,
       applyComputedValues: (values) =>
-        this.computedManager.apply(values, changedPaths),
+        operation.skipComputed
+          ? values
+          : this.computedManager.apply(values, operation.changedPaths),
     });
 
     this.state = updateResult.nextState;

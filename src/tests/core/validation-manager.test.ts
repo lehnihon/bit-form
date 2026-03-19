@@ -16,7 +16,7 @@ describe("BitValidationManager", () => {
         isSubmitting: false,
         isDirty: false,
       }),
-      internalUpdateState: () => {},
+      dispatch: () => {},
       setError: () => {},
       validate: async () => true,
       getFieldConfig: () => undefined,
@@ -57,7 +57,7 @@ describe("BitValidationManager", () => {
         isSubmitting: false,
         isDirty: false,
       }),
-      internalUpdateState: () => {},
+      dispatch: () => {},
       setError: () => {},
       validate: async () => true,
       getFieldConfig: () => ({

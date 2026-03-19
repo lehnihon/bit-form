@@ -4,6 +4,10 @@ import {
   BitValidationOptions,
 } from "../../contracts/public-types";
 import { BitPipelineContext, BitPipelineRunner } from "../../shared/pipeline";
+import {
+  BitStoreOperation,
+  patchStateOperation,
+} from "../../engines/operation-engine";
 import type {
   BitAfterValidateEvent,
   BitBeforeValidateEvent,
@@ -13,7 +17,7 @@ import type {
 
 export interface BitValidationStorePort<T extends object> {
   getState: () => BitState<T>;
-  internalUpdateState: (partial: Partial<BitState<T>>) => void;
+  dispatch: (operation: BitStoreOperation<T>) => void;
   setError: (path: string, message: string | undefined) => void;
   validate: (opts: BitValidationOptions) => Promise<boolean>;
   getFieldConfig: (path: string) => BitFieldDefinition<T> | undefined;
@@ -118,9 +122,11 @@ export class BitValidationManager<T extends object> {
       this.validatingCount = Math.max(0, this.validatingCount - 1);
     }
 
-    this.store.internalUpdateState({
-      isValidating: nextValidating,
-    });
+    this.store.dispatch(
+      patchStateOperation({
+        isValidating: nextValidating,
+      }),
+    );
   }
 
   private cancelFieldAsync(path: string) {
@@ -182,10 +188,12 @@ export class BitValidationManager<T extends object> {
 
     const newErrors = { ...this.store.getState().errors };
     delete newErrors[path as keyof BitErrors<T>];
-    this.store.internalUpdateState({
-      errors: newErrors,
-      isValid: !hasErrors(newErrors),
-    });
+    this.store.dispatch(
+      patchStateOperation({
+        errors: newErrors,
+        isValid: !hasErrors(newErrors),
+      }),
+    );
   }
 
   handleAsync(path: string, value: any) {
@@ -237,10 +245,12 @@ export class BitValidationManager<T extends object> {
             } else {
               const newErrors = { ...this.store.getState().errors };
               delete newErrors[path as keyof BitErrors<T>];
-              this.store.internalUpdateState({
-                errors: newErrors,
-                isValid: !hasErrors(newErrors),
-              });
+              this.store.dispatch(
+                patchStateOperation({
+                  errors: newErrors,
+                  isValid: !hasErrors(newErrors),
+                }),
+              );
             }
           }
         } finally {
@@ -342,7 +352,7 @@ export class BitValidationManager<T extends object> {
     });
     this.asyncAbortControllers.clear();
 
-    this.store.internalUpdateState({ isValidating: {} });
+    this.store.dispatch(patchStateOperation({ isValidating: {} }));
   }
 
   private resolveTargetFields(ctx: ValidationPipelineContext<T>) {
@@ -426,10 +436,12 @@ export class BitValidationManager<T extends object> {
       (field) => !ctx.allErrors[field] && !this.asyncErrors.has(field),
     );
 
-    this.store.internalUpdateState({
-      errors: newErrors,
-      isValid: ctx.isValid,
-    });
+    this.store.dispatch(
+      patchStateOperation({
+        errors: newErrors,
+        isValid: ctx.isValid,
+      }),
+    );
 
     await this.store.emitAfterValidate({
       values: this.store.getState().values,
@@ -451,10 +463,12 @@ export class BitValidationManager<T extends object> {
     ctx.isValid = !hasErrors(ctx.allErrors);
     ctx.result = ctx.isValid;
 
-    this.store.internalUpdateState({
-      errors: ctx.allErrors as BitErrors<T>,
-      isValid: ctx.isValid,
-    });
+    this.store.dispatch(
+      patchStateOperation({
+        errors: ctx.allErrors as BitErrors<T>,
+        isValid: ctx.isValid,
+      }),
+    );
 
     await this.store.emitAfterValidate({
       values: this.store.getState().values,
