@@ -175,10 +175,7 @@ export class BitSubscriptionEngine<T extends object> {
       });
     };
 
-    const normalizedChangedPaths =
-      this.normalizeSubscriptionPaths(changedPaths);
-
-    normalizedChangedPaths.forEach((changedPath) => {
+    changedPaths.forEach((changedPath) => {
       this.expandChangedPathForLookup(changedPath).forEach(addByPath);
     });
 

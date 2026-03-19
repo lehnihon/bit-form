@@ -14,6 +14,7 @@ In V4, `BitStore` acts mainly as an orchestrator/facade over specialized runtime
 
 - `subscription-engine`: handles `subscribe`, selector subscriptions and scoped path subscriptions with explicit paths.
 - `state-update-engine`: normalizes state updates (`changedPaths`, `valuesChanged`, computed apply).
+- `store-runtime-kernel-engine`: centralizes dispatch + batch flush commit semantics.
 - `effect-engine`: centralizes side effects (persist, plugin lifecycle hooks, bus dispatch).
 - `store-bootstrap`: builds capabilities and initial state during store construction.
 - `capability-registry`: resolves feature managers (`validation`, `lifecycle`, `history`, `arrays`, `scope`, `query`, `error`).
@@ -24,7 +25,7 @@ Current internal folder layout in `src/core/store`:
 
 - `contracts/`: shared type contracts (`types`, `public-types`, `bus-types`).
 - `shared/`: cross-cutting runtime helpers (`config`, `pipeline`, `bus`).
-- `engines/`: orchestration engines (`subscription`, `state-update`, `effect`).
+- `engines/`: orchestration engines (`subscription`, `state-update`, `store-runtime-kernel`, `effect`).
 - `managers/core/`: core domain managers (`dependency`, `computed`, `dirty`).
 - `managers/features/`: feature managers (`validation`, `lifecycle`, `history`, `array`, `scope`, `query`, `error`, `persist`, `plugin`).
 - `orchestration/`: composition and capability wiring (`store-bootstrap`, `capabilities`, `capability-registry`, `create-store`).

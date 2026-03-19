@@ -82,19 +82,19 @@ const unsubscribe = store.subscribe(() => {
 unsubscribe();
 ```
 
-### `watch<P extends BitPath<T>>(path: P, callback: (value: BitPathValue<T, P>) => void): () => void`
+### `subscribePath<P extends BitPath<T>>(path: P, callback: (value: BitPathValue<T, P>) => void): () => void`
 
 Subscribes to changes for a specific field path. The callback is only called when the value at that path actually changes (deep comparison).
 
 ```ts
-const stopWatching = store.watch("user.address.city", (city) => {
+const stopWatching = store.subscribePath("user.address.city", (city) => {
   console.log("City changed:", city);
 });
 ```
 
 Use this for side-effects like analytics, autosave, or cross-form coordination.
 
-> Note: advanced selector subscriptions (`subscribeSelector` / `subscribePath`) are internal integration APIs used by framework adapters and are not part of the direct `createBitStore` public API. In V4, internal selector subscriptions must declare explicit `paths` or opt into global mode.
+> Note: `subscribeSelector` is an advanced API used mostly by framework adapters. It requires explicit `paths`.
 
 ---
 
@@ -185,46 +185,25 @@ Updates a single field value by path.
 store.setField("email", "john@example.com");
 ```
 
-### `replaceValues(newValues: T): void`
+### `setValues(values, options?): void`
 
-Replaces the current `values` object without rebasing `initialValues`, then:
+Sets multiple values with three modes:
 
-- Re-applies all computed fields.
-- Re-runs dependency visibility logic.
-- Recomputes dirty state against the existing baseline.
-
-```ts
-store.replaceValues({
-  name: "John",
-  email: "john@example.com",
-});
-```
-
-### `hydrate(partialValues: DeepPartial<T>): void`
-
-Deep-merges a partial payload into the current values while keeping the current baseline.
+- Default (`setValues(nextValues)`): replace current values, keeping current baseline.
+- Partial (`setValues(partial, { partial: true })`): deep-merge into current values.
+- Rebase (`setValues(nextValues, { rebase: true })`): replace values and reset dirty baseline.
 
 ```ts
-store.hydrate({
-  profile: {
-    city: "Osaka",
+store.setValues({ name: "John", email: "john@example.com" });
+
+store.setValues(
+  {
+    profile: { city: "Osaka" },
   },
-});
-```
+  { partial: true },
+);
 
-### `rebase(newValues: T): void`
-
-Replaces the current `values` object and also resets `initialValues` to the new payload.
-
-- Re-applies all computed fields.
-- Re-runs dependency visibility logic.
-- Clears dirty state relative to the new baseline.
-
-```ts
-store.rebase({
-  name: "John",
-  email: "john@example.com",
-});
+store.setValues({ name: "John", email: "john@example.com" }, { rebase: true });
 ```
 
 ### `blurField(path: string): void`

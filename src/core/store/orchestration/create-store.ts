@@ -3,31 +3,28 @@ import { BitConfig } from "../contracts/types";
 import { BitStoreApi, BitStoreHooksApi } from "../contracts/public-types";
 
 function isHookCompatibleStore<T extends object>(
-  store: BitStoreApi<T> | BitStore<T>,
+  store: unknown,
 ): store is BitStoreHooksApi<T> {
+  if (!store || typeof store !== "object") {
+    return false;
+  }
+
+  const candidate = store as Partial<BitStoreHooksApi<T>>;
+
   return (
-    typeof (store as Partial<BitStoreHooksApi<T>>).getFieldState ===
-      "function" &&
-    typeof (store as Partial<BitStoreHooksApi<T>>).subscribePath ===
-      "function" &&
-    typeof (store as Partial<BitStoreHooksApi<T>>).subscribeSelector ===
-      "function" &&
-    typeof (store as Partial<BitStoreHooksApi<T>>).markFieldsTouched ===
-      "function" &&
-    typeof (store as Partial<BitStoreHooksApi<T>>).hasValidationsInProgress ===
-      "function" &&
-    typeof (store as Partial<BitStoreHooksApi<T>>).resolveMask === "function" &&
-    typeof (store as Partial<BitStoreHooksApi<T>>).getScopeFields === "function"
+    typeof candidate.getFieldState === "function" &&
+    typeof candidate.subscribePath === "function" &&
+    typeof candidate.subscribeSelector === "function" &&
+    typeof candidate.markFieldsTouched === "function" &&
+    typeof candidate.hasValidationsInProgress === "function" &&
+    typeof candidate.resolveMask === "function" &&
+    typeof candidate.getScopeFields === "function"
   );
 }
 
 export function resolveBitStoreForHooks<T extends object>(
-  store: BitStoreApi<T> | BitStore<T>,
+  store: unknown,
 ): BitStoreHooksApi<T> {
-  if (store instanceof BitStore) {
-    return store;
-  }
-
   if (isHookCompatibleStore(store)) {
     return store;
   }

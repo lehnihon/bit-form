@@ -77,11 +77,11 @@ export interface BitStoreQueryApi<T extends object = any> {
   getStepErrors(scopeName: string): Record<string, string>;
 }
 
-export interface BitStoreSubscriptionApi<T extends object = any> {
+export interface BitStoreObserveApi<T extends object = any> {
   subscribe(listener: () => void): () => void;
 }
 
-export interface BitStoreMutationApi<T extends object = any> {
+export interface BitStoreWriteApi<T extends object = any> {
   setField<P extends BitPath<T>>(path: P, value: BitPathValue<T, P>): void;
   blurField<P extends BitPath<T>>(path: P): void;
   setValues(
@@ -104,26 +104,26 @@ export interface BitStoreMutationApi<T extends object = any> {
   ): Promise<void>;
 }
 
-export interface BitStoreMaskApi {
+export interface BitStoreMaskFeatureApi {
   registerMask(name: BitMaskName, mask: BitMask): void;
   unregisterMask(name: BitMaskName): void;
 }
 
-export interface BitStorePersistApi {
+export interface BitStorePersistFeatureApi {
   getPersistMetadata(): BitPersistMetadata;
   restorePersisted(): Promise<boolean>;
   forceSave(): Promise<void>;
   clearPersisted(): Promise<void>;
 }
 
-export interface BitStoreRegistrationApi<T extends object = any> {
+export interface BitStoreRegistrationFeatureApi<T extends object = any> {
   cleanup(): void;
 
   registerField(path: string, config: BitFieldDefinition<T>): void;
   unregisterField(path: string): void;
 }
 
-export interface BitStoreArrayApi<T extends object = any> {
+export interface BitStoreArrayFeatureApi<T extends object = any> {
   pushItem<P extends BitArrayPath<T>>(
     path: P,
     value: BitArrayItem<BitPathValue<T, P>>,
@@ -146,20 +146,23 @@ export interface BitStoreArrayApi<T extends object = any> {
   ): void;
 }
 
-export interface BitStoreHistoryApi {
+export interface BitStoreHistoryFeatureApi {
   undo(): void;
   redo(): void;
 }
 
+export interface BitStoreFeatureApi<T extends object = any>
+  extends BitStoreMaskFeatureApi,
+    BitStorePersistFeatureApi,
+    BitStoreRegistrationFeatureApi<T>,
+    BitStoreArrayFeatureApi<T>,
+    BitStoreHistoryFeatureApi {}
+
 export interface BitStoreApi<T extends object = any>
   extends BitStoreQueryApi<T>,
-    BitStoreSubscriptionApi<T>,
-    BitStoreMutationApi<T>,
-    BitStoreMaskApi,
-    BitStorePersistApi,
-    BitStoreRegistrationApi<T>,
-    BitStoreArrayApi<T>,
-    BitStoreHistoryApi {}
+    BitStoreObserveApi<T>,
+    BitStoreWriteApi<T>,
+    BitStoreFeatureApi<T> {}
 
 export interface BitStoreHooksApi<T extends object = any>
   extends BitStoreApi<T> {
