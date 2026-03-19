@@ -7,8 +7,8 @@ describe("BitStore Core", () => {
     vi.useRealTimers();
   });
 
-  describe("Public Store Facade", () => {
-    it("should create a public facade with core operations", async () => {
+  describe("Public Store API", () => {
+    it("should create a store with core operations", async () => {
       const store = createBitStore({ initialValues: { name: "Leo", age: 30 } });
 
       store.setField("name", "Leandro");
@@ -25,15 +25,15 @@ describe("BitStore Core", () => {
       expect(submittedDirtyValues).toEqual({ name: "Leandro" });
     });
 
-    it("should expose core public methods from store instance", () => {
+    it("should expose core and hook-compatible methods from store instance", () => {
       const store = createBitStore({ initialValues: { name: "Leo" } }) as any;
 
       expect("undo" in store).toBe(true);
       expect("redo" in store).toBe(true);
       expect("getHistoryMetadata" in store).toBe(true);
-      expect("subscribeSelector" in store).toBe(false);
-      expect("subscribePath" in store).toBe(false);
-      expect("getFieldState" in store).toBe(false);
+      expect("subscribeSelector" in store).toBe(true);
+      expect("subscribePath" in store).toBe(true);
+      expect("getFieldState" in store).toBe(true);
       expect("setValues" in store).toBe(false);
       expect("beginFieldValidation" in store).toBe(false);
       expect("replaceValues" in store).toBe(true);
@@ -44,10 +44,10 @@ describe("BitStore Core", () => {
       expect("depsMg" in store).toBe(false);
     });
 
-    it("should resolve hook API from public facade without exposing hook methods", () => {
+    it("should resolve hook API from store instance", () => {
       const store = createBitStore({ initialValues: { name: "Leo" } }) as any;
 
-      expect(store.subscribeSelector).toBeUndefined();
+      expect(typeof store.subscribeSelector).toBe("function");
 
       const hooksStore = resolveBitStoreForHooks(store);
 

@@ -25,12 +25,14 @@ export class BitComputedManager<T extends object> {
   private readonly computedDependencyCache = new Map<string, Set<string>>();
 
   /**
-   * Equality comparison cache for computed values
-   * Key: `${path}:${JSON.stringify(value)}`
-   * Reduces redundant deepEqual calls when the same (path, value) pair is compared multiple times
-   * Cleared after each stabilization pass to avoid memory growth
+   * Equality cache por path sem serialização.
+   * Evita custo de JSON.stringify em hot path e reaproveita resultado
+   * quando current/new não mudam por identidade na mesma execução de apply().
    */
-  private equalityCache = new Map<string, boolean>();
+  private equalityCache = new Map<
+    string,
+    { current: unknown; next: unknown; equal: boolean }
+  >();
 
   constructor(private getComputedEntries: () => BitComputedEntryInput<T>[]) {}
   /**
@@ -125,12 +127,22 @@ export class BitComputedManager<T extends object> {
         );
         const currentValue = getDeepValue(nextValues, entry.path);
 
-        // Use memoized equality check to avoid redundant deepEqual calls
-        const cacheKey = `${entry.path}:${JSON.stringify(currentValue)}`;
-        let valuesEqual = this.equalityCache.get(cacheKey);
-        if (valuesEqual === undefined) {
+        const cached = this.equalityCache.get(entry.path);
+        let valuesEqual: boolean;
+
+        if (
+          cached &&
+          cached.current === currentValue &&
+          cached.next === newValue
+        ) {
+          valuesEqual = cached.equal;
+        } else {
           valuesEqual = deepEqual(currentValue, newValue);
-          this.equalityCache.set(cacheKey, valuesEqual);
+          this.equalityCache.set(entry.path, {
+            current: currentValue,
+            next: newValue,
+            equal: valuesEqual,
+          });
         }
 
         if (!valuesEqual) {
@@ -152,11 +164,6 @@ export class BitComputedManager<T extends object> {
             this.invalidateReverseDeps();
           }
         }
-      }
-
-      // Clear equality cache after each pass to prevent unbounded growth
-      if (this.equalityCache.size > 1000) {
-        this.equalityCache.clear();
       }
 
       if (!hasUpdates) break;
