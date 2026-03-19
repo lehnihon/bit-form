@@ -36,7 +36,7 @@ For applications and framework integrations, use `createBitStore` and the offici
 
 ### `getState(): BitState<T>`
 
-Returns the current snapshot of the store state.
+Returns the current state snapshot.
 
 ```ts
 const state = store.getState();
@@ -94,7 +94,7 @@ const stopWatching = store.watch("user.address.city", (city) => {
 
 Use this for side-effects like analytics, autosave, or cross-form coordination.
 
-> Note: advanced selector subscriptions (`subscribeSelector` / `subscribePath`) are internal integration APIs used by framework adapters and are not part of the direct `createBitStore` public API.
+> Note: advanced selector subscriptions (`subscribeSelector` / `subscribePath`) are internal integration APIs used by framework adapters and are not part of the direct `createBitStore` public API. In V4, internal selector subscriptions must declare explicit `paths` or opt into global mode.
 
 ---
 
@@ -232,7 +232,7 @@ store.rebase({
 Signals that a field has been blurred (lost focus).
 
 - Marks the field as `touched`.
-- Saves a history snapshot (if history is enabled).
+- Saves a history point (if history is enabled).
 - Triggers validation for that field.
 
 ```ts

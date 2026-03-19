@@ -9,13 +9,12 @@ import {
   BitArrayManager,
   type BitArrayStorePort,
 } from "../managers/features/array-manager";
-import { BitComputedManager } from "../managers/core/computed-manager";
 import { BitScopeManager } from "../managers/features/scope-manager";
 import { BitFieldQueryManager } from "../managers/features/field-query-manager";
 import { BitErrorManager } from "../managers/features/error-manager";
 import { BitCapabilityRegistry } from "./capability-registry";
 import { BitDependencyManager } from "../managers/core/dependency-manager";
-import { BitDirtyManager } from "../managers/core/dirty-manager";
+import { BitComputedManager } from "../managers/core/computed-manager";
 import type { BitStoreOperation } from "../engines/operation-engine";
 import { deepClone } from "../../utils";
 import type { BitStoreCapabilities } from "./capabilities";
@@ -24,109 +23,65 @@ import type { BitLifecycleStorePort } from "../managers/features/lifecycle-manag
 import type { BitValidationStorePort } from "../managers/features/validation-manager";
 import type { BitFieldDefinition, BitState } from "../contracts/types";
 
-type BitStoreCapabilityPorts<T extends object> = BitValidationStorePort<T> &
-  BitLifecycleStorePort<T> &
-  BitArrayStorePort<T> & {
-    getScopeFields(scopeName: string): string[];
-    getState(): BitState<T>;
-    dispatch(operation: BitStoreOperation<T>): void;
-  };
+export type BitStoreCapabilityPorts<T extends object> = {
+  config: BitFrameworkConfig<T>;
+  validationPort: BitValidationStorePort<T>;
+  lifecyclePort: BitLifecycleStorePort<T>;
+  arrayPort: BitArrayStorePort<T>;
+  getScopeFields(scopeName: string): string[];
+  getState(): BitState<T>;
+  dispatch(operation: BitStoreOperation<T>): void;
+  getInitialValues(): T;
+  isPathDirty(path: string): boolean;
+};
 
 export function createStoreCapabilities<T extends object>(args: {
-  store: BitStoreCapabilityPorts<T>;
+  ports: BitStoreCapabilityPorts<T>;
   dependencyManager: BitDependencyManager<T>;
-  dirtyManager: BitDirtyManager<T>;
 }): BitCapabilityRegistry<BitStoreCapabilities<T>> {
-  const { store, dependencyManager, dirtyManager } = args;
+  const { ports, dependencyManager } = args;
 
   const capabilities = new BitCapabilityRegistry<BitStoreCapabilities<T>>();
 
-  const validationPort: BitValidationStorePort<T> = {
-    getState: () => store.getState(),
-    dispatch: (operation) => store.dispatch(operation),
-    setError: (path, message) => store.setError(path, message),
-    validate: (opts) => store.validate(opts),
-    getFieldConfig: (path) => store.getFieldConfig(path),
-    getScopeFields: (scopeName) => store.getScopeFields(scopeName),
-    config: store.config,
-    getRequiredErrors: (values) => store.getRequiredErrors(values),
-    getHiddenFields: () => store.getHiddenFields(),
-    emitBeforeValidate: (event) => store.emitBeforeValidate(event),
-    emitAfterValidate: (event) => store.emitAfterValidate(event),
-  };
-
-  const lifecyclePort: BitLifecycleStorePort<T> = {
-    getState: () => store.getState(),
-    dispatch: (operation) => store.dispatch(operation),
-    internalSaveSnapshot: () => store.internalSaveSnapshot(),
-    batchStateUpdates: (callback) => store.batchStateUpdates(callback),
-    config: store.config,
-    getTransformEntries: () => store.getTransformEntries(),
-    updateDependencies: (changedPath, newValues) =>
-      store.updateDependencies(changedPath, newValues),
-    isFieldHidden: (path) => store.isFieldHidden(path),
-    evaluateAllDependencies: (values) => store.evaluateAllDependencies(values),
-    getHiddenFields: () => store.getHiddenFields(),
-    clearFieldValidation: (path) => store.clearFieldValidation(path),
-    triggerValidation: (scopeFields, options) =>
-      store.triggerValidation(scopeFields, options),
-    handleFieldAsyncValidation: (path, value) =>
-      store.handleFieldAsyncValidation(path, value),
-    cancelAllValidations: () => store.cancelAllValidations(),
-    validateNow: (options) => store.validateNow(options),
-    hasValidationsInProgress: (scopeFields) =>
-      store.hasValidationsInProgress(scopeFields),
-    updateDirtyForPath: (path, nextValues, baselineValues) =>
-      store.updateDirtyForPath(path, nextValues, baselineValues),
-    rebuildDirtyState: (nextValues, baselineValues) =>
-      store.rebuildDirtyState(nextValues, baselineValues),
-    clearDirtyState: () => store.clearDirtyState(),
-    buildDirtyValues: (values) => store.buildDirtyValues(values),
-    getInitialValues: () => store.getInitialValues(),
-    setInitialValues: (values) => store.setInitialValues(values),
-    resetHistory: (initialValues) => store.resetHistory(initialValues),
-    emitFieldChange: (event) => store.emitFieldChange(event),
-    emitBeforeSubmit: (event) => store.emitBeforeSubmit(event),
-    emitAfterSubmit: (event) => store.emitAfterSubmit(event),
-    emitOperationalError: (event) => store.emitOperationalError(event),
-  };
-
   capabilities.register(
     "validation",
-    new BitValidationManager<T>(validationPort),
+    new BitValidationManager<T>(ports.validationPort),
   );
-  capabilities.register("lifecycle", new BitLifecycleManager<T>(lifecyclePort));
+  capabilities.register(
+    "lifecycle",
+    new BitLifecycleManager<T>(ports.lifecyclePort),
+  );
   capabilities.register(
     "history",
     new BitHistoryManager<T>(
-      !!store.config.enableHistory,
-      store.config.historyLimit ?? 15,
+      !!ports.config.enableHistory,
+      ports.config.historyLimit ?? 15,
     ),
   );
-  capabilities.register("arrays", new BitArrayManager<T>(store));
+  capabilities.register("arrays", new BitArrayManager<T>(ports.arrayPort));
   capabilities.register(
     "scope",
     new BitScopeManager<T>(
-      () => store.getState(),
-      () => store.getInitialValues(),
-      (scopeName) => store.getScopeFields(scopeName),
-      (path) => dirtyManager.isPathDirty(path),
+      () => ports.getState(),
+      () => ports.getInitialValues(),
+      (scopeName) => ports.getScopeFields(scopeName),
+      (path) => ports.isPathDirty(path),
     ),
   );
   capabilities.register(
     "query",
     new BitFieldQueryManager<T>(
       dependencyManager,
-      () => store.getState(),
-      () => store.config,
-      (path) => dirtyManager.isPathDirty(path),
+      () => ports.getState(),
+      () => ports.config,
+      (path) => ports.isPathDirty(path),
     ),
   );
   capabilities.register(
     "error",
     new BitErrorManager<T>(
-      () => store.getState(),
-      (operation) => store.dispatch(operation),
+      () => ports.getState(),
+      (operation) => ports.dispatch(operation),
     ),
   );
 

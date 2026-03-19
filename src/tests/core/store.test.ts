@@ -119,7 +119,7 @@ describe("BitStore Core", () => {
       const unsubscribe = store.subscribeSelector(
         (state) => state.values.user.name,
         listener,
-        { autoTrackPaths: true },
+        { paths: ["user.name"] },
       );
 
       store.setField("age", 31);
@@ -131,7 +131,7 @@ describe("BitStore Core", () => {
       unsubscribe();
     });
 
-    it("should auto-track selector paths and notify on matching nested updates", () => {
+    it("should require explicit selector paths and notify on matching nested updates", () => {
       const store = new BitStore({
         initialValues: { user: { name: "Leo", age: 30 }, city: "Tokyo" },
       });
@@ -140,6 +140,7 @@ describe("BitStore Core", () => {
       const unsubscribe = store.subscribeSelector(
         (state) => state.values.user.name,
         listener,
+        { paths: ["user.name"] },
       );
 
       store.setField("city", "Osaka");
@@ -198,6 +199,7 @@ describe("BitStore Core", () => {
         listener,
         {
           emitImmediately: true,
+          paths: ["user"],
           equalityFn: (prev, next) => prev.name === next.name,
         },
       );
@@ -312,7 +314,10 @@ describe("BitStore Core", () => {
       const store = new BitStore({
         initialValues: { price: 10, qty: 2, total: 0 },
         fields: {
-          total: { computed: (vals) => vals.price * vals.qty },
+          total: {
+            computed: (vals) => vals.price * vals.qty,
+            computedDependsOn: ["price", "qty"],
+          },
         },
       });
 
@@ -329,6 +334,7 @@ describe("BitStore Core", () => {
         fields: {
           fullName: {
             computed: (vals) => `${vals.firstName} ${vals.lastName}`,
+            computedDependsOn: ["firstName", "lastName"],
           },
         },
       });
@@ -341,8 +347,14 @@ describe("BitStore Core", () => {
       const store = new BitStore({
         initialValues: { netPrice: 100, tax: 0, finalPrice: 0 },
         fields: {
-          tax: { computed: (vals) => vals.netPrice * 0.1 },
-          finalPrice: { computed: (vals) => vals.netPrice + vals.tax },
+          tax: {
+            computed: (vals) => vals.netPrice * 0.1,
+            computedDependsOn: ["netPrice"],
+          },
+          finalPrice: {
+            computed: (vals) => vals.netPrice + vals.tax,
+            computedDependsOn: ["netPrice", "tax"],
+          },
         },
       });
 

@@ -25,7 +25,6 @@ export function subscribeFieldState<
     listener,
     {
       paths: [path as string],
-      autoTrackPaths: false,
       equalityFn: (prev, next) =>
         prev.value === next.value &&
         prev.error === next.error &&

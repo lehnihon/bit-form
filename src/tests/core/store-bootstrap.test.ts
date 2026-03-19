@@ -16,6 +16,7 @@ describe("createInitialStoreState", () => {
       fields: {
         total: {
           computed: (values: any) => values.price * 2,
+          computedDependsOn: ["price"],
         },
         extra: {
           conditional: {
@@ -28,10 +29,18 @@ describe("createInitialStoreState", () => {
 
     const dependencyManager = new BitDependencyManager<any>();
     const computedManager = new BitComputedManager<any>(() => {
-      const entries: [string, (values: any) => any][] = [];
+      const entries: Array<{
+        path: string;
+        compute: (values: any) => any;
+        dependsOn: string[];
+      }> = [];
       dependencyManager.forEachFieldConfig((fieldConfig, path) => {
         if (fieldConfig.computed) {
-          entries.push([path, fieldConfig.computed]);
+          entries.push({
+            path,
+            compute: fieldConfig.computed,
+            dependsOn: fieldConfig.computedDependsOn,
+          });
         }
       });
       return entries;
