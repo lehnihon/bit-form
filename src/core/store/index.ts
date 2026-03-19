@@ -60,6 +60,7 @@ import {
   createFieldStateSnapshot,
   resolveFieldMask,
 } from "./engines/store-field-query-engine";
+import { buildFieldUnregisterPatch } from "./engines/store-field-cleanup-engine";
 import { executeStoreOperation } from "./engines/store-dispatch-engine";
 import {
   BitStoreOperation,
@@ -414,25 +415,16 @@ export class BitStore<T extends object = any> {
     this.dependencyManager.unregister(path);
     this.unregisterCachedFieldIndexes(path, config);
 
-    const newErrors = { ...this.state.errors };
-    const newTouched = { ...this.state.touched };
-    let stateChanged = false;
+    const cleanupPatch = buildFieldUnregisterPatch({
+      state: this.state,
+      path,
+    });
 
-    if (newErrors[path as keyof BitErrors<T>]) {
-      delete newErrors[path as keyof BitErrors<T>];
-      stateChanged = true;
-    }
-
-    if (newTouched[path as keyof typeof newTouched]) {
-      delete newTouched[path as keyof typeof newTouched];
-      stateChanged = true;
-    }
-
-    if (stateChanged) {
+    if (cleanupPatch) {
       this.dispatch(
         patchStateOperation({
-          errors: newErrors,
-          touched: newTouched,
+          errors: cleanupPatch.errors,
+          touched: cleanupPatch.touched,
         }),
       );
     }
