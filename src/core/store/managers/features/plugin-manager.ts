@@ -19,11 +19,12 @@ export class BitPluginManager<T extends object = any> {
   ) {}
 
   setupAll() {
+    const context = this.contextFactory();
     this.plugins.forEach((plugin) => {
       if (!plugin.setup) return;
 
       try {
-        const maybeTeardown = plugin.setup(this.contextFactory());
+        const maybeTeardown = plugin.setup(context);
         if (typeof maybeTeardown === "function") {
           this.teardownFns.push(maybeTeardown);
         }
@@ -50,12 +51,13 @@ export class BitPluginManager<T extends object = any> {
   }
 
   onFieldChange(event: BitFieldChangeEvent<T>) {
+    const context = this.contextFactory();
     this.plugins.forEach((plugin) => {
       const hook = plugin.hooks?.onFieldChange;
       if (!hook) return;
 
       try {
-        const result = hook(event, this.contextFactory());
+        const result = hook(event, context);
         void Promise.resolve(result).catch((error) => {
           void this.reportError("onFieldChange", error, event, plugin.name);
         });

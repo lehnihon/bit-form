@@ -36,8 +36,10 @@ export function normalizeConfig<T extends object>(
     initialValues: deepClone(rawInitial),
     resolver: validation?.resolver,
     validationDelay: validation?.delay ?? 300,
-    enableHistory: history?.enabled ?? false,
-    historyLimit: history?.limit ?? 15,
+    history: {
+      enabled: history?.enabled ?? false,
+      limit: history?.limit ?? 15,
+    },
     masks: config.masks,
     fields: config.fields,
     devTools: config.devTools,

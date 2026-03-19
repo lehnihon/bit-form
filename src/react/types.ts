@@ -133,9 +133,10 @@ export interface UseBitFormResult<T extends object = any> {
   transaction: <TResult>(callback: () => TResult) => TResult;
   setField: <P extends BitPath<T>>(path: P, value: BitPathValue<T, P>) => void;
   blurField: <P extends BitPath<T>>(path: P) => void;
-  replaceValues: (values: T) => void;
-  hydrate: (values: import("../core").DeepPartial<T>) => void;
-  rebase: (values: T) => void;
+  setValues: (
+    values: T | import("../core").DeepPartial<T>,
+    options?: { partial?: boolean; rebase?: boolean },
+  ) => void;
   setError: (path: string, message: string | undefined) => void;
   setErrors: (errors: BitErrors<T>) => void;
   setServerErrors: (serverErrors: Record<string, string[] | string>) => void;

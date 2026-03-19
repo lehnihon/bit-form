@@ -21,7 +21,7 @@ import type {
   BitSelectorSubscriptionOptions,
   BitValidationOptions,
 } from "./contracts/public-types";
-import { deepClone, deepEqual, getDeepValue, valueEqual } from "../utils";
+import { deepClone, getDeepValue, valueEqual } from "../utils";
 import { normalizeConfig } from "./shared/config";
 import { BitDependencyManager } from "./managers/core/dependency-manager";
 import {
@@ -64,7 +64,6 @@ import {
   touchFieldsOperation,
 } from "./engines/operation-engine";
 import { BitStoreEffectEngine } from "./engines/effect-engine";
-import { BitCapabilityRegistry } from "./orchestration/capability-registry";
 import type { BitStoreCapabilities } from "./orchestration/capabilities";
 import type { BitValidationTriggerOptions } from "./managers/features/validation-manager";
 import {
@@ -159,8 +158,15 @@ export class BitStore<T extends object = any> {
   private state: BitState<T>;
   private readonly subscriptions: BitSubscriptionEngine<T>;
   private readonly effects: BitStoreEffectEngine<T>;
-  private readonly capabilities: BitCapabilityRegistry<BitStoreCapabilities<T>>;
   private readonly maskManager: BitMaskManager;
+  private readonly _validation: BitStoreCapabilities<T>["validation"];
+  private readonly _lifecycle: BitStoreCapabilities<T>["lifecycle"];
+  private readonly _history: BitStoreCapabilities<T>["history"];
+  private readonly _arrays: BitStoreCapabilities<T>["arrays"];
+  private readonly _scope: BitStoreCapabilities<T>["scope"];
+  private readonly _query: BitStoreCapabilities<T>["query"];
+  private readonly _error: BitStoreCapabilities<T>["error"];
+  private readonly _config: BitFrameworkConfig<T>;
   /** Baseline for dirty tracking. Decoupled from config so that rebaseValues
    * can update it without mutating the user-provided config object. */
   private _initialValues!: T;
@@ -169,8 +175,10 @@ export class BitStore<T extends object = any> {
   // PUBLIC PROPERTIES
   // ============================================================================
 
-  public config: BitFrameworkConfig<T>;
   public readonly storeId: string;
+  get config(): Readonly<BitFrameworkConfig<T>> {
+    return this._config;
+  }
 
   // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   // Core Managers
@@ -217,41 +225,37 @@ export class BitStore<T extends object = any> {
     });
   }
 
-  private getCapability<TKey extends keyof BitStoreCapabilities<T>>(key: TKey) {
-    return this.capabilities.get(key);
-  }
-
   // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   // Feature Managers
   // Managers for optional features like history, arrays, and scopes
   // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
   private get validation() {
-    return this.getCapability("validation");
+    return this._validation;
   }
 
   private get lifecycle() {
-    return this.getCapability("lifecycle");
+    return this._lifecycle;
   }
 
   private get history() {
-    return this.getCapability("history");
+    return this._history;
   }
 
   private get arrays() {
-    return this.getCapability("arrays");
+    return this._arrays;
   }
 
   private get scope() {
-    return this.getCapability("scope");
+    return this._scope;
   }
 
   private get query() {
-    return this.getCapability("query");
+    return this._query;
   }
 
   private get error() {
-    return this.getCapability("error");
+    return this._error;
   }
 
   // ============================================================================
@@ -259,8 +263,8 @@ export class BitStore<T extends object = any> {
   // ============================================================================
 
   constructor(config: BitConfig<T> = {}) {
-    this.config = normalizeConfig(config);
-    this._initialValues = this.config.initialValues;
+    this._config = normalizeConfig(config);
+    this._initialValues = this._config.initialValues;
 
     // Initialize core managers
     this.dependencyManager = new BitDependencyManager<T>();
@@ -269,9 +273,14 @@ export class BitStore<T extends object = any> {
     );
     this.dirtyManager = new BitDirtyManager<T>();
     this.maskManager = new BitMaskManager();
+    if (this._config.masks) {
+      Object.entries(this._config.masks).forEach(([name, mask]) => {
+        this.maskManager.registerMask(name, mask);
+      });
+    }
 
     const capabilityPorts: BitStoreCapabilityPorts<T> = {
-      config: this.config,
+      config: this._config,
       validationPort: {
         getState: () => this.getState(),
         dispatch: (operation) => this.dispatch(operation),
@@ -279,7 +288,7 @@ export class BitStore<T extends object = any> {
         validate: (options) => this.validate(options),
         getFieldConfig: (path) => this.getFieldConfig(path),
         getScopeFields: (scopeName) => this.getScopeFields(scopeName),
-        config: this.config,
+        config: this._config,
         getRequiredErrors: (values) =>
           this.dependencyManager.getRequiredErrors(values),
         getHiddenFields: () => this.dependencyManager.getHiddenFields(),
@@ -291,7 +300,7 @@ export class BitStore<T extends object = any> {
         dispatch: (operation) => this.dispatch(operation),
         internalSaveSnapshot: () => this.saveHistorySnapshot(),
         batchStateUpdates: (callback) => this.runStateBatch(callback),
-        config: this.config,
+        config: this._config,
         getTransformEntries: () => this.getTransformEntries(),
         updateDependencies: (changedPath, newValues) =>
           this.dependencyManager.updateDependencies(changedPath, newValues),
@@ -318,7 +327,6 @@ export class BitStore<T extends object = any> {
         getInitialValues: () => this._initialValues,
         setInitialValues: (values) => {
           this._initialValues = values;
-          this.config.initialValues = values;
         },
         resetHistory: (initialValues) => this.history.reset(initialValues),
         emitFieldChange: (event) => this.effects.onFieldChange(event),
@@ -347,12 +355,20 @@ export class BitStore<T extends object = any> {
       isPathDirty: (path) => this.dirtyManager.isPathDirty(path),
     };
 
-    this.capabilities = createStoreCapabilities<T>({
+    const capabilities = createStoreCapabilities<T>({
       ports: capabilityPorts,
       dependencyManager: this.dependencyManager,
     });
+    this._validation = capabilities.validation;
+    this._lifecycle = capabilities.lifecycle;
+    this._history = capabilities.history;
+    this._arrays = capabilities.arrays;
+    this._scope = capabilities.scope;
+    this._query = capabilities.query;
+    this._error = capabilities.error;
+
     this.state = createInitialStoreState<T>({
-      config: this.config,
+      config: this._config,
       dependencyManager: this.dependencyManager,
       computedManager: this.computedManager,
     });
@@ -362,16 +378,16 @@ export class BitStore<T extends object = any> {
 
     this.storeId =
       config.storeId ||
-      this.config.name ||
-      this.config.idFactory({
+      this._config.name ||
+      this._config.idFactory({
         scope: "store",
-        storeName: this.config.name,
+        storeName: this._config.name,
       });
 
     this.effects = createStoreEffects<T>({
       storeId: this.storeId,
       storeInstance: this,
-      config: this.config,
+      config: this._config,
       getState: () => this.getState(),
       getConfig: () => this.getConfig(),
       getValues: () => this.state.values,
@@ -385,14 +401,11 @@ export class BitStore<T extends object = any> {
   // ============================================================================
 
   getConfig() {
-    return this.config;
+    return this._config;
   }
 
   getFieldConfig(path: string): BitFieldDefinition<T> | undefined {
-    return (
-      this.dependencyManager.getFieldConfig(path) ||
-      this.config.fields?.[path as keyof typeof this.config.fields]
-    );
+    return this.dependencyManager.getFieldConfig(path);
   }
 
   getScopeFields(scopeName: string): string[] {
@@ -424,7 +437,7 @@ export class BitStore<T extends object = any> {
     return resolveFieldMask({
       path,
       getFieldConfig: (fieldPath) => this.getFieldConfig(fieldPath),
-      masks: this.config.masks,
+      masks: this.maskManager.getAllMasks(),
     });
   }
 
@@ -479,7 +492,7 @@ export class BitStore<T extends object = any> {
 
   unregisterField(path: string) {
     // Fields from initial config are never unregistered
-    if (this.config.fields?.[path as string]) {
+    if (this._config.fields?.[path as string]) {
       return;
     }
     const config = this.getFieldConfig(path);
@@ -571,15 +584,6 @@ export class BitStore<T extends object = any> {
     );
   }
 
-  watch<P extends BitPath<T>>(
-    path: P,
-    callback: (value: BitPathValue<T, P>) => void,
-  ) {
-    return this.subscribePath(path, callback, {
-      equalityFn: deepEqual,
-    });
-  }
-
   // ============================================================================
   // FIELD VALUE MUTATIONS
   // ============================================================================
@@ -588,7 +592,7 @@ export class BitStore<T extends object = any> {
     this.setFieldWithMeta(path as string, value, { origin: "setField" });
   }
 
-  setFieldWithMeta(
+  private setFieldWithMeta(
     path: string,
     value: any,
     meta: BitFieldChangeMeta = { origin: "setField" },
@@ -613,16 +617,11 @@ export class BitStore<T extends object = any> {
     this.dispatch(touchFieldsOperation(paths));
   }
 
-  replaceValues(newValues: T) {
-    this.lifecycle.replaceValues(newValues);
-  }
-
-  hydrate(values: DeepPartial<T>) {
-    this.lifecycle.hydrateValues(values);
-  }
-
-  rebase(newValues: T) {
-    this.lifecycle.rebaseValues(newValues);
+  setValues(
+    values: T | DeepPartial<T>,
+    options?: { partial?: boolean; rebase?: boolean },
+  ) {
+    this.lifecycle.setValues(values, options);
   }
 
   // ============================================================================
@@ -661,17 +660,13 @@ export class BitStore<T extends object = any> {
 
   registerMask(name: BitMaskName, mask: BitMask) {
     this.maskManager.registerMask(name, mask);
-    this.config.masks = this.maskManager.getAllMasks();
-    // Fire global listeners so useSyncExternalStore subscribers tracking
-    // getMasksVersion() can pick up the change without broadcasting to all
-    // path-scoped field subscribers (the sentinel path matches no real field).
+    this._config.masks = this.maskManager.getAllMasks();
     this.subscriptions.notify(this.state, ["__masks__"]);
   }
 
   unregisterMask(name: BitMaskName) {
     this.maskManager.unregisterMask(name);
-    this.config.masks = this.maskManager.getAllMasks();
-    // Notify subscribers of mask configuration change
+    this._config.masks = this.maskManager.getAllMasks();
     this.subscriptions.notify(this.state, ["__masks__"]);
   }
 
@@ -930,7 +925,6 @@ export class BitStore<T extends object = any> {
   cleanup() {
     this.subscriptions.destroy();
     this.validation.cancelAll();
-    this.capabilities.clear();
     this.effects.destroy();
   }
 

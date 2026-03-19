@@ -26,9 +26,9 @@ describe("applyStateUpdate", () => {
     });
 
     expect(result.valuesChanged).toBe(true);
-    // With granular path inference, changedPaths now includes inferred values.keys
+    // With structural path inference, changedPaths includes concrete field paths.
     expect(result.changedPaths).toEqual(
-      expect.arrayContaining(["values.name", "values.total"]),
+      expect.arrayContaining(["name", "total"]),
     );
     expect(result.nextState.values).toEqual({ name: "Ana", total: 30 });
   });

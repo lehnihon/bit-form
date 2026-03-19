@@ -31,7 +31,6 @@ export interface BitSelectorSubscriptionOptions<TValue> {
   equalityFn?: BitEqualityFn<TValue>;
   emitImmediately?: boolean;
   paths?: string[];
-  mode?: "scoped" | "global";
 }
 
 export interface BitValidationOptions {
@@ -52,8 +51,7 @@ export interface BitFrameworkConfig<T extends object = any>
   initialValues: T;
   resolver?: ValidatorFn<T>;
   validationDelay: number;
-  enableHistory: boolean;
-  historyLimit: number;
+  history: { enabled: boolean; limit: number };
   masks?: Record<string, BitMask>;
   fields?: Record<string, BitFieldDefinition<T>>;
   devTools?: boolean | DevToolsOptions;
@@ -81,19 +79,15 @@ export interface BitStoreQueryApi<T extends object = any> {
 
 export interface BitStoreSubscriptionApi<T extends object = any> {
   subscribe(listener: () => void): () => void;
-
-  watch<P extends BitPath<T>>(
-    path: P,
-    callback: (value: BitPathValue<T, P>) => void,
-  ): () => void;
 }
 
 export interface BitStoreMutationApi<T extends object = any> {
   setField<P extends BitPath<T>>(path: P, value: BitPathValue<T, P>): void;
   blurField<P extends BitPath<T>>(path: P): void;
-  replaceValues(values: T): void;
-  hydrate(values: DeepPartial<T>): void;
-  rebase(values: T): void;
+  setValues(
+    values: T | DeepPartial<T>,
+    options?: { partial?: boolean; rebase?: boolean },
+  ): void;
 
   setError(path: string, message: string | undefined): void;
   setErrors(errors: BitErrors<T>): void;

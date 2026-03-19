@@ -1,5 +1,77 @@
 import type { BitErrors, BitState } from "../contracts/types";
 
+function isObjectLike(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === "object";
+}
+
+function collectChangedValuePaths(args: {
+  previousValue: unknown;
+  nextValue: unknown;
+  basePath: string;
+  changedPaths: Set<string>;
+}): void {
+  const { previousValue, nextValue, basePath, changedPaths } = args;
+
+  if (Object.is(previousValue, nextValue)) {
+    return;
+  }
+
+  const previousIsObject = isObjectLike(previousValue);
+  const nextIsObject = isObjectLike(nextValue);
+
+  if (!previousIsObject || !nextIsObject) {
+    if (basePath.length > 0) {
+      changedPaths.add(basePath);
+    }
+    return;
+  }
+
+  if (Array.isArray(previousValue) || Array.isArray(nextValue)) {
+    const previousArray = Array.isArray(previousValue) ? previousValue : [];
+    const nextArray = Array.isArray(nextValue) ? nextValue : [];
+    const maxLength = Math.max(previousArray.length, nextArray.length);
+
+    for (let index = 0; index < maxLength; index += 1) {
+      const childPath =
+        basePath.length > 0 ? `${basePath}.${index}` : `${index}`;
+      collectChangedValuePaths({
+        previousValue: previousArray[index],
+        nextValue: nextArray[index],
+        basePath: childPath,
+        changedPaths,
+      });
+    }
+
+    if (previousArray.length !== nextArray.length && basePath.length > 0) {
+      changedPaths.add(basePath);
+    }
+
+    return;
+  }
+
+  const previousObject = previousValue as Record<string, unknown>;
+  const nextObject = nextValue as Record<string, unknown>;
+  const keys = new Set<string>([
+    ...Object.keys(previousObject),
+    ...Object.keys(nextObject),
+  ]);
+
+  if (keys.size === 0 && basePath.length > 0) {
+    changedPaths.add(basePath);
+    return;
+  }
+
+  keys.forEach((key) => {
+    const childPath = basePath.length > 0 ? `${basePath}.${key}` : key;
+    collectChangedValuePaths({
+      previousValue: previousObject[key],
+      nextValue: nextObject[key],
+      basePath: childPath,
+      changedPaths,
+    });
+  });
+}
+
 function normalizeErrors<T extends object>(errors: BitErrors<T>): BitErrors<T> {
   let hasUndefined = false;
 
@@ -71,6 +143,7 @@ export function applyStateUpdate<T extends object>(args: {
   const explicitChangedPaths =
     changedPaths && changedPaths.length > 0 ? changedPaths : undefined;
   const inferredChangedPaths = inferChangedPaths(
+    currentState,
     partialState,
     !explicitChangedPaths && inferValueChangedPaths,
   );
@@ -87,28 +160,22 @@ export function applyStateUpdate<T extends object>(args: {
 }
 
 function inferChangedPaths<T extends object>(
+  currentState: BitState<T>,
   partialState: Partial<BitState<T>>,
-  includeValuesWildcard: boolean,
+  includeValueDiff: boolean,
 ): string[] | undefined {
   const changedPaths = new Set<string>();
 
   // If values are explicitly changed without path information, infer from object keys
   // instead of using wildcard ["*"] which notifies all path subscribers.
   // This provides granular notifications for better performance in large forms.
-  if (includeValuesWildcard && partialState.values) {
-    // Try to infer which value paths actually changed by comparing keys
-    // If we can't determine, fall back to wildcard.
-    // Note: This is a heuristic; ideally values mutations should provide changedPaths
-    const valueKeys = Object.keys(partialState.values);
-    if (valueKeys.length > 0 && valueKeys.length < 100) {
-      // Only use granular notification for reasonable number of keys
-      for (const key of valueKeys) {
-        changedPaths.add(`values.${key}`);
-      }
-    } else {
-      // Too many keys or empty, use wildcard for efficiency
-      return ["*"];
-    }
+  if (includeValueDiff && partialState.values) {
+    collectChangedValuePaths({
+      previousValue: currentState.values,
+      nextValue: partialState.values,
+      basePath: "",
+      changedPaths,
+    });
   }
 
   // Itera os três dicionários de path em único passo para evitar

@@ -1,11 +1,6 @@
 import { ref, onUnmounted, readonly } from "vue";
 import { useBitStore } from "./context";
-import {
-  getDeepValue,
-  deepEqual,
-  BitPath,
-  BitPathValue,
-} from "../core";
+import { getDeepValue, deepEqual, BitPath, BitPathValue } from "../core";
 
 export function useBitWatch<
   TForm extends object = any,
@@ -18,7 +13,7 @@ export function useBitWatch<
   ) as BitPathValue<TForm, P>;
   const value = ref<BitPathValue<TForm, P>>(initialValue);
 
-  const unsubscribe = store.watch(path, (newValue) => {
+  const unsubscribe = store.subscribePath(path, (newValue) => {
     if (!deepEqual(value.value, newValue)) {
       value.value = newValue as BitPathValue<TForm, P>;
     }

@@ -27,10 +27,10 @@ export function createStoreFormActions<T extends object>(
     blurField: <P extends Parameters<BitStoreHooksApi<T>["blurField"]>[0]>(
       path: P,
     ) => store.blurField(path),
-    replaceValues: (values: T) => store.replaceValues(values),
-    hydrate: (values: Parameters<BitStoreHooksApi<T>["hydrate"]>[0]) =>
-      store.hydrate(values),
-    rebase: (values: T) => store.rebase(values),
+    setValues: (
+      values: Parameters<BitStoreHooksApi<T>["setValues"]>[0],
+      options?: Parameters<BitStoreHooksApi<T>["setValues"]>[1],
+    ) => store.setValues(values, options),
     setError: (path: string, message: string | undefined) =>
       store.setError(path, message),
     setErrors: (errors: Parameters<BitStoreHooksApi<T>["setErrors"]>[0]) =>
