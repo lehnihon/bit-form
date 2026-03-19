@@ -2,6 +2,8 @@
 
 Bit-Form provides a modern, Signal-based integration for Angular. It leverages Angular's native Dependency Injection and Signals (`@angular/core`) for high-performance reactivity.
 
+Internally, Angular bindings are typed against `BitFormBindingApi<T>` (stable adapter contract), while applications should keep using `createBitStore()` for store creation.
+
 ## 1. Provide the Store
 
 Create your `BitStore` instance and provide it to your component or application using `provideBitStore`.
@@ -77,7 +79,7 @@ import { injectBitForm, injectBitField } from "@lehnihon/bit-form/angular";
           (blur)="nameField.setBlur()"
         />
         @if (nameField.meta.invalid()) {
-          <span style="color: red">{{ nameField.meta.error() }}</span>
+        <span style="color: red">{{ nameField.meta.error() }}</span>
         }
       </div>
 
@@ -115,12 +117,10 @@ import { injectBitArray } from "@lehnihon/bit-form/angular";
   template: `
     <div>
       @for (item of tags.fields(); track item.key) {
-        <div>
-          <span>{{ item.value }}</span>
-          <button type="button" (click)="tags.remove(item.index)">
-            Remove
-          </button>
-        </div>
+      <div>
+        <span>{{ item.value }}</span>
+        <button type="button" (click)="tags.remove(item.index)">Remove</button>
+      </div>
       }
       <button type="button" (click)="tags.append('New Tag')">Add</button>
     </div>
@@ -174,7 +174,7 @@ import { injectBitPersist } from "@lehnihon/bit-form/angular";
     <button type="button" (click)="persist.restore()">Restore Draft</button>
     <button type="button" (click)="persist.clear()">Clear Draft</button>
     @if (persist.meta.error()) {
-      <p>{{ persist.meta.error()?.message }}</p>
+    <p>{{ persist.meta.error()?.message }}</p>
     }
   `,
 })

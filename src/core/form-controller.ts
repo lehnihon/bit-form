@@ -1,5 +1,5 @@
 import { executeSubmitHandler } from "./submit-handler";
-import type { BitStoreHooksApi } from "./store/contracts/public-types";
+import type { BitFormBindingApi } from "./store/contracts/public-types";
 
 export type BitFormDomEvent = {
   preventDefault?: () => void;
@@ -17,28 +17,28 @@ export interface BitFormControllerOptions {
 }
 
 export function createStoreFormActions<T extends object>(
-  store: BitStoreHooksApi<T>,
+  store: BitFormBindingApi<T>,
 ) {
   return {
-    setField: <P extends Parameters<BitStoreHooksApi<T>["setField"]>[0]>(
+    setField: <P extends Parameters<BitFormBindingApi<T>["setField"]>[0]>(
       path: P,
-      value: Parameters<BitStoreHooksApi<T>["setField"]>[1],
+      value: Parameters<BitFormBindingApi<T>["setField"]>[1],
     ) => store.setField(path, value),
-    blurField: <P extends Parameters<BitStoreHooksApi<T>["blurField"]>[0]>(
+    blurField: <P extends Parameters<BitFormBindingApi<T>["blurField"]>[0]>(
       path: P,
     ) => store.blurField(path),
     setValues: (
-      values: Parameters<BitStoreHooksApi<T>["setValues"]>[0],
-      options?: Parameters<BitStoreHooksApi<T>["setValues"]>[1],
+      values: Parameters<BitFormBindingApi<T>["setValues"]>[0],
+      options?: Parameters<BitFormBindingApi<T>["setValues"]>[1],
     ) => store.setValues(values, options),
     setError: (path: string, message: string | undefined) =>
       store.setError(path, message),
-    setErrors: (errors: Parameters<BitStoreHooksApi<T>["setErrors"]>[0]) =>
+    setErrors: (errors: Parameters<BitFormBindingApi<T>["setErrors"]>[0]) =>
       store.setErrors(errors),
     setServerErrors: (
-      serverErrors: Parameters<BitStoreHooksApi<T>["setServerErrors"]>[0],
+      serverErrors: Parameters<BitFormBindingApi<T>["setServerErrors"]>[0],
     ) => store.setServerErrors(serverErrors),
-    validate: (options?: Parameters<BitStoreHooksApi<T>["validate"]>[0]) =>
+    validate: (options?: Parameters<BitFormBindingApi<T>["validate"]>[0]) =>
       store.validate(options),
     transaction: <TResult>(callback: () => TResult) =>
       store.transaction(callback),
@@ -56,7 +56,7 @@ export function preventFormEvent(
 }
 
 export function createFormController<T extends object>(
-  store: BitStoreHooksApi<T>,
+  store: BitFormBindingApi<T>,
   runtime: BitFormControllerRuntime,
   options?: BitFormControllerOptions,
 ) {

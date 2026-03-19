@@ -14,7 +14,7 @@ In V4, `BitStore` acts mainly as an orchestrator/facade over specialized runtime
 
 - `subscription-engine`: handles `subscribe`, selector subscriptions and scoped path subscriptions with explicit paths.
 - `state-update-engine`: normalizes state updates (`changedPaths`, `valuesChanged`, computed apply).
-- `store-runtime-kernel-engine`: centralizes dispatch + batch flush commit semantics.
+- `store-commit-engine`: centralizes operation routing + patch commit + batch flush semantics.
 - `effect-engine`: centralizes side effects (persist, plugin lifecycle hooks, bus dispatch).
 - `store-bootstrap`: builds capabilities and initial state during store construction.
 - `capability-registry`: resolves feature managers (`validation`, `lifecycle`, `history`, `arrays`, `scope`, `query`, `error`).
@@ -26,21 +26,22 @@ Current internal folder layout in `src/core/store`:
 - `contracts/`: shared type contracts (`types`, `public-types`, `bus-types`).
 - `shared/`: cross-cutting runtime helpers (`config`, `pipeline`, `bus`).
 - `engines/`: orchestration engines (`subscription`, `state-update`, `store-runtime-kernel`, `effect`).
-- `managers/core/`: core domain managers (`dependency`, `computed`, `dirty`).
+- `managers/core/`: core domain managers (`computed`, `dirty`).
+- `registry/`: field registry (`field-registry`) with dependency tracking + cached indexes.
 - `managers/features/`: feature managers (`validation`, `lifecycle`, `history`, `array`, `scope`, `query`, `error`, `persist`, `plugin`).
 - `orchestration/`: composition and capability wiring (`store-bootstrap`, `capabilities`, `capability-registry`, `create-store`).
 
 Naming convention:
 
 - Runtime classes keep semantic suffixes: `Manager`, `Engine`, `Registry`, `StorePort`.
-- Internal instances use explicit names (for example `dependencyManager`, `computedManager`, `dirtyManager`) instead of abbreviated suffixes.
+- Internal instances use explicit names (for example `fieldRegistry`, `computedManager`, `dirtyManager`) instead of abbreviated suffixes.
 
 ## 🧱 Shared Controllers (Framework-Agnostic)
 
 Bit-Form now centralizes shared UI orchestration into framework-agnostic controllers:
 
 - `form-controller`: submit/onSubmit/reset orchestration and server error normalization.
-- `field-controller`: field subscription and mask parse/format orchestration.
+- `field-controller`: field subscription and mask parse/format orchestration over `BitFormBindingApi`.
 - `adapters/upload-kernel`: shared upload/remove side effects reused by React, Vue and Angular bindings.
 
 Framework adapters (React/Vue/Angular) become thin bindings over these controllers, reducing duplicated behavior and drift across integrations.
@@ -49,7 +50,7 @@ Framework adapters (React/Vue/Angular) become thin bindings over these controlle
 
 - `src/core/index.ts` is the public core entrypoint and should expose stable contracts only.
 - `BitStore` is intentionally internal and exposed to consumers through the `createBitStore()` facade.
-- Devtools and framework bindings should prefer `BitStoreApi` / `BitStoreHooksApi` instead of importing concrete store internals.
+- Devtools and framework bindings should prefer `BitStoreApi` / `BitFormBindingApi` instead of importing concrete store internals.
 
 This keeps the public API centered on `createBitStore()` while preserving an explicit escape hatch for internal integration code.
 

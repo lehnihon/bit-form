@@ -77,6 +77,13 @@ export interface BitStoreQueryApi<T extends object = any> {
   getStepErrors(scopeName: string): Record<string, string>;
 }
 
+/** Snapshot of form-level reactive flags used by `subscribeFormMeta`. */
+export interface BitFormMeta {
+  isValid: boolean;
+  isDirty: boolean;
+  isSubmitting: boolean;
+}
+
 export interface BitStoreObserveApi<T extends object = any> {
   subscribe(listener: () => void): () => void;
 }
@@ -169,6 +176,20 @@ export interface BitStoreHooksApi<T extends object = any>
   getFieldState<P extends BitPath<T>>(
     path: P,
   ): Readonly<BitFieldState<T, BitPathValue<T, P>>>;
+  /**
+   * Subscribes to reactive state for a single field.
+   * More efficient than `subscribeSelector` for per-field bindings because
+   * it inlines path-scoping and equality checks without selector overhead.
+   */
+  subscribeFieldState<P extends BitPath<T>>(
+    path: P,
+    listener: (state: Readonly<BitFieldState<T, BitPathValue<T, P>>>) => void,
+  ): () => void;
+  /**
+   * Subscribes to form-level reactive metadata (isValid, isDirty, isSubmitting).
+   * Replaces the manual `subscribeSelector` + path list pattern in framework hooks.
+   */
+  subscribeFormMeta(listener: (meta: BitFormMeta) => void): () => void;
   subscribePath<P extends BitPath<T>>(
     path: P,
     listener: (value: BitPathValue<T, P>) => void,
@@ -187,4 +208,115 @@ export interface BitStoreHooksApi<T extends object = any>
    * Used by React hooks to track mask config changes reactively. */
   getMasksVersion(): number;
   getScopeFields(scopeName: string): string[];
+}
+
+/**
+ * BitFormBindingApi
+ *
+ * Minimal, stable contract that all framework adapters (React, Vue, Angular)
+ * should type against when building hooks, composables, or injectables.
+ *
+ * Using this interface instead of the full `BitStoreHooksApi<T>` achieves:
+ * - Reduced coupling: adapters don't depend on internal/advanced store APIs
+ * - Improved testability: easily mock without providing the full store
+ * - Clear documentation: makes the adapter's surface area explicit
+ *
+ * `BitStoreHooksApi<T>` intentionally extends this, so any `createBitStore()`
+ * result is assignment-compatible with `BitFormBindingApi<T>`.
+ */
+export interface BitFormBindingApi<T extends object = any> {
+  readonly config: Readonly<BitFrameworkConfig<T>>;
+
+  // ── Field-level state & subscriptions ──────────────────────────────────
+  getFieldState<P extends BitPath<T>>(
+    path: P,
+  ): Readonly<BitFieldState<T, BitPathValue<T, P>>>;
+  subscribeFieldState<P extends BitPath<T>>(
+    path: P,
+    listener: (state: Readonly<BitFieldState<T, BitPathValue<T, P>>>) => void,
+  ): () => void;
+
+  // ── Form-level state & subscriptions ───────────────────────────────────
+  getState(): Readonly<BitState<T>>;
+  subscribeFormMeta(listener: (meta: BitFormMeta) => void): () => void;
+  subscribe(listener: () => void): () => void;
+  subscribePath<P extends BitPath<T>>(
+    path: P,
+    listener: (value: BitPathValue<T, P>) => void,
+    options?: BitSelectorSubscriptionOptions<BitPathValue<T, P>>,
+  ): () => void;
+  subscribeSelector<TSlice>(
+    selector: BitSelector<T, TSlice>,
+    listener: (slice: TSlice) => void,
+    options?: BitSelectorSubscriptionOptions<TSlice>,
+  ): () => void;
+
+  // ── Field mutations ─────────────────────────────────────────────────────
+  setField<P extends BitPath<T>>(path: P, value: BitPathValue<T, P>): void;
+  blurField<P extends BitPath<T>>(path: P): void;
+
+  // ── Field registration (optional for dynamic fields) ───────────────────
+  registerField?(path: string, config: BitFieldDefinition<T>): void;
+  unregisterField?(path: string): void;
+  unregisterPrefix?(prefix: string): void;
+  markFieldsTouched(paths: string[]): void;
+
+  // ── Mask support ────────────────────────────────────────────────────────
+  resolveMask(path: string): BitMask | undefined;
+  getMasksVersion(): number;
+
+  // ── Form actions ────────────────────────────────────────────────────────
+  submit(
+    onSuccess: (values: T, dirtyValues?: Partial<T>) => void | Promise<void>,
+  ): Promise<void>;
+  reset(): void;
+  validate(options?: BitValidationOptions): Promise<boolean>;
+  setError(path: string, message: string | undefined): void;
+  setErrors(errors: BitErrors<T>): void;
+  setServerErrors(serverErrors: Record<string, string[] | string>): void;
+  setValues(
+    values: T | DeepPartial<T>,
+    options?: { partial?: boolean; rebase?: boolean },
+  ): void;
+  transaction<TResult>(callback: () => TResult): TResult;
+
+  // ── Arrays ──────────────────────────────────────────────────────────────
+  pushItem<P extends BitArrayPath<T>>(
+    path: P,
+    value: BitArrayItem<BitPathValue<T, P>>,
+  ): void;
+  prependItem<P extends BitArrayPath<T>>(
+    path: P,
+    value: BitArrayItem<BitPathValue<T, P>>,
+  ): void;
+  insertItem<P extends BitArrayPath<T>>(
+    path: P,
+    index: number,
+    value: BitArrayItem<BitPathValue<T, P>>,
+  ): void;
+  removeItem<P extends BitArrayPath<T>>(path: P, index: number): void;
+  moveItem<P extends BitArrayPath<T>>(path: P, from: number, to: number): void;
+  swapItems<P extends BitArrayPath<T>>(
+    path: P,
+    indexA: number,
+    indexB: number,
+  ): void;
+
+  // ── History ─────────────────────────────────────────────────────────────
+  undo(): void;
+  redo(): void;
+  getHistoryMetadata(): BitHistoryMetadata;
+
+  // ── Persistence ─────────────────────────────────────────────────────────
+  getPersistMetadata(): BitPersistMetadata;
+  restorePersisted(): Promise<boolean>;
+  forceSave(): Promise<void>;
+  clearPersisted(): Promise<void>;
+
+  // ── Query helpers ───────────────────────────────────────────────────────
+  getDirtyValues(): Partial<T>;
+  hasValidationsInProgress(scopeFields?: string[]): boolean;
+  getScopeFields(scopeName: string): string[];
+  getStepStatus(scopeName: string): ScopeStatus;
+  getStepErrors(scopeName: string): Record<string, string>;
 }

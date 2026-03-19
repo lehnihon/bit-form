@@ -1,6 +1,6 @@
 import { formatMaskedValue, parseMaskedInput } from "./mask/field-binding";
 import type { BitMask } from "./mask/types";
-import type { BitStoreHooksApi } from "./store/contracts/public-types";
+import type { BitFormBindingApi } from "./store/contracts/public-types";
 import type {
   BitFieldState,
   BitPath,
@@ -11,36 +11,21 @@ export function subscribeFieldState<
   TForm extends object,
   P extends BitPath<TForm>,
 >(
-  store: BitStoreHooksApi<TForm>,
+  store: BitFormBindingApi<TForm>,
   path: P,
   listener: (
     value: Readonly<BitFieldState<TForm, BitPathValue<TForm, P>>>,
   ) => void,
 ) {
-  return store.subscribeSelector(
-    () =>
-      store.getFieldState(path) as Readonly<
-        BitFieldState<TForm, BitPathValue<TForm, P>>
-      >,
-    listener,
-    {
-      paths: [path as string],
-      equalityFn: (prev, next) =>
-        prev.value === next.value &&
-        prev.error === next.error &&
-        prev.touched === next.touched &&
-        prev.isHidden === next.isHidden &&
-        prev.isRequired === next.isRequired &&
-        prev.isDirty === next.isDirty &&
-        prev.isValidating === next.isValidating,
-    },
-  );
+  // Delegates to the native store method, which encapsulates the
+  // path-scoping and structural equality check for single-field subscriptions.
+  return store.subscribeFieldState(path, listener);
 }
 
 export function createMaskedFieldController<
   TForm extends object,
   P extends BitPath<TForm>,
->(store: BitStoreHooksApi<TForm>, path: P, mask: BitMask | undefined) {
+>(store: BitFormBindingApi<TForm>, path: P, mask: BitMask | undefined) {
   const setValue = (value: unknown) => {
     store.setField(
       path,

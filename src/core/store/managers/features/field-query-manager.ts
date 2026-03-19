@@ -1,7 +1,5 @@
 import { BitState } from "../../contracts/types";
-import type { BitFrameworkConfig } from "../../contracts/public-types";
-import { BitDependencyManager } from "../core/dependency-manager";
-import { getDeepValue, valueEqual } from "../../../utils";
+import { BitFieldRegistry } from "../../registry/field-registry";
 
 /**
  * BitFieldQueryManager
@@ -13,9 +11,8 @@ export class BitFieldQueryManager<T extends object = any> {
   private requiredValuesRef: T | null = null;
 
   constructor(
-    private dependencyManager: BitDependencyManager<T>,
+    private fieldRegistry: BitFieldRegistry<T>,
     private getState: () => BitState<T>,
-    private getConfig: () => BitFrameworkConfig<T>,
     private isPathDirty: (path: string) => boolean,
   ) {}
 
@@ -23,7 +20,7 @@ export class BitFieldQueryManager<T extends object = any> {
    * Check if a field is hidden based on conditional logic.
    */
   isHidden<P extends string>(path: P): boolean {
-    return this.dependencyManager.isHidden(path);
+    return this.fieldRegistry.isHidden(path);
   }
 
   /**
@@ -36,7 +33,7 @@ export class BitFieldQueryManager<T extends object = any> {
       this.requiredValuesRef = values;
     }
 
-    return this.dependencyManager.isRequired(path, values);
+    return this.fieldRegistry.isRequired(path, values);
   }
 
   /**

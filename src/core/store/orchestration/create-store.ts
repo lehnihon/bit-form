@@ -13,6 +13,8 @@ function isHookCompatibleStore<T extends object>(
 
   return (
     typeof candidate.getFieldState === "function" &&
+    typeof candidate.subscribeFieldState === "function" &&
+    typeof candidate.subscribeFormMeta === "function" &&
     typeof candidate.subscribePath === "function" &&
     typeof candidate.subscribeSelector === "function" &&
     typeof candidate.markFieldsTouched === "function" &&

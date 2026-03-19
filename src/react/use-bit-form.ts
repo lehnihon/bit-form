@@ -12,16 +12,6 @@ import {
 } from "../core/form-controller";
 import type { UseBitFormResult } from "./types";
 
-const selectFormMeta = <T extends object>(state: {
-  isValid: boolean;
-  isDirty: boolean;
-  isSubmitting: boolean;
-}) => ({
-  isValid: state.isValid,
-  isDirty: state.isDirty,
-  isSubmitting: state.isSubmitting,
-});
-
 export function useBitForm<T extends object>(): UseBitFormResult<T> {
   const store = useBitStore<T>();
 
@@ -54,11 +44,10 @@ export function useBitForm<T extends object>(): UseBitFormResult<T> {
     return nextMeta;
   }, [store]);
 
+  // Uses the native subscribeFormMeta API which pre-configures path scoping
+  // and structural equality check without manual selector composition.
   const subscribeMeta = useCallback(
-    (cb: () => void) =>
-      store.subscribeSelector(selectFormMeta, () => cb(), {
-        paths: ["isValid", "isDirty", "isSubmitting"],
-      }),
+    (cb: () => void) => store.subscribeFormMeta(() => cb()),
     [store],
   );
 

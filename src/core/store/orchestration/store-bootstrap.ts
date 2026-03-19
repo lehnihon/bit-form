@@ -12,7 +12,7 @@ import {
 import { BitScopeManager } from "../managers/features/scope-manager";
 import { BitFieldQueryManager } from "../managers/features/field-query-manager";
 import { BitErrorManager } from "../managers/features/error-manager";
-import { BitDependencyManager } from "../managers/core/dependency-manager";
+import { BitFieldRegistry } from "../registry/field-registry";
 import { BitComputedManager } from "../managers/core/computed-manager";
 import { BitCapabilityRegistry } from "./capability-registry";
 import type { BitStoreOperation } from "../engines/operation-engine";
@@ -37,9 +37,9 @@ export type BitStoreCapabilityPorts<T extends object> = {
 
 export function createStoreCapabilities<T extends object>(args: {
   ports: BitStoreCapabilityPorts<T>;
-  dependencyManager: BitDependencyManager<T>;
+  fieldRegistry: BitFieldRegistry<T>;
 }): BitStoreCapabilities<T> {
-  const { ports, dependencyManager } = args;
+  const { ports, fieldRegistry } = args;
   const registry = new BitCapabilityRegistry<BitStoreCapabilities<T>>();
 
   registry.register(
@@ -70,9 +70,8 @@ export function createStoreCapabilities<T extends object>(args: {
   registry.register(
     "query",
     new BitFieldQueryManager<T>(
-      dependencyManager,
+      fieldRegistry,
       () => ports.getState(),
-      () => ports.config,
       (path) => ports.isPathDirty(path),
     ),
   );
@@ -148,16 +147,16 @@ export function createStoreEffects<T extends object>(args: {
 
 export function createInitialStoreState<T extends object>(args: {
   config: BitFrameworkConfig<T>;
-  dependencyManager: BitDependencyManager<T>;
+  fieldRegistry: BitFieldRegistry<T>;
   computedManager: BitComputedManager<T>;
 }): BitState<T> {
-  const { config, dependencyManager, computedManager } = args;
+  const { config, fieldRegistry, computedManager } = args;
 
   const initialValues = deepClone(config.initialValues);
 
   if (config.fields) {
     Object.entries(config.fields).forEach(([path, fieldConfig]) => {
-      dependencyManager.register(
+      fieldRegistry.register(
         path,
         fieldConfig as BitFieldDefinition<T>,
         initialValues,

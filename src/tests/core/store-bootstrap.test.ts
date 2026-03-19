@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { normalizeConfig } from "../../core/store/shared/config";
-import { BitDependencyManager } from "../../core/store/managers/core/dependency-manager";
+import { BitFieldRegistry } from "../../core/store/registry/field-registry";
 import { BitComputedManager } from "../../core/store/managers/core/computed-manager";
 import { createInitialStoreState } from "../../core/store/orchestration/store-bootstrap";
 
@@ -27,14 +27,14 @@ describe("createInitialStoreState", () => {
       },
     });
 
-    const dependencyManager = new BitDependencyManager<any>();
+    const fieldRegistry = new BitFieldRegistry<any>();
     const computedManager = new BitComputedManager<any>(() => {
       const entries: Array<{
         path: string;
         compute: (values: any) => any;
         dependsOn: string[];
       }> = [];
-      dependencyManager.forEachFieldConfig((fieldConfig, path) => {
+      fieldRegistry.forEachFieldConfig((fieldConfig, path) => {
         if (fieldConfig.computed) {
           entries.push({
             path,
@@ -48,13 +48,13 @@ describe("createInitialStoreState", () => {
 
     const initialState = createInitialStoreState({
       config,
-      dependencyManager,
+      fieldRegistry,
       computedManager,
     });
 
     expect(initialState.values.total).toBe(20);
-    expect(dependencyManager.hasFieldConfig("total")).toBe(true);
-    expect(dependencyManager.hasFieldConfig("extra")).toBe(true);
-    expect(dependencyManager.isHidden("extra")).toBe(true);
+    expect(fieldRegistry.hasFieldConfig("total")).toBe(true);
+    expect(fieldRegistry.hasFieldConfig("extra")).toBe(true);
+    expect(fieldRegistry.isHidden("extra")).toBe(true);
   });
 });

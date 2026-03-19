@@ -16,17 +16,11 @@ export function useBitForm<T extends object>(): UseBitFormResult<T> {
   const submitError = ref<Error | null>(null);
   const lastResponse = ref<unknown>(null);
 
-  const unsubscribe = store.subscribeSelector(
-    (snapshot) => ({
-      isValid: snapshot.isValid,
-      isSubmitting: snapshot.isSubmitting,
-      isDirty: snapshot.isDirty,
-    }),
-    (nextState) => {
-      state.value = nextState;
-    },
-    { paths: ["isValid", "isSubmitting", "isDirty"] },
-  );
+  // Uses the native subscribeFormMeta API which pre-configures path scoping
+  // and structural equality check without manual selector composition.
+  const unsubscribe = store.subscribeFormMeta((nextState) => {
+    state.value = nextState;
+  });
 
   onUnmounted(unsubscribe);
 
