@@ -24,6 +24,7 @@ const formatStoreState = (instance: any) => {
 };
 
 let activeBridgeCleanup: (() => void) | null = null;
+const STATE_BATCH_INTERVAL_MS = 50;
 
 const isDevToolsActionPayload = (
   payload: unknown,
@@ -52,7 +53,51 @@ export function setupRemoteBridge(url: string) {
   let socket: WebSocket | null = null;
   let unsubscribeBus: (() => void) | null = null;
   let heartbeatInterval: ReturnType<typeof setInterval>;
+  let batchFlushTimeout: ReturnType<typeof setTimeout> | null = null;
+  const pendingStoreIds = new Set<string>();
   let isIntentionalDisconnect = false;
+
+  const sendWhenOpen = (message: Record<string, unknown>) => {
+    if (socket?.readyState !== WebSocket.OPEN) {
+      return;
+    }
+
+    socket.send(JSON.stringify(message));
+  };
+
+  const flushPendingStoreUpdates = () => {
+    if (pendingStoreIds.size === 0) {
+      return;
+    }
+
+    const payload: Record<string, unknown> = {};
+
+    pendingStoreIds.forEach((storeId) => {
+      const storeInstance = bitBus.stores[storeId];
+      if (!storeInstance) {
+        return;
+      }
+
+      payload[storeId] = formatStoreState(storeInstance);
+    });
+
+    pendingStoreIds.clear();
+    batchFlushTimeout = null;
+
+    if (Object.keys(payload).length > 0) {
+      sendWhenOpen({ type: "STATE_UPDATE", payload });
+    }
+  };
+
+  const scheduleStoreFlush = () => {
+    if (batchFlushTimeout) {
+      return;
+    }
+
+    batchFlushTimeout = setTimeout(() => {
+      flushPendingStoreUpdates();
+    }, STATE_BATCH_INTERVAL_MS);
+  };
 
   const connect = () => {
     isIntentionalDisconnect = false;
@@ -63,37 +108,21 @@ export function setupRemoteBridge(url: string) {
 
       const storesEntries = Object.entries(bitBus.stores);
       if (storesEntries.length > 0) {
-        const initialState = storesEntries.reduce(
-          (acc, [id, store]) => {
-            acc[id] = formatStoreState(store);
-            return acc;
-          },
-          {} as Record<string, any>,
-        );
+        const initialState = storesEntries.reduce((acc, [id, store]) => {
+          acc[id] = formatStoreState(store);
+          return acc;
+        }, {} as Record<string, any>);
 
-        socket?.send(
-          JSON.stringify({ type: "STATE_UPDATE", payload: initialState }),
-        );
+        sendWhenOpen({ type: "STATE_UPDATE", payload: initialState });
       }
 
       unsubscribeBus = bitBus.subscribe((storeId, _newState) => {
-        if (socket?.readyState === WebSocket.OPEN) {
-          const storeInstance = bitBus.stores[storeId];
-          if (storeInstance) {
-            socket.send(
-              JSON.stringify({
-                type: "STATE_UPDATE",
-                payload: { [storeId]: formatStoreState(storeInstance) },
-              }),
-            );
-          }
-        }
+        pendingStoreIds.add(storeId);
+        scheduleStoreFlush();
       });
 
       heartbeatInterval = setInterval(() => {
-        if (socket?.readyState === WebSocket.OPEN) {
-          socket.send(JSON.stringify({ type: "PING" }));
-        }
+        sendWhenOpen({ type: "PING" });
       }, 30000);
     };
 
@@ -138,6 +167,11 @@ export function setupRemoteBridge(url: string) {
     socket.onclose = () => {
       if (unsubscribeBus) unsubscribeBus();
       clearInterval(heartbeatInterval);
+      if (batchFlushTimeout) {
+        clearTimeout(batchFlushTimeout);
+        batchFlushTimeout = null;
+      }
+      pendingStoreIds.clear();
 
       if (!isIntentionalDisconnect) {
         console.log("[bit-form] Conexão perdida. Reconectando em 3s...");
@@ -155,6 +189,11 @@ export function setupRemoteBridge(url: string) {
 
     if (unsubscribeBus) unsubscribeBus();
     clearInterval(heartbeatInterval);
+    if (batchFlushTimeout) {
+      clearTimeout(batchFlushTimeout);
+      batchFlushTimeout = null;
+    }
+    pendingStoreIds.clear();
     if (
       socket &&
       (socket.readyState === WebSocket.OPEN ||

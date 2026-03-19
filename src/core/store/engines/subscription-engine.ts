@@ -22,14 +22,8 @@ export class BitSubscriptionEngine<T extends object> {
     number
   >();
   private notifyVersion = 0;
-
-  /**
-   * Cleanup interval for phantom subscription paths (paths with no active listeners)
-   * Prevents unbounded growth of pathSelectorIndex when array fields grow dynamically
-   * Triggered every 100 notify() calls or manually via cleanupPhantomPaths()
-   */
-  private notifyCount = 0;
-  private readonly CLEANUP_INTERVAL = 100;
+  private readonly MAX_EXPANDED_CACHE_SIZE = 2_000;
+  private readonly MAX_CHANGED_LOOKUP_CACHE_SIZE = 2_000;
 
   constructor(private readonly getState: () => Readonly<BitState<T>>) {}
 
@@ -87,6 +81,7 @@ export class BitSubscriptionEngine<T extends object> {
 
     return () => {
       this.selectorListeners.delete(subscription);
+      this.subscriptionSeenVersion.delete(subscription);
 
       const paths = this.pathScopedSubscriptions.get(subscription);
       if (!paths) return;
@@ -97,7 +92,6 @@ export class BitSubscriptionEngine<T extends object> {
           if (!listeners) return;
 
           listeners.delete(subscription);
-          this.subscriptionSeenVersion.delete(subscription);
           if (listeners.size === 0) {
             this.pathSelectorIndex.delete(indexPath);
           }
@@ -135,31 +129,6 @@ export class BitSubscriptionEngine<T extends object> {
 
     scopedSubscribers.forEach((subscription) => {
       subscription.notify(nextState);
-    });
-
-    // Periodically cleanup phantom subscription paths to prevent unbounded growth
-    this.notifyCount++;
-    if (this.notifyCount >= this.CLEANUP_INTERVAL) {
-      this.cleanupPhantomPaths();
-      this.notifyCount = 0;
-    }
-  }
-
-  /**
-   * Remove paths from pathSelectorIndex that have no active subscribers
-   * Prevents memory creep in scenarios with dynamic array fields
-   */
-  private cleanupPhantomPaths(): void {
-    const phantomPaths = new Set<string>();
-
-    for (const [path, listeners] of this.pathSelectorIndex.entries()) {
-      if (listeners.size === 0) {
-        phantomPaths.add(path);
-      }
-    }
-
-    phantomPaths.forEach((path) => {
-      this.pathSelectorIndex.delete(path);
     });
   }
 
@@ -239,7 +208,12 @@ export class BitSubscriptionEngine<T extends object> {
       lookupPaths.push(parts.join("."));
     }
 
-    this.changedPathLookupCache.set(path, lookupPaths);
+    this.setBoundedCacheEntry(
+      this.changedPathLookupCache,
+      path,
+      lookupPaths,
+      this.MAX_CHANGED_LOOKUP_CACHE_SIZE,
+    );
     return lookupPaths;
   }
 
@@ -254,7 +228,28 @@ export class BitSubscriptionEngine<T extends object> {
     for (let i = 1; i <= segments.length; i++) {
       keys.push(segments.slice(0, i).join("."));
     }
-    this.expandedPathCache.set(path, keys);
+    this.setBoundedCacheEntry(
+      this.expandedPathCache,
+      path,
+      keys,
+      this.MAX_EXPANDED_CACHE_SIZE,
+    );
     return keys;
+  }
+
+  private setBoundedCacheEntry<K, V>(
+    cache: Map<K, V>,
+    key: K,
+    value: V,
+    maxSize: number,
+  ) {
+    if (cache.size >= maxSize) {
+      const oldestKey = cache.keys().next().value;
+      if (oldestKey !== undefined) {
+        cache.delete(oldestKey);
+      }
+    }
+
+    cache.set(key, value);
   }
 }

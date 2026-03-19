@@ -159,4 +159,26 @@ describe("BitSubscriptionEngine", () => {
     expect(nameFn).toHaveBeenCalledTimes(1);
     expect(nameFn).toHaveBeenCalledWith("Ana");
   });
+
+  it("limita caches internos de paths para evitar crescimento sem bound", () => {
+    const engine = new BitSubscriptionEngine<Values>(() =>
+      createState({ user: { name: "Leo", age: 30 } }),
+    );
+
+    const internals = engine as unknown as {
+      expandedPathCache: Map<string, string[]>;
+      changedPathLookupCache: Map<string, string[]>;
+      expandPathForIndexing(path: string): string[];
+      expandChangedPathForLookup(path: string): string[];
+    };
+
+    for (let i = 0; i < 2300; i++) {
+      const path = `user.name.${i}`;
+      internals.expandPathForIndexing(path);
+      internals.expandChangedPathForLookup(path);
+    }
+
+    expect(internals.expandedPathCache.size).toBeLessThanOrEqual(2000);
+    expect(internals.changedPathLookupCache.size).toBeLessThanOrEqual(2000);
+  });
 });

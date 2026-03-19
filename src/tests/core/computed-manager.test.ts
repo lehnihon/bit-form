@@ -139,4 +139,42 @@ describe("BitComputedManager", () => {
     const result = manager.apply({ a: 5, out: 0 }, ["a"]);
     expect(result.out).toBe(50);
   });
+
+  it("reusa ordenação quando configuração não muda e invalida ao mudar entries", () => {
+    const entriesA: BitComputedEntry<any>[] = [
+      {
+        path: "sum",
+        dependsOn: ["x", "y"],
+        compute: (values) => values.x + values.y,
+      },
+      {
+        path: "double",
+        dependsOn: ["sum"],
+        compute: (values) => values.sum * 2,
+      },
+    ];
+
+    let currentEntries = entriesA;
+    const manager = new BitComputedManager(() => currentEntries);
+
+    const first = manager.apply({ x: 1, y: 2, sum: 0, double: 0 }, ["x"]);
+    expect(first.double).toBe(6);
+
+    const second = manager.apply({ x: 2, y: 3, sum: 0, double: 0 }, ["x"]);
+    expect(second.double).toBe(10);
+
+    currentEntries = [
+      ...entriesA,
+      {
+        path: "triple",
+        dependsOn: ["double"],
+        compute: (values: any) => values.double * 3,
+      },
+    ];
+
+    const third = manager.apply({ x: 2, y: 3, sum: 0, double: 0, triple: 0 }, [
+      "x",
+    ]);
+    expect(third.triple).toBe(30);
+  });
 });
