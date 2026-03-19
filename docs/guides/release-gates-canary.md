@@ -1,6 +1,6 @@
-# Canary Quality Gates
+# Quality Gates
 
-This guide describes the non-runtime quality blocks used to validate canary releases without polluting library source code.
+This guide describes the non-runtime quality blocks used to validate releases without polluting library source code.
 
 ## Structure
 
