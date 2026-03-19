@@ -16,8 +16,10 @@ import {
   DeepPartial,
   BitPersistMetadata,
   BitIdFactory,
+  BitScheduler,
 } from "./types";
 import { BitMask, BitMaskName } from "../../mask/types";
+import type { BitFormGlobal } from "./bus-types";
 
 export type { BitPersistMetadata } from "./types";
 
@@ -58,6 +60,9 @@ export interface BitFrameworkConfig<T extends object = any>
   persist: BitPersistResolvedConfig<T>;
   idFactory: BitIdFactory;
   plugins: BitPlugin<T>[];
+  scheduler?: BitScheduler;
+  subscriptionCacheSize?: number;
+  bus?: BitFormGlobal;
 }
 
 export interface BitStoreQueryApi<T extends object = any> {
@@ -200,6 +205,20 @@ export interface BitStoreHooksApi<T extends object = any>
     listener: (slice: TSlice) => void,
     options?: BitSelectorSubscriptionOptions<TSlice>,
   ): () => void;
+  /**
+   * Subscribes to a selector slice with **automatic dependency tracking**.
+   * On the first call, runs `selector` through a Proxy that records all
+   * state paths accessed. Subsequent notifications are driven by those paths
+   * — same efficiency as `subscribeSelector` with explicit `paths`.
+   *
+   * Use when you don't want to enumerate `paths` manually.
+   * Use `subscribeSelector` when you need deterministic control.
+   */
+  subscribeTracked<TSlice>(
+    selector: BitSelector<T, TSlice>,
+    listener: (slice: TSlice) => void,
+    options?: Omit<BitSelectorSubscriptionOptions<TSlice>, "paths">,
+  ): () => void;
   unregisterPrefix?(prefix: string): void;
   markFieldsTouched(paths: string[]): void;
   hasValidationsInProgress(scopeFields?: string[]): boolean;
@@ -250,7 +269,15 @@ export interface BitFormBindingApi<T extends object = any> {
     listener: (slice: TSlice) => void,
     options?: BitSelectorSubscriptionOptions<TSlice>,
   ): () => void;
-
+  /**
+   * Subscribes to a selector slice with **automatic dependency tracking**.
+   * Mirrors the same method on `BitStoreHooksApi`. See that interface for details.
+   */
+  subscribeTracked<TSlice>(
+    selector: BitSelector<T, TSlice>,
+    listener: (slice: TSlice) => void,
+    options?: Omit<BitSelectorSubscriptionOptions<TSlice>, "paths">,
+  ): () => void;
   // ── Field mutations ─────────────────────────────────────────────────────
   setField<P extends BitPath<T>>(path: P, value: BitPathValue<T, P>): void;
   blurField<P extends BitPath<T>>(path: P): void;

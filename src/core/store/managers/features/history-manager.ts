@@ -17,7 +17,6 @@ interface BitHistoryPatchOperation {
 
 interface BitHistoryPatch<T extends object> {
   operations: BitHistoryPatchOperation[];
-  estimatedBytes: number;
   _type?: T;
 }
 
@@ -29,62 +28,6 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
     !(value instanceof Date) &&
     !(value instanceof RegExp)
   );
-}
-
-function estimateValueBytes(value: unknown, depth = 0): number {
-  if (value === null || value === undefined) {
-    return 4;
-  }
-
-  if (typeof value === "string") {
-    return value.length * 2;
-  }
-
-  if (typeof value === "number") {
-    return 8;
-  }
-
-  if (typeof value === "boolean") {
-    return 4;
-  }
-
-  if (typeof value !== "object") {
-    return 16;
-  }
-
-  if (depth >= 4) {
-    return 64;
-  }
-
-  if (Array.isArray(value)) {
-    return value.reduce(
-      (total, item) => total + estimateValueBytes(item, depth + 1),
-      16,
-    );
-  }
-
-  if (isPlainObject(value)) {
-    let total = 16;
-    for (const [key, child] of Object.entries(value)) {
-      total += key.length * 2;
-      total += estimateValueBytes(child, depth + 1);
-    }
-    return total;
-  }
-
-  return 32;
-}
-
-function estimatePatchBytes(operations: BitHistoryPatchOperation[]): number {
-  return operations.reduce((total, operation) => {
-    return (
-      total +
-      operation.path.length +
-      estimateValueBytes(operation.previousValue) +
-      estimateValueBytes(operation.nextValue) +
-      8
-    );
-  }, 0);
 }
 
 function createHistoryPatch<T extends object>(
@@ -150,7 +93,6 @@ function createHistoryPatch<T extends object>(
 
   return {
     operations,
-    estimatedBytes: estimatePatchBytes(operations),
   };
 }
 
@@ -188,7 +130,6 @@ export class BitHistoryManager<T extends object = any> {
   private patches: BitHistoryPatch<T>[] = [];
   private historyIndex = -1;
   private historySize = 0;
-  private estimatedBytes = 0;
 
   constructor(
     private enableHistory: boolean,
@@ -208,11 +149,7 @@ export class BitHistoryManager<T extends object = any> {
     }
 
     if (this.historyIndex < this.historySize - 1) {
-      const removed = this.patches.splice(this.historyIndex);
-      this.estimatedBytes -= removed.reduce(
-        (total, patch) => total + patch.estimatedBytes,
-        0,
-      );
+      this.patches.splice(this.historyIndex);
       this.historySize = this.historyIndex + 1;
     }
 
@@ -222,7 +159,6 @@ export class BitHistoryManager<T extends object = any> {
     }
 
     this.patches.push(patch);
-    this.estimatedBytes += patch.estimatedBytes;
     this.currentSnapshot = deepClone(values);
     this.historyIndex += 1;
     this.historySize = this.historyIndex + 1;
@@ -279,7 +215,6 @@ export class BitHistoryManager<T extends object = any> {
       this.patches = [];
       this.historyIndex = -1;
       this.historySize = 0;
-      this.estimatedBytes = 0;
       return;
     }
 
@@ -288,7 +223,6 @@ export class BitHistoryManager<T extends object = any> {
     this.patches = [];
     this.historyIndex = 0;
     this.historySize = 1;
-    this.estimatedBytes = 0;
   }
 
   getMetadata(): {
@@ -317,10 +251,6 @@ export class BitHistoryManager<T extends object = any> {
       this.baseSnapshot,
       oldestPatch,
       "redo",
-    );
-    this.estimatedBytes = Math.max(
-      0,
-      this.estimatedBytes - oldestPatch.estimatedBytes,
     );
     this.historySize = Math.max(1, this.historySize - 1);
     this.historyIndex = Math.max(0, this.historyIndex - 1);

@@ -1,0 +1,121 @@
+import type {
+  BitSelector,
+  BitSelectorSubscriptionOptions,
+} from "../contracts/public-types";
+import type { BitState } from "../contracts/types";
+
+export function collectTrackedSelectorPaths<T extends object, TSlice>(
+  state: Readonly<BitState<T>>,
+  selector: BitSelector<T, TSlice>,
+): string[] {
+  const trackedPaths = new Set<string>();
+
+  const createTrackingProxy = <TValue>(
+    value: TValue,
+    basePath: string,
+  ): TValue => {
+    if (value === null || typeof value !== "object") {
+      return value;
+    }
+
+    return new Proxy(value as object, {
+      get: (target, key, receiver) => {
+        if (typeof key === "symbol") {
+          return Reflect.get(target, key, receiver);
+        }
+
+        const keyAsString = String(key);
+        const childPath = basePath ? `${basePath}.${keyAsString}` : keyAsString;
+        trackedPaths.add(childPath);
+
+        const child = Reflect.get(target, key, receiver);
+        return createTrackingProxy(child, childPath);
+      },
+    }) as TValue;
+  };
+
+  const proxyState = createTrackingProxy(state, "");
+  selector(proxyState as Readonly<BitState<T>>);
+
+  const normalizedPaths = new Set<string>();
+
+  trackedPaths.forEach((path) => {
+    const normalizedPath = normalizeTrackedPath(path);
+    if (normalizedPath) {
+      normalizedPaths.add(normalizedPath);
+    }
+  });
+
+  return Array.from(normalizedPaths);
+}
+
+function normalizeTrackedPath(path: string): string | undefined {
+  if (!path) {
+    return undefined;
+  }
+
+  if (path === "values") {
+    return "*";
+  }
+
+  if (path.startsWith("values.")) {
+    return path.slice("values.".length);
+  }
+
+  if (path === "errors" || path === "touched" || path === "isValidating") {
+    return "*";
+  }
+
+  if (path.startsWith("errors.")) {
+    return path.slice("errors.".length);
+  }
+
+  if (path.startsWith("touched.")) {
+    return path.slice("touched.".length);
+  }
+
+  if (path.startsWith("isValidating.")) {
+    return path.slice("isValidating.".length);
+  }
+
+  if (path === "persist" || path.startsWith("persist.")) {
+    return "persist";
+  }
+
+  return path;
+}
+
+export function areTrackedPathSetsEqual(
+  previousPaths: readonly string[],
+  nextPaths: readonly string[],
+): boolean {
+  if (previousPaths.length !== nextPaths.length) {
+    return false;
+  }
+
+  const next = new Set(nextPaths);
+  for (const path of previousPaths) {
+    if (!next.has(path)) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+export function withTrackedSelectorPaths<TValue>(
+  paths: string[],
+  options?: Omit<BitSelectorSubscriptionOptions<TValue>, "paths">,
+): BitSelectorSubscriptionOptions<TValue> {
+  if (paths.length === 0) {
+    return {
+      ...options,
+      paths: ["*"],
+    };
+  }
+
+  return {
+    ...options,
+    paths,
+  };
+}

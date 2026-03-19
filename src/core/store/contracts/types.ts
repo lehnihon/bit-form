@@ -1,4 +1,27 @@
 import { BitMask, BitMaskName } from "../../mask/types";
+import type { BitFormGlobal } from "./bus-types";
+
+/**
+ * Pluggable scheduler used for validation debounce.
+ * Replace the default (setTimeout-based) with a framework-aware scheduler
+ * to integrate with React's concurrent mode, Vue's nextTick, etc.
+ *
+ * @example
+ * // React concurrent mode integration:
+ * const scheduler: BitScheduler = {
+ *   schedule: (fn, delay) => {
+ *     const id = setTimeout(() => startTransition(fn), delay);
+ *     return () => clearTimeout(id);
+ *   },
+ * };
+ */
+export interface BitScheduler {
+  /**
+   * Schedule `fn` to run after `delayMs` milliseconds.
+   * Must return a cleanup function that cancels the scheduled call.
+   */
+  schedule(fn: () => void, delayMs: number): () => void;
+}
 
 export type DeepPartial<T> = T extends object
   ? { [P in keyof T]?: DeepPartial<T[P]> }
@@ -262,6 +285,10 @@ export interface BitValidationConfig<T extends object> {
 /** History config. */
 export interface BitHistoryConfig {
   enabled?: boolean;
+  /**
+   * Maximum number of undo/redo steps to retain.
+   * @default 50
+   */
   limit?: number;
 }
 
@@ -294,6 +321,29 @@ export interface BitConfig<T extends object = any> {
 
   /** Plugins de lifecycle (observabilidade) */
   plugins?: BitPlugin<T>[];
+
+  /**
+   * Maximum number of entries for internal subscription path caches.
+   * Lower = less memory; higher = fewer cache evictions in large dynamic forms.
+   * @default 500
+   */
+  subscriptionCacheSize?: number;
+
+  /**
+   * Pluggable scheduler for validation debounce.
+   * Defaults to a `setTimeout`-based scheduler.
+   * Inject a framework-aware scheduler (e.g. React `startTransition`) for
+   * better integration with concurrent rendering.
+   */
+  scheduler?: BitScheduler;
+
+  /**
+   * Custom bus instance for DevTools/observability. When omitted, the
+   * shared browser-global bus (`bitBus`) is used — suitable for most apps.
+   * Pass a `createBitBus()` instance when running in SSR/Edge environments
+   * where a global singleton is unsafe (e.g. Next.js Edge Runtime).
+   */
+  bus?: BitFormGlobal;
 }
 
 /** Return type of BitStore.getStepStatus, used by useBitScope/injectBitScope. */

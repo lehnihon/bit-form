@@ -189,6 +189,22 @@ The complete documentation is available in the `/docs` folder. Explore the guide
 - **[API Reference](./docs/api-reference/bit-store.md)**: Full `BitStore` class documentation.
 - **[Type Definitions](./docs/api-reference/types.md)**: Core TypeScript interfaces and types.
 
+## ⚠️ Breaking Changes (dev branch)
+
+This branch currently allows breaking changes while architecture/performance work is in progress.
+
+- **History default limit changed** from `15` to `50` (`history.limit`).
+- **Selector subscriptions no longer rely on deep value diff inference** when no `paths` are provided internally; updates are now path-driven for predictable performance.
+- **New `subscribeTracked`** was added to auto-track selector dependencies and re-track when selector branches change.
+- **`resolveBitStoreForHooks` now uses symbol branding** instead of duck-typing checks.
+- **SSR/Edge support improved** with injectable bus instances (`createBitBus`, `config.bus`, `initDevTools({ bus })`).
+
+### Migration quick notes
+
+- If you relied on implicit broad selector notifications, prefer explicit `paths` or use `subscribeTracked`.
+- If you need old history density, set `history: { limit: 15 }` explicitly.
+- In SSR/Edge runtimes, create one bus per request scope and inject it into the store and DevTools.
+
 ## 🤝 Contributing
 
 Contributions are welcome! Feel free to open issues or submit pull requests.

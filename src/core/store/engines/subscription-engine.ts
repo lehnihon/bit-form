@@ -21,10 +21,21 @@ export class BitSubscriptionEngine<T extends object> {
     number
   >();
   private notifyVersion = 0;
-  private readonly MAX_EXPANDED_CACHE_SIZE = 2_000;
-  private readonly MAX_CHANGED_LOOKUP_CACHE_SIZE = 2_000;
+  private readonly MAX_EXPANDED_CACHE_SIZE: number;
+  private readonly MAX_CHANGED_LOOKUP_CACHE_SIZE: number;
 
-  constructor(private readonly getState: () => Readonly<BitState<T>>) {}
+  constructor(
+    private readonly getState: () => Readonly<BitState<T>>,
+    /**
+     * Maximum number of entries for each internal LRU path cache.
+     * Lower = less memory; higher = fewer cache evictions in large dynamic forms.
+     * @default 500
+     */
+    maxCacheSize = 500,
+  ) {
+    this.MAX_EXPANDED_CACHE_SIZE = maxCacheSize;
+    this.MAX_CHANGED_LOOKUP_CACHE_SIZE = maxCacheSize;
+  }
 
   subscribe(listener: () => void): () => void {
     this.listeners.add(listener);

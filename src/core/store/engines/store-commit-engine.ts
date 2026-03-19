@@ -72,10 +72,6 @@ function executeStatePatchOperation<T extends object>(args: {
   );
   const effectiveChangedPaths =
     operation.changedPaths ?? (hasValuesPatch ? ["*"] : undefined);
-  const inferValueChangedPaths =
-    operation.requireExplicitChangedPaths === undefined
-      ? false
-      : !operation.requireExplicitChangedPaths;
 
   return applyStateUpdate({
     currentState,
@@ -83,7 +79,6 @@ function executeStatePatchOperation<T extends object>(args: {
     changedPaths: effectiveChangedPaths,
     applyComputedValues: (values) =>
       applyComputedValues(values, effectiveChangedPaths),
-    inferValueChangedPaths,
   });
 }
 

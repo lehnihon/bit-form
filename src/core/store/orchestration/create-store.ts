@@ -1,6 +1,7 @@
 import { BitStore } from "../index";
 import { BitConfig } from "../contracts/types";
 import { BitStoreApi, BitStoreHooksApi } from "../contracts/public-types";
+import { BIT_HOOKS_API_SYMBOL } from "./hook-brand";
 
 function isHookCompatibleStore<T extends object>(
   store: unknown,
@@ -9,19 +10,8 @@ function isHookCompatibleStore<T extends object>(
     return false;
   }
 
-  const candidate = store as Partial<BitStoreHooksApi<T>>;
-
-  return (
-    typeof candidate.getFieldState === "function" &&
-    typeof candidate.subscribeFieldState === "function" &&
-    typeof candidate.subscribeFormMeta === "function" &&
-    typeof candidate.subscribePath === "function" &&
-    typeof candidate.subscribeSelector === "function" &&
-    typeof candidate.markFieldsTouched === "function" &&
-    typeof candidate.hasValidationsInProgress === "function" &&
-    typeof candidate.resolveMask === "function" &&
-    typeof candidate.getScopeFields === "function"
-  );
+  const candidate = store as Record<PropertyKey, unknown>;
+  return candidate[BIT_HOOKS_API_SYMBOL] === true;
 }
 
 export function resolveBitStoreForHooks<T extends object>(
