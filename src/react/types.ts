@@ -55,31 +55,6 @@ export interface UseBitFieldResult<
   meta: UseBitFieldMeta;
 }
 
-export interface UseBitFieldRawBindProps<
-  TValue = unknown,
-  TForm extends object = any,
-  P extends BitPath<TForm> = BitPath<TForm>,
-> {
-  value: TValue;
-  onChange: (e: BitFieldInputEvent) => void;
-  onBlur: () => void;
-  _type?: TForm;
-  _path?: P;
-}
-
-export interface UseBitFieldRawResult<
-  TForm extends object = any,
-  P extends BitPath<TForm> = BitPath<TForm>,
-> {
-  value: BitPathValue<TForm, P>;
-  setValue: (val: BitPathValue<TForm, P>) => void;
-  setBlur: () => void;
-  onChange: (e: BitFieldInputEvent) => void;
-  onBlur: () => void;
-  props: UseBitFieldRawBindProps<BitPathValue<TForm, P>, TForm, P>;
-  meta: UseBitFieldMeta;
-}
-
 /**
  * Result from useBitSteps hook.
  * Provides multi-step form navigation and validation.
