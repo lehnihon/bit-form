@@ -7,6 +7,7 @@ import { BitPipelineContext, BitPipelineRunner } from "../../shared/pipeline";
 import {
   BitStoreOperation,
   patchStateOperation,
+  validationCommitOperation,
 } from "../../engines/operation-engine";
 import type {
   BitAfterValidateEvent,
@@ -189,10 +190,7 @@ export class BitValidationManager<T extends object> {
     const newErrors = { ...this.store.getState().errors };
     delete newErrors[path as keyof BitErrors<T>];
     this.store.dispatch(
-      patchStateOperation({
-        errors: newErrors,
-        isValid: !hasErrors(newErrors),
-      }),
+      validationCommitOperation(newErrors, !hasErrors(newErrors)),
     );
   }
 
@@ -246,10 +244,7 @@ export class BitValidationManager<T extends object> {
               const newErrors = { ...this.store.getState().errors };
               delete newErrors[path as keyof BitErrors<T>];
               this.store.dispatch(
-                patchStateOperation({
-                  errors: newErrors,
-                  isValid: !hasErrors(newErrors),
-                }),
+                validationCommitOperation(newErrors, !hasErrors(newErrors)),
               );
             }
           }
@@ -436,12 +431,7 @@ export class BitValidationManager<T extends object> {
       (field) => !ctx.allErrors[field] && !this.asyncErrors.has(field),
     );
 
-    this.store.dispatch(
-      patchStateOperation({
-        errors: newErrors,
-        isValid: ctx.isValid,
-      }),
-    );
+    this.store.dispatch(validationCommitOperation(newErrors, ctx.isValid));
 
     await this.store.emitAfterValidate({
       values: this.store.getState().values,
@@ -464,10 +454,7 @@ export class BitValidationManager<T extends object> {
     ctx.result = ctx.isValid;
 
     this.store.dispatch(
-      patchStateOperation({
-        errors: ctx.allErrors as BitErrors<T>,
-        isValid: ctx.isValid,
-      }),
+      validationCommitOperation(ctx.allErrors as BitErrors<T>, ctx.isValid),
     );
 
     await this.store.emitAfterValidate({

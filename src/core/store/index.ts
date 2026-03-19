@@ -40,7 +40,10 @@ import { BitSubscriptionEngine } from "./engines/subscription-engine";
 import { applyStateUpdate } from "./engines/state-update-engine";
 import {
   BitStoreOperation,
+  historyApplyOperation,
   patchStateOperation,
+  persistMetaOperation,
+  touchFieldsOperation,
 } from "./engines/operation-engine";
 import { BitStoreEffectEngine } from "./engines/effect-engine";
 import { BitCapabilityRegistry } from "./orchestration/capability-registry";
@@ -575,11 +578,7 @@ export class BitStore<T extends object = any> {
 
     if (!this.state.touched[path as keyof typeof this.state.touched]) {
       this.batchStateUpdates(() => {
-        this.dispatch(
-          patchStateOperation({
-            touched: { ...this.state.touched, [path]: true },
-          }),
-        );
+        this.dispatch(touchFieldsOperation([path as string]));
       });
     }
 
@@ -588,11 +587,7 @@ export class BitStore<T extends object = any> {
 
   markFieldsTouched(paths: string[]) {
     if (paths.length === 0) return;
-    const newTouched = { ...this.state.touched };
-    paths.forEach((path) => {
-      newTouched[path as keyof typeof newTouched] = true;
-    });
-    this.dispatch(patchStateOperation({ touched: newTouched }));
+    this.dispatch(touchFieldsOperation(paths));
   }
 
   replaceValues(newValues: T) {
@@ -666,79 +661,50 @@ export class BitStore<T extends object = any> {
   }
 
   async restorePersisted(): Promise<boolean> {
-    this.dispatch(
-      patchStateOperation({
-        persist: { ...this.state.persist, isRestoring: true, error: null },
-      }),
-    );
+    this.dispatch(persistMetaOperation({ isRestoring: true, error: null }));
 
     try {
       return await this.effects.restorePersisted();
     } catch (error) {
       this.dispatch(
-        patchStateOperation({
-          persist: {
-            ...this.state.persist,
-            isRestoring: false,
-            error: error instanceof Error ? error : new Error(String(error)),
-          },
+        persistMetaOperation({
+          isRestoring: false,
+          error: error instanceof Error ? error : new Error(String(error)),
         }),
       );
       return false;
     } finally {
-      this.dispatch(
-        patchStateOperation({
-          persist: { ...this.state.persist, isRestoring: false },
-        }),
-      );
+      this.dispatch(persistMetaOperation({ isRestoring: false }));
     }
   }
 
   async forceSave(): Promise<void> {
-    this.dispatch(
-      patchStateOperation({
-        persist: { ...this.state.persist, isSaving: true, error: null },
-      }),
-    );
+    this.dispatch(persistMetaOperation({ isSaving: true, error: null }));
 
     try {
       await this.effects.savePersistedNow();
     } catch (error) {
       this.dispatch(
-        patchStateOperation({
-          persist: {
-            ...this.state.persist,
-            isSaving: false,
-            error: error instanceof Error ? error : new Error(String(error)),
-          },
+        persistMetaOperation({
+          isSaving: false,
+          error: error instanceof Error ? error : new Error(String(error)),
         }),
       );
       return;
     }
 
-    this.dispatch(
-      patchStateOperation({
-        persist: { ...this.state.persist, isSaving: false },
-      }),
-    );
+    this.dispatch(persistMetaOperation({ isSaving: false }));
   }
 
   async clearPersisted(): Promise<void> {
-    this.dispatch(
-      patchStateOperation({
-        persist: { ...this.state.persist, error: null },
-      }),
-    );
+    this.dispatch(persistMetaOperation({ error: null }));
 
     try {
       await this.effects.clearPersisted();
     } catch (error) {
       this.dispatch(
-        patchStateOperation({
-          persist: {
-            ...this.state.persist,
-            error: error instanceof Error ? error : new Error(String(error)),
-          },
+        persistMetaOperation({
+          error: error instanceof Error ? error : new Error(String(error)),
         }),
       );
     }
@@ -802,7 +768,7 @@ export class BitStore<T extends object = any> {
     const prevState = this.history.undo();
     if (prevState) {
       const isDirty = this.dirtyManager.rebuild(prevState, this._initialValues);
-      this.dispatch(patchStateOperation({ values: prevState, isDirty }));
+      this.dispatch(historyApplyOperation(prevState, isDirty));
       this.validation.trigger(undefined, { forceDebounce: true });
     }
   }
@@ -811,7 +777,7 @@ export class BitStore<T extends object = any> {
     const nextState = this.history.redo();
     if (nextState) {
       const isDirty = this.dirtyManager.rebuild(nextState, this._initialValues);
-      this.dispatch(patchStateOperation({ values: nextState, isDirty }));
+      this.dispatch(historyApplyOperation(nextState, isDirty));
       this.validation.trigger(undefined, { forceDebounce: true });
     }
   }
@@ -979,7 +945,53 @@ export class BitStore<T extends object = any> {
   // ============================================================================
 
   dispatch(operation: BitStoreOperation<T>) {
-    if (operation.kind !== "state.patch") {
+    if (operation.kind === "field.touchMany") {
+      if (operation.paths.length === 0) {
+        return;
+      }
+
+      const touched = { ...this.state.touched };
+      for (const path of operation.paths) {
+        touched[path as keyof typeof touched] = true;
+      }
+
+      this.dispatch(patchStateOperation({ touched }, operation.paths));
+      return;
+    }
+
+    if (operation.kind === "form.persistMeta") {
+      this.dispatch(
+        patchStateOperation({
+          persist: {
+            ...this.state.persist,
+            ...operation.patch,
+          },
+        }),
+      );
+      return;
+    }
+
+    if (operation.kind === "history.apply") {
+      this.dispatch(
+        patchStateOperation(
+          {
+            values: operation.values,
+            isDirty: operation.isDirty,
+          },
+          ["*"],
+          { requireExplicitChangedPaths: true },
+        ),
+      );
+      return;
+    }
+
+    if (operation.kind === "validation.commit") {
+      this.dispatch(
+        patchStateOperation({
+          errors: operation.errors,
+          isValid: operation.isValid,
+        }),
+      );
       return;
     }
 

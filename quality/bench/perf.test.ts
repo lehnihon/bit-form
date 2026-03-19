@@ -19,6 +19,16 @@ function createBigValues(total: number): BigForm {
   return values as BigForm;
 }
 
+function percentile(values: number[], p: number): number {
+  if (values.length === 0) return 0;
+  const sorted = [...values].sort((a, b) => a - b);
+  const idx = Math.min(
+    sorted.length - 1,
+    Math.max(0, Math.ceil((p / 100) * sorted.length) - 1),
+  );
+  return sorted[idx] ?? 0;
+}
+
 describe("quality perf baseline", () => {
   it("updates 300 fields under baseline budget", () => {
     const store = createBitStore<BigForm>({
@@ -201,5 +211,26 @@ describe("quality perf baseline", () => {
     const duration = performance.now() - start;
     unsubs.forEach((u) => u());
     expect(duration).toBeLessThan(150);
+  });
+
+  it("p95 setField latency: 1000 updates sob budget", () => {
+    type PerfForm = Record<string, string> & { target: string };
+
+    const initialValues: PerfForm = { target: "" };
+    for (let i = 0; i < 200; i++) {
+      initialValues[`field_${i}`] = "";
+    }
+
+    const store = createBitStore<PerfForm>({ initialValues });
+
+    const samples: number[] = [];
+    for (let i = 0; i < 1000; i++) {
+      const start = performance.now();
+      store.setField("target", `v-${i}`);
+      samples.push(performance.now() - start);
+    }
+
+    const p95 = percentile(samples, 95);
+    expect(p95).toBeLessThan(1.0);
   });
 });
