@@ -56,8 +56,7 @@ import {
   type BitStoreFieldIndexState,
   unregisterCachedFieldIndexes,
 } from "./engines/store-field-index-engine";
-import { executeStatePatchOperation } from "./engines/store-kernel-engine";
-import { routeStoreOperation } from "./engines/store-operation-router";
+import { executeStoreOperation } from "./engines/store-dispatch-engine";
 import {
   BitStoreOperation,
   historyApplyOperation,
@@ -903,32 +902,33 @@ export class BitStore<T extends object = any> {
 
   dispatch(operation: BitStoreOperation<T>) {
     const currentState = getEffectiveStoreState(this.state, this.batchState);
-    const patchOperation = routeStoreOperation(currentState, operation);
-
-    if (!patchOperation) {
-      return;
-    }
 
     if (this.batchState.depth > 0) {
-      const updateResult = executeStatePatchOperation({
+      const updateResult = executeStoreOperation({
         currentState,
-        operation: patchOperation,
+        operation,
         applyComputedValues: (values) => values,
       });
+
+      if (!updateResult) {
+        return;
+      }
 
       trackBatchedStoreUpdate(this.batchState, updateResult);
 
       return;
     }
 
-    const updateResult = executeStatePatchOperation({
+    const updateResult = executeStoreOperation({
       currentState: this.state,
-      operation: patchOperation,
+      operation,
       applyComputedValues: (values, changedPaths) =>
-        patchOperation.skipComputed
-          ? values
-          : this.computedManager.apply(values, changedPaths),
+        this.computedManager.apply(values, changedPaths),
     });
+
+    if (!updateResult) {
+      return;
+    }
 
     this.state = updateResult.nextState;
 
