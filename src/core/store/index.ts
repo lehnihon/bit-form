@@ -22,7 +22,7 @@ import type {
   BitSelectorSubscriptionOptions,
   BitValidationOptions,
 } from "./contracts/public-types";
-import { deepClone, getDeepValue, valueEqual } from "../utils";
+import { getDeepValue, valueEqual } from "../utils";
 import { normalizeConfig } from "./shared/config";
 import { BitFieldRegistry } from "./registry/field-registry";
 import {
@@ -43,7 +43,6 @@ import {
   createFieldStateSnapshot,
   resolveFieldMask,
 } from "./engines/store-field-query-engine";
-import { buildFieldUnregisterPatch } from "./engines/store-field-cleanup-engine";
 import {
   dispatchStoreKernelOperation,
   flushStoreKernelBatch,
@@ -52,7 +51,6 @@ import {
   BitStoreOperation,
   historyApplyOperation,
   patchStateOperation,
-  persistMetaOperation,
   touchFieldsOperation,
 } from "./engines/operation-engine";
 import { BitStoreEffectEngine } from "./engines/effect-engine";
@@ -62,90 +60,27 @@ import {
   createInitialStoreState,
   createStoreCapabilities,
   createStoreEffects,
-  type BitStoreCapabilityPorts,
 } from "./orchestration/store-bootstrap";
-/**
- * BitStore
- *
- * The core orchestrator of form state management.
- *
- * This store coordinates multiple managers to provide comprehensive form handling:
- * - Core managers handle essential state and validation
- * - Feature managers provide optional enhancements (history, arrays, scopes)
- * - Query/mutation managers organize domain-specific operations
- *
- * ## Public API Methods (50+)
- *
- * ### State Management
- * - getConfig(), getState(): Get current configuration and state
- * - subscribe(): Register listeners for state changes
- * - transaction(): Batch multiple mutations and notify once
- *
- * ### Field Operations
- * - setField(), blurField(): Update individual field values
- * - replaceValues(), hydrate(), rebase(): Replace entire form state
- * - registerField(), unregisterField(): Register/cleanup field configs
- * - setError(), setErrors(), setServerErrors(): Set field errors
- *
- * ### Validation
- * - validate(): Run field/form validation pipeline
- * - isHidden(), isRequired(), isFieldValidating(): Field metadata queries
- *
- * ### History & Persistence
- * - reset(): Reset to initial values (clears history if enabled)
- * - undo(), redo(): History navigation (if history enabled)
- * - restorePersisted(), forceSave(), clearPersisted(): Persistence controls
- * - getPersistMetadata(), getHistoryMetadata(): Metadata access
- *
- * ### Masks
- * - registerMask(), unregisterMask(): Register/unregister input masks
- * - resolveMask(): Get mask configuration for a field
- *
- * ### Arrays (if arrays feature enabled)
- * - pushItem(), prependItem(), insertItem(), removeItem(): Array mutations
- * - moveItem(), swapItems(): Array reordering
- *
- * ### Scopes/Steps (if steps feature enabled)
- * - getStepStatus(), getStepErrors(): Scope metadata queries
- *
- * ### Watchers & Cleanup
- * - watch(): Subscribe to specific field changes
- * - isFieldDirty(): Check if field differs from initialValues
- * - getDirtyValues(): Get only changed field values
- * - cleanup(): Cleanup all resources
- *
- * ### Form Submission
- * - submit(): Execute form submit handler with hooks
- *
- * ## Internal Architecture
- *
- * ### Managers (organized by responsibility)
- * - **Core**: BitFieldRegistry, BitComputedManager, BitDirtyManager
- * - **Features**: BitValidationManager, BitHistoryManager, BitArrayManager,
- *   BitScopeManager, BitPersistManager, BitLifecycleManager
- *
- * ### Engines (operational subsystems)
- * - **BitSubscriptionEngine**: Path-scoped pub/sub with wildcard expansion
- * - **BitStateUpdateEngine**: Granular state mutation and changed path tracking
- * - **BitStoreEffectEngine**: Side-effect orchestration (validation triggers, hooks)
- *
- * ### Caching & Indexing
- * - scopeFieldsIndex: Maps scope names → field paths (invalidated on registerField)
- * - computedEntriesCache: Cached computed field entries for iteration
- * - transformEntriesCache: Cached transform entries
- * - _masksVersion: Incremented on mask changes (tracks config changes without state)
- *
- * ## Performance Considerations
- *
- * - **Batch Updates**: transaction() defers subscriptions until batch completes
- * - **Lazy Evaluation**: Computed fields only run when dependencies change
- * - **Subscription Optimization**: Listeners only notified for affected paths
- * - **Memory**: Cleanup properly via cleanup() to prevent leaks with dynamic fields
- */
+import { BIT_HOOKS_API_SYMBOL } from "./orchestration/hook-brand";
+import {
+  areTrackedPathSetsEqual,
+  collectTrackedSelectorPaths,
+  withTrackedSelectorPaths,
+} from "./orchestration/tracked-selector";
+import { createCapabilityPorts } from "./orchestration/capability-ports";
+import {
+  registerStoreField,
+  unregisterStoreField,
+  unregisterStorePrefix,
+} from "./orchestration/store-registration-ops";
+import {
+  applyStorePersistedValues,
+  clearStorePersisted,
+  forceStorePersistedSave,
+  restoreStorePersisted,
+} from "./orchestration/store-persist-ops";
 export class BitStore<T extends object = any> {
-  // ============================================================================
-  // PRIVATE PROPERTIES
-  // ============================================================================
+  public readonly [BIT_HOOKS_API_SYMBOL] = true;
 
   private state: BitState<T>;
   private readonly subscriptions: BitSubscriptionEngine<T>;
@@ -159,23 +94,12 @@ export class BitStore<T extends object = any> {
   private readonly _query: BitStoreCapabilities<T>["query"];
   private readonly _error: BitStoreCapabilities<T>["error"];
   private readonly _config: BitFrameworkConfig<T>;
-  /** Baseline for dirty tracking. Decoupled from config so that rebaseValues
-   * can update it without mutating the user-provided config object. */
   private _initialValues!: T;
-
-  // ============================================================================
-  // PUBLIC PROPERTIES
-  // ============================================================================
 
   public readonly storeId: string;
   get config(): Readonly<BitFrameworkConfig<T>> {
     return this._config;
   }
-
-  // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  // Core Managers
-  // Managers for essential form state management
-  // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
   private readonly fieldRegistry: BitFieldRegistry<T>;
   private readonly computedManager: BitComputedManager<T>;
@@ -187,11 +111,6 @@ export class BitStore<T extends object = any> {
     this.fieldRegistry.invalidateIndexes();
     this.computedManager.invalidateReverseDeps();
   }
-
-  // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  // Feature Managers
-  // Managers for optional features like history, arrays, and scopes
-  // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
   private get validation() {
     return this._validation;
@@ -221,15 +140,9 @@ export class BitStore<T extends object = any> {
     return this._error;
   }
 
-  // ============================================================================
-  // CONSTRUCTOR
-  // ============================================================================
-
   constructor(config: BitConfig<T> = {}) {
     this._config = normalizeConfig(config);
     this._initialValues = this._config.initialValues;
-
-    // Initialize core managers
     this.fieldRegistry = new BitFieldRegistry<T>();
     this.computedManager = new BitComputedManager<T>(() =>
       this.getComputedEntries(),
@@ -242,81 +155,33 @@ export class BitStore<T extends object = any> {
       });
     }
 
-    const capabilityPorts: BitStoreCapabilityPorts<T> = {
+    const capabilityPorts = createCapabilityPorts<T>({
       config: this._config,
-      validationPort: {
-        getState: () => this.getState(),
-        dispatch: (operation) => this.dispatch(operation),
-        setError: (path, message) => this.setError(path, message),
-        validate: (options) => this.validate(options),
-        getFieldConfig: (path) => this.getFieldConfig(path),
-        getScopeFields: (scopeName) => this.getScopeFields(scopeName),
-        config: this._config,
-        getRequiredErrors: (values) =>
-          this.fieldRegistry.getRequiredErrors(values),
-        getHiddenFields: () => this.fieldRegistry.getHiddenFields(),
-        emitBeforeValidate: (event) => this.effects.beforeValidate(event),
-        emitAfterValidate: (event) => this.effects.afterValidate(event),
-      },
-      lifecyclePort: {
-        getState: () => this.getState(),
-        dispatch: (operation) => this.dispatch(operation),
-        internalSaveSnapshot: () => this.saveHistorySnapshot(),
-        batchStateUpdates: (callback) => this.runStateBatch(callback),
-        config: this._config,
-        getTransformEntries: () => this.getTransformEntries(),
-        updateDependencies: (changedPath, newValues) =>
-          this.fieldRegistry.updateDependencies(changedPath, newValues),
-        isFieldHidden: (path) => this.fieldRegistry.isHidden(path),
-        evaluateAllDependencies: (values) =>
-          this.fieldRegistry.evaluateAll(values),
-        getHiddenFields: () => this.fieldRegistry.getHiddenFields(),
-        clearFieldValidation: (path) => this.validation.clear(path),
-        triggerValidation: (scopeFields, options) =>
-          this.validation.trigger(scopeFields, options),
-        handleFieldAsyncValidation: (path, value) =>
-          this.validation.handleAsync(path, value),
-        cancelAllValidations: () => this.validation.cancelAll(),
-        validateNow: (options) => this.validation.validate(options),
-        hasValidationsInProgress: (scopeFields) =>
-          this.validation.hasValidationsInProgress(scopeFields),
-        updateDirtyForPath: (path, nextValues, baselineValues) =>
-          this.dirtyManager.updateForPath(path, nextValues, baselineValues),
-        rebuildDirtyState: (nextValues, baselineValues) =>
-          this.dirtyManager.rebuild(nextValues, baselineValues),
-        clearDirtyState: () => this.dirtyManager.clear(),
-        buildDirtyValues: (values) =>
-          this.dirtyManager.buildDirtyValues(values),
-        getInitialValues: () => this._initialValues,
-        setInitialValues: (values) => {
-          this._initialValues = values;
-        },
-        resetHistory: (initialValues) => this.history.reset(initialValues),
-        emitFieldChange: (event) => this.effects.onFieldChange(event),
-        emitBeforeSubmit: (event) => this.effects.beforeSubmit(event),
-        emitAfterSubmit: (event) => this.effects.afterSubmit(event),
-        emitOperationalError: (event) =>
-          this.effects.reportOperationalError(event),
-      },
-      arrayPort: {
-        getState: () => this.getState(),
-        setFieldWithMeta: (path, value, meta) =>
-          this.setFieldWithMeta(path, value, meta),
-        emitFieldChange: (event) => this.effects.onFieldChange(event),
-        dispatch: (operation) => this.dispatch(operation),
-        internalSaveSnapshot: () => this.saveHistorySnapshot(),
-        unregisterPrefix: (prefix) => this.unregisterPrefix(prefix),
-        triggerValidation: (scopeFields) => this.triggerValidation(scopeFields),
-        updateDirtyForPath: (path, nextValues, baselineValues) =>
-          this.dirtyManager.updateForPath(path, nextValues, baselineValues),
-        getConfig: () => this.getConfig(),
-      },
-      getScopeFields: (scopeName) => this.getScopeFields(scopeName),
+      fieldRegistry: this.fieldRegistry,
+      dirtyManager: this.dirtyManager,
       getState: () => this.getState(),
       dispatch: (operation) => this.dispatch(operation),
+      setError: (path, message) => this.setError(path, message),
+      validate: (options) => this.validate(options),
+      getFieldConfig: (path) => this.getFieldConfig(path),
+      getScopeFields: (scopeName) => this.getScopeFields(scopeName),
+      saveHistorySnapshot: () => this.saveHistorySnapshot(),
+      runStateBatch: (callback) => this.runStateBatch(callback),
+      getTransformEntries: () => this.getTransformEntries(),
+      setFieldWithMeta: (path, value, meta) =>
+        this.setFieldWithMeta(path, value, meta),
+      unregisterPrefix: (prefix) => this.unregisterPrefix(prefix),
+      triggerValidation: (scopeFields, options) =>
+        this.triggerValidation(scopeFields, options),
       getInitialValues: () => this._initialValues,
-      isPathDirty: (path) => this.dirtyManager.isPathDirty(path),
-    };
+      setInitialValues: (values) => {
+        this._initialValues = values;
+      },
+      getConfig: () => this.getConfig(),
+      getValidation: () => this.validation,
+      getHistory: () => this.history,
+      getEffects: () => this.effects,
+    });
 
     const capabilities = createStoreCapabilities<T>({
       ports: capabilityPorts,
@@ -335,7 +200,10 @@ export class BitStore<T extends object = any> {
       fieldRegistry: this.fieldRegistry,
       computedManager: this.computedManager,
     });
-    this.subscriptions = new BitSubscriptionEngine<T>(() => this.state);
+    this.subscriptions = new BitSubscriptionEngine<T>(
+      () => this.state,
+      this._config.subscriptionCacheSize,
+    );
 
     this.saveHistorySnapshot();
 
@@ -358,10 +226,6 @@ export class BitStore<T extends object = any> {
       applyPersistedValues: (values) => this.applyPersistedValues(values),
     });
   }
-
-  // ============================================================================
-  // STATE ACCESS
-  // ============================================================================
 
   getConfig() {
     return this._config;
@@ -426,52 +290,39 @@ export class BitStore<T extends object = any> {
     return this.state.isDirty;
   }
 
-  // ============================================================================
-  // FIELD REGISTRATION & CLEANUP
-  // ============================================================================
-
   registerField(path: string, config: BitFieldDefinition<T>) {
-    this.fieldRegistry.register(path, config, this.state.values);
-    if (this.fieldRegistry.isHidden(path)) {
-      // Notify only the registered path instead of a full wildcard broadcast,
-      // avoiding O(all-subscribers) re-evaluation on every conditional field mount.
-      this.subscriptions.notify(this.state, [path]);
-    }
+    registerStoreField({
+      path,
+      config,
+      state: this.state,
+      fieldRegistry: this.fieldRegistry,
+      subscriptions: this.subscriptions,
+      invalidateFieldIndexes: () => this.invalidateFieldIndexes(),
+    });
   }
 
   unregisterField(path: string) {
-    // Fields from initial config are never unregistered
-    if (this._config.fields?.[path as string]) {
-      return;
-    }
-    this.validation.cleanupField(path as string);
-    this.fieldRegistry.unregister(path);
-    this.invalidateFieldIndexes();
-
-    const cleanupPatch = buildFieldUnregisterPatch({
-      state: this.state,
+    unregisterStoreField({
       path,
+      state: this.state,
+      hasStaticConfig: !!this._config.fields?.[path as string],
+      fieldRegistry: this.fieldRegistry,
+      validationCleanupField: (fieldPath) =>
+        this.validation.cleanupField(fieldPath),
+      invalidateFieldIndexes: () => this.invalidateFieldIndexes(),
+      dispatch: (operation) => this.dispatch(operation),
     });
-
-    if (cleanupPatch) {
-      this.dispatch(
-        patchStateOperation({
-          errors: cleanupPatch.errors,
-          touched: cleanupPatch.touched,
-        }),
-      );
-    }
   }
 
   unregisterPrefix(prefix: string) {
-    this.validation.cleanupPrefix(prefix);
-    this.fieldRegistry.unregisterPrefix(prefix);
-    this.invalidateFieldIndexes();
+    unregisterStorePrefix({
+      prefix,
+      fieldRegistry: this.fieldRegistry,
+      validationCleanupPrefix: (fieldPrefix) =>
+        this.validation.cleanupPrefix(fieldPrefix),
+      invalidateFieldIndexes: () => this.invalidateFieldIndexes(),
+    });
   }
-
-  // ============================================================================
-  // FIELD QUERIES (Delegated to query manager)
-  // ============================================================================
 
   isHidden<P extends BitPath<T>>(path: P): boolean {
     return this.query.isHidden(path);
@@ -489,10 +340,6 @@ export class BitStore<T extends object = any> {
     return this.query.isFieldValidating(path);
   }
 
-  // ============================================================================
-  // SUBSCRIPTIONS & WATCHERS
-  // ============================================================================
-
   subscribe(listener: () => void): () => void {
     return this.subscriptions.subscribe(listener);
   }
@@ -509,6 +356,60 @@ export class BitStore<T extends object = any> {
       options,
       equalityFn,
     );
+  }
+
+  subscribeTracked<TSlice>(
+    selector: BitSelector<T, TSlice>,
+    listener: (slice: TSlice) => void,
+    options?: Omit<BitSelectorSubscriptionOptions<TSlice>, "paths">,
+  ) {
+    let activeUnsubscribe: (() => void) | null = null;
+    let activePaths = collectTrackedSelectorPaths(this.getState(), selector);
+    let isDisposed = false;
+    let isResubscribeQueued = false;
+
+    const subscribeWithPaths = (paths: string[]) => {
+      activeUnsubscribe = this.subscribeSelector(
+        selector,
+        (slice) => {
+          listener(slice);
+
+          const nextPaths = collectTrackedSelectorPaths(
+            this.getState(),
+            selector,
+          );
+          if (areTrackedPathSetsEqual(activePaths, nextPaths)) {
+            return;
+          }
+
+          activePaths = nextPaths;
+
+          if (isResubscribeQueued || isDisposed) {
+            return;
+          }
+
+          isResubscribeQueued = true;
+          queueMicrotask(() => {
+            isResubscribeQueued = false;
+            if (isDisposed) {
+              return;
+            }
+
+            activeUnsubscribe?.();
+            subscribeWithPaths(activePaths);
+          });
+        },
+        withTrackedSelectorPaths(paths, options),
+      );
+    };
+
+    subscribeWithPaths(activePaths);
+
+    return () => {
+      isDisposed = true;
+      activeUnsubscribe?.();
+      activeUnsubscribe = null;
+    };
   }
 
   subscribePath<P extends BitPath<T>>(
@@ -529,13 +430,6 @@ export class BitStore<T extends object = any> {
     );
   }
 
-  /**
-   * Subscribes to the full reactive state snapshot of a single field.
-   * More efficient than the raw `subscribeSelector` pattern because it
-   * pre-configures path scoping and a structural equality check covering
-   * all field-state properties (value, error, touched, dirty, hidden, …).
-   * This is the recommended API for framework field bindings.
-   */
   subscribeFieldState<P extends BitPath<T>>(
     path: P,
     listener: (state: Readonly<BitFieldState<T, BitPathValue<T, P>>>) => void,
@@ -560,12 +454,6 @@ export class BitStore<T extends object = any> {
     );
   }
 
-  /**
-   * Subscribes to form-level metadata (isValid, isDirty, isSubmitting).
-   * Replaces the `subscribeSelector` + manual path list pattern used internally
-   * by framework form hooks. The listener is called only when one of the three
-   * flags actually changes.
-   */
   subscribeFormMeta(listener: (meta: BitFormMeta) => void): () => void {
     return this.subscribeSelector(
       (state) => ({
@@ -583,10 +471,6 @@ export class BitStore<T extends object = any> {
       },
     );
   }
-
-  // ============================================================================
-  // FIELD VALUE MUTATIONS
-  // ============================================================================
 
   setField<P extends BitPath<T>>(path: P, value: BitPathValue<T, P>) {
     this.setFieldWithMeta(path as string, value, { origin: "setField" });
@@ -624,10 +508,6 @@ export class BitStore<T extends object = any> {
     this.lifecycle.setValues(values, options);
   }
 
-  // ============================================================================
-  // ERROR MANAGEMENT (Delegated to errorMg)
-  // ============================================================================
-
   setError(path: string, message: string | undefined) {
     this.error.setError(path, message);
   }
@@ -639,10 +519,6 @@ export class BitStore<T extends object = any> {
   setServerErrors(serverErrors: Record<string, string[] | string>) {
     this.error.setServerErrors(serverErrors);
   }
-
-  // ============================================================================
-  // FORM-LEVEL OPERATIONS
-  // ============================================================================
 
   reset() {
     this.lifecycle.reset();
@@ -679,58 +555,25 @@ export class BitStore<T extends object = any> {
   }
 
   async restorePersisted(): Promise<boolean> {
-    this.dispatch(persistMetaOperation({ isRestoring: true, error: null }));
-
-    try {
-      return await this.effects.restorePersisted();
-    } catch (error) {
-      this.dispatch(
-        persistMetaOperation({
-          isRestoring: false,
-          error: error instanceof Error ? error : new Error(String(error)),
-        }),
-      );
-      return false;
-    } finally {
-      this.dispatch(persistMetaOperation({ isRestoring: false }));
-    }
+    return restoreStorePersisted({
+      dispatch: (operation) => this.dispatch(operation),
+      effects: this.effects,
+    });
   }
 
   async forceSave(): Promise<void> {
-    this.dispatch(persistMetaOperation({ isSaving: true, error: null }));
-
-    try {
-      await this.effects.savePersistedNow();
-    } catch (error) {
-      this.dispatch(
-        persistMetaOperation({
-          isSaving: false,
-          error: error instanceof Error ? error : new Error(String(error)),
-        }),
-      );
-      return;
-    }
-
-    this.dispatch(persistMetaOperation({ isSaving: false }));
+    return forceStorePersistedSave({
+      dispatch: (operation) => this.dispatch(operation),
+      effects: this.effects,
+    });
   }
 
   async clearPersisted(): Promise<void> {
-    this.dispatch(persistMetaOperation({ error: null }));
-
-    try {
-      await this.effects.clearPersisted();
-    } catch (error) {
-      this.dispatch(
-        persistMetaOperation({
-          error: error instanceof Error ? error : new Error(String(error)),
-        }),
-      );
-    }
+    return clearStorePersisted({
+      dispatch: (operation) => this.dispatch(operation),
+      effects: this.effects,
+    });
   }
-
-  // ============================================================================
-  // ARRAY OPERATIONS (Delegated to arraysMg)
-  // ============================================================================
 
   pushItem<P extends BitArrayPath<T>>(
     path: P,
@@ -770,10 +613,6 @@ export class BitStore<T extends object = any> {
     this.arrays.moveItem(path, from, to);
   }
 
-  // ============================================================================
-  // HISTORY & TIME-TRAVEL (Delegated to historyMg)
-  // ============================================================================
-
   get canUndo(): boolean {
     return this.history.canUndo;
   }
@@ -803,10 +642,6 @@ export class BitStore<T extends object = any> {
   getHistoryMetadata(): BitHistoryMetadata {
     return this.history.getMetadata();
   }
-
-  // ============================================================================
-  // VALIDATION & SCOPES
-  // ============================================================================
 
   validate(options?: BitValidationOptions): Promise<boolean> {
     return this.validation.validate(options);
@@ -843,16 +678,9 @@ export class BitStore<T extends object = any> {
     }
   }
 
-  /** Returns a monotonically increasing counter that increments every time a
-   * mask is registered via registerMask(). Used by React components to track
-   * mask configuration changes reactively without storing masks in BitState. */
   getMasksVersion(): number {
     return this.maskManager.getMasksVersion();
   }
-
-  // ============================================================================
-  // INTERNAL OPERATIONS
-  // ============================================================================
 
   private dispatch(operation: BitStoreOperation<T>) {
     this.state = dispatchStoreKernelOperation({
@@ -870,9 +698,6 @@ export class BitStore<T extends object = any> {
   }
 
   private saveHistorySnapshot() {
-    // If we're inside a transaction, defer the snapshot to flush time
-    // so that multiple mutations (e.g. several array ops in a transaction)
-    // produce a single history entry rather than one per mutation.
     if (this.batchState.depth > 0) {
       this.batchState.pendingHistorySnapshot = true;
       return;
@@ -881,31 +706,16 @@ export class BitStore<T extends object = any> {
   }
 
   private applyPersistedValues(values: Partial<T>) {
-    const nextValues = deepClone({
-      ...this._initialValues,
-      ...values,
-    } as T);
-
-    this.validation.cancelAll();
-    this.fieldRegistry.evaluateAll(nextValues);
-
-    const isDirty = this.dirtyManager.rebuild(nextValues, this._initialValues);
-
-    this.dispatch(
-      patchStateOperation({
-        values: nextValues,
-        errors: {},
-        touched: {},
-        isValidating: {},
-        persist: { ...this.state.persist, error: null },
-        isValid: true,
-        isDirty,
-        isSubmitting: false,
-      }),
-    );
-
-    this.saveHistorySnapshot();
-    this.validation.validate();
+    applyStorePersistedValues({
+      values,
+      state: this.state,
+      initialValues: this._initialValues,
+      validation: this.validation,
+      fieldRegistry: this.fieldRegistry,
+      dirtyManager: this.dirtyManager,
+      dispatch: (operation) => this.dispatch(operation),
+      saveHistorySnapshot: () => this.saveHistorySnapshot(),
+    });
   }
 
   cleanup() {
@@ -927,7 +737,6 @@ export class BitStore<T extends object = any> {
       },
     });
 
-    // Flush any deferred history snapshot produced during the batch.
     if (this.batchState.pendingHistorySnapshot) {
       this.batchState.pendingHistorySnapshot = false;
       this.history.saveSnapshot(this.state.values);

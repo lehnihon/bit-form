@@ -217,6 +217,63 @@ describe("BitStore Core", () => {
       unsubscribe();
     });
 
+    it("should support tracked selector subscriptions without explicit paths", () => {
+      const store = new BitStore({
+        initialValues: { user: { name: "Leo" }, age: 30 },
+      });
+
+      const listener = vi.fn();
+
+      const unsubscribe = store.subscribeTracked(
+        (state) => state.values.user.name,
+        listener,
+      );
+
+      store.setField("age", 31);
+      expect(listener).not.toHaveBeenCalled();
+
+      store.setField("user.name", "Leandro");
+      expect(listener).toHaveBeenCalledTimes(1);
+      expect(listener).toHaveBeenLastCalledWith("Leandro");
+
+      unsubscribe();
+    });
+
+    it("should re-track tracked selector paths when selector branch changes", async () => {
+      const store = new BitStore({
+        initialValues: {
+          mode: "name" as "name" | "city",
+          user: { name: "Leo" },
+          city: "Tokyo",
+        },
+      });
+
+      const listener = vi.fn();
+
+      const unsubscribe = store.subscribeTracked(
+        (state) =>
+          state.values.mode === "name"
+            ? state.values.user.name
+            : state.values.city,
+        listener,
+      );
+
+      store.setField("city", "Osaka");
+      expect(listener).not.toHaveBeenCalled();
+
+      store.setField("mode", "city");
+      expect(listener).toHaveBeenCalledTimes(1);
+      expect(listener).toHaveBeenLastCalledWith("Osaka");
+
+      await Promise.resolve();
+
+      store.setField("city", "Kyoto");
+      expect(listener).toHaveBeenCalledTimes(2);
+      expect(listener).toHaveBeenLastCalledWith("Kyoto");
+
+      unsubscribe();
+    });
+
     it("should support path-based subscriptions", () => {
       const store = new BitStore({
         initialValues: { user: { name: "Leo" }, age: 30 },

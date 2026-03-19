@@ -19,6 +19,7 @@ import type { BitStoreOperation } from "../engines/operation-engine";
 import { deepClone } from "../../utils";
 import type { BitStoreCapabilities } from "./capabilities";
 import type { BitFrameworkConfig } from "../contracts/public-types";
+import { bitBus } from "../shared/bus";
 import type { BitLifecycleStorePort } from "../managers/features/lifecycle-manager";
 import type { BitValidationStorePort } from "../managers/features/validation-manager";
 import type { BitFieldDefinition, BitState } from "../contracts/types";
@@ -54,7 +55,7 @@ export function createStoreCapabilities<T extends object>(args: {
     "history",
     new BitHistoryManager<T>(
       !!ports.config.history.enabled,
-      ports.config.history.limit ?? 15,
+      ports.config.history.limit ?? 50,
     ),
   );
   registry.register("arrays", new BitArrayManager<T>(ports.arrayPort));
@@ -137,6 +138,7 @@ export function createStoreEffects<T extends object>(args: {
   const effects = new BitStoreEffectEngine<T>(
     storeId,
     storeInstance,
+    config.bus ?? bitBus,
     persistManager,
     pluginManager,
   );

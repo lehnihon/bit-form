@@ -11,3 +11,6 @@ export interface BitFormGlobal {
   dispatch: (storeId: string, state: BitState<any>) => void;
   subscribe: (fn: BitBusListener) => () => void;
 }
+
+/** Alias for {@link BitFormGlobal}. Prefer this name in user-facing APIs. */
+export type BitBus = BitFormGlobal;

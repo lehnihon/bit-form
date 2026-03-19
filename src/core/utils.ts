@@ -1,30 +1,7 @@
+import { cloneValue } from "./utils/clone";
+
 export function deepClone<T>(obj: T): T {
-  if (obj === null || typeof obj !== "object") {
-    return obj;
-  }
-
-  if (typeof structuredClone === "function") {
-    return structuredClone(obj);
-  }
-
-  if (obj instanceof Date) {
-    return new Date(obj.getTime()) as any as T;
-  }
-  if (obj instanceof RegExp) {
-    return new RegExp(obj.source, obj.flags) as any as T;
-  }
-
-  if (Array.isArray(obj)) {
-    return obj.map((item) => deepClone(item)) as any as T;
-  }
-
-  const clone: any = {};
-  for (const key in obj) {
-    if (Object.prototype.hasOwnProperty.call(obj, key)) {
-      clone[key] = deepClone((obj as any)[key]);
-    }
-  }
-  return clone as T;
+  return cloneValue(obj);
 }
 
 export function deepMerge<T>(target: T, source: any): T {

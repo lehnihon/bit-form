@@ -18,7 +18,7 @@ describe("applyStateUpdate", () => {
     isDirty: false,
   };
 
-  it("aplica computed values e marca changedPaths padrão", () => {
+  it("aplica computed values sem inferência profunda implícita", () => {
     const result = applyStateUpdate({
       currentState: baseState,
       partialState: { values: { name: "Ana", total: 15 } },
@@ -26,10 +26,7 @@ describe("applyStateUpdate", () => {
     });
 
     expect(result.valuesChanged).toBe(true);
-    // With structural path inference, changedPaths includes concrete field paths.
-    expect(result.changedPaths).toEqual(
-      expect.arrayContaining(["name", "total"]),
-    );
+    expect(result.changedPaths).toBeUndefined();
     expect(result.nextState.values).toEqual({ name: "Ana", total: 30 });
   });
 

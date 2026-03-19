@@ -38,7 +38,7 @@ export function normalizeConfig<T extends object>(
     validationDelay: validation?.delay ?? 300,
     history: {
       enabled: history?.enabled ?? false,
-      limit: history?.limit ?? 15,
+      limit: history?.limit ?? 50,
     },
     masks: config.masks,
     fields: config.fields,
@@ -46,5 +46,8 @@ export function normalizeConfig<T extends object>(
     persist,
     idFactory: config.idFactory ?? defaultIdFactory,
     plugins: config.plugins ?? [],
+    scheduler: config.scheduler,
+    subscriptionCacheSize: config.subscriptionCacheSize,
+    bus: config.bus,
   } as BitFrameworkConfig<T>;
 }

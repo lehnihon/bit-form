@@ -60,8 +60,8 @@ function hasErrors(errors: Record<string, unknown>) {
 }
 
 export class BitValidationManager<T extends object> {
-  private validationTimeout?: ReturnType<typeof setTimeout>;
-  private asyncSchedulerTimeout?: ReturnType<typeof setTimeout>;
+  private cancelValidationTimeout?: () => void;
+  private cancelAsyncSchedulerTimeout?: () => void;
   private currentValidationId: number = 0;
   private validatingCount = 0;
   /** Paths acumulados durante o debounce — evita descartar paths de calls anteriores */
@@ -81,8 +81,16 @@ export class BitValidationManager<T extends object> {
   private readonly validationPipeline: BitPipelineRunner<
     ValidationPipelineContext<T>
   >;
+  private readonly schedule: (fn: () => void, delayMs: number) => () => void;
 
   constructor(private store: BitValidationStorePort<T>) {
+    this.schedule =
+      store.config.scheduler?.schedule ??
+      ((fn, delayMs) => {
+        const timeoutId = setTimeout(fn, delayMs);
+        return () => clearTimeout(timeoutId);
+      });
+
     this.validationPipeline = new BitPipelineRunner<
       ValidationPipelineContext<T>
     >([
@@ -231,7 +239,10 @@ export class BitValidationManager<T extends object> {
   }
 
   trigger(scopeFields?: string[], options?: BitValidationTriggerOptions) {
-    if (this.validationTimeout) clearTimeout(this.validationTimeout);
+    if (this.cancelValidationTimeout) {
+      this.cancelValidationTimeout();
+      this.cancelValidationTimeout = undefined;
+    }
 
     const configuredDelay = this.store.config.validationDelay ?? 300;
     const delay = options?.forceDebounce
@@ -256,8 +267,9 @@ export class BitValidationManager<T extends object> {
         ? Array.from(this.pendingScopeFields)
         : undefined;
 
-      this.validationTimeout = setTimeout(() => {
+      this.cancelValidationTimeout = this.schedule(() => {
         this.pendingScopeFields = null;
+        this.cancelValidationTimeout = undefined;
         void this.validate({ scopeFields: resolvedScopeFields });
       }, delay);
     } else {
@@ -294,8 +306,16 @@ export class BitValidationManager<T extends object> {
     this.validatingCount = 0;
     this.pendingScopeFields = null;
 
-    if (this.validationTimeout) clearTimeout(this.validationTimeout);
-    if (this.asyncSchedulerTimeout) clearTimeout(this.asyncSchedulerTimeout);
+    if (this.cancelValidationTimeout) {
+      this.cancelValidationTimeout();
+      this.cancelValidationTimeout = undefined;
+    }
+
+    if (this.cancelAsyncSchedulerTimeout) {
+      this.cancelAsyncSchedulerTimeout();
+      this.cancelAsyncSchedulerTimeout = undefined;
+    }
+
     this.pendingAsyncValidations.clear();
     this.asyncErrors.clear();
 
@@ -416,9 +436,9 @@ export class BitValidationManager<T extends object> {
   }
 
   private schedulePendingAsyncValidations() {
-    if (this.asyncSchedulerTimeout) {
-      clearTimeout(this.asyncSchedulerTimeout);
-      this.asyncSchedulerTimeout = undefined;
+    if (this.cancelAsyncSchedulerTimeout) {
+      this.cancelAsyncSchedulerTimeout();
+      this.cancelAsyncSchedulerTimeout = undefined;
     }
 
     let nextDueAt = Number.POSITIVE_INFINITY;
@@ -433,13 +453,14 @@ export class BitValidationManager<T extends object> {
       return;
     }
 
-    this.asyncSchedulerTimeout = setTimeout(() => {
+    this.cancelAsyncSchedulerTimeout = this.schedule(() => {
+      this.cancelAsyncSchedulerTimeout = undefined;
       void this.flushPendingAsyncValidations();
     }, Math.max(0, nextDueAt - Date.now()));
   }
 
   private async flushPendingAsyncValidations() {
-    this.asyncSchedulerTimeout = undefined;
+    this.cancelAsyncSchedulerTimeout = undefined;
 
     const now = Date.now();
     const dueJobs = Array.from(this.pendingAsyncValidations.entries()).filter(

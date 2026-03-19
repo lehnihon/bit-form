@@ -1,4 +1,5 @@
 import { bitBus } from "bit-form/core";
+import type { BitFormGlobal } from "../core/store/contracts/bus-types";
 import type { DevToolsActionName, DevToolsActionPayload } from "./types";
 
 const formatStoreState = (instance: any) => {
@@ -42,7 +43,7 @@ const isDevToolsActionPayload = (
   );
 };
 
-export function setupRemoteBridge(url: string) {
+export function setupRemoteBridge(url: string, bus: BitFormGlobal = bitBus) {
   if (activeBridgeCleanup) {
     console.warn(
       "[bit-form] Reiniciando ponte do DevTools (Fast Refresh detectado).",
@@ -73,7 +74,7 @@ export function setupRemoteBridge(url: string) {
     const payload: Record<string, unknown> = {};
 
     pendingStoreIds.forEach((storeId) => {
-      const storeInstance = bitBus.stores[storeId];
+      const storeInstance = bus.stores[storeId];
       if (!storeInstance) {
         return;
       }
@@ -106,7 +107,7 @@ export function setupRemoteBridge(url: string) {
     socket.onopen = () => {
       console.log("[bit-form] 🔌 Conectado ao CLI DevTools via WebSocket.");
 
-      const storesEntries = Object.entries(bitBus.stores);
+      const storesEntries = Object.entries(bus.stores);
       if (storesEntries.length > 0) {
         const initialState = storesEntries.reduce((acc, [id, store]) => {
           acc[id] = formatStoreState(store);
@@ -116,7 +117,7 @@ export function setupRemoteBridge(url: string) {
         sendWhenOpen({ type: "STATE_UPDATE", payload: initialState });
       }
 
-      unsubscribeBus = bitBus.subscribe((storeId, _newState) => {
+      unsubscribeBus = bus.subscribe((storeId, _newState) => {
         pendingStoreIds.add(storeId);
         scheduleStoreFlush();
       });
@@ -140,7 +141,7 @@ export function setupRemoteBridge(url: string) {
 
           const { storeId, action } = message.payload;
 
-          const store = bitBus.stores[storeId];
+          const store = bus.stores[storeId];
 
           if (!store || typeof store !== "object") {
             return;

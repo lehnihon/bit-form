@@ -8,8 +8,8 @@ const rootGlobal =
   typeof globalThis !== "undefined"
     ? globalThis
     : typeof global !== "undefined"
-      ? global
-      : window;
+    ? global
+    : window;
 
 if (!rootGlobal.__BIT_FORM__) {
   rootGlobal.__BIT_FORM__ = {
@@ -30,3 +30,28 @@ if (!rootGlobal.__BIT_FORM__) {
 }
 
 export const bitBus = rootGlobal.__BIT_FORM__ as BitFormGlobal;
+
+/**
+ * Creates an isolated bus instance — not connected to the browser global.
+ * Use this in SSR / Edge Runtime environments (e.g. Next.js Edge) where a
+ * shared `globalThis` singleton is unsafe across request contexts.
+ *
+ * @example
+ * // _app.tsx (SSR-safe)
+ * const bus = createBitBus();
+ * const store = createBitStore({ bus, initialValues: { ... } });
+ */
+export function createBitBus(): BitFormGlobal {
+  const listeners = new Set<BitBusListener>();
+  return {
+    stores: {},
+    listeners,
+    dispatch(id, state) {
+      listeners.forEach((fn) => fn(id, state));
+    },
+    subscribe(fn) {
+      listeners.add(fn);
+      return () => listeners.delete(fn);
+    },
+  };
+}

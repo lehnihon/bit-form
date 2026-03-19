@@ -1,4 +1,5 @@
 import { BitFormDevToolsUI } from "../ui";
+import type { BitFormGlobal } from "../../core/store/contracts/bus-types";
 import type {
   DevToolsActionMessage,
   DevToolsActionName,
@@ -9,6 +10,7 @@ import type {
 export function setupRemoteDevTools(
   container: HTMLElement,
   url: string = "ws://localhost:3000",
+  _bus?: BitFormGlobal,
 ) {
   const socket = new WebSocket(url);
 

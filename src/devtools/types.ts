@@ -1,7 +1,11 @@
+import type { BitFormGlobal } from "../core/store/contracts/bus-types";
+
 export interface BitDevToolsOptions {
   container?: HTMLElement | string;
   mode?: "local" | "remote";
   url?: string;
+  /** Custom bus instance for SSR/Edge-safe DevTools wiring. */
+  bus?: BitFormGlobal;
 }
 
 export type DevToolsActionName = "undo" | "redo" | "reset";

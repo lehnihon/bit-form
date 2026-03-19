@@ -6,7 +6,7 @@ import type {
   BitFieldChangeEvent,
   BitState,
 } from "../contracts/types";
-import { bitBus } from "../shared/bus";
+import type { BitFormGlobal } from "../contracts/bus-types";
 import { BitPersistManager } from "../managers/features/persist-manager";
 import { BitPluginManager } from "../managers/features/plugin-manager";
 
@@ -14,13 +14,14 @@ export class BitStoreEffectEngine<T extends object> {
   constructor(
     private readonly storeId: string,
     private readonly storeInstance: unknown,
+    private readonly bus: BitFormGlobal,
     private readonly persistManager: BitPersistManager<T>,
     private readonly pluginManager: BitPluginManager<T>,
   ) {}
 
   initialize(): void {
     this.pluginManager.setupAll();
-    bitBus.stores[this.storeId] = this.storeInstance;
+    this.bus.stores[this.storeId] = this.storeInstance;
   }
 
   onStateUpdated(nextState: BitState<T>, valuesChanged: boolean): void {
@@ -28,7 +29,7 @@ export class BitStoreEffectEngine<T extends object> {
       this.persistManager.queueSave();
     }
 
-    bitBus.dispatch(this.storeId, nextState);
+    this.bus.dispatch(this.storeId, nextState);
   }
 
   restorePersisted(): Promise<boolean> {
@@ -78,6 +79,6 @@ export class BitStoreEffectEngine<T extends object> {
   destroy(): void {
     this.persistManager.destroy();
     this.pluginManager.destroy();
-    delete bitBus.stores[this.storeId];
+    delete this.bus.stores[this.storeId];
   }
 }

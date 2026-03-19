@@ -6,7 +6,7 @@ import type { BitDevToolsAdapter } from "./adapters/types";
 export type { BitDevToolsOptions };
 
 export function initDevTools(options: BitDevToolsOptions = {}) {
-  const { mode = "local", url } = options;
+  const { mode = "local", url, bus } = options;
   let containerEl: HTMLElement;
 
   let isAutoCreated = false;
@@ -38,10 +38,10 @@ export function initDevTools(options: BitDevToolsOptions = {}) {
 
   if (mode === "local") {
     console.log("[bit-form] DevTools iniciado em modo Local.");
-    adapterInstance = setupLocalDevTools(containerEl);
+    adapterInstance = setupLocalDevTools(containerEl, bus);
   } else if (mode === "remote") {
     console.log("[bit-form] DevTools iniciado em modo Remote.");
-    adapterInstance = setupRemoteDevTools(containerEl, url);
+    adapterInstance = setupRemoteDevTools(containerEl, url, bus);
   } else {
     throw new Error(`[bit-form] Modo DevTools inválido: ${mode}`);
   }

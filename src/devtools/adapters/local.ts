@@ -1,18 +1,22 @@
 import { bitBus } from "../../core";
 import type { BitStoreHooksApi } from "../../core";
+import type { BitFormGlobal } from "../../core/store/contracts/bus-types";
 import { BitFormDevToolsUI } from "../ui";
 
-export function setupLocalDevTools(container: HTMLElement) {
+export function setupLocalDevTools(
+  container: HTMLElement,
+  bus: BitFormGlobal = bitBus,
+) {
   const ui = new BitFormDevToolsUI(container, {
-    onUndo: (id) => (bitBus.stores[id] as BitStoreHooksApi<any>)?.undo(),
-    onRedo: (id) => (bitBus.stores[id] as BitStoreHooksApi<any>)?.redo(),
-    onReset: (id) => (bitBus.stores[id] as BitStoreHooksApi<any>)?.reset(),
+    onUndo: (id) => (bus.stores[id] as BitStoreHooksApi<any>)?.undo(),
+    onRedo: (id) => (bus.stores[id] as BitStoreHooksApi<any>)?.redo(),
+    onReset: (id) => (bus.stores[id] as BitStoreHooksApi<any>)?.reset(),
   });
 
   const getFullSnapshot = () => {
     const states: Record<string, unknown> = {};
 
-    for (const [id, instance] of Object.entries(bitBus.stores)) {
+    for (const [id, instance] of Object.entries(bus.stores)) {
       const storeInstance = instance as BitStoreHooksApi<any>;
       const state = storeInstance.getState();
 
@@ -39,7 +43,7 @@ export function setupLocalDevTools(container: HTMLElement) {
 
   ui.updateState(getFullSnapshot());
 
-  const unsubscribe = bitBus.subscribe(() => {
+  const unsubscribe = bus.subscribe(() => {
     ui.updateState(getFullSnapshot());
   });
 
