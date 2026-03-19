@@ -55,6 +55,31 @@ export interface UseBitFieldResult<
   meta: UseBitFieldMeta;
 }
 
+export interface UseBitFieldRawBindProps<
+  TValue = unknown,
+  TForm extends object = any,
+  P extends BitPath<TForm> = BitPath<TForm>,
+> {
+  value: TValue;
+  onChange: (e: BitFieldInputEvent) => void;
+  onBlur: () => void;
+  _type?: TForm;
+  _path?: P;
+}
+
+export interface UseBitFieldRawResult<
+  TForm extends object = any,
+  P extends BitPath<TForm> = BitPath<TForm>,
+> {
+  value: BitPathValue<TForm, P>;
+  setValue: (val: BitPathValue<TForm, P>) => void;
+  setBlur: () => void;
+  onChange: (e: BitFieldInputEvent) => void;
+  onBlur: () => void;
+  props: UseBitFieldRawBindProps<BitPathValue<TForm, P>, TForm, P>;
+  meta: UseBitFieldMeta;
+}
+
 /**
  * Result from useBitSteps hook.
  * Provides multi-step form navigation and validation.
@@ -133,9 +158,10 @@ export interface UseBitFormResult<T extends object = any> {
   transaction: <TResult>(callback: () => TResult) => TResult;
   setField: <P extends BitPath<T>>(path: P, value: BitPathValue<T, P>) => void;
   blurField: <P extends BitPath<T>>(path: P) => void;
-  replaceValues: (values: T) => void;
-  hydrate: (values: import("../core").DeepPartial<T>) => void;
-  rebase: (values: T) => void;
+  setValues: (
+    values: T | import("../core").DeepPartial<T>,
+    options?: { partial?: boolean; rebase?: boolean },
+  ) => void;
   setError: (path: string, message: string | undefined) => void;
   setErrors: (errors: BitErrors<T>) => void;
   setServerErrors: (serverErrors: Record<string, string[] | string>) => void;

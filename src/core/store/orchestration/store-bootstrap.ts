@@ -12,7 +12,6 @@ import {
 import { BitScopeManager } from "../managers/features/scope-manager";
 import { BitFieldQueryManager } from "../managers/features/field-query-manager";
 import { BitErrorManager } from "../managers/features/error-manager";
-import { BitCapabilityRegistry } from "./capability-registry";
 import { BitDependencyManager } from "../managers/core/dependency-manager";
 import { BitComputedManager } from "../managers/core/computed-manager";
 import type { BitStoreOperation } from "../engines/operation-engine";
@@ -38,54 +37,42 @@ export type BitStoreCapabilityPorts<T extends object> = {
 export function createStoreCapabilities<T extends object>(args: {
   ports: BitStoreCapabilityPorts<T>;
   dependencyManager: BitDependencyManager<T>;
-}): BitCapabilityRegistry<BitStoreCapabilities<T>> {
+}): BitStoreCapabilities<T> {
   const { ports, dependencyManager } = args;
 
-  const capabilities = new BitCapabilityRegistry<BitStoreCapabilities<T>>();
-
-  capabilities.register(
-    "validation",
-    new BitValidationManager<T>(ports.validationPort),
+  const validation = new BitValidationManager<T>(ports.validationPort);
+  const lifecycle = new BitLifecycleManager<T>(ports.lifecyclePort);
+  const history = new BitHistoryManager<T>(
+    !!ports.config.history.enabled,
+    ports.config.history.limit ?? 15,
   );
-  capabilities.register(
-    "lifecycle",
-    new BitLifecycleManager<T>(ports.lifecyclePort),
+  const arrays = new BitArrayManager<T>(ports.arrayPort);
+  const scope = new BitScopeManager<T>(
+    () => ports.getState(),
+    () => ports.getInitialValues(),
+    (scopeName) => ports.getScopeFields(scopeName),
+    (path) => ports.isPathDirty(path),
   );
-  capabilities.register(
-    "history",
-    new BitHistoryManager<T>(
-      !!ports.config.enableHistory,
-      ports.config.historyLimit ?? 15,
-    ),
+  const query = new BitFieldQueryManager<T>(
+    dependencyManager,
+    () => ports.getState(),
+    () => ports.config,
+    (path) => ports.isPathDirty(path),
   );
-  capabilities.register("arrays", new BitArrayManager<T>(ports.arrayPort));
-  capabilities.register(
-    "scope",
-    new BitScopeManager<T>(
-      () => ports.getState(),
-      () => ports.getInitialValues(),
-      (scopeName) => ports.getScopeFields(scopeName),
-      (path) => ports.isPathDirty(path),
-    ),
-  );
-  capabilities.register(
-    "query",
-    new BitFieldQueryManager<T>(
-      dependencyManager,
-      () => ports.getState(),
-      () => ports.config,
-      (path) => ports.isPathDirty(path),
-    ),
-  );
-  capabilities.register(
-    "error",
-    new BitErrorManager<T>(
-      () => ports.getState(),
-      (operation) => ports.dispatch(operation),
-    ),
+  const error = new BitErrorManager<T>(
+    () => ports.getState(),
+    (operation) => ports.dispatch(operation),
   );
 
-  return capabilities;
+  return {
+    validation,
+    lifecycle,
+    history,
+    arrays,
+    scope,
+    query,
+    error,
+  };
 }
 
 export function createStoreEffects<T extends object>(args: {

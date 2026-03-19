@@ -1,6 +1,7 @@
 export { BitFormProvider, useBitStore } from "./context";
 export { useBitForm } from "./use-bit-form";
 export { useBitField } from "./use-bit-field";
+export { useBitFieldRaw } from "./use-bit-field-raw";
 export { useBitArray } from "./use-bit-array";
 export { useBitHistory } from "./use-bit-history";
 export { useBitScope } from "./use-bit-scope";
@@ -11,6 +12,7 @@ export { useBitPersist } from "./use-bit-persist";
 export type {
   UseBitFieldBindProps,
   UseBitFieldMeta,
+  UseBitFieldRawResult,
   UseBitFieldResult,
   UseBitStepsResult,
   UseBitUploadResult,

@@ -133,9 +133,10 @@ export interface InjectBitFormResult<T extends object = any> {
   ) => (event?: Event) => Promise<void>;
   reset: () => void;
   transaction: <TResult>(callback: () => TResult) => TResult;
-  replaceValues: (values: T) => void;
-  hydrate: (values: import("../core").DeepPartial<T>) => void;
-  rebase: (values: T) => void;
+  setValues: (
+    values: T | import("../core").DeepPartial<T>,
+    options?: { partial?: boolean; rebase?: boolean },
+  ) => void;
   setError: (path: string, message: string | undefined) => void;
   setErrors: (errors: BitErrors<T>) => void;
   setServerErrors: (serverErrors: Record<string, string[] | string>) => void;

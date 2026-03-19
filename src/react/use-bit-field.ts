@@ -25,13 +25,13 @@ export function useBitField<
     store,
   } = useBitFieldBase<BitPathValue<TForm, P>, TForm, P>(path);
 
-  // Track mask registrations reactively. getMasksVersion() returns a counter
-  // that increments on every registerMask() call. useSyncExternalStore fires
-  // the snapshot on every store notification; the integer comparison is O(1)
-  // so this only triggers a re-render when a mask is actually added.
   const masksVersion = useSyncExternalStore(
-    // store.subscribe fires on every state change (global listener)
-    (cb) => store.subscribe(cb),
+    (cb) =>
+      store.subscribeSelector(
+        () => store.getMasksVersion(),
+        () => cb(),
+        { paths: ["__masks__"] },
+      ),
     () => store.getMasksVersion(),
     () => store.getMasksVersion(),
   );

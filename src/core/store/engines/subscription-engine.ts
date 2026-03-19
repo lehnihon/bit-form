@@ -10,7 +10,6 @@ interface SelectorListenerEntry<T extends object> {
 
 export class BitSubscriptionEngine<T extends object> {
   private listeners: Set<() => void> = new Set();
-  private selectorListeners: Set<SelectorListenerEntry<T>> = new Set();
   private pathScopedSubscriptions: Map<SelectorListenerEntry<T>, string[]> =
     new Map();
   private pathSelectorIndex: Map<string, Set<SelectorListenerEntry<T>>> =
@@ -54,33 +53,25 @@ export class BitSubscriptionEngine<T extends object> {
     };
 
     const scopedPaths = this.normalizeSubscriptionPaths(options?.paths);
-    const mode = options?.mode ?? "scoped";
 
-    if (mode === "scoped" && scopedPaths.length === 0) {
-      throw new Error(
-        'BitStore: subscribeSelector now requires explicit `paths` for scoped subscriptions. Use `{ mode: "global" }` for global subscriptions.',
-      );
+    if (scopedPaths.length === 0) {
+      throw new Error("BitStore: subscribeSelector requires explicit `paths`.");
     }
 
-    if (mode !== "global") {
-      this.pathScopedSubscriptions.set(subscription, scopedPaths);
-      scopedPaths.forEach((pathKey) => {
-        this.expandPathForIndexing(pathKey).forEach((indexPath) => {
-          const listeners = this.pathSelectorIndex.get(indexPath) ?? new Set();
-          listeners.add(subscription);
-          this.pathSelectorIndex.set(indexPath, listeners);
-        });
+    this.pathScopedSubscriptions.set(subscription, scopedPaths);
+    scopedPaths.forEach((pathKey) => {
+      this.expandPathForIndexing(pathKey).forEach((indexPath) => {
+        const listeners = this.pathSelectorIndex.get(indexPath) ?? new Set();
+        listeners.add(subscription);
+        this.pathSelectorIndex.set(indexPath, listeners);
       });
-    } else {
-      this.selectorListeners.add(subscription);
-    }
+    });
 
     if (options?.emitImmediately) {
       listener(lastSlice);
     }
 
     return () => {
-      this.selectorListeners.delete(subscription);
       this.subscriptionSeenVersion.delete(subscription);
 
       const paths = this.pathScopedSubscriptions.get(subscription);
@@ -102,21 +93,23 @@ export class BitSubscriptionEngine<T extends object> {
     };
   }
 
-  notify(nextState: Readonly<BitState<T>>, changedPaths?: string[]): void {
+  notify(
+    nextState: Readonly<BitState<T>>,
+    changedPaths?: Iterable<string>,
+  ): void {
     this.listeners.forEach((listener) => listener());
-
-    this.selectorListeners.forEach((subscription) => {
-      subscription.notify(nextState);
-    });
 
     if (this.pathScopedSubscriptions.size === 0) {
       return;
     }
 
+    const normalizedChangedPaths = changedPaths
+      ? this.normalizeSubscriptionPaths(Array.from(changedPaths))
+      : [];
+
     if (
-      !changedPaths ||
-      changedPaths.length === 0 ||
-      changedPaths.includes("*")
+      normalizedChangedPaths.length === 0 ||
+      normalizedChangedPaths.includes("*")
     ) {
       this.pathScopedSubscriptions.forEach((_paths, subscription) => {
         subscription.notify(nextState);
@@ -124,8 +117,9 @@ export class BitSubscriptionEngine<T extends object> {
       return;
     }
 
-    const scopedSubscribers =
-      this.collectSubscribersForChangedPaths(changedPaths);
+    const scopedSubscribers = this.collectSubscribersForChangedPaths(
+      normalizedChangedPaths,
+    );
 
     scopedSubscribers.forEach((subscription) => {
       subscription.notify(nextState);
@@ -134,7 +128,6 @@ export class BitSubscriptionEngine<T extends object> {
 
   destroy(): void {
     this.listeners.clear();
-    this.selectorListeners.clear();
     this.pathScopedSubscriptions.clear();
     this.pathSelectorIndex.clear();
     this.expandedPathCache.clear();
@@ -173,8 +166,6 @@ export class BitSubscriptionEngine<T extends object> {
 
       listeners.forEach((subscription) => {
         const seenVersion = this.subscriptionSeenVersion.get(subscription) ?? 0;
-        // Reentrant-safe dedupe: nested notify() may stamp a newer version;
-        // treat newer or equal as already seen in this or deeper call stack.
         if (seenVersion >= currentVersion) {
           return;
         }

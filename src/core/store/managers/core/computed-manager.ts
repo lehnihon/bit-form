@@ -26,6 +26,7 @@ export class BitComputedManager<T extends object> {
     this.reverseDepsCache = null;
     this.childDepsIndex = null;
     this.orderedAllEntriesCache = null;
+    this.equalityCache.clear();
   }
 
   apply(values: T, changedPaths?: readonly string[]): T {
@@ -71,8 +72,6 @@ export class BitComputedManager<T extends object> {
         nextValues = setDeepValue(nextValues, entry.path, newValue);
       }
     }
-
-    this.equalityCache.clear();
     return nextValues;
   }
 

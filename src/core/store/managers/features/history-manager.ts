@@ -31,13 +31,57 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
   );
 }
 
+function estimateValueBytes(value: unknown, depth = 0): number {
+  if (value === null || value === undefined) {
+    return 4;
+  }
+
+  if (typeof value === "string") {
+    return value.length * 2;
+  }
+
+  if (typeof value === "number") {
+    return 8;
+  }
+
+  if (typeof value === "boolean") {
+    return 4;
+  }
+
+  if (typeof value !== "object") {
+    return 16;
+  }
+
+  if (depth >= 4) {
+    return 64;
+  }
+
+  if (Array.isArray(value)) {
+    return value.reduce(
+      (total, item) => total + estimateValueBytes(item, depth + 1),
+      16,
+    );
+  }
+
+  if (isPlainObject(value)) {
+    let total = 16;
+    for (const [key, child] of Object.entries(value)) {
+      total += key.length * 2;
+      total += estimateValueBytes(child, depth + 1);
+    }
+    return total;
+  }
+
+  return 32;
+}
+
 function estimatePatchBytes(operations: BitHistoryPatchOperation[]): number {
   return operations.reduce((total, operation) => {
     return (
       total +
       operation.path.length +
-      JSON.stringify(operation.previousValue ?? null).length +
-      JSON.stringify(operation.nextValue ?? null).length +
+      estimateValueBytes(operation.previousValue) +
+      estimateValueBytes(operation.nextValue) +
       8
     );
   }, 0);

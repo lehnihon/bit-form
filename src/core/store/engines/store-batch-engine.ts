@@ -10,7 +10,7 @@ export interface BitStoreBatchState<T extends object> {
 
 export interface BitStoreBatchFlushResult<T extends object> {
   nextState: BitState<T>;
-  changedPaths?: string[];
+  changedPaths?: Set<string>;
   valuesChanged: boolean;
 }
 
@@ -62,7 +62,7 @@ export function trackBatchedStoreUpdate<T extends object>(
 export function flushStoreBatchState<T extends object>(args: {
   currentState: BitState<T>;
   batchState: BitStoreBatchState<T>;
-  applyComputedValues: (values: T, changedPaths?: string[]) => T;
+  applyComputedValues: (values: T, changedPaths?: readonly string[]) => T;
 }): BitStoreBatchFlushResult<T> | null {
   const { currentState, batchState, applyComputedValues } = args;
 
@@ -71,15 +71,14 @@ export function flushStoreBatchState<T extends object>(args: {
   }
 
   let nextState = batchState.pendingState;
-  const changedPaths = batchState.changedPathSet
-    ? Array.from(batchState.changedPathSet)
-    : undefined;
+  const changedPaths = batchState.changedPathSet ?? undefined;
   const valuesChanged = batchState.valuesChanged;
 
   if (valuesChanged) {
+    const computedChangedPaths = changedPaths ? [...changedPaths] : undefined;
     nextState = {
       ...nextState,
-      values: applyComputedValues(nextState.values, changedPaths),
+      values: applyComputedValues(nextState.values, computedChangedPaths),
     };
   }
 

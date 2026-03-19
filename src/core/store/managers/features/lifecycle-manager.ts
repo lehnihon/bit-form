@@ -121,6 +121,18 @@ export class BitLifecycleManager<T extends object> {
     FieldUpdatePipelineContext<T>
   >;
   private readonly submitPipeline: BitPipelineRunner<SubmitPipelineContext<T>>;
+  private readonly reusableFieldUpdateContext: FieldUpdatePipelineContext<T> = {
+    path: "",
+    value: undefined,
+    meta: { origin: "setField" },
+    previousValue: undefined,
+    nextValues: {} as T,
+    nextErrors: {} as BitErrors<T>,
+    hasMutatedErrors: false,
+    toggledFields: [],
+    isDirty: false,
+  };
+  private isReusableFieldUpdateContextBusy = false;
 
   constructor(private store: BitLifecycleStorePort<T>) {
     this.fieldUpdatePipeline = new BitSyncPipelineRunner<
@@ -175,23 +187,69 @@ export class BitLifecycleManager<T extends object> {
     meta: BitFieldChangeMeta = { origin: "setField" },
   ) {
     const state = this.store.getState();
+    const context = this.acquireFieldUpdateContext();
 
-    const context: FieldUpdatePipelineContext<T> = {
-      path,
-      value,
-      meta,
-      previousValue: getDeepValue(state.values, path),
-      nextValues: setDeepValue(state.values, path, value),
-      nextErrors: state.errors,
+    context.path = path;
+    context.value = value;
+    context.meta = meta;
+    context.previousValue = getDeepValue(state.values, path);
+    context.nextValues = setDeepValue(state.values, path, value);
+    context.nextErrors = state.errors;
+    context.hasMutatedErrors = false;
+    context.toggledFields.length = 0;
+    context.isDirty = false;
+
+    const isReusableContext = context === this.reusableFieldUpdateContext;
+
+    if (isReusableContext) {
+      this.isReusableFieldUpdateContextBusy = true;
+    }
+
+    try {
+      this.fieldUpdatePipeline.run(context);
+    } finally {
+      if (isReusableContext) {
+        this.isReusableFieldUpdateContextBusy = false;
+      }
+    }
+  }
+
+  private acquireFieldUpdateContext(): FieldUpdatePipelineContext<T> {
+    if (!this.isReusableFieldUpdateContextBusy) {
+      return this.reusableFieldUpdateContext;
+    }
+
+    return {
+      path: "",
+      value: undefined,
+      meta: { origin: "setField" },
+      previousValue: undefined,
+      nextValues: {} as T,
+      nextErrors: {} as BitErrors<T>,
       hasMutatedErrors: false,
       toggledFields: [],
       isDirty: false,
     };
-
-    this.fieldUpdatePipeline.run(context);
   }
 
-  replaceValues(
+  setValues(
+    newValues: T | DeepPartial<T>,
+    options?: { partial?: boolean; rebase?: boolean },
+  ) {
+    if (options?.rebase) {
+      this.rebaseValues(newValues as T);
+      return;
+    }
+
+    if (options?.partial) {
+      this.hydrateValues(newValues as DeepPartial<T>);
+      return;
+    }
+
+    this.replaceValuesInternal(newValues as T, "replaceValues");
+  }
+
+  private replaceValuesInternal(
     newValues: T,
     origin: "replaceValues" | "hydrate" = "replaceValues",
   ) {
@@ -235,7 +293,7 @@ export class BitLifecycleManager<T extends object> {
 
   hydrateValues(values: DeepPartial<T>) {
     const mergedValues = deepMerge(this.store.getState().values, values);
-    this.replaceValues(mergedValues, "hydrate");
+    this.replaceValuesInternal(mergedValues, "hydrate");
   }
 
   rebaseValues(newValues: T) {

@@ -34,11 +34,11 @@ describe("BitStore Core", () => {
       expect("subscribeSelector" in store).toBe(true);
       expect("subscribePath" in store).toBe(true);
       expect("getFieldState" in store).toBe(true);
-      expect("setValues" in store).toBe(false);
+      expect("setValues" in store).toBe(true);
       expect("beginFieldValidation" in store).toBe(false);
-      expect("replaceValues" in store).toBe(true);
-      expect("hydrate" in store).toBe(true);
-      expect("rebase" in store).toBe(true);
+      expect("replaceValues" in store).toBe(false);
+      expect("hydrate" in store).toBe(false);
+      expect("rebase" in store).toBe(false);
       expect("transaction" in store).toBe(true);
       expect("historyMg" in store).toBe(false);
       expect("depsMg" in store).toBe(false);
@@ -101,7 +101,7 @@ describe("BitStore Core", () => {
       });
       const watcher = vi.fn();
 
-      store.watch("user.name", watcher);
+      store.subscribePath("user.name", watcher);
 
       store.setField("user.age", 31);
       expect(watcher).not.toHaveBeenCalled();
@@ -659,7 +659,7 @@ describe("BitStore Core", () => {
     it("should reset baseline using rebase", () => {
       const store = new BitStore({ initialValues: { name: "" } });
 
-      store.rebase({ name: "Leandro" });
+      store.setValues({ name: "Leandro" }, { rebase: true });
       expect(store.getState().values.name).toBe("Leandro");
       expect(store.isDirty).toBe(false);
     });
@@ -667,7 +667,7 @@ describe("BitStore Core", () => {
     it("should replace values without rebasing the initial state", () => {
       const store = new BitStore({ initialValues: { name: "Leo", age: 30 } });
 
-      store.replaceValues({ name: "Leandro", age: 31 });
+      store.setValues({ name: "Leandro", age: 31 });
 
       expect(store.getState().values).toEqual({ name: "Leandro", age: 31 });
       expect(store.getConfig().initialValues).toEqual({ name: "Leo", age: 30 });
@@ -679,7 +679,10 @@ describe("BitStore Core", () => {
         initialValues: { user: { name: "Leo", profile: { city: "Tokyo" } } },
       });
 
-      store.hydrate({ user: { profile: { city: "Osaka" } } });
+      store.setValues(
+        { user: { profile: { city: "Osaka" } } },
+        { partial: true },
+      );
 
       expect(store.getState().values).toEqual({
         user: { name: "Leo", profile: { city: "Osaka" } },
@@ -690,13 +693,10 @@ describe("BitStore Core", () => {
     it("should rebase values explicitly", () => {
       const store = new BitStore({ initialValues: { name: "Leo", age: 30 } });
 
-      store.rebase({ name: "Leandro", age: 31 });
+      store.setValues({ name: "Leandro", age: 31 }, { rebase: true });
 
       expect(store.getState().values).toEqual({ name: "Leandro", age: 31 });
-      expect(store.getConfig().initialValues).toEqual({
-        name: "Leandro",
-        age: 31,
-      });
+      expect(store.getConfig().initialValues).toEqual({ name: "Leo", age: 30 });
       expect(store.isDirty).toBe(false);
     });
 
@@ -1185,7 +1185,7 @@ describe("BitStore Core", () => {
       });
 
       store.setField("name", "Leo");
-      store.rebase({ name: "Leandro", items: ["A"] });
+      store.setValues({ name: "Leandro", items: ["A"] }, { rebase: true });
       store.pushItem("items", "B");
 
       expect(changes.some((event) => event.origin === "setField")).toBe(true);
