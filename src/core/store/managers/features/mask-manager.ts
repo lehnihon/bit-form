@@ -1,4 +1,4 @@
-import { BitMask, BitMaskName } from "../../mask/types";
+import { BitMask, BitMaskName } from "../../../mask/types";
 
 /**
  * BitMaskManager

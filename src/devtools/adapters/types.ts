@@ -1,17 +1,14 @@
+import type { BitFormDevToolsUI } from "../ui";
+
 /**
  * Interface for DevTools adapters (local, remote).
  * Provides type safety for adapter operations.
  */
 export interface BitDevToolsAdapter {
   /**
-   * Initialize the adapter with a configuration object
+   * The DevTools UI instance
    */
-  initialize(config: unknown): void;
-
-  /**
-   * Send a message/event to the DevTools
-   */
-  sendMessage(event: unknown): void;
+  ui: BitFormDevToolsUI;
 
   /**
    * Cleanup and destroy the adapter resources
