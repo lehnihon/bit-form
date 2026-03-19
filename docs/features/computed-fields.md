@@ -5,6 +5,7 @@ Computed fields are form values derived from other values. When a dependency cha
 ## Setup
 
 Define computed fields in `fields` via the `computed` property per field.
+In V4, `computedDependsOn` is mandatory so the engine can build a deterministic dependency graph with no implicit tracking.
 
 ```tsx
 const store = createBitStore({
@@ -15,14 +16,20 @@ const store = createBitStore({
     discountedTotal: 0,
   },
   fields: {
-    total: { computed: (values) => values.price * values.quantity },
-    discountedTotal: { computed: (values) => values.total * 0.9 }, // 10% discount
+    total: {
+      computed: (values) => values.price * values.quantity,
+      computedDependsOn: ["price", "quantity"],
+    },
+    discountedTotal: {
+      computed: (values) => values.total * 0.9,
+      computedDependsOn: ["total"],
+    }, // 10% discount
   },
 });
 ```
 
 ## How it works
 
-The `BitComputedManager` evaluates all computed functions whenever the state changes. It performs a **double-pass evaluation**, which means cascading computations (e.g., `discountedTotal` relies on `total`, which relies on `price` and `quantity`) resolve perfectly in real-time.
+The `BitComputedManager` evaluates only the affected computed graph whenever a dependency changes. In V4 it uses an ordered DAG derived from `computedDependsOn`, so cascading computations (e.g. `discountedTotal` relies on `total`, which relies on `price` and `quantity`) resolve in a single deterministic pass.
 
 You can bind these computed fields to readonly inputs or use `useBitWatch("total")` to display the derived values seamlessly in your UI.

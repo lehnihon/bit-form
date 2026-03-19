@@ -284,6 +284,41 @@ export function setDeepValues(
   return root;
 }
 
+export function unsetDeepValue(obj: any, path: string): any {
+  if (!path) {
+    return Array.isArray(obj) ? [] : {};
+  }
+
+  const keys = getPathKeys(path);
+  const root = Array.isArray(obj) ? [...obj] : { ...obj };
+  let current: any = root;
+
+  for (let i = 0; i < keys.length - 1; i++) {
+    const key = keys[i];
+    const currentValue = current?.[key];
+
+    if (currentValue === null || currentValue === undefined) {
+      return root;
+    }
+
+    current[key] = Array.isArray(currentValue)
+      ? [...currentValue]
+      : { ...currentValue };
+
+    current = current[key];
+  }
+
+  const leafKey = keys[keys.length - 1];
+
+  if (Array.isArray(current)) {
+    current.splice(Number(leafKey), 1);
+  } else if (current && typeof current === "object") {
+    delete current[leafKey];
+  }
+
+  return root;
+}
+
 export function cleanPrefixedKeys(
   obj: Record<string, any>,
   prefix: string,

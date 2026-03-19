@@ -1,7 +1,6 @@
 import { BitMask, BitMaskName } from "../mask/types";
 import {
   BitConfig,
-  BitComputedFn,
   BitErrors,
   BitPersistMetadata,
   BitFieldState,
@@ -14,11 +13,6 @@ import {
   BitArrayItem,
   DeepPartial,
   BitFieldChangeMeta,
-  BitFieldChangeEvent,
-  BitBeforeValidateEvent,
-  BitAfterValidateEvent,
-  BitBeforeSubmitEvent,
-  BitAfterSubmitEvent,
 } from "./contracts/types";
 import type {
   BitFrameworkConfig,
@@ -77,6 +71,7 @@ import {
   createInitialStoreState,
   createStoreCapabilities,
   createStoreEffects,
+  type BitStoreCapabilityPorts,
 } from "./orchestration/store-bootstrap";
 /**
  * BitStore
@@ -274,10 +269,87 @@ export class BitStore<T extends object = any> {
     );
     this.dirtyManager = new BitDirtyManager<T>();
     this.maskManager = new BitMaskManager();
+
+    const capabilityPorts: BitStoreCapabilityPorts<T> = {
+      config: this.config,
+      validationPort: {
+        getState: () => this.getState(),
+        dispatch: (operation) => this.dispatch(operation),
+        setError: (path, message) => this.setError(path, message),
+        validate: (options) => this.validate(options),
+        getFieldConfig: (path) => this.getFieldConfig(path),
+        getScopeFields: (scopeName) => this.getScopeFields(scopeName),
+        config: this.config,
+        getRequiredErrors: (values) =>
+          this.dependencyManager.getRequiredErrors(values),
+        getHiddenFields: () => this.dependencyManager.getHiddenFields(),
+        emitBeforeValidate: (event) => this.effects.beforeValidate(event),
+        emitAfterValidate: (event) => this.effects.afterValidate(event),
+      },
+      lifecyclePort: {
+        getState: () => this.getState(),
+        dispatch: (operation) => this.dispatch(operation),
+        internalSaveSnapshot: () => this.saveHistorySnapshot(),
+        batchStateUpdates: (callback) => this.runStateBatch(callback),
+        config: this.config,
+        getTransformEntries: () => this.getTransformEntries(),
+        updateDependencies: (changedPath, newValues) =>
+          this.dependencyManager.updateDependencies(changedPath, newValues),
+        isFieldHidden: (path) => this.dependencyManager.isHidden(path),
+        evaluateAllDependencies: (values) =>
+          this.dependencyManager.evaluateAll(values),
+        getHiddenFields: () => this.dependencyManager.getHiddenFields(),
+        clearFieldValidation: (path) => this.validation.clear(path),
+        triggerValidation: (scopeFields, options) =>
+          this.validation.trigger(scopeFields, options),
+        handleFieldAsyncValidation: (path, value) =>
+          this.validation.handleAsync(path, value),
+        cancelAllValidations: () => this.validation.cancelAll(),
+        validateNow: (options) => this.validation.validate(options),
+        hasValidationsInProgress: (scopeFields) =>
+          this.validation.hasValidationsInProgress(scopeFields),
+        updateDirtyForPath: (path, nextValues, baselineValues) =>
+          this.dirtyManager.updateForPath(path, nextValues, baselineValues),
+        rebuildDirtyState: (nextValues, baselineValues) =>
+          this.dirtyManager.rebuild(nextValues, baselineValues),
+        clearDirtyState: () => this.dirtyManager.clear(),
+        buildDirtyValues: (values) =>
+          this.dirtyManager.buildDirtyValues(values),
+        getInitialValues: () => this._initialValues,
+        setInitialValues: (values) => {
+          this._initialValues = values;
+          this.config.initialValues = values;
+        },
+        resetHistory: (initialValues) => this.history.reset(initialValues),
+        emitFieldChange: (event) => this.effects.onFieldChange(event),
+        emitBeforeSubmit: (event) => this.effects.beforeSubmit(event),
+        emitAfterSubmit: (event) => this.effects.afterSubmit(event),
+        emitOperationalError: (event) =>
+          this.effects.reportOperationalError(event),
+      },
+      arrayPort: {
+        getState: () => this.getState(),
+        setFieldWithMeta: (path, value, meta) =>
+          this.setFieldWithMeta(path, value, meta),
+        emitFieldChange: (event) => this.effects.onFieldChange(event),
+        dispatch: (operation) => this.dispatch(operation),
+        internalSaveSnapshot: () => this.saveHistorySnapshot(),
+        unregisterPrefix: (prefix) => this.unregisterPrefix(prefix),
+        triggerValidation: (scopeFields) => this.triggerValidation(scopeFields),
+        updateDirtyForPath: (path, nextValues, baselineValues) =>
+          this.dirtyManager.updateForPath(path, nextValues, baselineValues),
+        getConfig: () => this.getConfig(),
+      },
+      getScopeFields: (scopeName) => this.getScopeFields(scopeName),
+      getState: () => this.getState(),
+      dispatch: (operation) => this.dispatch(operation),
+      getInitialValues: () => this._initialValues,
+      isPathDirty: (path) => this.dirtyManager.isPathDirty(path),
+    };
+
     this.capabilities = createStoreCapabilities<T>({
-      store: this,
+      ports: capabilityPorts,
       dependencyManager: this.dependencyManager,
-      dirtyManager: this.dirtyManager,
     });
     this.state = createInitialStoreState<T>({
       config: this.config,
@@ -286,7 +358,7 @@ export class BitStore<T extends object = any> {
     });
     this.subscriptions = new BitSubscriptionEngine<T>(() => this.state);
 
-    this.internalSaveSnapshot();
+    this.saveHistorySnapshot();
 
     this.storeId =
       config.storeId ||
@@ -332,7 +404,7 @@ export class BitStore<T extends object = any> {
     });
   }
 
-  getComputedEntries(): BitComputedEntry<T>[] {
+  private getComputedEntries(): BitComputedEntry<T>[] {
     return getComputedEntries({
       fieldIndexState: this.fieldIndexState,
       forEachFieldConfig: (iteratee) =>
@@ -340,7 +412,7 @@ export class BitStore<T extends object = any> {
     });
   }
 
-  getTransformEntries(): [string, BitTransformFn<T>][] {
+  private getTransformEntries(): [string, BitTransformFn<T>][] {
     return getTransformEntries({
       fieldIndexState: this.fieldIndexState,
       forEachFieldConfig: (iteratee) =>
@@ -525,10 +597,10 @@ export class BitStore<T extends object = any> {
   }
 
   blurField<P extends BitPath<T>>(path: P) {
-    this.internalSaveSnapshot();
+    this.saveHistorySnapshot();
 
     if (!this.state.touched[path as keyof typeof this.state.touched]) {
-      this.batchStateUpdates(() => {
+      this.runStateBatch(() => {
         this.dispatch(touchFieldsOperation([path as string]));
       });
     }
@@ -578,7 +650,7 @@ export class BitStore<T extends object = any> {
   }
 
   transaction<TResult>(callback: () => TResult): TResult {
-    return this.batchStateUpdates(callback);
+    return this.runStateBatch(callback);
   }
 
   async submit(
@@ -745,34 +817,6 @@ export class BitStore<T extends object = any> {
     return this.validation.validate(options);
   }
 
-  emitBeforeValidate(event: BitBeforeValidateEvent<T>): Promise<void> {
-    return this.effects.beforeValidate(event);
-  }
-
-  emitAfterValidate(event: BitAfterValidateEvent<T>): Promise<void> {
-    return this.effects.afterValidate(event);
-  }
-
-  emitBeforeSubmit(event: BitBeforeSubmitEvent<T>): Promise<void> {
-    return this.effects.beforeSubmit(event);
-  }
-
-  emitAfterSubmit(event: BitAfterSubmitEvent<T>): Promise<void> {
-    return this.effects.afterSubmit(event);
-  }
-
-  emitFieldChange(event: BitFieldChangeEvent<T>) {
-    this.effects.onFieldChange(event);
-  }
-
-  emitOperationalError(event: {
-    source: "submit";
-    error: unknown;
-    payload?: unknown;
-  }) {
-    return this.effects.reportOperationalError(event);
-  }
-
   hasValidationsInProgress(scopeFields?: string[]): boolean {
     return this.validation.hasValidationsInProgress(scopeFields);
   }
@@ -792,59 +836,7 @@ export class BitStore<T extends object = any> {
     return this.scope.getStepErrors(scopeName);
   }
 
-  updateDependencies(changedPath: string, newValues: T): string[] {
-    return this.dependencyManager.updateDependencies(changedPath, newValues);
-  }
-
-  isFieldHidden(path: string): boolean {
-    return this.dependencyManager.isHidden(path);
-  }
-
-  evaluateAllDependencies(values: T): void {
-    this.dependencyManager.evaluateAll(values);
-  }
-
-  getHiddenFields(): ReadonlySet<string> {
-    return this.dependencyManager.getHiddenFields();
-  }
-
-  getRequiredErrors(values: T): BitErrors<T> {
-    return this.dependencyManager.getRequiredErrors(values);
-  }
-
-  clearFieldValidation(path: string): void {
-    this.validation.clear(path);
-  }
-
-  handleFieldAsyncValidation(path: string, value: any): void {
-    this.validation.handleAsync(path, value);
-  }
-
-  cancelAllValidations(): void {
-    this.validation.cancelAll();
-  }
-
-  validateNow(options?: BitValidationOptions): Promise<boolean> {
-    return this.validation.validate(options);
-  }
-
-  updateDirtyForPath(path: string, nextValues: T, baselineValues: T): boolean {
-    return this.dirtyManager.updateForPath(path, nextValues, baselineValues);
-  }
-
-  rebuildDirtyState(nextValues: T, baselineValues: T): boolean {
-    return this.dirtyManager.rebuild(nextValues, baselineValues);
-  }
-
-  clearDirtyState(): void {
-    this.dirtyManager.clear();
-  }
-
-  buildDirtyValues(values: T): Partial<T> {
-    return this.dirtyManager.buildDirtyValues(values);
-  }
-
-  batchStateUpdates<TResult>(callback: () => TResult): TResult {
+  private runStateBatch<TResult>(callback: () => TResult): TResult {
     beginStoreBatch(this.batchState);
 
     try {
@@ -854,32 +846,6 @@ export class BitStore<T extends object = any> {
         this.flushBatchedStateUpdates();
       }
     }
-  }
-
-  resetHistory(initialValues: T): void {
-    this.history.reset(initialValues);
-  }
-
-  /** Current baseline used for dirty-state comparisons. */
-  get initialValues(): T {
-    return this._initialValues;
-  }
-
-  /** Returns the current baseline (usable as a port method). */
-  getInitialValues(): T {
-    return this._initialValues;
-  }
-
-  /**
-   * Updates the baseline used for dirty comparisons.
-   * Called by rebaseValues so that config is never mutated directly by managers.
-   * Also syncs config.initialValues so getConfig() reflects the new baseline.
-   */
-  setInitialValues(values: T): void {
-    this._initialValues = values;
-    // Keep the public config reference consistent so that getConfig().initialValues
-    // continues to return the current baseline after a rebase.
-    this.config.initialValues = values;
   }
 
   /** Returns a monotonically increasing counter that increments every time a
@@ -893,7 +859,7 @@ export class BitStore<T extends object = any> {
   // INTERNAL OPERATIONS
   // ============================================================================
 
-  dispatch(operation: BitStoreOperation<T>) {
+  private dispatch(operation: BitStoreOperation<T>) {
     const currentState = getEffectiveStoreState(this.state, this.batchState);
 
     if (this.batchState.depth > 0) {
@@ -929,7 +895,7 @@ export class BitStore<T extends object = any> {
     this.effects.onStateUpdated(this.state, updateResult.valuesChanged);
   }
 
-  internalSaveSnapshot() {
+  private saveHistorySnapshot() {
     this.history.saveSnapshot(this.state.values);
   }
 
@@ -957,7 +923,7 @@ export class BitStore<T extends object = any> {
       }),
     );
 
-    this.internalSaveSnapshot();
+    this.saveHistorySnapshot();
     this.validation.validate();
   }
 

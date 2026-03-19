@@ -31,11 +31,7 @@ export interface BitSelectorSubscriptionOptions<TValue> {
   equalityFn?: BitEqualityFn<TValue>;
   emitImmediately?: boolean;
   paths?: string[];
-  /**
-   * Quando `true`, o store tenta inferir paths acessados pelo selector via Proxy.
-   * Mantido como opt-in para reduzir custo de inscrição e complexidade implícita.
-   */
-  autoTrackPaths?: boolean;
+  mode?: "scoped" | "global";
 }
 
 export interface BitValidationOptions {
@@ -66,14 +62,33 @@ export interface BitFrameworkConfig<T extends object = any>
   plugins: BitPlugin<T>[];
 }
 
-export interface BitStoreApi<T extends object = any> {
+export interface BitStoreQueryApi<T extends object = any> {
   readonly config: Readonly<BitFrameworkConfig<T>>;
 
   getConfig(): Readonly<BitFrameworkConfig<T>>;
   getState(): Readonly<BitState<T>>;
 
+  isHidden<P extends BitPath<T>>(path: P): boolean;
+  isRequired<P extends BitPath<T>>(path: P): boolean;
+  isFieldDirty(path: string): boolean;
+  isFieldValidating(path: string): boolean;
+  getDirtyValues(): Partial<T>;
+  getPersistMetadata(): BitPersistMetadata;
+  getHistoryMetadata(): BitHistoryMetadata;
+  getStepStatus(scopeName: string): ScopeStatus;
+  getStepErrors(scopeName: string): Record<string, string>;
+}
+
+export interface BitStoreSubscriptionApi<T extends object = any> {
   subscribe(listener: () => void): () => void;
 
+  watch<P extends BitPath<T>>(
+    path: P,
+    callback: (value: BitPathValue<T, P>) => void,
+  ): () => void;
+}
+
+export interface BitStoreMutationApi<T extends object = any> {
   setField<P extends BitPath<T>>(path: P, value: BitPathValue<T, P>): void;
   blurField<P extends BitPath<T>>(path: P): void;
   replaceValues(values: T): void;
@@ -93,30 +108,28 @@ export interface BitStoreApi<T extends object = any> {
   submit(
     onSuccess: (values: T, dirtyValues?: Partial<T>) => void | Promise<void>,
   ): Promise<void>;
+}
 
+export interface BitStoreMaskApi {
   registerMask(name: BitMaskName, mask: BitMask): void;
   unregisterMask(name: BitMaskName): void;
-  getDirtyValues(): Partial<T>;
+}
+
+export interface BitStorePersistApi {
   getPersistMetadata(): BitPersistMetadata;
   restorePersisted(): Promise<boolean>;
   forceSave(): Promise<void>;
   clearPersisted(): Promise<void>;
+}
 
+export interface BitStoreRegistrationApi<T extends object = any> {
   cleanup(): void;
 
   registerField(path: string, config: BitFieldDefinition<T>): void;
   unregisterField(path: string): void;
+}
 
-  isHidden<P extends BitPath<T>>(path: P): boolean;
-  isRequired<P extends BitPath<T>>(path: P): boolean;
-  isFieldDirty(path: string): boolean;
-  isFieldValidating(path: string): boolean;
-
-  watch<P extends BitPath<T>>(
-    path: P,
-    callback: (value: BitPathValue<T, P>) => void,
-  ): () => void;
-
+export interface BitStoreArrayApi<T extends object = any> {
   pushItem<P extends BitArrayPath<T>>(
     path: P,
     value: BitArrayItem<BitPathValue<T, P>>,
@@ -137,14 +150,22 @@ export interface BitStoreApi<T extends object = any> {
     indexA: number,
     indexB: number,
   ): void;
+}
 
-  getHistoryMetadata(): BitHistoryMetadata;
+export interface BitStoreHistoryApi {
   undo(): void;
   redo(): void;
-
-  getStepStatus(scopeName: string): ScopeStatus;
-  getStepErrors(scopeName: string): Record<string, string>;
 }
+
+export interface BitStoreApi<T extends object = any>
+  extends BitStoreQueryApi<T>,
+    BitStoreSubscriptionApi<T>,
+    BitStoreMutationApi<T>,
+    BitStoreMaskApi,
+    BitStorePersistApi,
+    BitStoreRegistrationApi<T>,
+    BitStoreArrayApi<T>,
+    BitStoreHistoryApi {}
 
 export interface BitStoreHooksApi<T extends object = any>
   extends BitStoreApi<T> {

@@ -45,7 +45,7 @@ export function registerCachedFieldIndexes<T extends object>(args: {
     fieldIndexState.computedEntriesCache.push({
       path,
       compute: config.computed,
-      dependsOn: config.computedDependsOn ?? config.conditional?.dependsOn,
+      dependsOn: config.computedDependsOn,
     });
   }
 
@@ -133,7 +133,7 @@ export function getComputedEntries<T extends object>(args: {
         result.push({
           path,
           compute: cfg.computed,
-          dependsOn: cfg.computedDependsOn ?? cfg.conditional?.dependsOn,
+          dependsOn: cfg.computedDependsOn,
         });
       }
     });

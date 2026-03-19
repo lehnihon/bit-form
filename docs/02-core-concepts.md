@@ -8,11 +8,11 @@ The `BitStore` is a plain TypeScript class that acts as the single source of tru
 
 When you use framework-specific wrappers like `useBitForm` (React/Vue) or `injectBitForm` (Angular), they are simply subscribing to the `BitStore` and triggering re-renders only when necessary. This architecture is what makes Bit-Form incredibly performant and cross-compatible.
 
-### V3 Runtime Architecture
+### V4 Runtime Architecture
 
-In V3, `BitStore` acts mainly as an orchestrator/facade over specialized runtime modules:
+In V4, `BitStore` acts mainly as an orchestrator/facade over specialized runtime modules:
 
-- `subscription-engine`: handles `subscribe`, selector subscriptions, scoped path subscriptions and auto-tracked paths.
+- `subscription-engine`: handles `subscribe`, selector subscriptions and scoped path subscriptions with explicit paths.
 - `state-update-engine`: normalizes state updates (`changedPaths`, `valuesChanged`, computed apply).
 - `effect-engine`: centralizes side effects (persist, plugin lifecycle hooks, bus dispatch).
 - `store-bootstrap`: builds capabilities and initial state during store construction.
@@ -73,7 +73,7 @@ Understanding the lifecycle of a field within the `BitStore` will help you predi
 
 ### 1. Initialization
 
-When you instantiate a `BitStore`, you provide the `initialValues`. The store applies any initial `computed` logic and creates the base snapshot of the state.
+When you instantiate a `BitStore`, you provide the `initialValues`. The store applies any initial `computed` logic and creates the base history baseline for the state.
 
 ### 2. Registration
 
@@ -104,9 +104,9 @@ Bit-Form uses both specialized managers (domain behavior) and runtime engines (o
 
 - **Dependency Manager**: Evaluates `showIf` and `requiredIf` conditions.
 - **Validation Manager**: Handles synchronous resolvers (Zod, Yup, Joi) and debounced asynchronous API validations.
-- **History Manager**: Tracks state snapshots, enabling the Time-Travel (`undo` / `redo`) features.
+- **History Manager**: Tracks incremental patches between states, enabling `undo` / `redo` with lower memory pressure.
 - **Array Manager**: Exposes native methods to securely append, prepend, insert, remove, move, and swap items within array fields.
-- **Computed Manager**: Reactively calculates derived field values on every state update.
+- **Computed Manager**: Reactively calculates derived field values from explicit `computedDependsOn` declarations.
 
 `subscription-engine` now uses path-prefix indexing for scoped subscriptions, reducing notification overhead in large forms.
 

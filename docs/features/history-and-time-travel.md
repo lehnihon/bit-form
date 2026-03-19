@@ -1,6 +1,6 @@
 # History & Time Travel
 
-Ever wanted to give your users a `Ctrl+Z` (Undo) and `Ctrl+Y` (Redo) experience inside a complex form? Bit-Form includes a native History Manager that tracks snapshots of your state.
+Ever wanted to give your users a `Ctrl+Z` (Undo) and `Ctrl+Y` (Redo) experience inside a complex form? Bit-Form includes a native History Manager that tracks incremental patches between states.
 
 ## Enabling History
 
@@ -15,7 +15,7 @@ const store = createBitStore({
 
 ## How it works
 
-Every time a user finishes interacting with a field (specifically, when `blurField` is triggered), Bit-Form takes a deep clone snapshot of the current values and saves it to the history stack. You can configure the limit:
+Every time a user finishes interacting with a field (specifically, when `blurField` is triggered), Bit-Form computes an incremental patch from the previous history point and stores only that delta. You can configure the limit:
 
 ```tsx
 const store = createBitStore({
@@ -53,6 +53,6 @@ export function FormToolbar() {
 
 The history hook also exposes `historyIndex` and `historySize` for UI/toolbars.
 
-When you trigger `undo()`, Bit-Form replaces the current form values with the previous snapshot and automatically re-runs validation to ensure the UI stays consistent.
+When you trigger `undo()`, Bit-Form reconstructs the previous form values from the stored patches and automatically re-runs validation to ensure the UI stays consistent.
 
 _Note: For debugging your history stack visually, check out the **DevTools** documentation!_

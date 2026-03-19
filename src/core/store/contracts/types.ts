@@ -69,19 +69,27 @@ export interface BitFieldValidation<T extends object = any> {
   asyncValidateDelay?: number;
 }
 
-/** Full field definition: conditional, validation, transform, computed, mask, scope. */
-export interface BitFieldDefinition<T extends object = any> {
+interface BitFieldDefinitionBase<T extends object = any> {
   conditional?: BitFieldConditional<T>;
   validation?: BitFieldValidation<T>;
   transform?: BitTransformFn<T>;
-  computed?: BitComputedFn<T>;
-  /** Explicit dependencies for computed optimization. Falls back to conditional.dependsOn when omitted. */
-  computedDependsOn?: string[];
   /** Mask name (built-in or custom registry key) or BitMask instance. */
   mask?: BitMask | BitMaskName;
   /** Scope name (e.g. wizard step). */
   scope?: string;
 }
+
+/** Full field definition: conditional, validation, transform, computed, mask, scope. */
+export type BitFieldDefinition<T extends object = any> =
+  | (BitFieldDefinitionBase<T> & {
+      computed?: undefined;
+      computedDependsOn?: never;
+    })
+  | (BitFieldDefinitionBase<T> & {
+      computed: BitComputedFn<T>;
+      /** Explicit dependencies are mandatory in v4 for deterministic computed scheduling. */
+      computedDependsOn: string[];
+    });
 
 export interface DevToolsOptions {
   enabled?: boolean;
