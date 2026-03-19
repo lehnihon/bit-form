@@ -46,6 +46,16 @@ import {
   trackBatchedStoreUpdate,
   type BitStoreBatchState,
 } from "./engines/store-batch-engine";
+import {
+  createStoreFieldIndexState,
+  getComputedEntries,
+  getScopeFields,
+  getTransformEntries,
+  invalidateStoreFieldIndexes,
+  registerCachedFieldIndexes,
+  type BitStoreFieldIndexState,
+  unregisterCachedFieldIndexes,
+} from "./engines/store-field-index-engine";
 import { executeStatePatchOperation } from "./engines/store-kernel-engine";
 import { routeStoreOperation } from "./engines/store-operation-router";
 import {
@@ -171,16 +181,13 @@ export class BitStore<T extends object = any> {
   private readonly dependencyManager: BitDependencyManager<T>;
   private readonly computedManager: BitComputedManager<T>;
   private readonly dirtyManager: BitDirtyManager<T>;
-  private scopeFieldsIndex: Map<string, string[]> | null = null;
-  private computedEntriesCache: BitComputedEntry<T>[] | null = null;
-  private transformEntriesCache: [string, BitTransformFn<T>][] | null = null;
+  private readonly fieldIndexState: BitStoreFieldIndexState<T> =
+    createStoreFieldIndexState<T>();
   private readonly batchState: BitStoreBatchState<T> =
     createStoreBatchState<T>();
 
   private invalidateFieldIndexes() {
-    this.scopeFieldsIndex = null;
-    this.computedEntriesCache = null;
-    this.transformEntriesCache = null;
+    invalidateStoreFieldIndexes(this.fieldIndexState);
     this.computedManager.invalidateReverseDeps();
   }
 
@@ -188,25 +195,11 @@ export class BitStore<T extends object = any> {
     path: string,
     config: BitFieldDefinition<T>,
   ) {
-    if (this.scopeFieldsIndex && config.scope) {
-      const scopedPaths = this.scopeFieldsIndex.get(config.scope) ?? [];
-      if (!scopedPaths.includes(path)) {
-        scopedPaths.push(path);
-        this.scopeFieldsIndex.set(config.scope, scopedPaths);
-      }
-    }
-
-    if (this.computedEntriesCache && config.computed) {
-      this.computedEntriesCache.push({
-        path,
-        compute: config.computed,
-        dependsOn: config.computedDependsOn ?? config.conditional?.dependsOn,
-      });
-    }
-
-    if (this.transformEntriesCache && config.transform) {
-      this.transformEntriesCache.push([path, config.transform]);
-    }
+    registerCachedFieldIndexes({
+      fieldIndexState: this.fieldIndexState,
+      path,
+      config,
+    });
   }
 
   private unregisterCachedFieldIndexes(
@@ -218,29 +211,11 @@ export class BitStore<T extends object = any> {
       return;
     }
 
-    if (this.scopeFieldsIndex && config.scope) {
-      const scopedPaths = this.scopeFieldsIndex.get(config.scope);
-      if (scopedPaths) {
-        const nextPaths = scopedPaths.filter((fieldPath) => fieldPath !== path);
-        if (nextPaths.length > 0) {
-          this.scopeFieldsIndex.set(config.scope, nextPaths);
-        } else {
-          this.scopeFieldsIndex.delete(config.scope);
-        }
-      }
-    }
-
-    if (this.computedEntriesCache && config.computed) {
-      this.computedEntriesCache = this.computedEntriesCache.filter(
-        (entry) => entry.path !== path,
-      );
-    }
-
-    if (this.transformEntriesCache && config.transform) {
-      this.transformEntriesCache = this.transformEntriesCache.filter(
-        ([entryPath]) => entryPath !== path,
-      );
-    }
+    unregisterCachedFieldIndexes({
+      fieldIndexState: this.fieldIndexState,
+      path,
+      config,
+    });
   }
 
   private getCapability<TKey extends keyof BitStoreCapabilities<T>>(key: TKey) {
@@ -345,52 +320,28 @@ export class BitStore<T extends object = any> {
   }
 
   getScopeFields(scopeName: string): string[] {
-    if (!this.scopeFieldsIndex) {
-      const index = new Map<string, string[]>();
-      this.dependencyManager.forEachFieldConfig((cfg, path) => {
-        if (!cfg.scope) {
-          return;
-        }
-        const list = index.get(cfg.scope) ?? [];
-        list.push(path);
-        index.set(cfg.scope, list);
-      });
-      this.scopeFieldsIndex = index;
-    }
-
-    return this.scopeFieldsIndex.get(scopeName) ?? [];
+    return getScopeFields({
+      fieldIndexState: this.fieldIndexState,
+      scopeName,
+      forEachFieldConfig: (iteratee) =>
+        this.dependencyManager.forEachFieldConfig(iteratee),
+    });
   }
 
   getComputedEntries(): BitComputedEntry<T>[] {
-    if (!this.computedEntriesCache) {
-      const result: BitComputedEntry<T>[] = [];
-      this.dependencyManager.forEachFieldConfig((cfg, path) => {
-        if (cfg.computed) {
-          result.push({
-            path,
-            compute: cfg.computed,
-            dependsOn: cfg.computedDependsOn ?? cfg.conditional?.dependsOn,
-          });
-        }
-      });
-      this.computedEntriesCache = result;
-    }
-
-    return this.computedEntriesCache;
+    return getComputedEntries({
+      fieldIndexState: this.fieldIndexState,
+      forEachFieldConfig: (iteratee) =>
+        this.dependencyManager.forEachFieldConfig(iteratee),
+    });
   }
 
   getTransformEntries(): [string, BitTransformFn<T>][] {
-    if (!this.transformEntriesCache) {
-      const result: [string, BitTransformFn<T>][] = [];
-      this.dependencyManager.forEachFieldConfig((cfg, path) => {
-        if (cfg.transform) {
-          result.push([path, cfg.transform]);
-        }
-      });
-      this.transformEntriesCache = result;
-    }
-
-    return this.transformEntriesCache;
+    return getTransformEntries({
+      fieldIndexState: this.fieldIndexState,
+      forEachFieldConfig: (iteratee) =>
+        this.dependencyManager.forEachFieldConfig(iteratee),
+    });
   }
 
   resolveMask(path: string): BitMask | undefined {
