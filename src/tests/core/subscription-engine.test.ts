@@ -139,4 +139,24 @@ describe("BitSubscriptionEngine", () => {
     expect(nameFn).toHaveBeenCalledTimes(1);
     expect(ageFn).toHaveBeenCalledTimes(1);
   });
+
+  it("dedupe versionado: changedPaths sobrepostos não duplicam notificação", () => {
+    let state = createState({ user: { name: "Leo", age: 30 } });
+    const engine = new BitSubscriptionEngine<Values>(() => state);
+
+    const nameFn = vi.fn();
+
+    engine.subscribeSelector(
+      (s) => s.values.user.name,
+      nameFn,
+      { paths: ["user.name"] },
+      (a, b) => a === b,
+    );
+
+    state = createState({ user: { name: "Ana", age: 30 } });
+    engine.notify(state, ["user.name", "user"]);
+
+    expect(nameFn).toHaveBeenCalledTimes(1);
+    expect(nameFn).toHaveBeenCalledWith("Ana");
+  });
 });
