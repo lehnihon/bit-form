@@ -17,7 +17,10 @@ export class BitSubscriptionEngine<T extends object> {
     new Map();
   private readonly expandedPathCache = new Map<string, string[]>();
   private readonly changedPathLookupCache = new Map<string, string[]>();
-  private readonly subscriptionSeenVersion = new Map<SelectorListenerEntry<T>, number>();
+  private readonly subscriptionSeenVersion = new Map<
+    SelectorListenerEntry<T>,
+    number
+  >();
   private notifyVersion = 0;
 
   /**
@@ -280,7 +283,8 @@ export class BitSubscriptionEngine<T extends object> {
       });
     };
 
-    const normalizedChangedPaths = this.normalizeSubscriptionPaths(changedPaths);
+    const normalizedChangedPaths =
+      this.normalizeSubscriptionPaths(changedPaths);
 
     normalizedChangedPaths.forEach((changedPath) => {
       this.expandChangedPathForLookup(changedPath).forEach(addByPath);
