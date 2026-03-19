@@ -38,6 +38,7 @@ import { BitDirtyManager } from "./managers/core/dirty-manager";
 import { BitMaskManager } from "./managers/features/mask-manager";
 import { BitSubscriptionEngine } from "./engines/subscription-engine";
 import { executeStatePatchOperation } from "./engines/store-kernel-engine";
+import { routeStoreOperation } from "./engines/store-operation-router";
 import {
   BitStoreOperation,
   historyApplyOperation,
@@ -945,60 +946,17 @@ export class BitStore<T extends object = any> {
   // ============================================================================
 
   dispatch(operation: BitStoreOperation<T>) {
-    if (operation.kind === "field.touchMany") {
-      if (operation.paths.length === 0) {
-        return;
-      }
+    const currentState = this.batchedState ?? this.state;
+    const patchOperation = routeStoreOperation(currentState, operation);
 
-      const touched = { ...this.state.touched };
-      for (const path of operation.paths) {
-        touched[path as keyof typeof touched] = true;
-      }
-
-      this.dispatch(patchStateOperation({ touched }, operation.paths));
-      return;
-    }
-
-    if (operation.kind === "form.persistMeta") {
-      this.dispatch(
-        patchStateOperation({
-          persist: {
-            ...this.state.persist,
-            ...operation.patch,
-          },
-        }),
-      );
-      return;
-    }
-
-    if (operation.kind === "history.apply") {
-      this.dispatch(
-        patchStateOperation(
-          {
-            values: operation.values,
-            isDirty: operation.isDirty,
-          },
-          ["*"],
-          { requireExplicitChangedPaths: true },
-        ),
-      );
-      return;
-    }
-
-    if (operation.kind === "validation.commit") {
-      this.dispatch(
-        patchStateOperation({
-          errors: operation.errors,
-          isValid: operation.isValid,
-        }),
-      );
+    if (!patchOperation) {
       return;
     }
 
     if (this.batchDepth > 0) {
       const updateResult = executeStatePatchOperation({
-        currentState: this.batchedState ?? this.state,
-        operation,
+        currentState,
+        operation: patchOperation,
         applyComputedValues: (values) => values,
       });
 
@@ -1016,9 +974,9 @@ export class BitStore<T extends object = any> {
 
     const updateResult = executeStatePatchOperation({
       currentState: this.state,
-      operation,
+      operation: patchOperation,
       applyComputedValues: (values, changedPaths) =>
-        operation.skipComputed
+        patchOperation.skipComputed
           ? values
           : this.computedManager.apply(values, changedPaths),
     });
