@@ -35,9 +35,7 @@ import {
   beginStoreBatch,
   createStoreBatchState,
   endStoreBatch,
-  flushStoreBatchState,
   getEffectiveStoreState,
-  trackBatchedStoreUpdate,
   type BitStoreBatchState,
 } from "./engines/store-batch-engine";
 import {
@@ -55,7 +53,10 @@ import {
   resolveFieldMask,
 } from "./engines/store-field-query-engine";
 import { buildFieldUnregisterPatch } from "./engines/store-field-cleanup-engine";
-import { executeStoreOperation } from "./engines/store-dispatch-engine";
+import {
+  dispatchStoreKernelOperation,
+  flushStoreKernelBatch,
+} from "./engines/store-runtime-kernel-engine";
 import {
   BitStoreOperation,
   historyApplyOperation,
@@ -855,39 +856,18 @@ export class BitStore<T extends object = any> {
   // ============================================================================
 
   private dispatch(operation: BitStoreOperation<T>) {
-    const currentState = getEffectiveStoreState(this.state, this.batchState);
-
-    if (this.batchState.depth > 0) {
-      const updateResult = executeStoreOperation({
-        currentState,
-        operation,
-        applyComputedValues: (values) => values,
-      });
-
-      if (!updateResult) {
-        return;
-      }
-
-      trackBatchedStoreUpdate(this.batchState, updateResult);
-
-      return;
-    }
-
-    const updateResult = executeStoreOperation({
-      currentState: this.state,
+    this.state = dispatchStoreKernelOperation({
+      state: this.state,
+      batchState: this.batchState,
       operation,
       applyComputedValues: (values, changedPaths) =>
         this.computedManager.apply(values, changedPaths),
+      onStateCommitted: ({ nextState, changedPaths, valuesChanged }) => {
+        this.state = nextState;
+        this.subscriptions.notify(this.state, changedPaths);
+        this.effects.onStateUpdated(this.state, valuesChanged);
+      },
     });
-
-    if (!updateResult) {
-      return;
-    }
-
-    this.state = updateResult.nextState;
-
-    this.subscriptions.notify(this.state, updateResult.changedPaths);
-    this.effects.onStateUpdated(this.state, updateResult.valuesChanged);
   }
 
   private saveHistorySnapshot() {
@@ -929,19 +909,16 @@ export class BitStore<T extends object = any> {
   }
 
   private flushBatchedStateUpdates() {
-    const flushResult = flushStoreBatchState({
-      currentState: this.state,
+    this.state = flushStoreKernelBatch({
+      state: this.state,
       batchState: this.batchState,
       applyComputedValues: (values, changedPaths) =>
         this.computedManager.apply(values, changedPaths),
+      onStateCommitted: ({ nextState, changedPaths, valuesChanged }) => {
+        this.state = nextState;
+        this.subscriptions.notify(this.state, changedPaths);
+        this.effects.onStateUpdated(this.state, valuesChanged);
+      },
     });
-
-    if (!flushResult) {
-      return;
-    }
-
-    this.state = flushResult.nextState;
-    this.subscriptions.notify(this.state, flushResult.changedPaths);
-    this.effects.onStateUpdated(this.state, flushResult.valuesChanged);
   }
 }

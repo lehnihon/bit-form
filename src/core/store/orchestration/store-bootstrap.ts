@@ -14,6 +14,7 @@ import { BitFieldQueryManager } from "../managers/features/field-query-manager";
 import { BitErrorManager } from "../managers/features/error-manager";
 import { BitDependencyManager } from "../managers/core/dependency-manager";
 import { BitComputedManager } from "../managers/core/computed-manager";
+import { BitCapabilityRegistry } from "./capability-registry";
 import type { BitStoreOperation } from "../engines/operation-engine";
 import { deepClone } from "../../utils";
 import type { BitStoreCapabilities } from "./capabilities";
@@ -39,39 +40,58 @@ export function createStoreCapabilities<T extends object>(args: {
   dependencyManager: BitDependencyManager<T>;
 }): BitStoreCapabilities<T> {
   const { ports, dependencyManager } = args;
+  const registry = new BitCapabilityRegistry<BitStoreCapabilities<T>>();
 
-  const validation = new BitValidationManager<T>(ports.validationPort);
-  const lifecycle = new BitLifecycleManager<T>(ports.lifecyclePort);
-  const history = new BitHistoryManager<T>(
-    !!ports.config.history.enabled,
-    ports.config.history.limit ?? 15,
+  registry.register(
+    "validation",
+    new BitValidationManager<T>(ports.validationPort),
   );
-  const arrays = new BitArrayManager<T>(ports.arrayPort);
-  const scope = new BitScopeManager<T>(
-    () => ports.getState(),
-    () => ports.getInitialValues(),
-    (scopeName) => ports.getScopeFields(scopeName),
-    (path) => ports.isPathDirty(path),
+  registry.register(
+    "lifecycle",
+    new BitLifecycleManager<T>(ports.lifecyclePort),
   );
-  const query = new BitFieldQueryManager<T>(
-    dependencyManager,
-    () => ports.getState(),
-    () => ports.config,
-    (path) => ports.isPathDirty(path),
+  registry.register(
+    "history",
+    new BitHistoryManager<T>(
+      !!ports.config.history.enabled,
+      ports.config.history.limit ?? 15,
+    ),
   );
-  const error = new BitErrorManager<T>(
-    () => ports.getState(),
-    (operation) => ports.dispatch(operation),
+  registry.register("arrays", new BitArrayManager<T>(ports.arrayPort));
+  registry.register(
+    "scope",
+    new BitScopeManager<T>(
+      () => ports.getState(),
+      () => ports.getInitialValues(),
+      (scopeName) => ports.getScopeFields(scopeName),
+      (path) => ports.isPathDirty(path),
+    ),
+  );
+  registry.register(
+    "query",
+    new BitFieldQueryManager<T>(
+      dependencyManager,
+      () => ports.getState(),
+      () => ports.config,
+      (path) => ports.isPathDirty(path),
+    ),
+  );
+  registry.register(
+    "error",
+    new BitErrorManager<T>(
+      () => ports.getState(),
+      (operation) => ports.dispatch(operation),
+    ),
   );
 
   return {
-    validation,
-    lifecycle,
-    history,
-    arrays,
-    scope,
-    query,
-    error,
+    validation: registry.get("validation"),
+    lifecycle: registry.get("lifecycle"),
+    history: registry.get("history"),
+    arrays: registry.get("arrays"),
+    scope: registry.get("scope"),
+    query: registry.get("query"),
+    error: registry.get("error"),
   };
 }
 
