@@ -8,6 +8,10 @@ import {
   setDeepValue,
   reindexFieldArrayMeta,
 } from "../../../utils";
+import {
+  BitStoreOperation,
+  patchStateOperation,
+} from "../../engines/operation-engine";
 
 export interface BitArrayStorePort<T extends object> {
   getState: () => BitState<T>;
@@ -17,10 +21,7 @@ export interface BitArrayStorePort<T extends object> {
     meta: BitFieldChangeMeta,
   ) => void;
   emitFieldChange: (event: BitFieldChangeEvent<T>) => void;
-  internalUpdateState: (
-    partialState: Partial<BitState<T>>,
-    changedPaths?: string[],
-  ) => void;
+  dispatch: (operation: BitStoreOperation<T>) => void;
   internalSaveSnapshot: () => void;
   unregisterPrefix?: (prefix: string) => void;
   triggerValidation: (scopeFields?: string[]) => void;
@@ -92,13 +93,19 @@ export class BitArrayManager<T extends object = any> {
       return currentIdx > index ? currentIdx - 1 : currentIdx;
     });
 
-    this.store.internalUpdateState({
-      values: newValues,
-      errors: reindexedMeta.errors,
-      touched: reindexedMeta.touched,
-      isValidating: reindexedMeta.isValidating,
-      isDirty,
-    });
+    this.store.dispatch(
+      patchStateOperation(
+        {
+          values: newValues,
+          errors: reindexedMeta.errors,
+          touched: reindexedMeta.touched,
+          isValidating: reindexedMeta.isValidating,
+          isDirty,
+        },
+        [path],
+        { requireExplicitChangedPaths: true },
+      ),
+    );
 
     this.store.emitFieldChange({
       path,
@@ -139,13 +146,19 @@ export class BitArrayManager<T extends object = any> {
       return currentIdx;
     });
 
-    this.store.internalUpdateState({
-      values: newValues,
-      errors: reindexedMeta.errors,
-      touched: reindexedMeta.touched,
-      isValidating: reindexedMeta.isValidating,
-      isDirty,
-    });
+    this.store.dispatch(
+      patchStateOperation(
+        {
+          values: newValues,
+          errors: reindexedMeta.errors,
+          touched: reindexedMeta.touched,
+          isValidating: reindexedMeta.isValidating,
+          isDirty,
+        },
+        [path],
+        { requireExplicitChangedPaths: true },
+      ),
+    );
 
     this.store.emitFieldChange({
       path,
@@ -196,13 +209,19 @@ export class BitArrayManager<T extends object = any> {
       return currentIdx;
     });
 
-    this.store.internalUpdateState({
-      values: newValues,
-      errors: reindexedMeta.errors,
-      touched: reindexedMeta.touched,
-      isValidating: reindexedMeta.isValidating,
-      isDirty,
-    });
+    this.store.dispatch(
+      patchStateOperation(
+        {
+          values: newValues,
+          errors: reindexedMeta.errors,
+          touched: reindexedMeta.touched,
+          isValidating: reindexedMeta.isValidating,
+          isDirty,
+        },
+        [path],
+        { requireExplicitChangedPaths: true },
+      ),
+    );
 
     this.store.emitFieldChange({
       path,

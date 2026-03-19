@@ -976,6 +976,7 @@ export class BitStore<T extends object = any> {
         partialState: operation.partialState,
         changedPaths: operation.changedPaths,
         applyComputedValues: (values) => values,
+        inferValueChangedPaths: !operation.requireExplicitChangedPaths,
       });
 
       this.batchedState = updateResult.nextState;
@@ -998,6 +999,7 @@ export class BitStore<T extends object = any> {
         operation.skipComputed
           ? values
           : this.computedManager.apply(values, operation.changedPaths),
+      inferValueChangedPaths: !operation.requireExplicitChangedPaths,
     });
 
     this.state = updateResult.nextState;

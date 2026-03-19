@@ -46,9 +46,15 @@ export function applyStateUpdate<T extends object>(args: {
   partialState: Partial<BitState<T>>;
   changedPaths?: string[];
   applyComputedValues: (values: T) => T;
+  inferValueChangedPaths?: boolean;
 }): BitStateUpdateResult<T> {
-  const { currentState, partialState, changedPaths, applyComputedValues } =
-    args;
+  const {
+    currentState,
+    partialState,
+    changedPaths,
+    applyComputedValues,
+    inferValueChangedPaths = true,
+  } = args;
 
   const nextState: BitState<T> = { ...currentState, ...partialState };
   const valuesChanged = !!partialState.values;
@@ -66,7 +72,7 @@ export function applyStateUpdate<T extends object>(args: {
     changedPaths && changedPaths.length > 0 ? changedPaths : undefined;
   const inferredChangedPaths = inferChangedPaths(
     partialState,
-    !explicitChangedPaths,
+    !explicitChangedPaths && inferValueChangedPaths,
   );
   const effectiveChangedPaths = mergeChangedPaths(
     explicitChangedPaths,

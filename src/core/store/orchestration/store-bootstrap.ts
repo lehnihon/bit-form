@@ -16,6 +16,7 @@ import { BitErrorManager } from "../managers/features/error-manager";
 import { BitCapabilityRegistry } from "./capability-registry";
 import { BitDependencyManager } from "../managers/core/dependency-manager";
 import { BitDirtyManager } from "../managers/core/dirty-manager";
+import type { BitStoreOperation } from "../engines/operation-engine";
 import { deepClone } from "../../utils";
 import type { BitStoreCapabilities } from "./capabilities";
 import type { BitFrameworkConfig } from "../contracts/public-types";
@@ -28,6 +29,7 @@ type BitStoreCapabilityPorts<T extends object> = BitValidationStorePort<T> &
   BitArrayStorePort<T> & {
     getScopeFields(scopeName: string): string[];
     getState(): BitState<T>;
+    dispatch(operation: BitStoreOperation<T>): void;
   };
 
 export function createStoreCapabilities<T extends object>(args: {
