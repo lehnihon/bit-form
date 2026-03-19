@@ -467,10 +467,12 @@ export class BitStore<T extends object = any> {
     }
 
     if (stateChanged) {
-      this.internalUpdateState({
-        errors: newErrors,
-        touched: newTouched,
-      });
+      this.dispatch(
+        patchStateOperation({
+          errors: newErrors,
+          touched: newTouched,
+        }),
+      );
     }
   }
 
@@ -573,9 +575,11 @@ export class BitStore<T extends object = any> {
 
     if (!this.state.touched[path as keyof typeof this.state.touched]) {
       this.batchStateUpdates(() => {
-        this.internalUpdateState({
-          touched: { ...this.state.touched, [path]: true },
-        });
+        this.dispatch(
+          patchStateOperation({
+            touched: { ...this.state.touched, [path]: true },
+          }),
+        );
       });
     }
 
@@ -588,7 +592,7 @@ export class BitStore<T extends object = any> {
     paths.forEach((path) => {
       newTouched[path as keyof typeof newTouched] = true;
     });
-    this.internalUpdateState({ touched: newTouched });
+    this.dispatch(patchStateOperation({ touched: newTouched }));
   }
 
   replaceValues(newValues: T) {
@@ -662,65 +666,81 @@ export class BitStore<T extends object = any> {
   }
 
   async restorePersisted(): Promise<boolean> {
-    this.internalUpdateState({
-      persist: { ...this.state.persist, isRestoring: true, error: null },
-    });
+    this.dispatch(
+      patchStateOperation({
+        persist: { ...this.state.persist, isRestoring: true, error: null },
+      }),
+    );
 
     try {
       return await this.effects.restorePersisted();
     } catch (error) {
-      this.internalUpdateState({
-        persist: {
-          ...this.state.persist,
-          isRestoring: false,
-          error: error instanceof Error ? error : new Error(String(error)),
-        },
-      });
+      this.dispatch(
+        patchStateOperation({
+          persist: {
+            ...this.state.persist,
+            isRestoring: false,
+            error: error instanceof Error ? error : new Error(String(error)),
+          },
+        }),
+      );
       return false;
     } finally {
-      this.internalUpdateState({
-        persist: { ...this.state.persist, isRestoring: false },
-      });
+      this.dispatch(
+        patchStateOperation({
+          persist: { ...this.state.persist, isRestoring: false },
+        }),
+      );
     }
   }
 
   async forceSave(): Promise<void> {
-    this.internalUpdateState({
-      persist: { ...this.state.persist, isSaving: true, error: null },
-    });
+    this.dispatch(
+      patchStateOperation({
+        persist: { ...this.state.persist, isSaving: true, error: null },
+      }),
+    );
 
     try {
       await this.effects.savePersistedNow();
     } catch (error) {
-      this.internalUpdateState({
-        persist: {
-          ...this.state.persist,
-          isSaving: false,
-          error: error instanceof Error ? error : new Error(String(error)),
-        },
-      });
+      this.dispatch(
+        patchStateOperation({
+          persist: {
+            ...this.state.persist,
+            isSaving: false,
+            error: error instanceof Error ? error : new Error(String(error)),
+          },
+        }),
+      );
       return;
     }
 
-    this.internalUpdateState({
-      persist: { ...this.state.persist, isSaving: false },
-    });
+    this.dispatch(
+      patchStateOperation({
+        persist: { ...this.state.persist, isSaving: false },
+      }),
+    );
   }
 
   async clearPersisted(): Promise<void> {
-    this.internalUpdateState({
-      persist: { ...this.state.persist, error: null },
-    });
+    this.dispatch(
+      patchStateOperation({
+        persist: { ...this.state.persist, error: null },
+      }),
+    );
 
     try {
       await this.effects.clearPersisted();
     } catch (error) {
-      this.internalUpdateState({
-        persist: {
-          ...this.state.persist,
-          error: error instanceof Error ? error : new Error(String(error)),
-        },
-      });
+      this.dispatch(
+        patchStateOperation({
+          persist: {
+            ...this.state.persist,
+            error: error instanceof Error ? error : new Error(String(error)),
+          },
+        }),
+      );
     }
   }
 
@@ -782,7 +802,7 @@ export class BitStore<T extends object = any> {
     const prevState = this.history.undo();
     if (prevState) {
       const isDirty = this.dirtyManager.rebuild(prevState, this._initialValues);
-      this.internalUpdateState({ values: prevState, isDirty });
+      this.dispatch(patchStateOperation({ values: prevState, isDirty }));
       this.validation.trigger(undefined, { forceDebounce: true });
     }
   }
@@ -791,7 +811,7 @@ export class BitStore<T extends object = any> {
     const nextState = this.history.redo();
     if (nextState) {
       const isDirty = this.dirtyManager.rebuild(nextState, this._initialValues);
-      this.internalUpdateState({ values: nextState, isDirty });
+      this.dispatch(patchStateOperation({ values: nextState, isDirty }));
       this.validation.trigger(undefined, { forceDebounce: true });
     }
   }
@@ -1023,16 +1043,18 @@ export class BitStore<T extends object = any> {
 
     const isDirty = this.dirtyManager.rebuild(nextValues, this._initialValues);
 
-    this.internalUpdateState({
-      values: nextValues,
-      errors: {},
-      touched: {},
-      isValidating: {},
-      persist: { ...this.state.persist, error: null },
-      isValid: true,
-      isDirty,
-      isSubmitting: false,
-    });
+    this.dispatch(
+      patchStateOperation({
+        values: nextValues,
+        errors: {},
+        touched: {},
+        isValidating: {},
+        persist: { ...this.state.persist, error: null },
+        isValid: true,
+        isDirty,
+        isSubmitting: false,
+      }),
+    );
 
     this.internalSaveSnapshot();
     this.validation.validate();
