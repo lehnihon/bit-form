@@ -35,6 +35,7 @@ import {
   BitComputedManager,
 } from "./managers/core/computed-manager";
 import { BitDirtyManager } from "./managers/core/dirty-manager";
+import { BitMaskManager } from "./managers/features/mask-manager";
 import { BitSubscriptionEngine } from "./engines/subscription-engine";
 import { applyStateUpdate } from "./engines/state-update-engine";
 import { BitStoreEffectEngine } from "./engines/effect-engine";
@@ -133,13 +134,10 @@ export class BitStore<T extends object = any> {
   private readonly subscriptions: BitSubscriptionEngine<T>;
   private readonly effects: BitStoreEffectEngine<T>;
   private readonly capabilities: BitCapabilityRegistry<BitStoreCapabilities<T>>;
+  private readonly maskManager: BitMaskManager;
   /** Baseline for dirty tracking. Decoupled from config so that rebaseValues
    * can update it without mutating the user-provided config object. */
   private _initialValues!: T;
-  /** Incremented on every registerMask() call so React hooks can track mask
-   * configuration changes via useSyncExternalStore without putting masks in
-   * BitState and triggering a full re-render of all fields. */
-  private _masksVersion = 0;
 
   // ============================================================================
   // PUBLIC PROPERTIES
@@ -281,6 +279,7 @@ export class BitStore<T extends object = any> {
       this.getComputedEntries(),
     );
     this.dirtyManager = new BitDirtyManager<T>();
+    this.maskManager = new BitMaskManager();
     this.capabilities = createStoreCapabilities<T>({
       store: this,
       dependencyManager: this.dependencyManager,
@@ -635,11 +634,8 @@ export class BitStore<T extends object = any> {
   }
 
   registerMask(name: BitMaskName, mask: BitMask) {
-    this.config.masks = {
-      ...(this.config.masks || {}),
-      [name]: mask,
-    };
-    this._masksVersion += 1;
+    this.maskManager.registerMask(name, mask);
+    this.config.masks = this.maskManager.getAllMasks();
     // Fire global listeners so useSyncExternalStore subscribers tracking
     // getMasksVersion() can pick up the change without broadcasting to all
     // path-scoped field subscribers (the sentinel path matches no real field).
@@ -647,13 +643,8 @@ export class BitStore<T extends object = any> {
   }
 
   unregisterMask(name: BitMaskName) {
-    if (!this.config.masks || !(name in this.config.masks)) {
-      return; // Silently ignore attempts to unregister non-existent masks
-    }
-
-    const { [name]: _, ...remainingMasks } = this.config.masks;
-    this.config.masks = remainingMasks;
-    this._masksVersion += 1;
+    this.maskManager.unregisterMask(name);
+    this.config.masks = this.maskManager.getAllMasks();
     // Notify subscribers of mask configuration change
     this.subscriptions.notify(this.state, ["__masks__"]);
   }
@@ -956,7 +947,7 @@ export class BitStore<T extends object = any> {
    * mask is registered via registerMask(). Used by React components to track
    * mask configuration changes reactively without storing masks in BitState. */
   getMasksVersion(): number {
-    return this._masksVersion;
+    return this.maskManager.getMasksVersion();
   }
 
   // ============================================================================
