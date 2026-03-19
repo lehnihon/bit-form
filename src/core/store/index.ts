@@ -37,6 +37,15 @@ import {
 import { BitDirtyManager } from "./managers/core/dirty-manager";
 import { BitMaskManager } from "./managers/features/mask-manager";
 import { BitSubscriptionEngine } from "./engines/subscription-engine";
+import {
+  beginStoreBatch,
+  createStoreBatchState,
+  endStoreBatch,
+  flushStoreBatchState,
+  getEffectiveStoreState,
+  trackBatchedStoreUpdate,
+  type BitStoreBatchState,
+} from "./engines/store-batch-engine";
 import { executeStatePatchOperation } from "./engines/store-kernel-engine";
 import { routeStoreOperation } from "./engines/store-operation-router";
 import {
@@ -165,10 +174,8 @@ export class BitStore<T extends object = any> {
   private scopeFieldsIndex: Map<string, string[]> | null = null;
   private computedEntriesCache: BitComputedEntry<T>[] | null = null;
   private transformEntriesCache: [string, BitTransformFn<T>][] | null = null;
-  private batchDepth = 0;
-  private batchedState: BitState<T> | null = null;
-  private batchedChangedPaths: Set<string> | null = null;
-  private batchedValuesChanged = false;
+  private readonly batchState: BitStoreBatchState<T> =
+    createStoreBatchState<T>();
 
   private invalidateFieldIndexes() {
     this.scopeFieldsIndex = null;
@@ -398,7 +405,7 @@ export class BitStore<T extends object = any> {
   }
 
   getState(): BitState<T> {
-    return this.batchedState ?? this.state;
+    return getEffectiveStoreState(this.state, this.batchState);
   }
 
   getFieldState<P extends BitPath<T>>(
@@ -895,14 +902,12 @@ export class BitStore<T extends object = any> {
   }
 
   batchStateUpdates<TResult>(callback: () => TResult): TResult {
-    this.batchDepth += 1;
+    beginStoreBatch(this.batchState);
 
     try {
       return callback();
     } finally {
-      this.batchDepth -= 1;
-
-      if (this.batchDepth === 0) {
+      if (endStoreBatch(this.batchState)) {
         this.flushBatchedStateUpdates();
       }
     }
@@ -946,28 +951,21 @@ export class BitStore<T extends object = any> {
   // ============================================================================
 
   dispatch(operation: BitStoreOperation<T>) {
-    const currentState = this.batchedState ?? this.state;
+    const currentState = getEffectiveStoreState(this.state, this.batchState);
     const patchOperation = routeStoreOperation(currentState, operation);
 
     if (!patchOperation) {
       return;
     }
 
-    if (this.batchDepth > 0) {
+    if (this.batchState.depth > 0) {
       const updateResult = executeStatePatchOperation({
         currentState,
         operation: patchOperation,
         applyComputedValues: (values) => values,
       });
 
-      this.batchedState = updateResult.nextState;
-      this.batchedValuesChanged ||= updateResult.valuesChanged;
-
-      if (updateResult.changedPaths && updateResult.changedPaths.length > 0) {
-        const pathSet = this.batchedChangedPaths ?? new Set<string>();
-        updateResult.changedPaths.forEach((path) => pathSet.add(path));
-        this.batchedChangedPaths = pathSet;
-      }
+      trackBatchedStoreUpdate(this.batchState, updateResult);
 
       return;
     }
@@ -1027,29 +1025,19 @@ export class BitStore<T extends object = any> {
   }
 
   private flushBatchedStateUpdates() {
-    if (!this.batchedState) {
+    const flushResult = flushStoreBatchState({
+      currentState: this.state,
+      batchState: this.batchState,
+      applyComputedValues: (values, changedPaths) =>
+        this.computedManager.apply(values, changedPaths),
+    });
+
+    if (!flushResult) {
       return;
     }
 
-    let nextState = this.batchedState;
-    const changedPaths = this.batchedChangedPaths
-      ? Array.from(this.batchedChangedPaths)
-      : undefined;
-    const valuesChanged = this.batchedValuesChanged;
-
-    if (valuesChanged) {
-      nextState = {
-        ...nextState,
-        values: this.computedManager.apply(nextState.values, changedPaths),
-      };
-    }
-
-    this.batchedState = null;
-    this.batchedChangedPaths = null;
-    this.batchedValuesChanged = false;
-
-    this.state = nextState;
-    this.subscriptions.notify(this.state, changedPaths);
-    this.effects.onStateUpdated(this.state, valuesChanged);
+    this.state = flushResult.nextState;
+    this.subscriptions.notify(this.state, flushResult.changedPaths);
+    this.effects.onStateUpdated(this.state, flushResult.valuesChanged);
   }
 }
