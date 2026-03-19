@@ -6,6 +6,7 @@ import {
   subscribeFieldState,
 } from "../core/field-controller";
 import { isBitFieldInputEventObject } from "../core/mask/field-binding";
+import { deriveFieldMeta } from "../core/utils/field-meta";
 import type {
   BitFieldInputEvent,
   InjectBitFieldMeta,
@@ -33,19 +34,14 @@ export function injectBitField<
   });
 
   const value = computed(() => stateSignal().value as BitPathValue<TForm, P>);
-  const rawError = computed(() => stateSignal().error);
-  const touched = computed(() => stateSignal().touched);
-  const error = computed(() => (touched() ? rawError() : undefined));
-
-  const isDirty = computed(() => stateSignal().isDirty);
-
-  const isValidating = computed(() => stateSignal().isValidating);
-
-  const isHidden = computed(() => stateSignal().isHidden);
-
-  const isRequired = computed(() => stateSignal().isRequired);
-
-  const invalid = computed(() => touched() && !!rawError());
+  const metaState = computed(() => deriveFieldMeta(stateSignal()));
+  const error = computed(() => metaState().error);
+  const touched = computed(() => metaState().touched);
+  const invalid = computed(() => metaState().invalid);
+  const isDirty = computed(() => metaState().isDirty);
+  const isValidating = computed(() => metaState().isValidating);
+  const isHidden = computed(() => metaState().isHidden);
+  const isRequired = computed(() => metaState().isRequired);
 
   const resolvedMask = store.resolveMask(path as string);
   const fieldController = createMaskedFieldController(
@@ -64,10 +60,10 @@ export function injectBitField<
 
   const setBlur = () => fieldController.setBlur();
 
-  const hasError = computed(() => !!rawError());
+  const hasError = computed(() => metaState().hasError);
 
   const update = (e: BitFieldInputEvent) =>
-    setValue(isBitFieldInputEventObject(e) ? (e.target?.value ?? null) : e);
+    setValue(isBitFieldInputEventObject(e) ? e.target?.value ?? null : e);
 
   return {
     // Main handlers and values (flat)

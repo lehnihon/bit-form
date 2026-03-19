@@ -16,6 +16,12 @@ export class BitSubscriptionEngine<T extends object> {
   private pathSelectorIndex: Map<string, Set<SelectorListenerEntry<T>>> =
     new Map();
   private readonly expandedPathCache = new Map<string, string[]>();
+  private readonly changedPathLookupCache = new Map<string, string[]>();
+  private readonly subscriptionSeenVersion = new Map<
+    SelectorListenerEntry<T>,
+    number
+  >();
+  private notifyVersion = 0;
 
   /**
    * Cleanup interval for phantom subscription paths (paths with no active listeners)
@@ -104,6 +110,7 @@ export class BitSubscriptionEngine<T extends object> {
           if (!listeners) return;
 
           listeners.delete(subscription);
+          this.subscriptionSeenVersion.delete(subscription);
           if (listeners.size === 0) {
             this.pathSelectorIndex.delete(indexPath);
           }
@@ -175,6 +182,8 @@ export class BitSubscriptionEngine<T extends object> {
     this.pathScopedSubscriptions.clear();
     this.pathSelectorIndex.clear();
     this.expandedPathCache.clear();
+    this.changedPathLookupCache.clear();
+    this.subscriptionSeenVersion.clear();
   }
 
   private normalizeSubscriptionPaths(paths?: string[]): string[] {
@@ -253,31 +262,53 @@ export class BitSubscriptionEngine<T extends object> {
 
   private collectSubscribersForChangedPaths(
     changedPaths: string[],
-  ): Set<SelectorListenerEntry<T>> {
-    // Use a fresh Set per call to be safe against reentrant notify() calls
-    // (e.g. a plugin that calls setField inside onFieldChange).
-    const scopedSubscribers = new Set<SelectorListenerEntry<T>>();
+  ): SelectorListenerEntry<T>[] {
+    const scopedSubscribers: SelectorListenerEntry<T>[] = [];
+    const currentVersion = ++this.notifyVersion;
 
     const addByPath = (path: string) => {
       const listeners = this.pathSelectorIndex.get(path);
       if (!listeners) return;
-      listeners.forEach((subscription) => scopedSubscribers.add(subscription));
+
+      listeners.forEach((subscription) => {
+        const seenVersion = this.subscriptionSeenVersion.get(subscription) ?? 0;
+        // Reentrant-safe dedupe: nested notify() may stamp a newer version;
+        // treat newer or equal as already seen in this or deeper call stack.
+        if (seenVersion >= currentVersion) {
+          return;
+        }
+
+        this.subscriptionSeenVersion.set(subscription, currentVersion);
+        scopedSubscribers.push(subscription);
+      });
     };
 
     const normalizedChangedPaths =
       this.normalizeSubscriptionPaths(changedPaths);
 
     normalizedChangedPaths.forEach((changedPath) => {
-      addByPath(changedPath);
-
-      const parts = changedPath.split(".");
-      while (parts.length > 1) {
-        parts.pop();
-        addByPath(parts.join("."));
-      }
+      this.expandChangedPathForLookup(changedPath).forEach(addByPath);
     });
 
     return scopedSubscribers;
+  }
+
+  private expandChangedPathForLookup(path: string): string[] {
+    const cached = this.changedPathLookupCache.get(path);
+    if (cached) {
+      return cached;
+    }
+
+    const parts = path.split(".");
+    const lookupPaths: string[] = [path];
+
+    while (parts.length > 1) {
+      parts.pop();
+      lookupPaths.push(parts.join("."));
+    }
+
+    this.changedPathLookupCache.set(path, lookupPaths);
+    return lookupPaths;
   }
 
   private expandPathForIndexing(path: string): string[] {

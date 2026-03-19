@@ -1,4 +1,8 @@
 import { BitErrors, BitState } from "../../contracts/types";
+import {
+  BitStoreOperation,
+  patchStateOperation,
+} from "../../engines/operation-engine";
 
 /**
  * BitErrorManager
@@ -9,7 +13,7 @@ import { BitErrors, BitState } from "../../contracts/types";
 export class BitErrorManager<T extends object = any> {
   constructor(
     private getState: () => BitState<T>,
-    private internalUpdateState: (partial: Partial<BitState<T>>) => void,
+    private dispatch: (operation: BitStoreOperation<T>) => void,
   ) {}
 
   /**
@@ -26,16 +30,18 @@ export class BitErrorManager<T extends object = any> {
       delete newErrors[path as keyof BitErrors<T>];
     }
 
-    this.internalUpdateState({ errors: newErrors });
+    this.dispatch(patchStateOperation({ errors: newErrors }));
   }
 
   /**
    * Set multiple field errors at once (merge behavior).
    */
   setErrors(errors: BitErrors<T>): void {
-    this.internalUpdateState({
-      errors: { ...this.getState().errors, ...errors },
-    });
+    this.dispatch(
+      patchStateOperation({
+        errors: { ...this.getState().errors, ...errors },
+      }),
+    );
   }
 
   /**

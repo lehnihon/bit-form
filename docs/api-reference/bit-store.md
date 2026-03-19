@@ -1,6 +1,6 @@
 # BitStore API
 
-`BitStore` is the core engine of Bit-Form. For direct consumer usage, the recommended entrypoint is `createBitStore`, which returns the official store facade consumed by React, Vue and Angular integrations.
+`BitStore` is the core engine of Bit-Form. For direct consumer usage, the recommended entrypoint is `createBitStore`, which returns the official store instance consumed by React, Vue and Angular integrations.
 
 All framework bindings (`useBitForm`, `injectBitForm`, etc.) are thin adapters on top of the internal store engine.
 
@@ -94,7 +94,7 @@ const stopWatching = store.watch("user.address.city", (city) => {
 
 Use this for side-effects like analytics, autosave, or cross-form coordination.
 
-> Note: advanced selector subscriptions (`subscribeSelector` / `subscribePath`) are internal integration APIs used by framework adapters and are not part of the direct `createBitStore` public facade.
+> Note: advanced selector subscriptions (`subscribeSelector` / `subscribePath`) are internal integration APIs used by framework adapters and are not part of the direct `createBitStore` public API.
 
 ---
 

@@ -6,6 +6,7 @@ import {
   parseMaskedInput,
   isBitFieldInputEventObject,
 } from "../core/mask/field-binding";
+import { deriveFieldMeta } from "../core/utils/field-meta";
 import type {
   BitFieldInputEvent,
   UseBitFieldMeta,
@@ -55,11 +56,8 @@ export function useBitField<
     [resolvedMask, rawSetValue],
   );
 
-  const { isHidden, isRequired, value, error, touched, isDirty, isValidating } =
-    fieldState;
-
-  const invalid = !!(touched && error);
-  const visibleError = touched ? error : undefined;
+  const { value } = fieldState;
+  const metaState = deriveFieldMeta(fieldState);
 
   const onChange = useCallback(
     (e: BitFieldInputEvent) => {
@@ -89,14 +87,14 @@ export function useBitField<
     },
     // Metadata (grouped)
     meta: {
-      error: visibleError,
-      touched,
-      invalid,
-      isDirty,
-      isValidating,
-      isHidden,
-      isRequired,
-      hasError: !!error,
+      error: metaState.error,
+      touched: metaState.touched,
+      invalid: metaState.invalid,
+      isDirty: metaState.isDirty,
+      isValidating: metaState.isValidating,
+      isHidden: metaState.isHidden,
+      isRequired: metaState.isRequired,
+      hasError: metaState.hasError,
     },
   };
 }

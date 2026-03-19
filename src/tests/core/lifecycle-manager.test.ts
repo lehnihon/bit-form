@@ -14,13 +14,13 @@ describe("BitLifecycleManager", () => {
       isDirty: false,
     };
 
-    const internalUpdateState = vi.fn((partial: any) => {
-      Object.assign(state, partial);
+    const dispatch = vi.fn((operation: any) => {
+      Object.assign(state, operation.partialState);
     });
 
     const manager = new BitLifecycleManager<any>({
       getState: () => state,
-      internalUpdateState,
+      dispatch,
       internalSaveSnapshot: () => {},
       batchStateUpdates: (cb) => cb(),
       config: { initialValues: { name: "A" }, resolver: undefined } as any,
@@ -50,9 +50,9 @@ describe("BitLifecycleManager", () => {
 
     manager.updateField("name", "B");
 
-    const committed = internalUpdateState.mock.calls.find(
-      (call) => call[0] && "errors" in call[0],
-    )?.[0];
+    const committed = dispatch.mock.calls.find(
+      (call) => call[0]?.partialState && "errors" in call[0].partialState,
+    )?.[0]?.partialState;
 
     expect(committed.errors).toBe(state.errors);
   });
@@ -76,8 +76,8 @@ describe("BitLifecycleManager", () => {
 
     const manager = new BitLifecycleManager<any>({
       getState: () => state,
-      internalUpdateState: (partial: any) => {
-        Object.assign(state, partial);
+      dispatch: (operation: any) => {
+        Object.assign(state, operation.partialState);
       },
       internalSaveSnapshot: () => {},
       batchStateUpdates: (cb) => cb(),

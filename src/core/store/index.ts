@@ -37,7 +37,38 @@ import {
 import { BitDirtyManager } from "./managers/core/dirty-manager";
 import { BitMaskManager } from "./managers/features/mask-manager";
 import { BitSubscriptionEngine } from "./engines/subscription-engine";
-import { applyStateUpdate } from "./engines/state-update-engine";
+import {
+  beginStoreBatch,
+  createStoreBatchState,
+  endStoreBatch,
+  flushStoreBatchState,
+  getEffectiveStoreState,
+  trackBatchedStoreUpdate,
+  type BitStoreBatchState,
+} from "./engines/store-batch-engine";
+import {
+  createStoreFieldIndexState,
+  getComputedEntries,
+  getScopeFields,
+  getTransformEntries,
+  invalidateStoreFieldIndexes,
+  registerCachedFieldIndexes,
+  type BitStoreFieldIndexState,
+  unregisterCachedFieldIndexes,
+} from "./engines/store-field-index-engine";
+import {
+  createFieldStateSnapshot,
+  resolveFieldMask,
+} from "./engines/store-field-query-engine";
+import { buildFieldUnregisterPatch } from "./engines/store-field-cleanup-engine";
+import { executeStoreOperation } from "./engines/store-dispatch-engine";
+import {
+  BitStoreOperation,
+  historyApplyOperation,
+  patchStateOperation,
+  persistMetaOperation,
+  touchFieldsOperation,
+} from "./engines/operation-engine";
 import { BitStoreEffectEngine } from "./engines/effect-engine";
 import { BitCapabilityRegistry } from "./orchestration/capability-registry";
 import type { BitStoreCapabilities } from "./orchestration/capabilities";
@@ -154,18 +185,13 @@ export class BitStore<T extends object = any> {
   private readonly dependencyManager: BitDependencyManager<T>;
   private readonly computedManager: BitComputedManager<T>;
   private readonly dirtyManager: BitDirtyManager<T>;
-  private scopeFieldsIndex: Map<string, string[]> | null = null;
-  private computedEntriesCache: BitComputedEntry<T>[] | null = null;
-  private transformEntriesCache: [string, BitTransformFn<T>][] | null = null;
-  private batchDepth = 0;
-  private batchedState: BitState<T> | null = null;
-  private batchedChangedPaths: Set<string> | null = null;
-  private batchedValuesChanged = false;
+  private readonly fieldIndexState: BitStoreFieldIndexState<T> =
+    createStoreFieldIndexState<T>();
+  private readonly batchState: BitStoreBatchState<T> =
+    createStoreBatchState<T>();
 
   private invalidateFieldIndexes() {
-    this.scopeFieldsIndex = null;
-    this.computedEntriesCache = null;
-    this.transformEntriesCache = null;
+    invalidateStoreFieldIndexes(this.fieldIndexState);
     this.computedManager.invalidateReverseDeps();
   }
 
@@ -173,25 +199,11 @@ export class BitStore<T extends object = any> {
     path: string,
     config: BitFieldDefinition<T>,
   ) {
-    if (this.scopeFieldsIndex && config.scope) {
-      const scopedPaths = this.scopeFieldsIndex.get(config.scope) ?? [];
-      if (!scopedPaths.includes(path)) {
-        scopedPaths.push(path);
-        this.scopeFieldsIndex.set(config.scope, scopedPaths);
-      }
-    }
-
-    if (this.computedEntriesCache && config.computed) {
-      this.computedEntriesCache.push({
-        path,
-        compute: config.computed,
-        dependsOn: config.computedDependsOn ?? config.conditional?.dependsOn,
-      });
-    }
-
-    if (this.transformEntriesCache && config.transform) {
-      this.transformEntriesCache.push([path, config.transform]);
-    }
+    registerCachedFieldIndexes({
+      fieldIndexState: this.fieldIndexState,
+      path,
+      config,
+    });
   }
 
   private unregisterCachedFieldIndexes(
@@ -203,29 +215,11 @@ export class BitStore<T extends object = any> {
       return;
     }
 
-    if (this.scopeFieldsIndex && config.scope) {
-      const scopedPaths = this.scopeFieldsIndex.get(config.scope);
-      if (scopedPaths) {
-        const nextPaths = scopedPaths.filter((fieldPath) => fieldPath !== path);
-        if (nextPaths.length > 0) {
-          this.scopeFieldsIndex.set(config.scope, nextPaths);
-        } else {
-          this.scopeFieldsIndex.delete(config.scope);
-        }
-      }
-    }
-
-    if (this.computedEntriesCache && config.computed) {
-      this.computedEntriesCache = this.computedEntriesCache.filter(
-        (entry) => entry.path !== path,
-      );
-    }
-
-    if (this.transformEntriesCache && config.transform) {
-      this.transformEntriesCache = this.transformEntriesCache.filter(
-        ([entryPath]) => entryPath !== path,
-      );
-    }
+    unregisterCachedFieldIndexes({
+      fieldIndexState: this.fieldIndexState,
+      path,
+      config,
+    });
   }
 
   private getCapability<TKey extends keyof BitStoreCapabilities<T>>(key: TKey) {
@@ -330,67 +324,40 @@ export class BitStore<T extends object = any> {
   }
 
   getScopeFields(scopeName: string): string[] {
-    if (!this.scopeFieldsIndex) {
-      const index = new Map<string, string[]>();
-      this.dependencyManager.forEachFieldConfig((cfg, path) => {
-        if (!cfg.scope) {
-          return;
-        }
-        const list = index.get(cfg.scope) ?? [];
-        list.push(path);
-        index.set(cfg.scope, list);
-      });
-      this.scopeFieldsIndex = index;
-    }
-
-    return this.scopeFieldsIndex.get(scopeName) ?? [];
+    return getScopeFields({
+      fieldIndexState: this.fieldIndexState,
+      scopeName,
+      forEachFieldConfig: (iteratee) =>
+        this.dependencyManager.forEachFieldConfig(iteratee),
+    });
   }
 
   getComputedEntries(): BitComputedEntry<T>[] {
-    if (!this.computedEntriesCache) {
-      const result: BitComputedEntry<T>[] = [];
-      this.dependencyManager.forEachFieldConfig((cfg, path) => {
-        if (cfg.computed) {
-          result.push({
-            path,
-            compute: cfg.computed,
-            dependsOn: cfg.computedDependsOn ?? cfg.conditional?.dependsOn,
-          });
-        }
-      });
-      this.computedEntriesCache = result;
-    }
-
-    return this.computedEntriesCache;
+    return getComputedEntries({
+      fieldIndexState: this.fieldIndexState,
+      forEachFieldConfig: (iteratee) =>
+        this.dependencyManager.forEachFieldConfig(iteratee),
+    });
   }
 
   getTransformEntries(): [string, BitTransformFn<T>][] {
-    if (!this.transformEntriesCache) {
-      const result: [string, BitTransformFn<T>][] = [];
-      this.dependencyManager.forEachFieldConfig((cfg, path) => {
-        if (cfg.transform) {
-          result.push([path, cfg.transform]);
-        }
-      });
-      this.transformEntriesCache = result;
-    }
-
-    return this.transformEntriesCache;
+    return getTransformEntries({
+      fieldIndexState: this.fieldIndexState,
+      forEachFieldConfig: (iteratee) =>
+        this.dependencyManager.forEachFieldConfig(iteratee),
+    });
   }
 
   resolveMask(path: string): BitMask | undefined {
-    const maskOption = this.getFieldConfig(path)?.mask;
-    if (!maskOption) return undefined;
-
-    if (typeof maskOption === "string") {
-      return this.config.masks?.[maskOption];
-    }
-
-    return maskOption;
+    return resolveFieldMask({
+      path,
+      getFieldConfig: (fieldPath) => this.getFieldConfig(fieldPath),
+      masks: this.config.masks,
+    });
   }
 
   getState(): BitState<T> {
-    return this.batchedState ?? this.state;
+    return getEffectiveStoreState(this.state, this.batchState);
   }
 
   getFieldState<P extends BitPath<T>>(
@@ -401,15 +368,15 @@ export class BitStore<T extends object = any> {
       path as string,
     ) as BitPathValue<T, P>;
 
-    return {
+    return createFieldStateSnapshot({
+      state: this.state,
+      path,
       value,
-      error: this.state.errors[path as keyof BitErrors<T>],
-      touched: !!this.state.touched[path as keyof typeof this.state.touched],
       isHidden: this.isHidden(path),
       isRequired: this.isRequired(path),
       isDirty: this.isFieldDirty(path as string),
       isValidating: this.isFieldValidating(path as string),
-    };
+    });
   }
 
   get isValid(): boolean {
@@ -448,25 +415,18 @@ export class BitStore<T extends object = any> {
     this.dependencyManager.unregister(path);
     this.unregisterCachedFieldIndexes(path, config);
 
-    const newErrors = { ...this.state.errors };
-    const newTouched = { ...this.state.touched };
-    let stateChanged = false;
+    const cleanupPatch = buildFieldUnregisterPatch({
+      state: this.state,
+      path,
+    });
 
-    if (newErrors[path as keyof BitErrors<T>]) {
-      delete newErrors[path as keyof BitErrors<T>];
-      stateChanged = true;
-    }
-
-    if (newTouched[path as keyof typeof newTouched]) {
-      delete newTouched[path as keyof typeof newTouched];
-      stateChanged = true;
-    }
-
-    if (stateChanged) {
-      this.internalUpdateState({
-        errors: newErrors,
-        touched: newTouched,
-      });
+    if (cleanupPatch) {
+      this.dispatch(
+        patchStateOperation({
+          errors: cleanupPatch.errors,
+          touched: cleanupPatch.touched,
+        }),
+      );
     }
   }
 
@@ -569,9 +529,7 @@ export class BitStore<T extends object = any> {
 
     if (!this.state.touched[path as keyof typeof this.state.touched]) {
       this.batchStateUpdates(() => {
-        this.internalUpdateState({
-          touched: { ...this.state.touched, [path]: true },
-        });
+        this.dispatch(touchFieldsOperation([path as string]));
       });
     }
 
@@ -580,11 +538,7 @@ export class BitStore<T extends object = any> {
 
   markFieldsTouched(paths: string[]) {
     if (paths.length === 0) return;
-    const newTouched = { ...this.state.touched };
-    paths.forEach((path) => {
-      newTouched[path as keyof typeof newTouched] = true;
-    });
-    this.internalUpdateState({ touched: newTouched });
+    this.dispatch(touchFieldsOperation(paths));
   }
 
   replaceValues(newValues: T) {
@@ -658,65 +612,52 @@ export class BitStore<T extends object = any> {
   }
 
   async restorePersisted(): Promise<boolean> {
-    this.internalUpdateState({
-      persist: { ...this.state.persist, isRestoring: true, error: null },
-    });
+    this.dispatch(persistMetaOperation({ isRestoring: true, error: null }));
 
     try {
       return await this.effects.restorePersisted();
     } catch (error) {
-      this.internalUpdateState({
-        persist: {
-          ...this.state.persist,
+      this.dispatch(
+        persistMetaOperation({
           isRestoring: false,
           error: error instanceof Error ? error : new Error(String(error)),
-        },
-      });
+        }),
+      );
       return false;
     } finally {
-      this.internalUpdateState({
-        persist: { ...this.state.persist, isRestoring: false },
-      });
+      this.dispatch(persistMetaOperation({ isRestoring: false }));
     }
   }
 
   async forceSave(): Promise<void> {
-    this.internalUpdateState({
-      persist: { ...this.state.persist, isSaving: true, error: null },
-    });
+    this.dispatch(persistMetaOperation({ isSaving: true, error: null }));
 
     try {
       await this.effects.savePersistedNow();
     } catch (error) {
-      this.internalUpdateState({
-        persist: {
-          ...this.state.persist,
+      this.dispatch(
+        persistMetaOperation({
           isSaving: false,
           error: error instanceof Error ? error : new Error(String(error)),
-        },
-      });
+        }),
+      );
       return;
     }
 
-    this.internalUpdateState({
-      persist: { ...this.state.persist, isSaving: false },
-    });
+    this.dispatch(persistMetaOperation({ isSaving: false }));
   }
 
   async clearPersisted(): Promise<void> {
-    this.internalUpdateState({
-      persist: { ...this.state.persist, error: null },
-    });
+    this.dispatch(persistMetaOperation({ error: null }));
 
     try {
       await this.effects.clearPersisted();
     } catch (error) {
-      this.internalUpdateState({
-        persist: {
-          ...this.state.persist,
+      this.dispatch(
+        persistMetaOperation({
           error: error instanceof Error ? error : new Error(String(error)),
-        },
-      });
+        }),
+      );
     }
   }
 
@@ -778,7 +719,7 @@ export class BitStore<T extends object = any> {
     const prevState = this.history.undo();
     if (prevState) {
       const isDirty = this.dirtyManager.rebuild(prevState, this._initialValues);
-      this.internalUpdateState({ values: prevState, isDirty });
+      this.dispatch(historyApplyOperation(prevState, isDirty));
       this.validation.trigger(undefined, { forceDebounce: true });
     }
   }
@@ -787,7 +728,7 @@ export class BitStore<T extends object = any> {
     const nextState = this.history.redo();
     if (nextState) {
       const isDirty = this.dirtyManager.rebuild(nextState, this._initialValues);
-      this.internalUpdateState({ values: nextState, isDirty });
+      this.dispatch(historyApplyOperation(nextState, isDirty));
       this.validation.trigger(undefined, { forceDebounce: true });
     }
   }
@@ -904,14 +845,12 @@ export class BitStore<T extends object = any> {
   }
 
   batchStateUpdates<TResult>(callback: () => TResult): TResult {
-    this.batchDepth += 1;
+    beginStoreBatch(this.batchState);
 
     try {
       return callback();
     } finally {
-      this.batchDepth -= 1;
-
-      if (this.batchDepth === 0) {
+      if (endStoreBatch(this.batchState)) {
         this.flushBatchedStateUpdates();
       }
     }
@@ -954,37 +893,35 @@ export class BitStore<T extends object = any> {
   // INTERNAL OPERATIONS
   // ============================================================================
 
-  internalUpdateState(
-    partialState: Partial<BitState<T>>,
-    changedPaths?: string[],
-  ) {
-    if (this.batchDepth > 0) {
-      const updateResult = applyStateUpdate({
-        currentState: this.batchedState ?? this.state,
-        partialState,
-        changedPaths,
+  dispatch(operation: BitStoreOperation<T>) {
+    const currentState = getEffectiveStoreState(this.state, this.batchState);
+
+    if (this.batchState.depth > 0) {
+      const updateResult = executeStoreOperation({
+        currentState,
+        operation,
         applyComputedValues: (values) => values,
       });
 
-      this.batchedState = updateResult.nextState;
-      this.batchedValuesChanged ||= updateResult.valuesChanged;
-
-      if (updateResult.changedPaths && updateResult.changedPaths.length > 0) {
-        const pathSet = this.batchedChangedPaths ?? new Set<string>();
-        updateResult.changedPaths.forEach((path) => pathSet.add(path));
-        this.batchedChangedPaths = pathSet;
+      if (!updateResult) {
+        return;
       }
+
+      trackBatchedStoreUpdate(this.batchState, updateResult);
 
       return;
     }
 
-    const updateResult = applyStateUpdate({
+    const updateResult = executeStoreOperation({
       currentState: this.state,
-      partialState,
-      changedPaths,
-      applyComputedValues: (values) =>
+      operation,
+      applyComputedValues: (values, changedPaths) =>
         this.computedManager.apply(values, changedPaths),
     });
+
+    if (!updateResult) {
+      return;
+    }
 
     this.state = updateResult.nextState;
 
@@ -1007,16 +944,18 @@ export class BitStore<T extends object = any> {
 
     const isDirty = this.dirtyManager.rebuild(nextValues, this._initialValues);
 
-    this.internalUpdateState({
-      values: nextValues,
-      errors: {},
-      touched: {},
-      isValidating: {},
-      persist: { ...this.state.persist, error: null },
-      isValid: true,
-      isDirty,
-      isSubmitting: false,
-    });
+    this.dispatch(
+      patchStateOperation({
+        values: nextValues,
+        errors: {},
+        touched: {},
+        isValidating: {},
+        persist: { ...this.state.persist, error: null },
+        isValid: true,
+        isDirty,
+        isSubmitting: false,
+      }),
+    );
 
     this.internalSaveSnapshot();
     this.validation.validate();
@@ -1030,29 +969,19 @@ export class BitStore<T extends object = any> {
   }
 
   private flushBatchedStateUpdates() {
-    if (!this.batchedState) {
+    const flushResult = flushStoreBatchState({
+      currentState: this.state,
+      batchState: this.batchState,
+      applyComputedValues: (values, changedPaths) =>
+        this.computedManager.apply(values, changedPaths),
+    });
+
+    if (!flushResult) {
       return;
     }
 
-    let nextState = this.batchedState;
-    const changedPaths = this.batchedChangedPaths
-      ? Array.from(this.batchedChangedPaths)
-      : undefined;
-    const valuesChanged = this.batchedValuesChanged;
-
-    if (valuesChanged) {
-      nextState = {
-        ...nextState,
-        values: this.computedManager.apply(nextState.values, changedPaths),
-      };
-    }
-
-    this.batchedState = null;
-    this.batchedChangedPaths = null;
-    this.batchedValuesChanged = false;
-
-    this.state = nextState;
-    this.subscriptions.notify(this.state, changedPaths);
-    this.effects.onStateUpdated(this.state, valuesChanged);
+    this.state = flushResult.nextState;
+    this.subscriptions.notify(this.state, flushResult.changedPaths);
+    this.effects.onStateUpdated(this.state, flushResult.valuesChanged);
   }
 }

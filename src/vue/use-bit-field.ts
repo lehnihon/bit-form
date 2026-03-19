@@ -6,6 +6,7 @@ import {
   createMaskedFieldController,
   subscribeFieldState,
 } from "../core/field-controller";
+import { deriveFieldMeta } from "../core/utils/field-meta";
 
 export function useBitField<
   TForm extends object = any,
@@ -46,22 +47,15 @@ export function useBitField<
     },
   });
 
-  const rawError = computed(() => state.value.error);
-  const error = computed(() =>
-    state.value.touched ? state.value.error : undefined,
-  );
-  const touched = computed(() => state.value.touched);
-  const invalid = computed(() => !!(touched.value && error.value));
-
-  const isValidating = computed(() => state.value.isValidating);
-
-  const isDirty = computed(() => state.value.isDirty);
-
-  const isHidden = computed(() => state.value.isHidden);
-
-  const isRequired = computed(() => state.value.isRequired);
-
-  const hasError = computed(() => !!rawError.value);
+  const metaState = computed(() => deriveFieldMeta(state.value));
+  const error = computed(() => metaState.value.error);
+  const touched = computed(() => metaState.value.touched);
+  const invalid = computed(() => metaState.value.invalid);
+  const isValidating = computed(() => metaState.value.isValidating);
+  const isDirty = computed(() => metaState.value.isDirty);
+  const isHidden = computed(() => metaState.value.isHidden);
+  const isRequired = computed(() => metaState.value.isRequired);
+  const hasError = computed(() => metaState.value.hasError);
 
   const setValue = (
     val: BitPathValue<TForm, P> | string | number | null | undefined,

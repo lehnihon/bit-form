@@ -16,7 +16,7 @@ describe("BitValidationManager", () => {
         isSubmitting: false,
         isDirty: false,
       }),
-      internalUpdateState: () => {},
+      dispatch: () => {},
       setError: () => {},
       validate: async () => true,
       getFieldConfig: () => undefined,
@@ -57,7 +57,7 @@ describe("BitValidationManager", () => {
         isSubmitting: false,
         isDirty: false,
       }),
-      internalUpdateState: () => {},
+      dispatch: () => {},
       setError: () => {},
       validate: async () => true,
       getFieldConfig: () => ({
@@ -84,5 +84,43 @@ describe("BitValidationManager", () => {
     expect(validateSpy).not.toHaveBeenCalled();
 
     vi.useRealTimers();
+  });
+
+  it("should commit validation in a single dispatch per validate cycle", async () => {
+    const dispatch = vi.fn();
+
+    const manager = new BitValidationManager<any>({
+      getState: () => ({
+        values: { email: "" },
+        errors: {},
+        touched: {},
+        isValidating: {},
+        persist: { isSaving: false, isRestoring: false, error: null },
+        isValid: true,
+        isSubmitting: false,
+        isDirty: false,
+      }),
+      dispatch,
+      setError: () => {},
+      validate: async () => true,
+      getFieldConfig: () => undefined,
+      getScopeFields: () => [],
+      config: {
+        validationDelay: 0,
+        resolver: async () => ({ email: "required" }),
+      } as any,
+      getRequiredErrors: () => ({}),
+      getHiddenFields: () => new Set<string>(),
+      emitBeforeValidate: async () => {},
+      emitAfterValidate: async () => {},
+    });
+
+    await manager.validate();
+
+    const validationCommits = dispatch.mock.calls.filter(
+      (call) => call[0]?.kind === "validation.commit",
+    );
+
+    expect(validationCommits).toHaveLength(1);
   });
 });

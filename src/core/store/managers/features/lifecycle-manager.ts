@@ -15,6 +15,10 @@ import {
   BitPipelineRunner,
   BitSyncPipelineRunner,
 } from "../../shared/pipeline";
+import {
+  BitStoreOperation,
+  patchStateOperation,
+} from "../../engines/operation-engine";
 import type {
   BitState,
   BitTransformFn,
@@ -30,10 +34,7 @@ import type { BitValidationTriggerOptions } from "./validation-manager";
 
 interface BitLifecycleStatePort<T extends object> {
   getState: () => BitState<T>;
-  internalUpdateState: (
-    partial: Partial<BitState<T>>,
-    changedPaths?: string[],
-  ) => void;
+  dispatch: (operation: BitStoreOperation<T>) => void;
   internalSaveSnapshot: () => void;
   batchStateUpdates<TResult>(callback: () => TResult): TResult;
   config: BitFrameworkConfig<T>;
@@ -205,16 +206,18 @@ export class BitLifecycleManager<T extends object> {
       this.store.getInitialValues(),
     );
 
-    this.store.internalUpdateState(
-      {
-        values: clonedValues,
-        errors: {},
-        isValidating: {},
-        isValid: true,
-        isDirty,
-        isSubmitting: false,
-      },
-      ["*"],
+    this.store.dispatch(
+      patchStateOperation(
+        {
+          values: clonedValues,
+          errors: {},
+          isValidating: {},
+          isValid: true,
+          isDirty,
+          isSubmitting: false,
+        },
+        ["*"],
+      ),
     );
 
     this.store.internalSaveSnapshot();
@@ -246,17 +249,19 @@ export class BitLifecycleManager<T extends object> {
 
     this.store.clearDirtyState();
 
-    this.store.internalUpdateState(
-      {
-        values: clonedValues,
-        errors: {},
-        touched: {},
-        isValidating: {},
-        isValid: true,
-        isDirty: false,
-        isSubmitting: false,
-      },
-      ["*"],
+    this.store.dispatch(
+      patchStateOperation(
+        {
+          values: clonedValues,
+          errors: {},
+          touched: {},
+          isValidating: {},
+          isValid: true,
+          isDirty: false,
+          isSubmitting: false,
+        },
+        ["*"],
+      ),
     );
 
     this.store.internalSaveSnapshot();
@@ -310,7 +315,7 @@ export class BitLifecycleManager<T extends object> {
 
       console.error(error);
     } finally {
-      this.store.internalUpdateState({ isSubmitting: false });
+      this.store.dispatch(patchStateOperation({ isSubmitting: false }));
     }
   }
 
@@ -323,17 +328,19 @@ export class BitLifecycleManager<T extends object> {
 
     this.store.clearDirtyState();
 
-    this.store.internalUpdateState(
-      {
-        values: initialCloned,
-        errors: {},
-        touched: {},
-        isValidating: {},
-        isValid: true,
-        isDirty: false,
-        isSubmitting: false,
-      },
-      ["*"],
+    this.store.dispatch(
+      patchStateOperation(
+        {
+          values: initialCloned,
+          errors: {},
+          touched: {},
+          isValidating: {},
+          isValid: true,
+          isDirty: false,
+          isSubmitting: false,
+        },
+        ["*"],
+      ),
     );
 
     this.store.resetHistory(initialCloned);
@@ -390,13 +397,15 @@ export class BitLifecycleManager<T extends object> {
   }
 
   private commitFieldState(ctx: FieldUpdatePipelineContext<T>) {
-    this.store.internalUpdateState(
-      {
-        values: ctx.nextValues,
-        errors: ctx.nextErrors,
-        isDirty: ctx.isDirty,
-      },
-      [ctx.path, ...ctx.toggledFields],
+    this.store.dispatch(
+      patchStateOperation(
+        {
+          values: ctx.nextValues,
+          errors: ctx.nextErrors,
+          isDirty: ctx.isDirty,
+        },
+        [ctx.path, ...ctx.toggledFields],
+      ),
     );
   }
 
@@ -422,7 +431,7 @@ export class BitLifecycleManager<T extends object> {
   }
 
   private async startSubmit(ctx: SubmitPipelineContext<T>) {
-    this.store.internalUpdateState({ isSubmitting: true });
+    this.store.dispatch(patchStateOperation({ isSubmitting: true }));
     ctx.isValid = await this.store.validateNow();
   }
 
@@ -437,7 +446,7 @@ export class BitLifecycleManager<T extends object> {
     });
 
     this.store.batchStateUpdates(() => {
-      this.store.internalUpdateState({ touched: newTouched });
+      this.store.dispatch(patchStateOperation({ touched: newTouched }));
     });
 
     ctx.dirtyValues = this.store.buildDirtyValues(this.store.getState().values);
