@@ -978,25 +978,29 @@ export class BitStore<T extends object = any> {
   // INTERNAL OPERATIONS
   // ============================================================================
 
-  internalUpdateState(
-    partialState: Partial<BitState<T>>,
-    changedPaths?: string[],
-  ) {
-    this.dispatch(patchStateOperation(partialState, changedPaths));
-  }
-
   dispatch(operation: BitStoreOperation<T>) {
     if (operation.kind !== "state.patch") {
       return;
     }
 
+    const hasValuesPatch = Object.prototype.hasOwnProperty.call(
+      operation.partialState,
+      "values",
+    );
+    const effectiveChangedPaths =
+      operation.changedPaths ?? (hasValuesPatch ? ["*"] : undefined);
+    const inferValueChangedPaths =
+      operation.requireExplicitChangedPaths === undefined
+        ? false
+        : !operation.requireExplicitChangedPaths;
+
     if (this.batchDepth > 0) {
       const updateResult = applyStateUpdate({
         currentState: this.batchedState ?? this.state,
         partialState: operation.partialState,
-        changedPaths: operation.changedPaths,
+        changedPaths: effectiveChangedPaths,
         applyComputedValues: (values) => values,
-        inferValueChangedPaths: !operation.requireExplicitChangedPaths,
+        inferValueChangedPaths,
       });
 
       this.batchedState = updateResult.nextState;
@@ -1014,12 +1018,12 @@ export class BitStore<T extends object = any> {
     const updateResult = applyStateUpdate({
       currentState: this.state,
       partialState: operation.partialState,
-      changedPaths: operation.changedPaths,
+      changedPaths: effectiveChangedPaths,
       applyComputedValues: (values) =>
         operation.skipComputed
           ? values
-          : this.computedManager.apply(values, operation.changedPaths),
-      inferValueChangedPaths: !operation.requireExplicitChangedPaths,
+          : this.computedManager.apply(values, effectiveChangedPaths),
+      inferValueChangedPaths,
     });
 
     this.state = updateResult.nextState;
