@@ -17,6 +17,14 @@ export class BitSubscriptionEngine<T extends object> {
     new Map();
   private readonly expandedPathCache = new Map<string, string[]>();
 
+  /**
+   * Cleanup interval for phantom subscription paths (paths with no active listeners)
+   * Prevents unbounded growth of pathSelectorIndex when array fields grow dynamically
+   * Triggered every 100 notify() calls or manually via cleanupPhantomPaths()
+   */
+  private notifyCount = 0;
+  private readonly CLEANUP_INTERVAL = 100;
+
   constructor(private readonly getState: () => Readonly<BitState<T>>) {}
 
   subscribe(listener: () => void): () => void {
@@ -133,6 +141,31 @@ export class BitSubscriptionEngine<T extends object> {
 
     scopedSubscribers.forEach((subscription) => {
       subscription.notify(nextState);
+    });
+
+    // Periodically cleanup phantom subscription paths to prevent unbounded growth
+    this.notifyCount++;
+    if (this.notifyCount >= this.CLEANUP_INTERVAL) {
+      this.cleanupPhantomPaths();
+      this.notifyCount = 0;
+    }
+  }
+
+  /**
+   * Remove paths from pathSelectorIndex that have no active subscribers
+   * Prevents memory creep in scenarios with dynamic array fields
+   */
+  private cleanupPhantomPaths(): void {
+    const phantomPaths = new Set<string>();
+
+    for (const [path, listeners] of this.pathSelectorIndex.entries()) {
+      if (listeners.size === 0) {
+        phantomPaths.add(path);
+      }
+    }
+
+    phantomPaths.forEach((path) => {
+      this.pathSelectorIndex.delete(path);
     });
   }
 
