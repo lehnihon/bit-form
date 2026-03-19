@@ -55,6 +55,74 @@ import {
  * - Core managers handle essential state and validation
  * - Feature managers provide optional enhancements (history, arrays, scopes)
  * - Query/mutation managers organize domain-specific operations
+ *
+ * ## Public API Methods (50+)
+ *
+ * ### State Management
+ * - getConfig(), getState(): Get current configuration and state
+ * - subscribe(): Register listeners for state changes
+ * - transaction(): Batch multiple mutations and notify once
+ *
+ * ### Field Operations
+ * - setField(), blurField(): Update individual field values
+ * - replaceValues(), hydrate(), rebase(): Replace entire form state
+ * - registerField(), unregisterField(): Register/cleanup field configs
+ * - setError(), setErrors(), setServerErrors(): Set field errors
+ *
+ * ### Validation
+ * - validate(): Run field/form validation pipeline
+ * - isHidden(), isRequired(), isFieldValidating(): Field metadata queries
+ *
+ * ### History & Persistence
+ * - reset(): Reset to initial values (clears history if enabled)
+ * - undo(), redo(): History navigation (if history enabled)
+ * - restorePersisted(), forceSave(), clearPersisted(): Persistence controls
+ * - getPersistMetadata(), getHistoryMetadata(): Metadata access
+ *
+ * ### Masks
+ * - registerMask(), unregisterMask(): Register/unregister input masks
+ * - resolveMask(): Get mask configuration for a field
+ *
+ * ### Arrays (if arrays feature enabled)
+ * - pushItem(), prependItem(), insertItem(), removeItem(): Array mutations
+ * - moveItem(), swapItems(): Array reordering
+ *
+ * ### Scopes/Steps (if steps feature enabled)
+ * - getStepStatus(), getStepErrors(): Scope metadata queries
+ *
+ * ### Watchers & Cleanup
+ * - watch(): Subscribe to specific field changes
+ * - isFieldDirty(): Check if field differs from initialValues
+ * - getDirtyValues(): Get only changed field values
+ * - cleanup(): Cleanup all resources
+ *
+ * ### Form Submission
+ * - submit(): Execute form submit handler with hooks
+ *
+ * ## Internal Architecture
+ *
+ * ### Managers (organized by responsibility)
+ * - **Core**: BitDependencyManager, BitComputedManager, BitDirtyManager
+ * - **Features**: BitValidationManager, BitHistoryManager, BitArrayManager,
+ *   BitScopeManager, BitPersistManager, BitLifecycleManager
+ *
+ * ### Engines (operational subsystems)
+ * - **BitSubscriptionEngine**: Path-scoped pub/sub with wildcard expansion
+ * - **BitStateUpdateEngine**: Granular state mutation and changed path tracking
+ * - **BitStoreEffectEngine**: Side-effect orchestration (validation triggers, hooks)
+ *
+ * ### Caching & Indexing
+ * - scopeFieldsIndex: Maps scope names → field paths (invalidated on registerField)
+ * - computedEntriesCache: Cached computed field entries for iteration
+ * - transformEntriesCache: Cached transform entries
+ * - _masksVersion: Incremented on mask changes (tracks config changes without state)
+ *
+ * ## Performance Considerations
+ *
+ * - **Batch Updates**: transaction() defers subscriptions until batch completes
+ * - **Lazy Evaluation**: Computed fields only run when dependencies change
+ * - **Subscription Optimization**: Listeners only notified for affected paths
+ * - **Memory**: Cleanup properly via cleanup() to prevent leaks with dynamic fields
  */
 export class BitStore<T extends object = any> {
   // ============================================================================
@@ -575,6 +643,18 @@ export class BitStore<T extends object = any> {
     // Fire global listeners so useSyncExternalStore subscribers tracking
     // getMasksVersion() can pick up the change without broadcasting to all
     // path-scoped field subscribers (the sentinel path matches no real field).
+    this.subscriptions.notify(this.state, ["__masks__"]);
+  }
+
+  unregisterMask(name: BitMaskName) {
+    if (!this.config.masks || !(name in this.config.masks)) {
+      return; // Silently ignore attempts to unregister non-existent masks
+    }
+
+    const { [name]: _, ...remainingMasks } = this.config.masks;
+    this.config.masks = remainingMasks;
+    this._masksVersion += 1;
+    // Notify subscribers of mask configuration change
     this.subscriptions.notify(this.state, ["__masks__"]);
   }
 

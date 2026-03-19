@@ -1,6 +1,7 @@
 import { setupLocalDevTools } from "./adapters/local";
 import { setupRemoteDevTools } from "./adapters/remote";
 import type { BitDevToolsOptions } from "./types";
+import type { BitDevToolsAdapter } from "./adapters/types";
 
 export type { BitDevToolsOptions };
 
@@ -33,7 +34,7 @@ export function initDevTools(options: BitDevToolsOptions = {}) {
     isAutoCreated = true;
   }
 
-  let adapterInstance: any;
+  let adapterInstance: BitDevToolsAdapter;
 
   if (mode === "local") {
     console.log("[bit-form] DevTools iniciado em modo Local.");
