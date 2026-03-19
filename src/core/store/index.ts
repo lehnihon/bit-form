@@ -37,7 +37,7 @@ import {
 import { BitDirtyManager } from "./managers/core/dirty-manager";
 import { BitMaskManager } from "./managers/features/mask-manager";
 import { BitSubscriptionEngine } from "./engines/subscription-engine";
-import { applyStateUpdate } from "./engines/state-update-engine";
+import { executeStatePatchOperation } from "./engines/store-kernel-engine";
 import {
   BitStoreOperation,
   historyApplyOperation,
@@ -995,24 +995,11 @@ export class BitStore<T extends object = any> {
       return;
     }
 
-    const hasValuesPatch = Object.prototype.hasOwnProperty.call(
-      operation.partialState,
-      "values",
-    );
-    const effectiveChangedPaths =
-      operation.changedPaths ?? (hasValuesPatch ? ["*"] : undefined);
-    const inferValueChangedPaths =
-      operation.requireExplicitChangedPaths === undefined
-        ? false
-        : !operation.requireExplicitChangedPaths;
-
     if (this.batchDepth > 0) {
-      const updateResult = applyStateUpdate({
+      const updateResult = executeStatePatchOperation({
         currentState: this.batchedState ?? this.state,
-        partialState: operation.partialState,
-        changedPaths: effectiveChangedPaths,
+        operation,
         applyComputedValues: (values) => values,
-        inferValueChangedPaths,
       });
 
       this.batchedState = updateResult.nextState;
@@ -1027,15 +1014,13 @@ export class BitStore<T extends object = any> {
       return;
     }
 
-    const updateResult = applyStateUpdate({
+    const updateResult = executeStatePatchOperation({
       currentState: this.state,
-      partialState: operation.partialState,
-      changedPaths: effectiveChangedPaths,
-      applyComputedValues: (values) =>
+      operation,
+      applyComputedValues: (values, changedPaths) =>
         operation.skipComputed
           ? values
-          : this.computedManager.apply(values, effectiveChangedPaths),
-      inferValueChangedPaths,
+          : this.computedManager.apply(values, changedPaths),
     });
 
     this.state = updateResult.nextState;
