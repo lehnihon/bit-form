@@ -56,6 +56,10 @@ import {
   type BitStoreFieldIndexState,
   unregisterCachedFieldIndexes,
 } from "./engines/store-field-index-engine";
+import {
+  createFieldStateSnapshot,
+  resolveFieldMask,
+} from "./engines/store-field-query-engine";
 import { executeStoreOperation } from "./engines/store-dispatch-engine";
 import {
   BitStoreOperation,
@@ -344,14 +348,11 @@ export class BitStore<T extends object = any> {
   }
 
   resolveMask(path: string): BitMask | undefined {
-    const maskOption = this.getFieldConfig(path)?.mask;
-    if (!maskOption) return undefined;
-
-    if (typeof maskOption === "string") {
-      return this.config.masks?.[maskOption];
-    }
-
-    return maskOption;
+    return resolveFieldMask({
+      path,
+      getFieldConfig: (fieldPath) => this.getFieldConfig(fieldPath),
+      masks: this.config.masks,
+    });
   }
 
   getState(): BitState<T> {
@@ -366,15 +367,15 @@ export class BitStore<T extends object = any> {
       path as string,
     ) as BitPathValue<T, P>;
 
-    return {
+    return createFieldStateSnapshot({
+      state: this.state,
+      path,
       value,
-      error: this.state.errors[path as keyof BitErrors<T>],
-      touched: !!this.state.touched[path as keyof typeof this.state.touched],
       isHidden: this.isHidden(path),
       isRequired: this.isRequired(path),
       isDirty: this.isFieldDirty(path as string),
       isValidating: this.isFieldValidating(path as string),
-    };
+    });
   }
 
   get isValid(): boolean {
