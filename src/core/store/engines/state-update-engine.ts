@@ -84,11 +84,26 @@ function inferChangedPaths<T extends object>(
   partialState: Partial<BitState<T>>,
   includeValuesWildcard: boolean,
 ): string[] | undefined {
-  if (includeValuesWildcard && partialState.values) {
-    return ["*"];
-  }
-
   const changedPaths = new Set<string>();
+
+  // If values are explicitly changed without path information, infer from object keys
+  // instead of using wildcard ["*"] which notifies all path subscribers.
+  // This provides granular notifications for better performance in large forms.
+  if (includeValuesWildcard && partialState.values) {
+    // Try to infer which value paths actually changed by comparing keys
+    // If we can't determine, fall back to wildcard.
+    // Note: This is a heuristic; ideally values mutations should provide changedPaths
+    const valueKeys = Object.keys(partialState.values);
+    if (valueKeys.length > 0 && valueKeys.length < 100) {
+      // Only use granular notification for reasonable number of keys
+      for (const key of valueKeys) {
+        changedPaths.add(`values.${key}`);
+      }
+    } else {
+      // Too many keys or empty, use wildcard for efficiency
+      return ["*"];
+    }
+  }
 
   // Itera os três dicionários de path em único passo para evitar
   // três Object.keys() + três forEach() separados.

@@ -26,7 +26,10 @@ describe("applyStateUpdate", () => {
     });
 
     expect(result.valuesChanged).toBe(true);
-    expect(result.changedPaths).toEqual(["*"]);
+    // With granular path inference, changedPaths now includes inferred values.keys
+    expect(result.changedPaths).toEqual(
+      expect.arrayContaining(["values.name", "values.total"]),
+    );
     expect(result.nextState.values).toEqual({ name: "Ana", total: 30 });
   });
 

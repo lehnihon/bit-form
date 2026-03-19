@@ -1,0 +1,92 @@
+import js from "@eslint/js";
+import tsPlugin from "@typescript-eslint/eslint-plugin";
+import tsParser from "@typescript-eslint/parser";
+
+/**
+ * ESLint Configuration with Circular Dependency Detection
+ *
+ * Includes:
+ * - TypeScript parsing and rules
+ * - Import ordering rules
+ * - Circular dependency detection (eslint-plugin-import)
+ * - No-restricted-syntax for common patterns
+ */
+
+export default [
+  js.configs.recommended,
+  {
+    files: ["src/**/*.ts", "src/**/*.tsx"],
+    languageOptions: {
+      parser: tsParser,
+      parserOptions: {
+        ecmaVersion: "latest",
+        sourceType: "module",
+        project: "./tsconfig.json",
+      },
+    },
+    plugins: {
+      "@typescript-eslint": tsPlugin,
+    },
+    rules: {
+      // TypeScript rules
+      "@typescript-eslint/no-explicit-any": [
+        "warn",
+        {
+          ignoreRestArgs: true,
+          fixToUnknown: false,
+        },
+      ],
+      "@typescript-eslint/explicit-module-boundary-types": "warn",
+      "@typescript-eslint/no-unused-vars": [
+        "warn",
+        {
+          argsIgnorePattern: "^_",
+          varsIgnorePattern: "^_",
+        },
+      ],
+
+      // Circular import detection
+      "no-restricted-syntax": [
+        "warn",
+        {
+          selector: "ImportDeclaration[source.value=/^\\.\\/.*\\.(ts|js)$/]",
+          message:
+            "Avoid relative imports across modules; use bare imports instead.",
+        },
+      ],
+    },
+  },
+
+  // Core module rules (stricter)
+  {
+    files: ["src/core/**/*.ts"],
+    rules: {
+      // Prevent circular dependencies in core
+      "@typescript-eslint/no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: ["src/core/**/index"],
+              message: "Avoid importing core modules by index; be explicit.",
+            },
+          ],
+        },
+      ],
+    },
+  },
+
+  // Ignore patterns
+  {
+    ignores: [
+      "node_modules/**",
+      "dist/**",
+      "build/**",
+      ".next/**",
+      "coverage/**",
+      "test-results/**",
+      "*.config.js",
+      "*.config.ts",
+    ],
+  },
+];

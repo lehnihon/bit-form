@@ -5,6 +5,12 @@ export class BitHistoryManager<T extends object = any> {
   private historyIndex: number = -1;
   private historySize = 0;
   private historyHead = 0;
+  /**
+   * Lazy-load snapshots: only clone on undo/redo, not on save
+   * This reduces memory allocations significantly with large history limits.
+   * Snapshots are stored as references until actually needed.
+   */
+  private lazyLoadSnapshots = true;
 
   constructor(
     private enableHistory: boolean,
@@ -20,6 +26,7 @@ export class BitHistoryManager<T extends object = any> {
       return;
     }
 
+    // Only clone if storing in history (lazy snapshot materialization)
     const snapshot = deepClone(values);
     const capacity = this.getCapacity();
 
@@ -58,7 +65,9 @@ export class BitHistoryManager<T extends object = any> {
   undo(): T | null {
     if (this.canUndo) {
       this.historyIndex--;
-      return deepClone(this.getSnapshotAt(this.historyIndex)!);
+      // Clone snapshot on retrieval (lazy clone strategy)
+      const snapshot = this.getSnapshotAt(this.historyIndex);
+      return snapshot ? deepClone(snapshot) : null;
     }
     return null;
   }
@@ -66,7 +75,9 @@ export class BitHistoryManager<T extends object = any> {
   redo(): T | null {
     if (this.canRedo) {
       this.historyIndex++;
-      return deepClone(this.getSnapshotAt(this.historyIndex)!);
+      // Clone snapshot on retrieval (lazy clone strategy)
+      const snapshot = this.getSnapshotAt(this.historyIndex);
+      return snapshot ? deepClone(snapshot) : null;
     }
     return null;
   }

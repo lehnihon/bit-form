@@ -95,6 +95,7 @@ export interface BitStoreApi<T extends object = any> {
   ): Promise<void>;
 
   registerMask(name: BitMaskName, mask: BitMask): void;
+  unregisterMask(name: BitMaskName): void;
   getDirtyValues(): Partial<T>;
   getPersistMetadata(): BitPersistMetadata;
   restorePersisted(): Promise<boolean>;

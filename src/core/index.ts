@@ -28,6 +28,12 @@ export {
   extractServerErrors,
 } from "./utils";
 
+export {
+  createFieldStateSnapshot,
+  areFieldSnapshotsEqual,
+} from "./utils/field-state-snapshot";
+export type { BitFieldSnapshot } from "./utils/field-state-snapshot";
+
 export type {
   BitConfig,
   BitValidationConfig,

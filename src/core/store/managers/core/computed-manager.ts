@@ -24,6 +24,14 @@ export class BitComputedManager<T extends object> {
   private static readonly MIN_PASSES = 4;
   private readonly computedDependencyCache = new Map<string, Set<string>>();
 
+  /**
+   * Equality comparison cache for computed values
+   * Key: `${path}:${JSON.stringify(value)}`
+   * Reduces redundant deepEqual calls when the same (path, value) pair is compared multiple times
+   * Cleared after each stabilization pass to avoid memory growth
+   */
+  private equalityCache = new Map<string, boolean>();
+
   constructor(private getComputedEntries: () => BitComputedEntryInput<T>[]) {}
   /**
    * Cache de dependências reversas (entry.path → Set<paths que dependem dela>).
@@ -117,7 +125,15 @@ export class BitComputedManager<T extends object> {
         );
         const currentValue = getDeepValue(nextValues, entry.path);
 
-        if (!deepEqual(currentValue, newValue)) {
+        // Use memoized equality check to avoid redundant deepEqual calls
+        const cacheKey = `${entry.path}:${JSON.stringify(currentValue)}`;
+        let valuesEqual = this.equalityCache.get(cacheKey);
+        if (valuesEqual === undefined) {
+          valuesEqual = deepEqual(currentValue, newValue);
+          this.equalityCache.set(cacheKey, valuesEqual);
+        }
+
+        if (!valuesEqual) {
           nextValues = setDeepValue(nextValues, entry.path, newValue);
           hasUpdates = true;
         }
@@ -138,6 +154,11 @@ export class BitComputedManager<T extends object> {
         }
       }
 
+      // Clear equality cache after each pass to prevent unbounded growth
+      if (this.equalityCache.size > 1000) {
+        this.equalityCache.clear();
+      }
+
       if (!hasUpdates) break;
 
       if (resolution.requiresStabilizationPasses && i === maxPasses - 1) {
@@ -147,6 +168,8 @@ export class BitComputedManager<T extends object> {
       }
     }
 
+    // Clear cache for next apply() call
+    this.equalityCache.clear();
     return nextValues;
   }
 

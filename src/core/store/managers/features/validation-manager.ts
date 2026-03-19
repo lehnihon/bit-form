@@ -62,6 +62,8 @@ export class BitValidationManager<T extends object> {
   >();
   private readonly asyncRequests = new Map<string, number>();
   private readonly asyncErrors = new Map<string, string>();
+  /** AbortControllers per field for canceling async validation requests */
+  private readonly asyncAbortControllers = new Map<string, AbortController>();
   private readonly validationPipeline: BitPipelineRunner<
     ValidationPipelineContext<T>
   >;
@@ -128,6 +130,14 @@ export class BitValidationManager<T extends object> {
       this.asyncTimers.delete(path);
     }
 
+    // Abort any pending async validation via AbortController
+    const abortController = this.asyncAbortControllers.get(path);
+    if (abortController) {
+      abortController.abort();
+      this.asyncAbortControllers.delete(path);
+    }
+
+    // Legacy epoch increment (kept for backward compatibility)
     this.asyncRequests.set(path, (this.asyncRequests.get(path) || 0) + 1);
   }
 
@@ -186,21 +196,25 @@ export class BitValidationManager<T extends object> {
       return;
     }
 
-    const existingTimer = this.asyncTimers.get(path);
-    if (existingTimer) clearTimeout(existingTimer);
+    // Cancel previous validation for this path
+    this.cancelFieldAsync(path);
 
     const delay = config.validation?.asyncValidateDelay ?? 500;
-
     this.updateFieldValidating(path, true);
+
+    // Create AbortController for this validation request
+    const abortController = new AbortController();
+    this.asyncAbortControllers.set(path, abortController);
 
     this.asyncTimers.set(
       path,
       setTimeout(async () => {
         this.asyncTimers.delete(path);
-        const requestEpoch = this.asyncEpoch;
 
-        const currentRequestId = (this.asyncRequests.get(path) || 0) + 1;
-        this.asyncRequests.set(path, currentRequestId);
+        // Check if request was aborted before execution
+        if (abortController.signal.aborted) {
+          return;
+        }
 
         try {
           const errorMessage = await asyncValidate(
@@ -208,10 +222,8 @@ export class BitValidationManager<T extends object> {
             this.store.getState().values,
           );
 
-          if (
-            this.asyncRequests.get(path) !== currentRequestId ||
-            requestEpoch !== this.asyncEpoch
-          ) {
+          // Check again if aborted (race condition between async call and cancel)
+          if (abortController.signal.aborted) {
             return;
           }
 
@@ -232,12 +244,11 @@ export class BitValidationManager<T extends object> {
             }
           }
         } finally {
-          if (
-            this.asyncRequests.get(path) === currentRequestId &&
-            requestEpoch === this.asyncEpoch
-          ) {
+          // Only update state if not aborted
+          if (!abortController.signal.aborted) {
             this.updateFieldValidating(path, false);
           }
+          this.asyncAbortControllers.delete(path);
         }
       }, delay),
     );
@@ -324,6 +335,13 @@ export class BitValidationManager<T extends object> {
     this.asyncTimers.clear();
     this.asyncRequests.clear();
     this.asyncErrors.clear();
+
+    // Abort all pending async validations
+    this.asyncAbortControllers.forEach((controller) => {
+      controller.abort();
+    });
+    this.asyncAbortControllers.clear();
+
     this.store.internalUpdateState({ isValidating: {} });
   }
 
