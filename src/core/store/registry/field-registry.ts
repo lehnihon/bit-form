@@ -1,7 +1,8 @@
-import { BitFieldDefinition } from "../../contracts/types";
-import { getDeepValue } from "../../../utils";
+import { getDeepValue } from "../../utils";
+import type { BitFieldDefinition, BitTransformFn } from "../contracts/types";
+import type { BitComputedEntry } from "../managers/core/computed-manager";
 
-export class BitDependencyManager<T extends object = any> {
+export class BitFieldRegistry<T extends object = any> {
   private readonly fieldConfigs: Map<string, BitFieldDefinition<T>> = new Map();
   private readonly dependencies: Map<string, Set<string>> = new Map();
   private readonly hiddenFields: Set<string> = new Set();
@@ -11,6 +12,10 @@ export class BitDependencyManager<T extends object = any> {
   private readonly requiredConditionalPaths: Set<string> = new Set();
   private requiredEvaluationCache = new WeakMap<T, Map<string, boolean>>();
   private requiredEvaluationCacheDirty = false;
+
+  private scopeFieldsIndex: Map<string, string[]> | null = null;
+  private computedEntriesCache: BitComputedEntry<T>[] | null = null;
+  private transformEntriesCache: [string, BitTransformFn<T>][] | null = null;
 
   getFieldConfig(path: string): BitFieldDefinition<T> | undefined {
     return this.fieldConfigs.get(path);
@@ -59,8 +64,51 @@ export class BitDependencyManager<T extends object = any> {
     }
 
     this.requiredEvaluationCacheDirty = true;
-
+    this.registerCachedIndexes(path, config);
     this.evaluateFieldCondition(path, currentValues);
+  }
+
+  unregister(path: string) {
+    const config = this.fieldConfigs.get(path);
+
+    this.fieldConfigs.delete(path);
+    this.hiddenFields.delete(path);
+    this.conditionalVisibilityPaths.delete(path);
+    this.dependencies.delete(path);
+    this.requiredEvaluationCacheDirty = true;
+    this.requiredConditionalPaths.delete(path);
+
+    config?.conditional?.dependsOn?.forEach((dep) => {
+      const requiredPaths = this.requiredPathsByDependency.get(dep);
+      if (!requiredPaths) {
+        return;
+      }
+
+      requiredPaths.delete(path);
+      if (requiredPaths.size === 0) {
+        this.requiredPathsByDependency.delete(dep);
+      }
+    });
+
+    this.dependencies.forEach((dependentsSet) => {
+      dependentsSet.delete(path);
+    });
+
+    this.unregisterCachedIndexes(path, config);
+  }
+
+  unregisterPrefix(prefix: string) {
+    const removedEntries: [string, BitFieldDefinition<T>][] = [];
+
+    this.fieldConfigs.forEach((config, path) => {
+      if (path.startsWith(prefix)) {
+        removedEntries.push([path, config]);
+      }
+    });
+
+    removedEntries.forEach(([path]) => this.unregister(path));
+
+    return removedEntries;
   }
 
   isHidden(path: string): boolean {
@@ -158,45 +206,115 @@ export class BitDependencyManager<T extends object = any> {
     return toggledFields;
   }
 
-  unregister(path: string) {
-    const config = this.fieldConfigs.get(path);
+  getScopeFields(scopeName: string): string[] {
+    if (!this.scopeFieldsIndex) {
+      const index = new Map<string, string[]>();
+      this.forEachFieldConfig((cfg, path) => {
+        if (!cfg.scope) {
+          return;
+        }
+        const list = index.get(cfg.scope) ?? [];
+        list.push(path);
+        index.set(cfg.scope, list);
+      });
+      this.scopeFieldsIndex = index;
+    }
 
-    this.fieldConfigs.delete(path);
-    this.hiddenFields.delete(path);
-    this.conditionalVisibilityPaths.delete(path);
-    this.dependencies.delete(path);
-    this.requiredEvaluationCacheDirty = true;
-    this.requiredConditionalPaths.delete(path);
-
-    config?.conditional?.dependsOn?.forEach((dep) => {
-      const requiredPaths = this.requiredPathsByDependency.get(dep);
-      if (!requiredPaths) {
-        return;
-      }
-
-      requiredPaths.delete(path);
-      if (requiredPaths.size === 0) {
-        this.requiredPathsByDependency.delete(dep);
-      }
-    });
-
-    this.dependencies.forEach((dependentsSet) => {
-      dependentsSet.delete(path);
-    });
+    return this.scopeFieldsIndex.get(scopeName) ?? [];
   }
 
-  unregisterPrefix(prefix: string) {
-    const removedEntries: [string, BitFieldDefinition<T>][] = [];
+  getComputedEntries(): BitComputedEntry<T>[] {
+    if (!this.computedEntriesCache) {
+      const result: BitComputedEntry<T>[] = [];
+      this.forEachFieldConfig((cfg, path) => {
+        if (cfg.computed) {
+          result.push({
+            path,
+            compute: cfg.computed,
+            dependsOn: cfg.computedDependsOn,
+          });
+        }
+      });
+      this.computedEntriesCache = result;
+    }
 
-    this.fieldConfigs.forEach((config, path) => {
-      if (path.startsWith(prefix)) {
-        removedEntries.push([path, config]);
+    return this.computedEntriesCache;
+  }
+
+  getTransformEntries(): [string, BitTransformFn<T>][] {
+    if (!this.transformEntriesCache) {
+      const result: [string, BitTransformFn<T>][] = [];
+      this.forEachFieldConfig((cfg, path) => {
+        if (cfg.transform) {
+          result.push([path, cfg.transform]);
+        }
+      });
+      this.transformEntriesCache = result;
+    }
+
+    return this.transformEntriesCache;
+  }
+
+  invalidateIndexes() {
+    this.scopeFieldsIndex = null;
+    this.computedEntriesCache = null;
+    this.transformEntriesCache = null;
+  }
+
+  private registerCachedIndexes(path: string, config: BitFieldDefinition<T>) {
+    if (this.scopeFieldsIndex && config.scope) {
+      const scopedPaths = this.scopeFieldsIndex.get(config.scope) ?? [];
+      if (!scopedPaths.includes(path)) {
+        scopedPaths.push(path);
+        this.scopeFieldsIndex.set(config.scope, scopedPaths);
       }
-    });
+    }
 
-    removedEntries.forEach(([path]) => this.unregister(path));
+    if (this.computedEntriesCache && config.computed) {
+      this.computedEntriesCache.push({
+        path,
+        compute: config.computed,
+        dependsOn: config.computedDependsOn,
+      });
+    }
 
-    return removedEntries;
+    if (this.transformEntriesCache && config.transform) {
+      this.transformEntriesCache.push([path, config.transform]);
+    }
+  }
+
+  private unregisterCachedIndexes(
+    path: string,
+    config?: BitFieldDefinition<T>,
+  ) {
+    if (!config) {
+      this.invalidateIndexes();
+      return;
+    }
+
+    if (this.scopeFieldsIndex && config.scope) {
+      const scopedPaths = this.scopeFieldsIndex.get(config.scope);
+      if (scopedPaths) {
+        const nextPaths = scopedPaths.filter((fieldPath) => fieldPath !== path);
+        if (nextPaths.length > 0) {
+          this.scopeFieldsIndex.set(config.scope, nextPaths);
+        } else {
+          this.scopeFieldsIndex.delete(config.scope);
+        }
+      }
+    }
+
+    if (this.computedEntriesCache && config.computed) {
+      this.computedEntriesCache = this.computedEntriesCache.filter(
+        (entry) => entry.path !== path,
+      );
+    }
+
+    if (this.transformEntriesCache && config.transform) {
+      this.transformEntriesCache = this.transformEntriesCache.filter(
+        ([entryPath]) => entryPath !== path,
+      );
+    }
   }
 
   private evaluateFieldCondition(path: string, values: T) {

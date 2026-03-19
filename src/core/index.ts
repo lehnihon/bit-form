@@ -5,6 +5,8 @@ export {
 export type {
   BitStoreApi,
   BitStoreHooksApi,
+  BitFormBindingApi,
+  BitFormMeta,
   BitFrameworkConfig,
   BitValidationOptions,
   BitHistoryMetadata,

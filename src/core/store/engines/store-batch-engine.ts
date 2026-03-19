@@ -6,6 +6,11 @@ export interface BitStoreBatchState<T extends object> {
   pendingState: BitState<T> | null;
   changedPathSet: Set<string> | null;
   valuesChanged: boolean;
+  /** When true, a history snapshot should be recorded the moment the top-level
+   * batch flushes. This allows multiple mutations inside a `transaction()` –
+   * including individual array operations – to produce a single history entry
+   * instead of one per mutation. */
+  pendingHistorySnapshot: boolean;
 }
 
 export interface BitStoreBatchFlushResult<T extends object> {
@@ -22,6 +27,7 @@ export function createStoreBatchState<
     pendingState: null,
     changedPathSet: null,
     valuesChanged: false,
+    pendingHistorySnapshot: false,
   };
 }
 
@@ -67,6 +73,7 @@ export function flushStoreBatchState<T extends object>(args: {
   const { currentState, batchState, applyComputedValues } = args;
 
   if (!batchState.pendingState) {
+    batchState.pendingHistorySnapshot = false;
     return null;
   }
 
@@ -85,6 +92,7 @@ export function flushStoreBatchState<T extends object>(args: {
   batchState.pendingState = null;
   batchState.changedPathSet = null;
   batchState.valuesChanged = false;
+  // Note: pendingHistorySnapshot is reset by the caller after it records the snapshot.
 
   return {
     nextState: nextState ?? currentState,

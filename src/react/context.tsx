@@ -1,8 +1,8 @@
 import React, { createContext, useContext } from "react";
-import type { BitStoreApi, BitStoreHooksApi } from "../core";
+import type { BitFormBindingApi, BitStoreApi } from "../core";
 import { resolveBitStoreForHooks } from "../core";
 
-const BitContext = createContext<BitStoreHooksApi<any> | null>(null);
+const BitContext = createContext<BitFormBindingApi<any> | null>(null);
 
 export const BitFormProvider = ({
   store,
@@ -22,5 +22,5 @@ export const useBitStore = <T extends object>() => {
     throw new Error(
       "BitForm hooks devem ser usados dentro de um BitFormProvider",
     );
-  return store as BitStoreHooksApi<T>;
+  return store as BitFormBindingApi<T>;
 };

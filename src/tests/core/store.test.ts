@@ -234,6 +234,69 @@ describe("BitStore Core", () => {
       unsubscribe();
     });
 
+    it("should support native subscribeFieldState with field-level equality", () => {
+      const store = new BitStore({
+        initialValues: { name: "Leo", age: 30 },
+      });
+      const listener = vi.fn();
+
+      const unsubscribe = store.subscribeFieldState("name", listener);
+
+      store.setField("age", 31);
+      expect(listener).not.toHaveBeenCalled();
+
+      store.setField("name", "Leandro");
+      expect(listener).toHaveBeenCalledTimes(1);
+      expect(listener.mock.calls[0]?.[0]?.value).toBe("Leandro");
+
+      unsubscribe();
+    });
+
+    it("should support native subscribeFormMeta and notify only form flags", () => {
+      const store = new BitStore({
+        initialValues: { name: "Leo" },
+      });
+      const listener = vi.fn();
+
+      const unsubscribe = store.subscribeFormMeta(listener);
+
+      store.setField("name", "Leandro");
+      expect(listener).toHaveBeenCalledTimes(1);
+      expect(listener.mock.calls[0]?.[0]).toMatchObject({
+        isDirty: true,
+        isValid: true,
+      });
+
+      store.setField("name", "Leo");
+      expect(listener).toHaveBeenCalledTimes(2);
+      expect(listener.mock.calls[1]?.[0]).toMatchObject({
+        isDirty: false,
+        isValid: true,
+      });
+
+      unsubscribe();
+    });
+
+    it("should persist a single history snapshot for multiple mutations inside transaction", () => {
+      const store = new BitStore({
+        initialValues: { items: [1] },
+        history: { enabled: true, limit: 20 },
+      });
+
+      expect(store.getHistoryMetadata().historySize).toBe(1);
+
+      store.transaction(() => {
+        store.pushItem("items", 2);
+        store.pushItem("items", 3);
+      });
+
+      expect(store.getState().values.items).toEqual([1, 2, 3]);
+      expect(store.getHistoryMetadata().historySize).toBe(2);
+
+      store.undo();
+      expect(store.getState().values.items).toEqual([1]);
+    });
+
     it("should update nested fields using dot notation", () => {
       const store = new BitStore({
         initialValues: { user: { profile: { name: "" } } },

@@ -1,9 +1,9 @@
 import { inject, provide, InjectionKey } from "vue";
-import type { BitStoreApi, BitStoreHooksApi } from "../core";
+import type { BitFormBindingApi, BitStoreApi } from "../core";
 import { resolveBitStoreForHooks } from "../core";
 
 // Chave única para evitar colisões
-export const BIT_STORE_KEY: InjectionKey<BitStoreHooksApi<any>> =
+export const BIT_STORE_KEY: InjectionKey<BitFormBindingApi<any>> =
   Symbol("BIT_STORE");
 
 export function provideBitStore<T extends object>(store: BitStoreApi<T>) {
@@ -16,5 +16,5 @@ export function useBitStore<T extends object>() {
     throw new Error(
       "BitForm Vue hooks devem ser usados sob um provideBitStore",
     );
-  return store as BitStoreHooksApi<T>;
+  return store as BitFormBindingApi<T>;
 }

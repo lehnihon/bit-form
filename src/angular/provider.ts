@@ -1,8 +1,8 @@
 import { inject, InjectionToken, Provider } from "@angular/core";
-import type { BitStoreApi, BitStoreHooksApi } from "../core";
+import type { BitFormBindingApi, BitStoreApi } from "../core";
 import { resolveBitStoreForHooks } from "../core";
 
-export const BIT_STORE_TOKEN = new InjectionToken<BitStoreHooksApi<any>>(
+export const BIT_STORE_TOKEN = new InjectionToken<BitFormBindingApi<any>>(
   "BIT_STORE",
 );
 
@@ -22,5 +22,5 @@ export function useBitStore<T extends object>() {
     );
   }
 
-  return store as BitStoreHooksApi<T>;
+  return store as BitFormBindingApi<T>;
 }

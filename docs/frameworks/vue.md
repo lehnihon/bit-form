@@ -2,6 +2,8 @@
 
 Bit-Form embraces Vue's Composition API. It utilizes `provide` and `inject` to pass the store through your component tree, and wraps the store state in Vue's `computed` and `ref` to ensure deep reactivity.
 
+Internally, Vue bindings are typed against `BitFormBindingApi<T>` (stable adapter contract), while app code should continue creating stores with `createBitStore()`.
+
 ## 1. Provide the Store
 
 In your parent component, instantiate the `BitStore` and provide it using `provideBitStore`.

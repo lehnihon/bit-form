@@ -94,6 +94,29 @@ const stopWatching = store.subscribePath("user.address.city", (city) => {
 
 Use this for side-effects like analytics, autosave, or cross-form coordination.
 
+### `subscribeFieldState<P extends BitPath<T>>(path: P, listener: (state: BitFieldState<T, BitPathValue<T, P>>) => void): () => void`
+
+Subscribes to the full reactive snapshot of a single field (`value`, `error`, `touched`, `isHidden`, `isRequired`, `isDirty`, `isValidating`).
+
+- Optimized for framework field bindings.
+- Internally path-scoped and with structural equality to avoid unnecessary re-renders.
+
+```ts
+const unsubscribe = store.subscribeFieldState("email", (field) => {
+  console.log(field.value, field.error, field.isValidating);
+});
+```
+
+### `subscribeFormMeta(listener: (meta: { isValid: boolean; isDirty: boolean; isSubmitting: boolean }) => void): () => void`
+
+Subscribes to form-level metadata updates only (`isValid`, `isDirty`, `isSubmitting`).
+
+```ts
+const unsubscribe = store.subscribeFormMeta((meta) => {
+  console.log(meta.isValid, meta.isDirty, meta.isSubmitting);
+});
+```
+
 > Note: `subscribeSelector` is an advanced API used mostly by framework adapters. It requires explicit `paths`.
 
 ---
@@ -395,6 +418,8 @@ store.moveItem("items", 0, 1);
 
 History is enabled by setting `history: { enabled: true }` in the `BitConfig`. The store will save snapshots at key points (such as `blurField` and other lifecycle events).
 
+When using `transaction(...)`, history snapshots are batch-aware: multiple mutations inside the same transaction produce a single history entry.
+
 ### `canUndo: boolean` / `canRedo: boolean`
 
 Flags indicating whether there is a previous or next snapshot to navigate to.
@@ -417,6 +442,16 @@ Restores the next snapshot of `values` and re-runs validation.
 store.undo();
 store.redo();
 ```
+
+---
+
+## Framework Binding Contract
+
+Framework adapters (React/Vue/Angular) are typed against `BitFormBindingApi<T>`, a stable contract derived from the store API.
+
+- It includes field/form subscriptions (`subscribeFieldState`, `subscribeFormMeta`, `subscribePath`, `subscribeSelector`).
+- It includes field mutations and feature operations used by adapters (arrays/history/persist/scopes).
+- `createBitStore()` returns an implementation compatible with this contract.
 
 ---
 
