@@ -57,15 +57,15 @@ Use UI-only hide only if you have very custom rendering logic and are comfortabl
 
 ## Quick reference table
 
-| Scenario                        | Use                                                                       |
-| ------------------------------- | ------------------------------------------------------------------------- |
-| Validate email format           | `resolver` (Zod/Yup)                                                      |
-| Check if email exists in DB     | `asyncValidate`                                                           |
-| Show "Email taken" from API 422 | `setServerErrors` or `onSubmit`                                           |
-| Total = price × quantity        | `computed`                                                                |
-| Submit "R$ 1.500" as 1500       | `transform`                                                               |
-| Show CNPJ only when type=PJ     | `showIf` + `dependsOn`                                                    |
-| Validate step before "Next"     | `scopes` + `useBitScope` / `injectBitScope`                               |
-| Undo/Redo                       | `history: { enabled: true }`, `undo()`, `redo()`                          |
-| Debug form state                | `devTools: true`                                                          |
+| Scenario                        | Use                                                                             |
+| ------------------------------- | ------------------------------------------------------------------------------- |
+| Validate email format           | `resolver` (Zod/Yup)                                                            |
+| Check if email exists in DB     | `asyncValidate`                                                                 |
+| Show "Email taken" from API 422 | `setServerErrors` or `onSubmit`                                                 |
+| Total = price × quantity        | `computed`                                                                      |
+| Submit "R$ 1.500" as 1500       | `transform`                                                                     |
+| Show CNPJ only when type=PJ     | `showIf` + `dependsOn`                                                          |
+| Validate step before "Next"     | `scopes` + `useBitScope` / `injectBitScope`                                     |
+| Undo/Redo                       | `history: { enabled: true }`, `undo()`, `redo()`                                |
+| Debug form state                | `devTools: true`                                                                |
 | Release confidence              | `quality` gates (`test:e2e`, `test:bench`, `test:compat`, `test:release-gates`) |
