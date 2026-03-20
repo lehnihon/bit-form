@@ -119,3 +119,62 @@ export function withTrackedSelectorPaths<TValue>(
     paths,
   };
 }
+
+export function createTrackedSubscription<T extends object, TSlice>(args: {
+  getState: () => Readonly<BitState<T>>;
+  subscribeSelector: (
+    selector: BitSelector<T, TSlice>,
+    listener: (slice: TSlice) => void,
+    options?: BitSelectorSubscriptionOptions<TSlice>,
+  ) => () => void;
+  selector: BitSelector<T, TSlice>;
+  listener: (slice: TSlice) => void;
+  options?: Omit<BitSelectorSubscriptionOptions<TSlice>, "paths">;
+}): () => void {
+  const { getState, subscribeSelector, selector, listener, options } = args;
+
+  let activeUnsubscribe: (() => void) | null = null;
+  let activePaths = collectTrackedSelectorPaths(getState(), selector);
+  let isDisposed = false;
+  let isResubscribeQueued = false;
+
+  const subscribeWithPaths = (paths: string[]) => {
+    activeUnsubscribe = subscribeSelector(
+      selector,
+      (slice) => {
+        listener(slice);
+
+        const nextPaths = collectTrackedSelectorPaths(getState(), selector);
+        if (areTrackedPathSetsEqual(activePaths, nextPaths)) {
+          return;
+        }
+
+        activePaths = nextPaths;
+
+        if (isResubscribeQueued || isDisposed) {
+          return;
+        }
+
+        isResubscribeQueued = true;
+        queueMicrotask(() => {
+          isResubscribeQueued = false;
+          if (isDisposed) {
+            return;
+          }
+
+          activeUnsubscribe?.();
+          subscribeWithPaths(activePaths);
+        });
+      },
+      withTrackedSelectorPaths(paths, options),
+    );
+  };
+
+  subscribeWithPaths(activePaths);
+
+  return () => {
+    isDisposed = true;
+    activeUnsubscribe?.();
+    activeUnsubscribe = null;
+  };
+}

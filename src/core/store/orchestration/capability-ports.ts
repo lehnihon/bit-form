@@ -11,8 +11,8 @@ import type {
 import type {
   BitValidationStorePort,
   BitValidationTriggerOptions,
-} from "../managers/features/validation-manager";
-import type { BitLifecycleStorePort } from "../managers/features/lifecycle-manager";
+  BitLifecycleStorePort,
+} from "../contracts/port-types";
 import type { BitArrayStorePort } from "../managers/features/array-manager";
 import type { BitStoreOperation } from "../engines/operation-engine";
 import { BitFieldRegistry } from "../registry/field-registry";

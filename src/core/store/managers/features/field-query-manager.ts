@@ -49,4 +49,8 @@ export class BitFieldQueryManager<T extends object = any> {
   isFieldValidating(path: string): boolean {
     return !!this.getState().isValidating[path];
   }
+
+  isTouched(path: string): boolean {
+    return !!this.getState().touched[path];
+  }
 }

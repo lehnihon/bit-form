@@ -49,24 +49,19 @@ import {
 } from "./engines/store-commit-engine";
 import {
   BitStoreOperation,
-  historyApplyOperation,
   patchStateOperation,
   touchFieldsOperation,
 } from "./engines/operation-engine";
 import { BitStoreEffectEngine } from "./engines/effect-engine";
 import type { BitStoreCapabilities } from "./orchestration/capabilities";
-import type { BitValidationTriggerOptions } from "./managers/features/validation-manager";
+import type { BitValidationTriggerOptions } from "./contracts/port-types";
 import {
   createInitialStoreState,
   createStoreCapabilities,
   createStoreEffects,
 } from "./orchestration/store-bootstrap";
 import { BIT_HOOKS_API_SYMBOL } from "./orchestration/hook-brand";
-import {
-  areTrackedPathSetsEqual,
-  collectTrackedSelectorPaths,
-  withTrackedSelectorPaths,
-} from "./orchestration/tracked-selector";
+import { createTrackedSubscription } from "./orchestration/tracked-selector";
 import {
   createArrayPort,
   createLifecyclePort,
@@ -369,53 +364,18 @@ export class BitStore<T extends object = any> {
     listener: (slice: TSlice) => void,
     options?: Omit<BitSelectorSubscriptionOptions<TSlice>, "paths">,
   ) {
-    let activeUnsubscribe: (() => void) | null = null;
-    let activePaths = collectTrackedSelectorPaths(this.getState(), selector);
-    let isDisposed = false;
-    let isResubscribeQueued = false;
-
-    const subscribeWithPaths = (paths: string[]) => {
-      activeUnsubscribe = this.subscribeSelector(
-        selector,
-        (slice) => {
-          listener(slice);
-
-          const nextPaths = collectTrackedSelectorPaths(
-            this.getState(),
-            selector,
-          );
-          if (areTrackedPathSetsEqual(activePaths, nextPaths)) {
-            return;
-          }
-
-          activePaths = nextPaths;
-
-          if (isResubscribeQueued || isDisposed) {
-            return;
-          }
-
-          isResubscribeQueued = true;
-          queueMicrotask(() => {
-            isResubscribeQueued = false;
-            if (isDisposed) {
-              return;
-            }
-
-            activeUnsubscribe?.();
-            subscribeWithPaths(activePaths);
-          });
-        },
-        withTrackedSelectorPaths(paths, options),
-      );
-    };
-
-    subscribeWithPaths(activePaths);
-
-    return () => {
-      isDisposed = true;
-      activeUnsubscribe?.();
-      activeUnsubscribe = null;
-    };
+    return createTrackedSubscription({
+      getState: () => this.getState(),
+      subscribeSelector: (trackedSelector, trackedListener, trackedOptions) =>
+        this.subscribeSelector(
+          trackedSelector,
+          trackedListener,
+          trackedOptions,
+        ),
+      selector,
+      listener,
+      options,
+    });
   }
 
   subscribePath<P extends BitPath<T>>(
@@ -493,7 +453,7 @@ export class BitStore<T extends object = any> {
   blurField<P extends BitPath<T>>(path: P) {
     this.saveHistorySnapshot();
 
-    if (!this.state.touched[path as keyof typeof this.state.touched]) {
+    if (!this._query.isTouched(path as string)) {
       this.runStateBatch(() => {
         this.dispatch(touchFieldsOperation([path as string]));
       });
@@ -636,18 +596,14 @@ export class BitStore<T extends object = any> {
   undo() {
     const prevState = this._history.undo();
     if (prevState) {
-      const isDirty = this.dirtyManager.rebuild(prevState, this._initialValues);
-      this.dispatch(historyApplyOperation(prevState, isDirty));
-      this._validation.trigger(undefined, { forceDebounce: true });
+      this._lifecycle.applyHistoryState(prevState);
     }
   }
 
   redo() {
     const nextState = this._history.redo();
     if (nextState) {
-      const isDirty = this.dirtyManager.rebuild(nextState, this._initialValues);
-      this.dispatch(historyApplyOperation(nextState, isDirty));
-      this._validation.trigger(undefined, { forceDebounce: true });
+      this._lifecycle.applyHistoryState(nextState);
     }
   }
 
