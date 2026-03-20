@@ -51,6 +51,8 @@ describe("quality benchmark: bit-form vs react-hook-form", () => {
     expect(Number.isFinite(ratioP95)).toBe(true);
     expect(bitSample.medianMs).toBeGreaterThanOrEqual(0);
     expect(rhfSample.medianMs).toBeGreaterThanOrEqual(0);
+    expect(ratioMedian).toBeLessThan(0.5);
+    expect(ratioP95).toBeLessThan(0.6);
   });
 
   it("compares async burst scenario with robust percentiles", async () => {
@@ -93,5 +95,7 @@ describe("quality benchmark: bit-form vs react-hook-form", () => {
     expect(Number.isFinite(ratioP95)).toBe(true);
     expect(bitSample.p95Ms).toBeGreaterThanOrEqual(0);
     expect(rhfSample.p95Ms).toBeGreaterThanOrEqual(0);
+    expect(ratioMedian).toBeLessThan(0.8);
+    expect(ratioP95).toBeLessThan(0.9);
   });
 });

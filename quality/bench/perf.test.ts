@@ -29,7 +29,20 @@ function percentile(values: number[], p: number): number {
   return sorted[idx] ?? 0;
 }
 
+function withCiHeadroom(baseMs: number): number {
+  const factor = process.env.CI ? 1.6 : 1.0;
+  return baseMs * factor;
+}
+
 describe("quality perf baseline", () => {
+  // Budgets recalibrados com medições locais de 20/03/2026:
+  // - updates 300 fields: ~19ms
+  // - transaction 1000 fields: ~43ms
+  // - scoped subscribers: ~9ms
+  // - async burst: ~13ms
+  // - computed chain: ~51ms
+  // - notify fanout: ~16ms
+  // Mantemos margem realista para variações de máquina/CI.
   it("updates 300 fields under baseline budget", () => {
     const store = createBitStore<BigForm>({
       initialValues: createBigValues(300),
@@ -52,7 +65,7 @@ describe("quality perf baseline", () => {
     }
 
     const duration = performance.now() - start;
-    expect(duration).toBeLessThan(250);
+    expect(duration).toBeLessThan(withCiHeadroom(60));
   });
 
   it("updates 1000 fields in transaction with history under budget", () => {
@@ -80,7 +93,7 @@ describe("quality perf baseline", () => {
     });
 
     const duration = performance.now() - start;
-    expect(duration).toBeLessThan(230);
+    expect(duration).toBeLessThan(withCiHeadroom(120));
   });
 
   it("handles 400 scoped subscribers under baseline budget", () => {
@@ -103,7 +116,7 @@ describe("quality perf baseline", () => {
 
     const duration = performance.now() - start;
     unsubs.forEach((unsubscribe) => unsubscribe());
-    expect(duration).toBeLessThan(80);
+    expect(duration).toBeLessThan(withCiHeadroom(30));
   });
 
   it("handles async validation burst under baseline budget", async () => {
@@ -141,7 +154,7 @@ describe("quality perf baseline", () => {
     await store.validate();
 
     const duration = performance.now() - start;
-    expect(duration).toBeLessThan(50);
+    expect(duration).toBeLessThan(withCiHeadroom(40));
   });
 
   it("computed fanout: 50 computed com dependências em cadeia sob budget", () => {
@@ -178,7 +191,7 @@ describe("quality perf baseline", () => {
     }
 
     const duration = performance.now() - start;
-    expect(duration).toBeLessThan(400);
+    expect(duration).toBeLessThan(withCiHeadroom(140));
   });
 
   it("subscription notify fanout: 200 subscribers path-scoped sob budget", () => {
@@ -210,7 +223,7 @@ describe("quality perf baseline", () => {
 
     const duration = performance.now() - start;
     unsubs.forEach((u) => u());
-    expect(duration).toBeLessThan(150);
+    expect(duration).toBeLessThan(withCiHeadroom(60));
   });
 
   it("p95 setField latency: 1000 updates sob budget", () => {
@@ -231,6 +244,6 @@ describe("quality perf baseline", () => {
     }
 
     const p95 = percentile(samples, 95);
-    expect(p95).toBeLessThan(1.0);
+    expect(p95).toBeLessThan(withCiHeadroom(0.8));
   });
 });
