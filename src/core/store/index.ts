@@ -542,13 +542,19 @@ export class BitStore<T extends object = any> {
 
   registerMask(name: BitMaskName, mask: BitMask) {
     this.maskManager.registerMask(name, mask);
-    this._cachedConfig = { ...this._config, masks: this.maskManager.getAllMasks() };
+    this._cachedConfig = {
+      ...this._config,
+      masks: this.maskManager.getAllMasks(),
+    };
     this.subscriptions.notify(this.state, ["__masks__"]);
   }
 
   unregisterMask(name: BitMaskName) {
     this.maskManager.unregisterMask(name);
-    this._cachedConfig = { ...this._config, masks: this.maskManager.getAllMasks() };
+    this._cachedConfig = {
+      ...this._config,
+      masks: this.maskManager.getAllMasks(),
+    };
     this.subscriptions.notify(this.state, ["__masks__"]);
   }
 
