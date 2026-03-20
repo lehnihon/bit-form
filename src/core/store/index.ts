@@ -67,7 +67,11 @@ import {
   collectTrackedSelectorPaths,
   withTrackedSelectorPaths,
 } from "./orchestration/tracked-selector";
-import { createCapabilityPorts } from "./orchestration/capability-ports";
+import {
+  createArrayPort,
+  createLifecyclePort,
+  createValidationPort,
+} from "./orchestration/capability-ports";
 import {
   registerStoreField,
   unregisterStoreField,
@@ -94,11 +98,12 @@ export class BitStore<T extends object = any> {
   private readonly _query: BitStoreCapabilities<T>["query"];
   private readonly _error: BitStoreCapabilities<T>["error"];
   private readonly _config: BitFrameworkConfig<T>;
+  private _cachedConfig: BitFrameworkConfig<T>;
   private _initialValues!: T;
 
   public readonly storeId: string;
   get config(): Readonly<BitFrameworkConfig<T>> {
-    return this._config;
+    return this._cachedConfig;
   }
 
   private readonly fieldRegistry: BitFieldRegistry<T>;
@@ -110,34 +115,6 @@ export class BitStore<T extends object = any> {
   private invalidateFieldIndexes() {
     this.fieldRegistry.invalidateIndexes();
     this.computedManager.invalidateReverseDeps();
-  }
-
-  private get validation() {
-    return this._validation;
-  }
-
-  private get lifecycle() {
-    return this._lifecycle;
-  }
-
-  private get history() {
-    return this._history;
-  }
-
-  private get arrays() {
-    return this._arrays;
-  }
-
-  private get scope() {
-    return this._scope;
-  }
-
-  private get query() {
-    return this._query;
-  }
-
-  private get error() {
-    return this._error;
   }
 
   constructor(config: BitConfig<T> = {}) {
@@ -155,36 +132,62 @@ export class BitStore<T extends object = any> {
       });
     }
 
-    const capabilityPorts = createCapabilityPorts<T>({
+    const validationPort = createValidationPort<T>({
       config: this._config,
       fieldRegistry: this.fieldRegistry,
-      dirtyManager: this.dirtyManager,
       getState: () => this.getState(),
       dispatch: (operation) => this.dispatch(operation),
       setError: (path, message) => this.setError(path, message),
       validate: (options) => this.validate(options),
       getFieldConfig: (path) => this.getFieldConfig(path),
       getScopeFields: (scopeName) => this.getScopeFields(scopeName),
+      getEffects: () => this.effects,
+    });
+
+    const lifecyclePort = createLifecyclePort<T>({
+      config: this._config,
+      fieldRegistry: this.fieldRegistry,
+      dirtyManager: this.dirtyManager,
+      getState: () => this.getState(),
+      dispatch: (operation) => this.dispatch(operation),
       saveHistorySnapshot: () => this.saveHistorySnapshot(),
       runStateBatch: (callback) => this.runStateBatch(callback),
       getTransformEntries: () => this.getTransformEntries(),
+      getInitialValues: () => this._initialValues,
+      setInitialValues: (values) => {
+        this._initialValues = values;
+      },
+      getValidation: () => this._validation,
+      getHistory: () => this._history,
+      getEffects: () => this.effects,
+    });
+
+    const arrayPort = createArrayPort<T>({
+      getState: () => this.getState(),
+      dispatch: (operation) => this.dispatch(operation),
       setFieldWithMeta: (path, value, meta) =>
         this.setFieldWithMeta(path, value, meta),
       unregisterPrefix: (prefix) => this.unregisterPrefix(prefix),
       triggerValidation: (scopeFields, options) =>
         this.triggerValidation(scopeFields, options),
-      getInitialValues: () => this._initialValues,
-      setInitialValues: (values) => {
-        this._initialValues = values;
-      },
+      dirtyManager: this.dirtyManager,
       getConfig: () => this.getConfig(),
-      getValidation: () => this.validation,
-      getHistory: () => this.history,
       getEffects: () => this.effects,
+      saveHistorySnapshot: () => this.saveHistorySnapshot(),
     });
 
     const capabilities = createStoreCapabilities<T>({
-      ports: capabilityPorts,
+      ports: {
+        config: this._config,
+        validationPort,
+        lifecyclePort,
+        arrayPort,
+        getScopeFields: (scopeName) => this.getScopeFields(scopeName),
+        getState: () => this.getState(),
+        dispatch: (operation) => this.dispatch(operation),
+        getInitialValues: () => this._initialValues,
+        isPathDirty: (path) => this.dirtyManager.isPathDirty(path),
+      },
       fieldRegistry: this.fieldRegistry,
     });
     this._validation = capabilities.validation;
@@ -225,10 +228,12 @@ export class BitStore<T extends object = any> {
       getDirtyValues: () => this.getDirtyValues(),
       applyPersistedValues: (values) => this.applyPersistedValues(values),
     });
+
+    this._cachedConfig = this._config;
   }
 
   getConfig() {
-    return this._config;
+    return this._cachedConfig;
   }
 
   getFieldConfig(path: string): BitFieldDefinition<T> | undefined {
@@ -262,13 +267,14 @@ export class BitStore<T extends object = any> {
   getFieldState<P extends BitPath<T>>(
     path: P,
   ): BitFieldState<T, BitPathValue<T, P>> {
+    const effectiveState = this.getState();
     const value = getDeepValue(
-      this.state.values,
+      effectiveState.values,
       path as string,
     ) as BitPathValue<T, P>;
 
     return createFieldStateSnapshot({
-      state: this.state,
+      state: effectiveState,
       path,
       value,
       isHidden: this.isHidden(path),
@@ -308,7 +314,7 @@ export class BitStore<T extends object = any> {
       hasStaticConfig: !!this._config.fields?.[path as string],
       fieldRegistry: this.fieldRegistry,
       validationCleanupField: (fieldPath) =>
-        this.validation.cleanupField(fieldPath),
+        this._validation.cleanupField(fieldPath),
       invalidateFieldIndexes: () => this.invalidateFieldIndexes(),
       dispatch: (operation) => this.dispatch(operation),
     });
@@ -319,25 +325,25 @@ export class BitStore<T extends object = any> {
       prefix,
       fieldRegistry: this.fieldRegistry,
       validationCleanupPrefix: (fieldPrefix) =>
-        this.validation.cleanupPrefix(fieldPrefix),
+        this._validation.cleanupPrefix(fieldPrefix),
       invalidateFieldIndexes: () => this.invalidateFieldIndexes(),
     });
   }
 
   isHidden<P extends BitPath<T>>(path: P): boolean {
-    return this.query.isHidden(path);
+    return this._query.isHidden(path);
   }
 
   isRequired<P extends BitPath<T>>(path: P): boolean {
-    return this.query.isRequired(path);
+    return this._query.isRequired(path);
   }
 
   isFieldDirty(path: string): boolean {
-    return this.query.isFieldDirty(path);
+    return this._query.isFieldDirty(path);
   }
 
   isFieldValidating(path: string): boolean {
-    return this.query.isFieldValidating(path);
+    return this._query.isFieldValidating(path);
   }
 
   subscribe(listener: () => void): () => void {
@@ -481,7 +487,7 @@ export class BitStore<T extends object = any> {
     value: any,
     meta: BitFieldChangeMeta = { origin: "setField" },
   ) {
-    this.lifecycle.updateField(path, value, meta);
+    this._lifecycle.updateField(path, value, meta);
   }
 
   blurField<P extends BitPath<T>>(path: P) {
@@ -493,7 +499,7 @@ export class BitStore<T extends object = any> {
       });
     }
 
-    this.validation.trigger([path]);
+    this._validation.trigger([path]);
   }
 
   markFieldsTouched(paths: string[]) {
@@ -505,23 +511,23 @@ export class BitStore<T extends object = any> {
     values: T | DeepPartial<T>,
     options?: { partial?: boolean; rebase?: boolean },
   ) {
-    this.lifecycle.setValues(values, options);
+    this._lifecycle.setValues(values, options);
   }
 
   setError(path: string, message: string | undefined) {
-    this.error.setError(path, message);
+    this._error.setError(path, message);
   }
 
   setErrors(errors: BitErrors<T>) {
-    this.error.setErrors(errors);
+    this._error.setErrors(errors);
   }
 
   setServerErrors(serverErrors: Record<string, string[] | string>) {
-    this.error.setServerErrors(serverErrors);
+    this._error.setServerErrors(serverErrors);
   }
 
   reset() {
-    this.lifecycle.reset();
+    this._lifecycle.reset();
   }
 
   transaction<TResult>(callback: () => TResult): TResult {
@@ -531,18 +537,24 @@ export class BitStore<T extends object = any> {
   async submit(
     onSuccess: (values: T, dirtyValues?: Partial<T>) => void | Promise<void>,
   ) {
-    return this.lifecycle.submit(onSuccess);
+    return this._lifecycle.submit(onSuccess);
   }
 
   registerMask(name: BitMaskName, mask: BitMask) {
     this.maskManager.registerMask(name, mask);
-    this._config.masks = this.maskManager.getAllMasks();
+    this._cachedConfig = {
+      ...this._config,
+      masks: this.maskManager.getAllMasks(),
+    };
     this.subscriptions.notify(this.state, ["__masks__"]);
   }
 
   unregisterMask(name: BitMaskName) {
     this.maskManager.unregisterMask(name);
-    this._config.masks = this.maskManager.getAllMasks();
+    this._cachedConfig = {
+      ...this._config,
+      masks: this.maskManager.getAllMasks(),
+    };
     this.subscriptions.notify(this.state, ["__masks__"]);
   }
 
@@ -579,14 +591,14 @@ export class BitStore<T extends object = any> {
     path: P,
     value: BitArrayItem<BitPathValue<T, P>>,
   ) {
-    this.arrays.pushItem(path, value);
+    this._arrays.pushItem(path, value);
   }
 
   prependItem<P extends BitArrayPath<T>>(
     path: P,
     value: BitArrayItem<BitPathValue<T, P>>,
   ) {
-    this.arrays.prependItem(path, value);
+    this._arrays.prependItem(path, value);
   }
 
   insertItem<P extends BitArrayPath<T>>(
@@ -594,11 +606,11 @@ export class BitStore<T extends object = any> {
     index: number,
     value: BitArrayItem<BitPathValue<T, P>>,
   ) {
-    this.arrays.insertItem(path, index, value);
+    this._arrays.insertItem(path, index, value);
   }
 
   removeItem<P extends BitArrayPath<T>>(path: P, index: number) {
-    this.arrays.removeItem(path, index);
+    this._arrays.removeItem(path, index);
   }
 
   swapItems<P extends BitArrayPath<T>>(
@@ -606,64 +618,64 @@ export class BitStore<T extends object = any> {
     indexA: number,
     indexB: number,
   ) {
-    this.arrays.swapItems(path, indexA, indexB);
+    this._arrays.swapItems(path, indexA, indexB);
   }
 
   moveItem<P extends BitArrayPath<T>>(path: P, from: number, to: number) {
-    this.arrays.moveItem(path, from, to);
+    this._arrays.moveItem(path, from, to);
   }
 
   get canUndo(): boolean {
-    return this.history.canUndo;
+    return this._history.canUndo;
   }
 
   get canRedo(): boolean {
-    return this.history.canRedo;
+    return this._history.canRedo;
   }
 
   undo() {
-    const prevState = this.history.undo();
+    const prevState = this._history.undo();
     if (prevState) {
       const isDirty = this.dirtyManager.rebuild(prevState, this._initialValues);
       this.dispatch(historyApplyOperation(prevState, isDirty));
-      this.validation.trigger(undefined, { forceDebounce: true });
+      this._validation.trigger(undefined, { forceDebounce: true });
     }
   }
 
   redo() {
-    const nextState = this.history.redo();
+    const nextState = this._history.redo();
     if (nextState) {
       const isDirty = this.dirtyManager.rebuild(nextState, this._initialValues);
       this.dispatch(historyApplyOperation(nextState, isDirty));
-      this.validation.trigger(undefined, { forceDebounce: true });
+      this._validation.trigger(undefined, { forceDebounce: true });
     }
   }
 
   getHistoryMetadata(): BitHistoryMetadata {
-    return this.history.getMetadata();
+    return this._history.getMetadata();
   }
 
   validate(options?: BitValidationOptions): Promise<boolean> {
-    return this.validation.validate(options);
+    return this._validation.validate(options);
   }
 
   hasValidationsInProgress(scopeFields?: string[]): boolean {
-    return this.validation.hasValidationsInProgress(scopeFields);
+    return this._validation.hasValidationsInProgress(scopeFields);
   }
 
   triggerValidation(
     scopeFields?: string[],
     options?: BitValidationTriggerOptions,
   ) {
-    this.validation.trigger(scopeFields, options);
+    this._validation.trigger(scopeFields, options);
   }
 
   getStepStatus(scopeName: string) {
-    return this.scope.getStepStatus(scopeName);
+    return this._scope.getStepStatus(scopeName);
   }
 
   getStepErrors(scopeName: string): Record<string, string> {
-    return this.scope.getStepErrors(scopeName);
+    return this._scope.getStepErrors(scopeName);
   }
 
   private runStateBatch<TResult>(callback: () => TResult): TResult {
@@ -682,6 +694,16 @@ export class BitStore<T extends object = any> {
     return this.maskManager.getMasksVersion();
   }
 
+  private onStateCommitted(payload: {
+    nextState: BitState<T>;
+    changedPaths?: Iterable<string>;
+    valuesChanged: boolean;
+  }): void {
+    this.state = payload.nextState;
+    this.subscriptions.notify(this.state, payload.changedPaths);
+    this.effects.onStateUpdated(this.state, payload.valuesChanged);
+  }
+
   private dispatch(operation: BitStoreOperation<T>) {
     this.state = dispatchStoreKernelOperation({
       state: this.state,
@@ -689,11 +711,7 @@ export class BitStore<T extends object = any> {
       operation,
       applyComputedValues: (values, changedPaths) =>
         this.computedManager.apply(values, changedPaths),
-      onStateCommitted: ({ nextState, changedPaths, valuesChanged }) => {
-        this.state = nextState;
-        this.subscriptions.notify(this.state, changedPaths);
-        this.effects.onStateUpdated(this.state, valuesChanged);
-      },
+      onStateCommitted: (payload) => this.onStateCommitted(payload),
     });
   }
 
@@ -702,7 +720,7 @@ export class BitStore<T extends object = any> {
       this.batchState.pendingHistorySnapshot = true;
       return;
     }
-    this.history.saveSnapshot(this.state.values);
+    this._history.saveSnapshot(this.state.values);
   }
 
   private applyPersistedValues(values: Partial<T>) {
@@ -710,7 +728,7 @@ export class BitStore<T extends object = any> {
       values,
       state: this.state,
       initialValues: this._initialValues,
-      validation: this.validation,
+      validation: this._validation,
       fieldRegistry: this.fieldRegistry,
       dirtyManager: this.dirtyManager,
       dispatch: (operation) => this.dispatch(operation),
@@ -720,7 +738,7 @@ export class BitStore<T extends object = any> {
 
   cleanup() {
     this.subscriptions.destroy();
-    this.validation.cancelAll();
+    this._validation.cancelAll();
     this.effects.destroy();
   }
 
@@ -730,16 +748,12 @@ export class BitStore<T extends object = any> {
       batchState: this.batchState,
       applyComputedValues: (values, changedPaths) =>
         this.computedManager.apply(values, changedPaths),
-      onStateCommitted: ({ nextState, changedPaths, valuesChanged }) => {
-        this.state = nextState;
-        this.subscriptions.notify(this.state, changedPaths);
-        this.effects.onStateUpdated(this.state, valuesChanged);
-      },
+      onStateCommitted: (payload) => this.onStateCommitted(payload),
     });
 
     if (this.batchState.pendingHistorySnapshot) {
       this.batchState.pendingHistorySnapshot = false;
-      this.history.saveSnapshot(this.state.values);
+      this._history.saveSnapshot(this.state.values);
     }
   }
 }

@@ -14,7 +14,6 @@ import { BitFieldQueryManager } from "../managers/features/field-query-manager";
 import { BitErrorManager } from "../managers/features/error-manager";
 import { BitFieldRegistry } from "../registry/field-registry";
 import { BitComputedManager } from "../managers/core/computed-manager";
-import { BitCapabilityRegistry } from "./capability-registry";
 import type { BitStoreOperation } from "../engines/operation-engine";
 import { deepClone } from "../../utils";
 import type { BitStoreCapabilities } from "./capabilities";
@@ -41,57 +40,30 @@ export function createStoreCapabilities<T extends object>(args: {
   fieldRegistry: BitFieldRegistry<T>;
 }): BitStoreCapabilities<T> {
   const { ports, fieldRegistry } = args;
-  const registry = new BitCapabilityRegistry<BitStoreCapabilities<T>>();
 
-  registry.register(
-    "validation",
-    new BitValidationManager<T>(ports.validationPort),
-  );
-  registry.register(
-    "lifecycle",
-    new BitLifecycleManager<T>(ports.lifecyclePort),
-  );
-  registry.register(
-    "history",
-    new BitHistoryManager<T>(
+  return {
+    validation: new BitValidationManager<T>(ports.validationPort),
+    lifecycle: new BitLifecycleManager<T>(ports.lifecyclePort),
+    history: new BitHistoryManager<T>(
       !!ports.config.history.enabled,
       ports.config.history.limit ?? 50,
     ),
-  );
-  registry.register("arrays", new BitArrayManager<T>(ports.arrayPort));
-  registry.register(
-    "scope",
-    new BitScopeManager<T>(
+    arrays: new BitArrayManager<T>(ports.arrayPort),
+    scope: new BitScopeManager<T>(
       () => ports.getState(),
       () => ports.getInitialValues(),
       (scopeName) => ports.getScopeFields(scopeName),
       (path) => ports.isPathDirty(path),
     ),
-  );
-  registry.register(
-    "query",
-    new BitFieldQueryManager<T>(
+    query: new BitFieldQueryManager<T>(
       fieldRegistry,
       () => ports.getState(),
       (path) => ports.isPathDirty(path),
     ),
-  );
-  registry.register(
-    "error",
-    new BitErrorManager<T>(
+    error: new BitErrorManager<T>(
       () => ports.getState(),
       (operation) => ports.dispatch(operation),
     ),
-  );
-
-  return {
-    validation: registry.get("validation"),
-    lifecycle: registry.get("lifecycle"),
-    history: registry.get("history"),
-    arrays: registry.get("arrays"),
-    scope: registry.get("scope"),
-    query: registry.get("query"),
-    error: registry.get("error"),
   };
 }
 

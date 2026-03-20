@@ -103,7 +103,6 @@ export class BitArrayManager<T extends object = any> {
           isDirty,
         },
         [path],
-        { requireExplicitChangedPaths: true },
       ),
     );
 
@@ -156,7 +155,6 @@ export class BitArrayManager<T extends object = any> {
           isDirty,
         },
         [path],
-        { requireExplicitChangedPaths: true },
       ),
     );
 
@@ -219,7 +217,6 @@ export class BitArrayManager<T extends object = any> {
           isDirty,
         },
         [path],
-        { requireExplicitChangedPaths: true },
       ),
     );
 
