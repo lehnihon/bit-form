@@ -99,33 +99,36 @@ Bit-Form was built to solve the "heavy form" problem. While most libraries re-re
 
 ### Benchmark Results
 
-Tests performed with a form containing **100 inputs**, measuring the "Time to Interaction" (TTI) during a single keystroke on a mid-range device.
+Below are **measured results** from the quality benchmarks currently in this repository (no estimated/extrapolated values).
 
-#### React Ecosystem
+- Source tests:
+  - `quality/bench/rhf-compare.test.ts`
+  - `quality/bench/perf.test.ts`
+- Reproduce with:
+  - `npm run test:bench:compare`
+  - `npm run test:bench`
 
-| Metric (lower is better)  | **Bit-Form** | React Hook Form | Formik |
-| :------------------------ | :----------- | :-------------- | :----- |
-| **Keystroke Latency**     | **1.2ms**    | 1.8ms           | 14.5ms |
-| **Validation Overhead**   | **0.8ms**    | 1.2ms           | 5.4ms  |
-| **Bundle Size (Gzipped)** | **~12kb**    | ~9kb            | ~15kb  |
+#### React benchmark (Bit-Form vs React Hook Form)
 
-#### Vue Ecosystem
+Snapshot measured on **20/03/2026**:
 
-| Metric (lower is better)  | **Bit-Form** | VeeValidate | FormKit |
-| :------------------------ | :----------- | :---------- | :------ |
-| **Keystroke Latency**     | **~1.2ms**   | ~2.0ms      | ~2.5ms  |
-| **Validation Overhead**   | **~0.8ms**   | ~1.0ms      | ~1.5ms  |
-| **Bundle Size (Gzipped)** | **~12kb**    | ~8kb        | ~25kb   |
+| Scenario (lower is better) | Bit-Form (median / p95) | RHF (median / p95) | Ratio Bit/RHF   |
+| :------------------------- | :---------------------- | :----------------- | :-------------- |
+| Bulk update (300 fields)   | **2.49ms / 5.32ms**     | 113.26ms / 117.7ms | **0.02 / 0.05** |
+| Async burst (120 updates)  | **5.58ms / 8.36ms**     | 33.97ms / 36.71ms  | **0.16 / 0.23** |
 
-#### Angular Ecosystem
+#### Internal performance baseline (Bit-Form)
 
-| Metric (lower is better)  | **Bit-Form** | Angular Reactive Forms | ngx-formly |
-| :------------------------ | :----------- | :--------------------: | :--------- |
-| **Keystroke Latency**     | **~1.2ms**   |         ~1.5ms         | ~2.2ms     |
-| **Validation Overhead**   | **~0.8ms**   |         ~1.0ms         | ~1.4ms     |
-| **Bundle Size (Gzipped)** | **~12kb**    |    ~0kb (built-in)     | ~15kb      |
+Latest baseline from `quality/bench/perf.test.ts`:
 
-> **Note:** Bit-Form's slightly larger bundle size (vs. minimal libraries) is due to the included agnostic core and built-in masking engine, which saves you from installing secondary libraries like `imask` or `cleave.js`. Vue and Angular benchmarks use the same methodology as React; actual numbers may vary by form complexity and device.
+- 300 field updates: ~20ms
+- 1000 field updates in transaction + history: ~45ms
+- 400 scoped subscribers: ~9ms
+- Async validation burst: ~16ms
+- Computed chain fanout (50): ~60ms
+- Subscription notify fanout (200): ~15ms
+
+> **Note:** benchmark values vary by machine, Node version, and CI load. Thresholds are calibrated from measured data with CI headroom and are validated in `quality/bench`.
 
 ### Why Bit-Form?
 
