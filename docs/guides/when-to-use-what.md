@@ -68,4 +68,4 @@ Use UI-only hide only if you have very custom rendering logic and are comfortabl
 | Validate step before "Next"     | `scopes` + `useBitScope` / `injectBitScope`                               |
 | Undo/Redo                       | `history: { enabled: true }`, `undo()`, `redo()`                          |
 | Debug form state                | `devTools: true`                                                          |
-| Release confidence              | `quality` gates (`test:e2e`, `test:bench`, `test:compat`, `gate:release`) |
+| Release confidence              | `quality` gates (`test:e2e`, `test:bench`, `test:compat`, `test:release-gates`) |

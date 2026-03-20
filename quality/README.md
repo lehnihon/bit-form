@@ -7,7 +7,7 @@ This folder is isolated from library runtime and package exports.
 - `e2e/`: Playwright critical-flow tests with visual/headless modes.
 - `bench/`: performance baseline tests + framework comparison (bit-form vs RHF).
 - `compat/`: real consumer package smoke checks using `npm pack`.
-- `release-gates/`: semver/changelog and observability/rollback checks.
+- `release-gates/`: bundle/observability and rollback checks.
 
 ## Commands
 
@@ -19,5 +19,5 @@ npm run test:bench:memory
 npm run test:bench:compare
 npm run test:bench:all
 npm run test:compat
-npm run gate:release
+npm run test:release-gates
 ```

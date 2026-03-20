@@ -77,7 +77,7 @@ jobs:
         run: npm run test:compat
 
   release-gates:
-    name: Release Gates (Semver + Observability)
+    name: Release Gates (Observability + Bundle)
     runs-on: ubuntu-latest
     continue-on-error: true
     steps:
@@ -93,4 +93,4 @@ jobs:
         run: npm ci
 
       - name: Run release gates
-        run: npm run gate:release
+        run: npm run test:release-gates

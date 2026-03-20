@@ -18,7 +18,7 @@ npm run test:bench
 npm run test:bench:compare
 npm run test:bench:all
 npm run test:compat
-npm run gate:release
+npm run test:release-gates
 ```
 
 ## Promotion policy (suggested)
