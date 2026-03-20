@@ -978,6 +978,7 @@ describe("BitStore Core", () => {
 
       store.registerField("username", {
         validation: {
+          asyncValidateOn: "change",
           asyncValidate: mockApi,
           asyncValidateDelay: 500,
         },
@@ -1019,6 +1020,7 @@ describe("BitStore Core", () => {
 
       store.registerField("username", {
         validation: {
+          asyncValidateOn: "change",
           asyncValidate: mockApi,
           asyncValidateDelay: 500,
         },
@@ -1035,7 +1037,11 @@ describe("BitStore Core", () => {
       resolveApi!(null);
       await vi.advanceTimersByTimeAsync(1);
 
-      await store.submit(onSuccess);
+      const secondSubmit = store.submit(onSuccess);
+      await vi.advanceTimersByTimeAsync(0);
+      resolveApi!(null);
+      await vi.advanceTimersByTimeAsync(1);
+      await secondSubmit;
       expect(onSuccess).toHaveBeenCalledTimes(1);
     });
 
@@ -1056,6 +1062,7 @@ describe("BitStore Core", () => {
 
       store.registerField("email", {
         validation: {
+          asyncValidateOn: "change",
           asyncValidate: mockApi,
           asyncValidateDelay: 100,
         },
@@ -1075,6 +1082,7 @@ describe("BitStore Core", () => {
       await vi.advanceTimersByTimeAsync(1);
 
       expect(store.getState().errors.email).toBeUndefined();
+      await vi.advanceTimersByTimeAsync(5);
       expect(store.isFieldValidating("email")).toBe(false);
     });
 
@@ -1119,6 +1127,7 @@ describe("BitStore Core", () => {
 
       store.registerField("username", {
         validation: {
+          asyncValidateOn: "change",
           asyncValidate: async () => "API: Username ocupado",
           asyncValidateDelay: 0,
         },
@@ -1168,7 +1177,7 @@ describe("BitStore Core", () => {
       expect(store.getState().errors.email).toBe("E-mail inválido");
     });
 
-    it("deve limpar a memória do erro Assíncrono se o campo for ocultado (showIf)", async () => {
+    it("deve limpar a memória do erro assíncrono ao ocultar e recalcular quando validado novamente", async () => {
       const store = new BitStore({
         initialValues: { hasCnpj: true, cnpj: "111" },
       });
@@ -1179,6 +1188,7 @@ describe("BitStore Core", () => {
           showIf: (v) => v.hasCnpj,
         },
         validation: {
+          asyncValidateOn: "change",
           asyncValidate: async () => "API: CNPJ Inválido",
           asyncValidateDelay: 0,
         },
@@ -1196,7 +1206,34 @@ describe("BitStore Core", () => {
       store.setField("hasCnpj", true);
       await store.validate({ scopeFields: ["cnpj"] });
 
-      expect(store.getState().errors.cnpj).toBeUndefined();
+      expect(store.getState().errors.cnpj).toBe("API: CNPJ Inválido");
+    });
+
+    it("deve executar asyncValidate apenas no blur por padrão", async () => {
+      const store = new BitStore({
+        initialValues: { username: "" },
+        validation: { delay: 0 },
+      });
+
+      const mockApi = vi.fn().mockResolvedValue("Username já existe");
+
+      store.registerField("username", {
+        validation: {
+          asyncValidate: mockApi,
+          asyncValidateDelay: 0,
+        },
+      });
+
+      store.setField("username", "leandro");
+      await vi.advanceTimersByTimeAsync(10);
+
+      expect(mockApi).not.toHaveBeenCalled();
+
+      store.blurField("username");
+      await vi.advanceTimersByTimeAsync(10);
+
+      expect(mockApi).toHaveBeenCalledTimes(1);
+      expect(store.getState().errors.username).toBe("Username já existe");
     });
   });
 

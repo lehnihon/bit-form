@@ -88,6 +88,11 @@ export interface BitFieldConditional<T extends object = any> {
 
 /** Field-level validation: async validation only. */
 export interface BitFieldValidation<T extends object = any> {
+  /**
+   * Breaking change: async validation now defaults to `blur` instead of eager `change`.
+   * `validate()`/submit still execute async validators for the targeted fields.
+   */
+  asyncValidateOn?: "change" | "blur";
   asyncValidate?: (value: any, values: T) => Promise<string | null | undefined>;
   asyncValidateDelay?: number;
 }
@@ -371,22 +376,22 @@ type Primitive = string | number | boolean | bigint | symbol | null | undefined;
 export type BitPath<T, Prefix extends string = ""> = T extends Primitive
   ? never
   : T extends readonly (infer U)[]
-  ? Prefix extends ""
-    ? `${number}` | `${number}.${BitPath<U>}`
-    : `${Prefix}.${number}` | `${Prefix}.${number}.${BitPath<U>}`
-  : {
-      [K in keyof T & (string | number)]: T[K] extends Primitive
-        ? Prefix extends ""
-          ? `${K & (string | number)}`
-          : `${Prefix}.${K & (string | number)}`
-        : Prefix extends ""
-        ?
-            | `${K & (string | number)}`
-            | `${K & (string | number)}.${BitPath<T[K]>}`
-        :
-            | `${Prefix}.${K & (string | number)}`
-            | `${Prefix}.${K & (string | number)}.${BitPath<T[K]>}`;
-    }[keyof T & (string | number)];
+    ? Prefix extends ""
+      ? `${number}` | `${number}.${BitPath<U>}`
+      : `${Prefix}.${number}` | `${Prefix}.${number}.${BitPath<U>}`
+    : {
+        [K in keyof T & (string | number)]: T[K] extends Primitive
+          ? Prefix extends ""
+            ? `${K & (string | number)}`
+            : `${Prefix}.${K & (string | number)}`
+          : Prefix extends ""
+            ?
+                | `${K & (string | number)}`
+                | `${K & (string | number)}.${BitPath<T[K]>}`
+            :
+                | `${Prefix}.${K & (string | number)}`
+                | `${Prefix}.${K & (string | number)}.${BitPath<T[K]>}`;
+      }[keyof T & (string | number)];
 
 // Resolves the value type at a given dot-separated path.
 export type BitPathValue<
@@ -398,29 +403,30 @@ export type BitPathValue<
       ? BitPathValue<U, Rest>
       : never
     : K extends keyof T
-    ? BitPathValue<T[K], Rest>
-    : never
+      ? BitPathValue<T[K], Rest>
+      : never
   : P extends `${number}`
-  ? T extends readonly (infer U)[]
-    ? U
-    : never
-  : P extends keyof T
-  ? T[P]
-  : never;
+    ? T extends readonly (infer U)[]
+      ? U
+      : never
+    : P extends keyof T
+      ? T[P]
+      : never;
 
 // Filters BitPath<T> to only those paths that resolve to array types.
 // Distributive over union so each path is checked individually.
-export type BitArrayPath<T> = BitPath<T> extends infer P
-  ? P extends string
-    ? BitPathValue<T, P> extends readonly any[]
-      ? P
+export type BitArrayPath<T> =
+  BitPath<T> extends infer P
+    ? P extends string
+      ? BitPathValue<T, P> extends readonly any[]
+        ? P
+        : never
       : never
-    : never
-  : never;
+    : never;
 
 // Extracts the element type of an array.
 export type BitArrayItem<A> = A extends readonly (infer U)[]
   ? U
   : A extends (infer U)[]
-  ? U
-  : never;
+    ? U
+    : never;

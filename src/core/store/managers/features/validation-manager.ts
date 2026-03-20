@@ -9,6 +9,7 @@ import {
   patchStateOperation,
   validationCommitOperation,
 } from "../../engines/operation-engine";
+import { getDeepValue } from "../../../utils";
 import type {
   BitAfterValidateEvent,
   BitBeforeValidateEvent,
@@ -91,6 +92,10 @@ export class BitValidationManager<T extends object> {
       {
         name: "validate:sync-track",
         run: async (ctx) => this.runSynchronousTrack(ctx),
+      },
+      {
+        name: "validate:async-track",
+        run: async (ctx) => this.runAsyncTrack(ctx),
       },
       {
         name: "validate:abort-check",
@@ -192,7 +197,9 @@ export class BitValidationManager<T extends object> {
   handleAsync(path: string, value: any) {
     const config = this.store.getFieldConfig(path);
     const asyncValidate = config?.validation?.asyncValidate;
-    if (!asyncValidate) {
+    const asyncValidateOn = config?.validation?.asyncValidateOn ?? "blur";
+
+    if (!asyncValidate || asyncValidateOn !== "change") {
       this.cancelFieldAsync(path);
       this.updateFieldValidating(path, false);
       return;
@@ -350,6 +357,24 @@ export class BitValidationManager<T extends object> {
     });
   }
 
+  private async runAsyncTrack(ctx: ValidationPipelineContext<T>) {
+    const targetPaths = this.resolveAsyncValidationPaths(ctx.targetFields);
+
+    if (targetPaths.length === 0) {
+      return;
+    }
+
+    await Promise.all(
+      targetPaths.map((path) =>
+        this.runImmediateAsyncValidation(
+          path,
+          ctx.currentState.values,
+          ctx.validationId,
+        ),
+      ),
+    );
+  }
+
   private mergeAsyncTrack(ctx: ValidationPipelineContext<T>) {
     if (ctx.targetFields && ctx.targetFields.length > 0) {
       const scopedErrors = { ...ctx.currentState.errors } as BitErrors<T>;
@@ -419,6 +444,89 @@ export class BitValidationManager<T extends object> {
     });
 
     ctx.halted = true;
+  }
+
+  private resolveAsyncValidationPaths(targetFields?: string[]) {
+    const hiddenFields = this.store.getHiddenFields();
+    const paths: string[] = [];
+
+    if (targetFields && targetFields.length > 0) {
+      for (const path of targetFields) {
+        if (hiddenFields.has(path)) {
+          continue;
+        }
+
+        const asyncValidate =
+          this.store.getFieldConfig(path)?.validation?.asyncValidate;
+        if (asyncValidate) {
+          paths.push(path);
+        }
+      }
+
+      return paths;
+    }
+
+    if (!this.store.forEachFieldConfig) {
+      return paths;
+    }
+
+    this.store.forEachFieldConfig((config, path) => {
+      if (!config.validation?.asyncValidate || hiddenFields.has(path)) {
+        return;
+      }
+
+      paths.push(path);
+    });
+
+    return paths;
+  }
+
+  private async runImmediateAsyncValidation(
+    path: string,
+    values: T,
+    validationId: number,
+  ) {
+    const asyncValidate =
+      this.store.getFieldConfig(path)?.validation?.asyncValidate;
+
+    if (!asyncValidate) {
+      this.asyncErrors.delete(path);
+      return;
+    }
+
+    this.cancelFieldAsync(path);
+
+    const controller = new AbortController();
+    this.asyncAbortControllers.set(path, controller);
+    this.updateFieldValidating(path, true);
+
+    try {
+      const errorMessage = await asyncValidate(
+        getDeepValue(values, path),
+        values,
+      );
+
+      if (
+        controller.signal.aborted ||
+        validationId !== this.currentValidationId
+      ) {
+        return;
+      }
+
+      if (errorMessage) {
+        this.asyncErrors.set(path, errorMessage);
+      } else {
+        this.asyncErrors.delete(path);
+      }
+    } finally {
+      if (
+        !controller.signal.aborted &&
+        validationId === this.currentValidationId
+      ) {
+        this.updateFieldValidating(path, false);
+      }
+      this.asyncAbortControllers.delete(path);
+    }
   }
 
   private schedulePendingAsyncValidations() {
@@ -500,15 +608,7 @@ export class BitValidationManager<T extends object> {
         this.store.setError(path, errorMessage);
       } else {
         this.asyncErrors.delete(path);
-        if (this.store.validate) {
-          await this.store.validate({ scopeFields: [path] });
-        } else {
-          const newErrors = { ...this.store.getState().errors };
-          delete newErrors[path as keyof BitErrors<T>];
-          this.store.dispatch(
-            validationCommitOperation(newErrors, !hasErrors(newErrors)),
-          );
-        }
+        await this.commitSynchronousScopeValidation([path]);
       }
     } finally {
       if (!job.controller.signal.aborted) {
@@ -516,5 +616,41 @@ export class BitValidationManager<T extends object> {
       }
       this.asyncAbortControllers.delete(path);
     }
+  }
+
+  private async commitSynchronousScopeValidation(scopeFields: string[]) {
+    const currentState = this.store.getState();
+    const resolverErrors = this.store.config.resolver
+      ? await this.store.config.resolver(currentState.values, {
+          scopeFields,
+        })
+      : {};
+
+    const dynamicRequiredErrors = this.store.getRequiredErrors(
+      currentState.values,
+    );
+    const allErrors = { ...resolverErrors, ...dynamicRequiredErrors };
+
+    this.store.getHiddenFields().forEach((hiddenPath) => {
+      delete allErrors[hiddenPath];
+      this.asyncErrors.delete(hiddenPath);
+    });
+
+    const scopedErrors = { ...currentState.errors } as BitErrors<T>;
+
+    scopeFields.forEach((field) => {
+      if (allErrors[field]) {
+        scopedErrors[field as keyof BitErrors<T>] = allErrors[field];
+      } else if (this.asyncErrors.has(field)) {
+        scopedErrors[field as keyof BitErrors<T>] =
+          this.asyncErrors.get(field)!;
+      } else {
+        delete scopedErrors[field as keyof BitErrors<T>];
+      }
+    });
+
+    this.store.dispatch(
+      validationCommitOperation(scopedErrors, !hasErrors(scopedErrors)),
+    );
   }
 }

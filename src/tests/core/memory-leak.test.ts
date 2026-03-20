@@ -87,6 +87,7 @@ describe("Memory Leak Detection", () => {
   it("should cleanup async validations on reset", async () => {
     store.registerField("asyncField", {
       validation: {
+        asyncValidateOn: "change",
         asyncValidate: async () => {
           await new Promise((resolve) => setTimeout(resolve, 100));
           return undefined;

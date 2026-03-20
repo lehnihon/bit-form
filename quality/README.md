@@ -80,8 +80,14 @@ As comparações entre bit-form, React Hook Form, Formik e TanStack Form seguem:
 
 | Cenário             | bit-form | RHF     | Formik  | TanStack |
 | ------------------- | -------- | ------- | ------- | -------- |
-| bulk 600 campos     | ~12 ms   | ~505 ms | ~250 ms | ~1980 ms |
-| async burst 240 it. | ~15 ms   | ~68 ms  | ~23 ms  | ~14 ms   |
+| bulk 600 campos     | ~5.8 ms  | ~556 ms | ~191 ms | ~1553 ms |
+| async burst 240 it. | ~4.6 ms  | ~65 ms  | ~22 ms  | ~13.5 ms |
 
 bit-form/RHF ratio bulk: **~0.02x** (50x mais rápido em batch de atualizações)
-bit-form/TanStack ratio async: **~1.1x** (equivalente — mesma ordem de grandeza)
+bit-form/TanStack ratio async: **~0.34x** (~2.9x mais rápido após a mudança de trigger default + pipeline async)
+
+### Observação importante sobre a mudança arquitetural
+
+- `asyncValidate` agora roda por padrão em `blur` e também em `validate()`/submit.
+- Se o benchmark ou a UX precisarem de checagem enquanto digita, use `asyncValidateOn: "change"` explicitamente.
+- Isso reduz agendamento desnecessário, churn de `isValidating` e custo de bursts assíncronos sem remover o caminho opt-in para validação live.

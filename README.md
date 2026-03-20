@@ -46,7 +46,7 @@ Bit-Form is a powerful, framework-agnostic library designed to handle complex va
 ## ✨ Key Features
 
 - **Framework Agnostic Core:** Dedicated bindings for React, Vue, and Angular.
-- **First-Class Validation:** Built-in schema resolvers for Zod, Yup, and Joi. Includes native support for debounced asynchronous validation.
+- **First-Class Validation:** Built-in schema resolvers for Zod, Yup, and Joi. Includes native asynchronous validation with configurable trigger (`blur` by default, `change` opt-in).
 - **Advanced Masking System:** Extensive list of presets including Currency (BRL, USD, EUR), Documents (CPF, CNPJ, SSN), Dates, and Credit Cards.
 - **Smart Dependencies:** Built-in dependency manager to conditionally hide or require fields using `showIf`, `requiredIf`, and `dependsOn`.
 - **Computed Fields:** Automatically calculate and update form values in real-time based on other field changes.
@@ -123,29 +123,29 @@ The comparison now uses a more realistic and stricter setup:
 
 #### React benchmark (Bit-Form vs RHF/Formik/TanStack)
 
-Snapshot measured on **20/03/2026**:
+Latest local Node snapshot measured on **20/03/2026**:
 
-| Scenario (lower is better) | Bit-Form (median / p95) | RHF (median / p95) | Formik (median / p95) | TanStack (median / p95) |
-| :------------------------- | :---------------------- | :----------------- | :-------------------- | :---------------------- |
-| Bulk update (600 fields)   | **11.86ms / 120.45ms**  | 505.17ms / 563.37ms | 249.84ms / 720ms     | 1979.36ms / 2881.91ms   |
-| Async burst (240 updates)  | 15.24ms / 17.74ms       | 68.35ms / 80.04ms   | 23.42ms / 27.53ms    | **13.77ms / 17.91ms**   |
+| Scenario (lower is better) | Bit-Form   | RHF      | Formik   | TanStack  |
+| :------------------------- | :--------- | :------- | :------- | :-------- |
+| Bulk update (600 fields)   | **5.83ms** | 556.11ms | 190.63ms | 1552.84ms |
+| Async burst (240 updates)  | **4.57ms** | 65.12ms  | 22.12ms  | 13.50ms   |
 
 Bit-Form ratio (`bit-form / competitor`) from the same snapshot:
 
-- Bulk (median / p95):
-  - vs RHF: **0.02 / 0.21**
-  - vs Formik: **0.05 / 0.17**
-  - vs TanStack: **0.01 / 0.04**
-- Async burst (median / p95):
-  - vs RHF: **0.22 / 0.22**
-  - vs Formik: **0.65 / 0.64**
-  - vs TanStack: **1.11 / 0.99**
+- Bulk (median):
+  - vs RHF: **0.01**
+  - vs Formik: **0.03**
+  - vs TanStack: **0.00**
+- Async burst (median):
+  - vs RHF: **0.07**
+  - vs Formik: **0.21**
+  - vs TanStack: **0.34**
 
 In practice, this means:
 
 - Bit-Form remains substantially faster than RHF and Formik in bulk-update workloads.
-- In the async burst scenario, Bit-Form and TanStack Form are in the same performance band.
-- The benchmark is intentionally conservative now, because it measures after React settles instead of stopping too early.
+- After the async-validation pipeline refactor, Bit-Form also moved ahead of TanStack in the async burst scenario on this measured environment.
+- The benchmark is intentionally conservative, because it waits for React commit stabilization instead of stopping too early.
 
 #### Internal performance baseline (Bit-Form)
 
@@ -154,7 +154,7 @@ Latest baseline from `quality/bench/perf.test.ts`:
 - 300 field updates: ~20ms
 - 1000 field updates in transaction + history: ~45ms
 - 400 scoped subscribers: ~9ms
-- Async validation burst: ~16ms
+- Async validation burst: ~13ms
 - Computed chain fanout (50): ~60ms
 - Subscription notify fanout (200): ~15ms
 
@@ -231,12 +231,14 @@ This branch currently allows breaking changes while architecture/performance wor
 - **New `subscribeTracked`** was added to auto-track selector dependencies and re-track when selector branches change.
 - **`resolveBitStoreForHooks` now uses symbol branding** instead of duck-typing checks.
 - **SSR/Edge support improved** with injectable bus instances (`createBitBus`, `config.bus`, `initDevTools({ bus })`).
+- **Field `asyncValidate` now defaults to `blur` trigger**. To keep validation while typing, set `validation.asyncValidateOn: "change"` explicitly.
 
 ### Migration quick notes
 
 - If you relied on implicit broad selector notifications, prefer explicit `paths` or use `subscribeTracked`.
 - If you need old history density, set `history: { limit: 15 }` explicitly.
 - In SSR/Edge runtimes, create one bus per request scope and inject it into the store and DevTools.
+- If you relied on async validation firing while typing, add `asyncValidateOn: "change"` to the field config. `validate()` and submit still execute async validators.
 
 ## 🤝 Contributing
 

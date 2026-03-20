@@ -55,6 +55,10 @@ export class BitFieldRegistry<T extends object = any> {
     return this.conditions.isHidden(path);
   }
 
+  hasDependents(path: string): boolean {
+    return this.conditions.hasDependents(path);
+  }
+
   isRequired(path: string, values: T): boolean {
     return this.conditions.isRequired(path, values);
   }

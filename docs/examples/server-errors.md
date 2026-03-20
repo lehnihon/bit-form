@@ -4,12 +4,12 @@ Bit-Form distinguishes between **client-side validation** and **server-side erro
 
 ## Overview
 
-| Tool                | When to use                                    | Handles                                                            |
-| ------------------- | ---------------------------------------------- | ------------------------------------------------------------------ |
-| **resolver**        | Schema validation (Zod, Yup, Joi)              | Sync validation before submit                                      |
-| **asyncValidate**   | Real-time API checks (e.g. "email taken")      | Debounced per-field validation while typing                        |
-| **setServerErrors** | 422/400 from API on submit                     | Errors returned after the form is sent                             |
-| **onSubmit**        | Wrapper that calls API + handles server errors | preventDefault, setServerErrors on 422, submitError on 500/network |
+| Tool                | When to use                                    | Handles                                                                         |
+| ------------------- | ---------------------------------------------- | ------------------------------------------------------------------------------- |
+| **resolver**        | Schema validation (Zod, Yup, Joi)              | Sync validation before submit                                                   |
+| **asyncValidate**   | API checks por campo (e.g. "email taken")      | `blur` por padrão; use `asyncValidateOn: "change"` para validar enquanto digita |
+| **setServerErrors** | 422/400 from API on submit                     | Errors returned after the form is sent                                          |
+| **onSubmit**        | Wrapper that calls API + handles server errors | preventDefault, setServerErrors on 422, submitError on 500/network              |
 
 ## Client-Side: resolver + asyncValidate
 
@@ -46,6 +46,7 @@ store.registerField("email", {
       const { available } = await api.checkEmail(value);
       return available ? null : "E-mail já está em uso";
     },
+    asyncValidateOn: "change",
     asyncValidateDelay: 500,
   },
 });

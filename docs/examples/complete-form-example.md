@@ -66,6 +66,7 @@ const store = createBitStore({
           const ok = await api.checkCnpjAvailable(value);
           return ok ? null : "CNPJ já cadastrado";
         },
+        asyncValidateOn: "change",
         asyncValidateDelay: 500,
       },
     },
@@ -78,6 +79,7 @@ const store = createBitStore({
           const ok = await api.checkEmailAvailable(value);
           return ok ? null : "E-mail já está em uso";
         },
+        asyncValidateOn: "change",
         asyncValidateDelay: 400,
       },
     },
