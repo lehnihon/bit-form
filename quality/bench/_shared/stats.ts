@@ -10,6 +10,8 @@ export interface BenchmarkSample {
 export interface BenchmarkOptions {
   warmups?: number;
   samples?: number;
+  settleBeforeEach?: () => void | Promise<void>;
+  settleAfterEach?: () => void | Promise<void>;
 }
 
 export interface BenchmarkLifecycle<TContext> {
@@ -36,16 +38,22 @@ export async function runMeasuredScenario(
 ): Promise<BenchmarkSample> {
   const warmups = options.warmups ?? 5;
   const samples = options.samples ?? 30;
+  const settleBeforeEach = options.settleBeforeEach;
+  const settleAfterEach = options.settleAfterEach;
 
   for (let index = 0; index < warmups; index++) {
+    await settleBeforeEach?.();
     await fn();
+    await settleAfterEach?.();
   }
 
   const valuesMs: number[] = [];
 
   for (let index = 0; index < samples; index++) {
+    await settleBeforeEach?.();
     const start = performance.now();
     await fn();
+    await settleAfterEach?.();
     valuesMs.push(performance.now() - start);
   }
 

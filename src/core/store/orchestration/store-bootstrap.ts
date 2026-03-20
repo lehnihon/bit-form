@@ -19,8 +19,10 @@ import { deepClone } from "../../utils";
 import type { BitStoreCapabilities } from "./capabilities";
 import type { BitFrameworkConfig } from "../contracts/public-types";
 import { bitBus } from "../shared/bus";
-import type { BitLifecycleStorePort } from "../managers/features/lifecycle-manager";
-import type { BitValidationStorePort } from "../managers/features/validation-manager";
+import type {
+  BitLifecycleStorePort,
+  BitValidationStorePort,
+} from "../contracts/port-types";
 import type { BitFieldDefinition, BitState } from "../contracts/types";
 
 export type BitStoreCapabilityPorts<T extends object> = {

@@ -13,25 +13,15 @@ import type {
   BitAfterValidateEvent,
   BitBeforeValidateEvent,
   BitFieldDefinition,
-  BitState,
 } from "../../contracts/types";
+import type {
+  BitValidationStorePort,
+  BitValidationTriggerOptions,
+} from "../../contracts/port-types";
 
-export interface BitValidationStorePort<T extends object> {
-  getState: () => BitState<T>;
-  dispatch: (operation: BitStoreOperation<T>) => void;
-  setError: (path: string, message: string | undefined) => void;
-  validate: (opts: BitValidationOptions) => Promise<boolean>;
-  getFieldConfig: (path: string) => BitFieldDefinition<T> | undefined;
-  getScopeFields: (scopeName: string) => string[];
-  config: BitFrameworkConfig<T>;
-  getRequiredErrors: (values: T) => BitErrors<T>;
-  getHiddenFields: () => ReadonlySet<string>;
-  emitBeforeValidate: (event: BitBeforeValidateEvent<T>) => Promise<void>;
-  emitAfterValidate: (event: BitAfterValidateEvent<T>) => Promise<void>;
-}
-
-interface ValidationPipelineContext<T extends object>
-  extends BitPipelineContext {
+interface ValidationPipelineContext<
+  T extends object,
+> extends BitPipelineContext {
   options?: BitValidationOptions;
   validationId: number;
   currentState: ReturnType<BitValidationStorePort<T>["getState"]>;
@@ -41,10 +31,6 @@ interface ValidationPipelineContext<T extends object>
   isValid: boolean;
   result: boolean;
   aborted: boolean;
-}
-
-export interface BitValidationTriggerOptions {
-  forceDebounce?: boolean;
 }
 
 type BitAsyncValidateFn<T extends object> = NonNullable<
@@ -453,10 +439,13 @@ export class BitValidationManager<T extends object> {
       return;
     }
 
-    this.cancelAsyncSchedulerTimeout = this.schedule(() => {
-      this.cancelAsyncSchedulerTimeout = undefined;
-      void this.flushPendingAsyncValidations();
-    }, Math.max(0, nextDueAt - Date.now()));
+    this.cancelAsyncSchedulerTimeout = this.schedule(
+      () => {
+        this.cancelAsyncSchedulerTimeout = undefined;
+        void this.flushPendingAsyncValidations();
+      },
+      Math.max(0, nextDueAt - Date.now()),
+    );
   }
 
   private async flushPendingAsyncValidations() {

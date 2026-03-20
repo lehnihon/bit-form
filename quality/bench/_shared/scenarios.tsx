@@ -1,5 +1,7 @@
 import { act, renderHook } from "@testing-library/react";
+import { useFormik } from "formik";
 import { useForm } from "react-hook-form";
+import { useForm as useTanstackForm } from "@tanstack/react-form";
 import { createBitStore } from "../../../src";
 
 export type CompareFormValues = Record<string, string> & {
@@ -23,6 +25,12 @@ export function createLargeValues(total: number): CompareFormValues {
 export interface BenchmarkHarness {
   run: () => Promise<void>;
   teardown?: () => void | Promise<void>;
+}
+
+export async function settleReactCommit(): Promise<void> {
+  await Promise.resolve();
+  await new Promise<void>((resolve) => setTimeout(resolve, 0));
+  await act(async () => {});
 }
 
 export function createBitFormBulkHarness(
@@ -49,7 +57,7 @@ export function createBitFormBulkHarness(
         );
       }
 
-      await store.validate();
+      await store.validate({ touch: false });
       store.reset();
     },
   };
@@ -60,9 +68,14 @@ export function createRhfBulkHarness(totalFields: number): BenchmarkHarness {
   const { result, unmount } = renderHook(() =>
     useForm<CompareFormValues>({
       defaultValues: initialValues,
-      mode: "onChange",
+      mode: "onSubmit",
+      reValidateMode: "onSubmit",
     }),
   );
+
+  result.current.register("email", {
+    validate: (value) => (value ? true : "required"),
+  });
 
   return {
     run: async () => {
@@ -79,14 +92,7 @@ export function createRhfBulkHarness(totalFields: number): BenchmarkHarness {
           );
         }
 
-        const emailValue = result.current.getValues("email");
-        if (!emailValue) {
-          result.current.setError("email", {
-            type: "required",
-            message: "required",
-          });
-        }
-
+        await result.current.trigger("email");
         result.current.reset(initialValues);
       });
     },
@@ -123,7 +129,7 @@ export function createBitFormAsyncBurstHarness(
         store.setField("username", index % 2 === 0 ? "taken" : `user-${index}`);
       }
 
-      await store.validate();
+      await store.validate({ touch: false });
       store.reset();
     },
   };
@@ -136,7 +142,8 @@ export function createRhfAsyncBurstHarness(
   const { result, unmount } = renderHook(() =>
     useForm<CompareFormValues>({
       defaultValues: initialValues,
-      mode: "onChange",
+      mode: "onSubmit",
+      reValidateMode: "onSubmit",
     }),
   );
 
@@ -163,6 +170,173 @@ export function createRhfAsyncBurstHarness(
         }
 
         await result.current.trigger("username");
+        result.current.reset(initialValues);
+      });
+    },
+    teardown: () => {
+      unmount();
+    },
+  };
+}
+
+export function createFormikBulkHarness(totalFields: number): BenchmarkHarness {
+  const initialValues = createLargeValues(totalFields);
+  const { result, unmount } = renderHook(() =>
+    useFormik<CompareFormValues>({
+      initialValues,
+      validateOnBlur: false,
+      validateOnChange: false,
+      validate: (values) => {
+        const errors: Partial<Record<keyof CompareFormValues, string>> = {};
+        if (!values.email) {
+          errors.email = "required";
+        }
+        return errors;
+      },
+      onSubmit: () => {},
+    }),
+  );
+
+  return {
+    run: async () => {
+      await act(async () => {
+        for (let index = 0; index < totalFields; index++) {
+          await result.current.setFieldValue(
+            `field_${index}` as keyof CompareFormValues,
+            `value-${index}`,
+            false,
+          );
+        }
+
+        await result.current.validateForm();
+        result.current.resetForm({ values: initialValues });
+      });
+    },
+    teardown: () => {
+      unmount();
+    },
+  };
+}
+
+export function createTanstackBulkHarness(
+  totalFields: number,
+): BenchmarkHarness {
+  const initialValues = createLargeValues(totalFields);
+  const { result, unmount } = renderHook(() =>
+    useTanstackForm<CompareFormValues>({
+      defaultValues: initialValues,
+      validators: {
+        onSubmit: ({ value }) => {
+          if (!value.email) {
+            return {
+              email: "required",
+            };
+          }
+          return undefined;
+        },
+      },
+      onSubmit: async () => {},
+    }),
+  );
+
+  return {
+    run: async () => {
+      await act(async () => {
+        for (let index = 0; index < totalFields; index++) {
+          result.current.setFieldValue(
+            `field_${index}` as keyof CompareFormValues,
+            `value-${index}`,
+            { dontValidate: true },
+          );
+        }
+
+        await result.current.validateAllFields("submit");
+        result.current.reset(initialValues);
+      });
+    },
+    teardown: () => {
+      unmount();
+    },
+  };
+}
+
+export function createFormikAsyncBurstHarness(
+  iterations: number,
+): BenchmarkHarness {
+  const initialValues = createLargeValues(220);
+  const { result, unmount } = renderHook(() =>
+    useFormik<CompareFormValues>({
+      initialValues,
+      validateOnBlur: false,
+      validateOnChange: false,
+      validate: async (values) => {
+        const errors: Partial<Record<keyof CompareFormValues, string>> = {};
+        await new Promise((resolve) => setTimeout(resolve, 2));
+        if (String(values.username).toLowerCase() === "taken") {
+          errors.username = "already used";
+        }
+        return errors;
+      },
+      onSubmit: () => {},
+    }),
+  );
+
+  return {
+    run: async () => {
+      await act(async () => {
+        for (let index = 0; index < iterations; index++) {
+          await result.current.setFieldValue(
+            "username",
+            index % 2 === 0 ? "taken" : `user-${index}`,
+            false,
+          );
+        }
+
+        await result.current.validateField("username");
+        result.current.resetForm({ values: initialValues });
+      });
+    },
+    teardown: () => {
+      unmount();
+    },
+  };
+}
+
+export function createTanstackAsyncBurstHarness(
+  iterations: number,
+): BenchmarkHarness {
+  const initialValues = createLargeValues(220);
+  const { result, unmount } = renderHook(() =>
+    useTanstackForm<CompareFormValues>({
+      defaultValues: initialValues,
+      validators: {
+        onSubmitAsyncDebounceMs: 5,
+        onSubmitAsync: async ({ value }) => {
+          await new Promise((resolve) => setTimeout(resolve, 2));
+          if (String(value.username).toLowerCase() === "taken") {
+            return {
+              username: "already used",
+            };
+          }
+          return undefined;
+        },
+      },
+      onSubmit: async () => {},
+    }),
+  );
+
+  return {
+    run: async () => {
+      await act(async () => {
+        for (let index = 0; index < iterations; index++) {
+          result.current.setFieldValue(
+            "username",
+            index % 2 === 0 ? "taken" : `user-${index}`,
+            { dontValidate: true },
+          );
+        }
+
+        await result.current.validateField("username", "submit");
         result.current.reset(initialValues);
       });
     },
