@@ -515,6 +515,7 @@ describe("React Integration (Context + Hooks)", () => {
             scope: "step1",
             validation: {
               asyncValidate: async () => null,
+              asyncValidateOn: "change",
               asyncValidateDelay: 500,
             },
           },

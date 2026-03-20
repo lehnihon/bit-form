@@ -1,6 +1,6 @@
 # Validation & Resolvers
 
-Bit-Form treats validation as a first-class citizen. It supports synchronous schema validation via popular libraries (Zod, Yup, Joi) and native debounced asynchronous validation for API checks.
+Bit-Form treats validation as a first-class citizen. It supports synchronous schema validation via popular libraries (Zod, Yup, Joi) and native asynchronous validation for API checks with configurable trigger semantics.
 
 ## Synchronous Validation (Schemas)
 
@@ -33,7 +33,10 @@ Whenever the form changes or a field loses focus, Bit-Form will run the resolver
 
 ## Asynchronous Validation
 
-Sometimes you need to validate a field against a backend API (e.g., checking if a username is available). You can define `asyncValidate` on a field's configuration. Bit-Form automatically manages the loading state (`isValidating`) and debounces the requests to avoid spamming your API.
+Sometimes you need to validate a field against a backend API (e.g., checking if a username is available). You can define `asyncValidate` on a field's configuration. Bit-Form automatically manages the loading state (`isValidating`) and supports two trigger modes:
+
+- `blur` (**default**): runs async validation when the field loses focus, and also during `validate()`/submit flows.
+- `change`: opt-in live validation while typing. Pair it with `asyncValidateDelay` to debounce requests.
 
 ```tsx
 store.registerField("username", {
@@ -44,10 +47,13 @@ store.registerField("username", {
       if (!response.available) return "This username is already taken";
       return null;
     },
+    asyncValidateOn: "change",
     asyncValidateDelay: 500,
   },
 });
 ```
+
+If you do not set `asyncValidateOn`, the field keeps the cheaper default behavior and validates asynchronously on `blur`.
 
 You can check if a field is currently validating to show a loading spinner in your UI:
 
@@ -59,6 +65,10 @@ if (isValidating) return <Spinner />;
 ```
 
 Bit-Form safely merges synchronous schema errors with asynchronous API errors, avoiding race conditions if the user types quickly.
+
+### Migration note
+
+If you used `asyncValidate` in older dev-branch builds expecting automatic validation on every change, add `asyncValidateOn: "change"` to preserve that behavior.
 
 ## Server Errors (422 / 400)
 

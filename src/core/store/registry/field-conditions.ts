@@ -78,6 +78,10 @@ export class BitFieldConditions<T extends object = any> {
     return this.hiddenFields.has(path);
   }
 
+  hasDependents(path: string): boolean {
+    return (this.dependencies.get(path)?.size ?? 0) > 0;
+  }
+
   isRequired(path: string, values: T): boolean {
     const config = this.getFieldConfig(path);
     if (!config || this.isHidden(path)) return false;

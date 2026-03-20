@@ -133,6 +133,14 @@ export class BitFieldUpdateManager<T extends object> {
   }
 
   private updateDependencies(ctx: FieldUpdatePipelineContext<T>) {
+    if (
+      typeof this.store.hasDependentFields === "function" &&
+      !this.store.hasDependentFields(ctx.path)
+    ) {
+      ctx.toggledFields.length = 0;
+      return;
+    }
+
     ctx.toggledFields = this.store.updateDependencies(ctx.path, ctx.nextValues);
 
     ctx.toggledFields.forEach((depPath) => {
@@ -195,6 +203,15 @@ export class BitFieldUpdateManager<T extends object> {
   }
 
   private triggerAsyncValidation(ctx: FieldUpdatePipelineContext<T>) {
+    const asyncValidateOn =
+      typeof this.store.getFieldConfig === "function"
+        ? this.store.getFieldConfig(ctx.path)?.validation?.asyncValidateOn
+        : undefined;
+
+    if (asyncValidateOn !== "change") {
+      return;
+    }
+
     this.store.handleFieldAsyncValidation(ctx.path, ctx.value);
   }
 }

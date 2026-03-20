@@ -125,6 +125,7 @@ interface BitFieldConditional<T> {
 
 interface BitFieldValidation<T> {
   asyncValidate?: (value: any, values: T) => Promise<string | null | undefined>;
+  asyncValidateOn?: "change" | "blur";
   asyncValidateDelay?: number;
 }
 
@@ -139,7 +140,7 @@ interface BitFieldDefinition<T> {
 ```
 
 - **`conditional`** — visibility and dynamic required logic (`dependsOn`, `showIf`, `requiredIf`, `requiredMessage`).
-- **`validation`** — async validation only.
+- **`validation`** — async validation only. `asyncValidateOn` defaults to `"blur"`; use `"change"` for live validation while typing.
 - **`transform`** — applied before submit.
 - **`computed`** — derives value from other fields.
 - **`mask`** — mask name or instance.

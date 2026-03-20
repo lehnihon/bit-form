@@ -21,6 +21,7 @@ describe("BitValidationManager", () => {
       validate: async () => true,
       getFieldConfig: () => undefined,
       getScopeFields: () => [],
+      forEachFieldConfig: () => {},
       config: { validationDelay: 20 } as any,
       getRequiredErrors: () => ({}),
       getHiddenFields: () => new Set<string>(),
@@ -67,6 +68,7 @@ describe("BitValidationManager", () => {
         },
       }),
       getScopeFields: () => [],
+      forEachFieldConfig: () => {},
       config: { validationDelay: 20 } as any,
       getRequiredErrors: () => ({}),
       getHiddenFields: () => new Set<string>(),
@@ -105,6 +107,7 @@ describe("BitValidationManager", () => {
       validate: async () => true,
       getFieldConfig: () => undefined,
       getScopeFields: () => [],
+      forEachFieldConfig: () => {},
       config: {
         validationDelay: 0,
         resolver: async () => ({ email: "required" }),

@@ -58,6 +58,10 @@ export function createValidationPort<T extends object>(
     setError: (path, message) => deps.setError(path, message),
     validate: (options) => deps.validate(options),
     getFieldConfig: (path) => deps.getFieldConfig(path),
+    forEachFieldConfig: (callback) =>
+      deps.fieldRegistry.forEachFieldConfig((config, path) =>
+        callback(config, path),
+      ),
     getScopeFields: (scopeName) => deps.getScopeFields(scopeName),
     config: deps.config,
     getRequiredErrors: (values) => deps.fieldRegistry.getRequiredErrors(values),
@@ -96,9 +100,11 @@ export function createLifecyclePort<T extends object>(
     internalSaveSnapshot: () => deps.saveHistorySnapshot(),
     batchStateUpdates: (callback) => deps.runStateBatch(callback),
     config: deps.config,
+    getFieldConfig: (path) => deps.fieldRegistry.getFieldConfig(path),
     getTransformEntries: () => deps.getTransformEntries(),
     updateDependencies: (changedPath, newValues) =>
       deps.fieldRegistry.updateDependencies(changedPath, newValues),
+    hasDependentFields: (path) => deps.fieldRegistry.hasDependents(path),
     isFieldHidden: (path) => deps.fieldRegistry.isHidden(path),
     evaluateAllDependencies: (values) => deps.fieldRegistry.evaluateAll(values),
     getHiddenFields: () => deps.fieldRegistry.getHiddenFields(),

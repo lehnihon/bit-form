@@ -18,6 +18,9 @@ export interface BitValidationStorePort<T extends object> {
   setError: (path: string, message: string | undefined) => void;
   validate: (opts: BitValidationOptions) => Promise<boolean>;
   getFieldConfig: (path: string) => BitFieldDefinition<T> | undefined;
+  forEachFieldConfig: (
+    callback: (config: BitFieldDefinition<T>, path: string) => void,
+  ) => void;
   getScopeFields: (scopeName: string) => string[];
   config: BitFrameworkConfig<T>;
   getRequiredErrors: (values: T) => BitErrors<T>;
@@ -39,8 +42,10 @@ interface BitLifecycleStatePort<T extends object> {
 }
 
 interface BitLifecycleDependencyPort<T extends object> {
+  getFieldConfig: (path: string) => BitFieldDefinition<T> | undefined;
   getTransformEntries: () => [string, BitTransformFn<T>][];
   updateDependencies: (changedPath: string, newValues: T) => string[];
+  hasDependentFields: (path: string) => boolean;
   isFieldHidden: (path: string) => boolean;
   evaluateAllDependencies: (values: T) => void;
   getHiddenFields: () => ReadonlySet<string>;
