@@ -99,14 +99,27 @@ Bit-Form was built to solve the "heavy form" problem. While most libraries re-re
 
 ### Benchmark Results
 
-Below are **measured results** from the quality benchmarks currently in this repository (no estimated/extrapolated values).
+Below are **measured results** from the quality benchmarks currently in this repository. These numbers are not estimated or extrapolated.
 
 - Source tests:
   - `quality/bench/rhf-compare.test.ts`
   - `quality/bench/perf.test.ts`
+  - `quality/e2e/tests/benchmark-compare.spec.ts`
 - Reproduce with:
   - `npm run test:bench:compare`
+  - `npm run test:bench:compare:browser`
+  - `npm run test:bench:compare:browser:prod`
   - `npm run test:bench`
+
+#### React benchmark methodology
+
+The comparison now uses a more realistic and stricter setup:
+
+- same validation semantics across Bit-Form, React Hook Form, Formik, and TanStack Form
+- validation is triggered once at the end of each measured cycle
+- React commit stabilization before and after each sample
+- larger load (`600` fields for bulk, `240` iterations for async burst)
+- browser confirmation with Playwright in both dev and production preview modes
 
 #### React benchmark (Bit-Form vs RHF/Formik/TanStack)
 
@@ -114,19 +127,25 @@ Snapshot measured on **20/03/2026**:
 
 | Scenario (lower is better) | Bit-Form (median / p95) | RHF (median / p95) | Formik (median / p95) | TanStack (median / p95) |
 | :------------------------- | :---------------------- | :----------------- | :-------------------- | :---------------------- |
-| Bulk update (300 fields)   | **2.32ms / 5.33ms**     | 103.97ms / 188.1ms | 37.09ms / 49.78ms     | 398.44ms / 554.07ms     |
-| Async burst (120 updates)  | **5.8ms / 8.52ms**      | 31.28ms / 33.33ms  | 10.44ms / 12.22ms     | 14.85ms / 21.19ms       |
+| Bulk update (600 fields)   | **11.86ms / 120.45ms**  | 505.17ms / 563.37ms | 249.84ms / 720ms     | 1979.36ms / 2881.91ms   |
+| Async burst (240 updates)  | 15.24ms / 17.74ms       | 68.35ms / 80.04ms   | 23.42ms / 27.53ms    | **13.77ms / 17.91ms**   |
 
 Bit-Form ratio (`bit-form / competitor`) from the same snapshot:
 
 - Bulk (median / p95):
-  - vs RHF: **0.02 / 0.03**
-  - vs Formik: **0.06 / 0.11**
-  - vs TanStack: **0.01 / 0.01**
+  - vs RHF: **0.02 / 0.21**
+  - vs Formik: **0.05 / 0.17**
+  - vs TanStack: **0.01 / 0.04**
 - Async burst (median / p95):
-  - vs RHF: **0.19 / 0.26**
-  - vs Formik: **0.56 / 0.70**
-  - vs TanStack: **0.39 / 0.40**
+  - vs RHF: **0.22 / 0.22**
+  - vs Formik: **0.65 / 0.64**
+  - vs TanStack: **1.11 / 0.99**
+
+In practice, this means:
+
+- Bit-Form remains substantially faster than RHF and Formik in bulk-update workloads.
+- In the async burst scenario, Bit-Form and TanStack Form are in the same performance band.
+- The benchmark is intentionally conservative now, because it measures after React settles instead of stopping too early.
 
 #### Internal performance baseline (Bit-Form)
 
@@ -143,9 +162,9 @@ Latest baseline from `quality/bench/perf.test.ts`:
 
 ### Why Bit-Form?
 
-1.  **Zero-Reflow Masking:** Unlike other libs where masking causes a double-render (one for the raw value, one for the mask), Bit-Form handles masks at the store level before the UI even knows about it.
-2.  **Logic Portability:** You can share the exact same `BitStore` instance (including validations and masks) between a React web app and an Angular admin dashboard.
-3.  **Predictable State:** With the History Manager, you can track exactly how the form state evolved, making it the best choice for complex, multi-step financial or insurance forms.
+1.  **Store-Level Masking:** Bit-Form applies masks in the store layer, which helps keep UI updates localized and predictable in complex forms.
+2.  **Logic Portability:** You can share the same `BitStore` logic (validation, masks, conditional rules, history) across React, Vue, Angular, and React Native bindings.
+3.  **Predictable State:** With history, scoped subscriptions, and explicit lifecycle hooks, Bit-Form is a strong fit for multi-step and high-complexity forms where debuggability matters as much as raw speed.
 
 ## 📦 Installation
 

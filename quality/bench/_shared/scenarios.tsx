@@ -27,6 +27,12 @@ export interface BenchmarkHarness {
   teardown?: () => void | Promise<void>;
 }
 
+export async function settleReactCommit(): Promise<void> {
+  await Promise.resolve();
+  await new Promise<void>((resolve) => setTimeout(resolve, 0));
+  await act(async () => {});
+}
+
 export function createBitFormBulkHarness(
   totalFields: number,
 ): BenchmarkHarness {
@@ -51,7 +57,7 @@ export function createBitFormBulkHarness(
         );
       }
 
-      await store.validate();
+      await store.validate({ touch: false });
       store.reset();
     },
   };
@@ -62,9 +68,14 @@ export function createRhfBulkHarness(totalFields: number): BenchmarkHarness {
   const { result, unmount } = renderHook(() =>
     useForm<CompareFormValues>({
       defaultValues: initialValues,
-      mode: "onChange",
+      mode: "onSubmit",
+      reValidateMode: "onSubmit",
     }),
   );
+
+  result.current.register("email", {
+    validate: (value) => (value ? true : "required"),
+  });
 
   return {
     run: async () => {
@@ -81,14 +92,7 @@ export function createRhfBulkHarness(totalFields: number): BenchmarkHarness {
           );
         }
 
-        const emailValue = result.current.getValues("email");
-        if (!emailValue) {
-          result.current.setError("email", {
-            type: "required",
-            message: "required",
-          });
-        }
-
+        await result.current.trigger("email");
         result.current.reset(initialValues);
       });
     },
@@ -125,7 +129,7 @@ export function createBitFormAsyncBurstHarness(
         store.setField("username", index % 2 === 0 ? "taken" : `user-${index}`);
       }
 
-      await store.validate();
+      await store.validate({ touch: false });
       store.reset();
     },
   };
@@ -138,7 +142,8 @@ export function createRhfAsyncBurstHarness(
   const { result, unmount } = renderHook(() =>
     useForm<CompareFormValues>({
       defaultValues: initialValues,
-      mode: "onChange",
+      mode: "onSubmit",
+      reValidateMode: "onSubmit",
     }),
   );
 
@@ -179,6 +184,8 @@ export function createFormikBulkHarness(totalFields: number): BenchmarkHarness {
   const { result, unmount } = renderHook(() =>
     useFormik<CompareFormValues>({
       initialValues,
+      validateOnBlur: false,
+      validateOnChange: false,
       validate: (values) => {
         const errors: Partial<Record<keyof CompareFormValues, string>> = {};
         if (!values.email) {
@@ -219,7 +226,7 @@ export function createTanstackBulkHarness(
     useTanstackForm<CompareFormValues>({
       defaultValues: initialValues,
       validators: {
-        onChange: ({ value }) => {
+        onSubmit: ({ value }) => {
           if (!value.email) {
             return {
               email: "required",
@@ -243,7 +250,7 @@ export function createTanstackBulkHarness(
           );
         }
 
-        await result.current.validateAllFields("change");
+        await result.current.validateAllFields("submit");
         result.current.reset(initialValues);
       });
     },
@@ -260,6 +267,8 @@ export function createFormikAsyncBurstHarness(
   const { result, unmount } = renderHook(() =>
     useFormik<CompareFormValues>({
       initialValues,
+      validateOnBlur: false,
+      validateOnChange: false,
       validate: async (values) => {
         const errors: Partial<Record<keyof CompareFormValues, string>> = {};
         await new Promise((resolve) => setTimeout(resolve, 2));
@@ -301,8 +310,8 @@ export function createTanstackAsyncBurstHarness(
     useTanstackForm<CompareFormValues>({
       defaultValues: initialValues,
       validators: {
-        onChangeAsyncDebounceMs: 5,
-        onChangeAsync: async ({ value }) => {
+        onSubmitAsyncDebounceMs: 5,
+        onSubmitAsync: async ({ value }) => {
           await new Promise((resolve) => setTimeout(resolve, 2));
           if (String(value.username).toLowerCase() === "taken") {
             return {
@@ -327,7 +336,7 @@ export function createTanstackAsyncBurstHarness(
           );
         }
 
-        await result.current.validateField("username", "change");
+        await result.current.validateField("username", "submit");
         result.current.reset(initialValues);
       });
     },

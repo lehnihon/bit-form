@@ -16,10 +16,10 @@ export default defineConfig({
     trace: "retain-on-failure",
   },
   webServer: {
-    command: `cd ${projectRoot} && npm run quality:e2e:serve`,
+    command: `cd ${projectRoot} && npm run ${process.env.E2E_PROD ? "quality:e2e:serve:prod" : "quality:e2e:serve"}`,
     url: "http://127.0.0.1:4173",
     reuseExistingServer: !process.env.CI,
-    timeout: 90_000,
+    timeout: 120_000,
   },
   reporter: [
     ["list"],
