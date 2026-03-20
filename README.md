@@ -108,14 +108,25 @@ Below are **measured results** from the quality benchmarks currently in this rep
   - `npm run test:bench:compare`
   - `npm run test:bench`
 
-#### React benchmark (Bit-Form vs React Hook Form)
+#### React benchmark (Bit-Form vs RHF/Formik/TanStack)
 
 Snapshot measured on **20/03/2026**:
 
-| Scenario (lower is better) | Bit-Form (median / p95) | RHF (median / p95) | Ratio Bit/RHF   |
-| :------------------------- | :---------------------- | :----------------- | :-------------- |
-| Bulk update (300 fields)   | **2.49ms / 5.32ms**     | 113.26ms / 117.7ms | **0.02 / 0.05** |
-| Async burst (120 updates)  | **5.58ms / 8.36ms**     | 33.97ms / 36.71ms  | **0.16 / 0.23** |
+| Scenario (lower is better) | Bit-Form (median / p95) | RHF (median / p95) | Formik (median / p95) | TanStack (median / p95) |
+| :------------------------- | :---------------------- | :----------------- | :-------------------- | :---------------------- |
+| Bulk update (300 fields)   | **2.32ms / 5.33ms**     | 103.97ms / 188.1ms | 37.09ms / 49.78ms     | 398.44ms / 554.07ms     |
+| Async burst (120 updates)  | **5.8ms / 8.52ms**      | 31.28ms / 33.33ms  | 10.44ms / 12.22ms     | 14.85ms / 21.19ms       |
+
+Bit-Form ratio (`bit-form / competitor`) from the same snapshot:
+
+- Bulk (median / p95):
+  - vs RHF: **0.02 / 0.03**
+  - vs Formik: **0.06 / 0.11**
+  - vs TanStack: **0.01 / 0.01**
+- Async burst (median / p95):
+  - vs RHF: **0.19 / 0.26**
+  - vs Formik: **0.56 / 0.70**
+  - vs TanStack: **0.39 / 0.40**
 
 #### Internal performance baseline (Bit-Form)
 
