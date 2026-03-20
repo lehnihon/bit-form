@@ -98,7 +98,7 @@ export class BitStore<T extends object = any> {
   private readonly _query: BitStoreCapabilities<T>["query"];
   private readonly _error: BitStoreCapabilities<T>["error"];
   private readonly _config: BitFrameworkConfig<T>;
-  private _cachedConfig: Readonly<BitFrameworkConfig<T>>;
+  private _cachedConfig: BitFrameworkConfig<T>;
   private _initialValues!: T;
 
   public readonly storeId: string;
