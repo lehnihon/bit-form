@@ -5,7 +5,6 @@ export interface BitStatePatchOperation<T extends object> {
   partialState: Partial<BitState<T>>;
   changedPaths?: string[];
   skipComputed?: boolean;
-  requireExplicitChangedPaths?: boolean;
 }
 
 export interface BitTouchFieldsOperation<T extends object> {
@@ -40,14 +39,13 @@ export type BitStoreOperation<T extends object> =
 export function patchStateOperation<T extends object>(
   partialState: Partial<BitState<T>>,
   changedPaths?: string[],
-  options?: { skipComputed?: boolean; requireExplicitChangedPaths?: boolean },
+  options?: { skipComputed?: boolean },
 ): BitStatePatchOperation<T> {
   return {
     kind: "state.patch",
     partialState,
     changedPaths,
     skipComputed: options?.skipComputed,
-    requireExplicitChangedPaths: options?.requireExplicitChangedPaths,
   };
 }
 

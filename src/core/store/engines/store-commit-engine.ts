@@ -49,7 +49,6 @@ function routeStoreOperation<T extends object>(
         isDirty: operation.isDirty,
       },
       ["*"],
-      { requireExplicitChangedPaths: true },
     );
   }
 

@@ -16,8 +16,7 @@ In V4, `BitStore` acts mainly as an orchestrator/facade over specialized runtime
 - `state-update-engine`: normalizes state updates (`changedPaths`, `valuesChanged`, computed apply).
 - `store-commit-engine`: centralizes operation routing + patch commit + batch flush semantics.
 - `effect-engine`: centralizes side effects (persist, plugin lifecycle hooks, bus dispatch).
-- `store-bootstrap`: builds capabilities and initial state during store construction.
-- `capability-registry`: resolves feature managers (`validation`, `lifecycle`, `history`, `arrays`, `scope`, `query`, `error`).
+- `store-bootstrap`: builds capabilities and initial state during store construction. Capabilities are now composed as a plain object — no registry indirection.
 
 This separation reduces coupling inside `BitStore` and makes behavior easier to test in isolated units.
 
@@ -29,7 +28,7 @@ Current internal folder layout in `src/core/store`:
 - `managers/core/`: core domain managers (`computed`, `dirty`).
 - `registry/`: field registry (`field-registry`) with dependency tracking + cached indexes.
 - `managers/features/`: feature managers (`validation`, `lifecycle`, `history`, `array`, `scope`, `query`, `error`, `persist`, `plugin`).
-- `orchestration/`: composition and capability wiring (`store-bootstrap`, `capabilities`, `capability-registry`, `create-store`).
+- `orchestration/`: composition and capability wiring (`store-bootstrap`, `capabilities`, `capability-ports`, `create-store`). `capability-ports` exposes three focused factories (`createValidationPort`, `createLifecyclePort`, `createArrayPort`) instead of a single god-deps function.
 
 Naming convention:
 
