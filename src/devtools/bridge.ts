@@ -1,4 +1,4 @@
-import { bitBus } from "bit-form/core";
+import { bitBus } from "../core";
 import type { BitFormGlobal } from "../core/store/contracts/bus-types";
 import type { DevToolsActionName, DevToolsActionPayload } from "./types";
 
@@ -109,10 +109,13 @@ export function setupRemoteBridge(url: string, bus: BitFormGlobal = bitBus) {
 
       const storesEntries = Object.entries(bus.stores);
       if (storesEntries.length > 0) {
-        const initialState = storesEntries.reduce((acc, [id, store]) => {
-          acc[id] = formatStoreState(store);
-          return acc;
-        }, {} as Record<string, any>);
+        const initialState = storesEntries.reduce(
+          (acc, [id, store]) => {
+            acc[id] = formatStoreState(store);
+            return acc;
+          },
+          {} as Record<string, any>,
+        );
 
         sendWhenOpen({ type: "STATE_UPDATE", payload: initialState });
       }

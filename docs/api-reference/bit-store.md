@@ -2,6 +2,8 @@
 
 `BitStore` is the core engine of Bit-Form. For direct consumer usage, the recommended entrypoint is `createBitStore`, which returns the official store instance consumed by React, Vue and Angular integrations.
 
+For explicit runtime-only imports, Bit-Form also exposes the dedicated subpath `@lehnihon/bit-form/core`.
+
 All framework bindings (`useBitForm`, `injectBitForm`, etc.) are thin adapters on top of the internal store engine.
 
 ```ts
@@ -24,6 +26,8 @@ const store = createBitStore<MyFormValues>({
 
 Direct `BitStore` instantiation is considered internal and is not the recommended consumer path.
 For applications and framework integrations, use `createBitStore` and the official subpath exports.
+
+Framework adapters should prefer the segmented adapter contracts from `@lehnihon/bit-form/core`, such as `BitFormMetaBindingApi`, `BitFieldBindingApi`, `BitArrayBindingApi` and `BitFormBindingApi`.
 
 - **Type parameter**: `T` — the shape of `values`. Defaults to `any` if omitted.
 - **Parameter**: `config?: BitConfig<T>` — see [Types Reference](./types.md) for all options.

@@ -139,6 +139,44 @@ export interface BitStoreHistoryFeatureApi {
   redo(): void;
 }
 
+export interface BitFormMetaBindingApi<T extends object = any> {
+  readonly config: Readonly<BitFrameworkConfig<T>>;
+
+  getState(): Readonly<BitState<T>>;
+  subscribeFormMeta(listener: (meta: BitFormMeta) => void): () => void;
+}
+
+export interface BitFieldBindingApi<T extends object = any> {
+  readonly config: Readonly<BitFrameworkConfig<T>>;
+
+  getFieldState<P extends BitPath<T>>(
+    path: P,
+  ): Readonly<BitFieldState<T, BitPathValue<T, P>>>;
+  subscribeFieldState<P extends BitPath<T>>(
+    path: P,
+    listener: (state: Readonly<BitFieldState<T, BitPathValue<T, P>>>) => void,
+  ): () => void;
+
+  setField<P extends BitPath<T>>(path: P, value: BitPathValue<T, P>): void;
+  blurField<P extends BitPath<T>>(path: P): void;
+  resolveMask(path: string): BitMask | undefined;
+  unregisterField?(path: string): void;
+}
+
+export interface BitArrayBindingApi<T extends object = any> extends Pick<
+  BitFormBindingApi<T>,
+  | "config"
+  | "getState"
+  | "setField"
+  | "subscribePath"
+  | "pushItem"
+  | "prependItem"
+  | "insertItem"
+  | "removeItem"
+  | "moveItem"
+  | "swapItems"
+> {}
+
 export interface BitStoreFeatureApi<T extends object = any>
   extends
     BitStoreMaskFeatureApi,

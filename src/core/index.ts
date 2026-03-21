@@ -6,6 +6,9 @@ export type {
   BitStoreApi,
   BitStoreHooksApi,
   BitFormBindingApi,
+  BitFormMetaBindingApi,
+  BitFieldBindingApi,
+  BitArrayBindingApi,
   BitFormMeta,
   BitFrameworkConfig,
   BitValidationOptions,
@@ -80,3 +83,13 @@ export type {
   BitDeleteUploadFn,
   BitUploadResult,
 } from "./types/upload";
+
+export {
+  readFormMetaSnapshot,
+  subscribeFormMetaSnapshot,
+} from "./bindings/form-meta";
+export { createArrayBindingController } from "./bindings/array-controller";
+export type {
+  BitArrayBindingController,
+  BitArrayBindingField,
+} from "./bindings/array-controller";

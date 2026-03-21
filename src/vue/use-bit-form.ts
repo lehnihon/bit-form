@@ -4,22 +4,17 @@ import {
   createFormController,
   createStoreFormActions,
 } from "../core/form-controller";
+import { readFormMetaSnapshot, subscribeFormMetaSnapshot } from "../core";
 import type { UseBitFormResult } from "./types";
 
 export function useBitForm<T extends object>(): UseBitFormResult<T> {
   const store = useBitStore<T>();
-  const state = shallowRef({
-    isValid: store.getState().isValid,
-    isSubmitting: store.getState().isSubmitting,
-    isDirty: store.getState().isDirty,
-  });
+  const state = shallowRef(readFormMetaSnapshot(store));
   const submitError = ref<Error | null>(null);
   const lastResponse = ref<unknown>(null);
 
-  // Uses the native subscribeFormMeta API which pre-configures path scoping
-  // and structural equality check without manual selector composition.
-  const unsubscribe = store.subscribeFormMeta((nextState) => {
-    state.value = nextState;
+  const unsubscribe = subscribeFormMetaSnapshot(store, () => {
+    state.value = readFormMetaSnapshot(store);
   });
 
   onUnmounted(unsubscribe);
