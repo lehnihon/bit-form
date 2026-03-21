@@ -44,6 +44,7 @@ export type {
   BitScheduler,
   BitValidationConfig,
   BitHistoryConfig,
+  DevToolsOptions,
   BitState,
   BitErrors,
   BitTouched,

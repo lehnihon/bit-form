@@ -24,16 +24,19 @@ Configure your `BitStore` to use remote mode:
 
 ```tsx
 import { createBitStore } from "@lehnihon/bit-form";
+import { createDevToolsPlugin } from "@lehnihon/bit-form/devtools";
 
 const store = createBitStore({
   initialValues: { username: "", password: "" },
   devTools: { mode: "remote" }, // Uses ws://localhost:3000 by default
+  plugins: [createDevToolsPlugin()],
 });
 
 // Custom URL (e.g. if you changed the port):
 const storeCustom = createBitStore({
   initialValues: { username: "" },
   devTools: { mode: "remote", url: "ws://localhost:3333" },
+  plugins: [createDevToolsPlugin()],
 });
 ```
 

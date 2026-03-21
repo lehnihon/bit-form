@@ -1,9 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { BitStore } from "../../core/store";
-import * as devtools from "../../devtools/index";
+import { createDevToolsPlugin } from "../../devtools";
+import * as devtools from "../../devtools/init-dev-tools";
 import * as bridge from "../../devtools/bridge";
 
-vi.mock("../../devtools/index", () => ({
+vi.mock("../../devtools/init-dev-tools", () => ({
   initDevTools: vi.fn(() => ({
     destroy: vi.fn(),
   })),
@@ -31,6 +32,7 @@ describe("BitDevtoolsManager", () => {
     new BitStore({
       initialValues: {},
       devTools: true,
+      plugins: [createDevToolsPlugin()],
     } as any);
 
     await vi.waitFor(() => {
@@ -44,11 +46,13 @@ describe("BitDevtoolsManager", () => {
     new BitStore({
       initialValues: {},
       devTools: { mode: "remote" },
+      plugins: [createDevToolsPlugin()],
     } as any);
 
     await vi.waitFor(() => {
       expect(bridge.setupRemoteBridge).toHaveBeenCalledWith(
         "ws://localhost:3000",
+        undefined,
       );
     });
 
@@ -59,11 +63,13 @@ describe("BitDevtoolsManager", () => {
     new BitStore({
       initialValues: {},
       devTools: { mode: "remote", url: "ws://meu-app.com:4000" },
+      plugins: [createDevToolsPlugin()],
     } as any);
 
     await vi.waitFor(() => {
       expect(bridge.setupRemoteBridge).toHaveBeenCalledWith(
         "ws://meu-app.com:4000",
+        undefined,
       );
     });
   });
@@ -77,6 +83,7 @@ describe("BitDevtoolsManager", () => {
     const storeLocal = new BitStore({
       initialValues: {},
       devTools: true,
+      plugins: [createDevToolsPlugin()],
     } as any);
 
     await vi.waitFor(() => {
@@ -92,6 +99,7 @@ describe("BitDevtoolsManager", () => {
     const storeRemote = new BitStore({
       initialValues: {},
       devTools: { mode: "remote" },
+      plugins: [createDevToolsPlugin()],
     } as any);
 
     await vi.waitFor(() => {

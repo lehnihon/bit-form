@@ -4,15 +4,17 @@ A collapsible panel injected directly into your app. It appears as a floating bu
 
 ## Usage
 
-Enable it by setting `devTools: true` or `devTools: { mode: "local" }`:
+Enable it by combining `devTools: true` (or `devTools: { mode: "local" }`) with `createDevToolsPlugin()`:
 
 ```tsx
 import { createBitStore } from "@lehnihon/bit-form";
+import { createDevToolsPlugin } from "@lehnihon/bit-form/devtools";
 
 const store = createBitStore({
   initialValues: { email: "", theme: "dark" },
   history: { enabled: true },
   devTools: process.env.NODE_ENV !== "production",
+  plugins: [createDevToolsPlugin()],
 });
 ```
 
@@ -24,4 +26,4 @@ const store = createBitStore({
 
 ## Production Safety
 
-DevTools use dynamic imports. When you conditionally enable them (e.g. `process.env.NODE_ENV !== "production"`), bundlers will tree-shake the code. The panel logic is **not** included in production builds.
+DevTools use dynamic imports. When you conditionally enable them (e.g. `process.env.NODE_ENV !== "production"`) and only install `createDevToolsPlugin()` in development, bundlers will tree-shake the code. The panel logic is **not** included in production builds.

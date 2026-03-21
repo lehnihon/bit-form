@@ -9,15 +9,22 @@ Bit-Form provides two ways to inspect and debug your form state in real time:
 
 ## Configuration
 
-Both modes use the `devTools` option in your `BitStore` config:
+Both modes now use the external `createDevToolsPlugin()` helper from the devtools package. The store keeps the `devTools` option as declarative config, but the runtime wiring is no longer auto-injected by core:
 
 ```tsx
+import { createBitStore } from "@lehnihon/bit-form";
+import { createDevToolsPlugin } from "@lehnihon/bit-form/devtools";
+
 const store = createBitStore({
   initialValues: { email: "" },
   devTools: true, // Floating panel (local)
-  // or
-  devTools: { mode: "remote" }, // CLI dashboard, default ws://localhost:3000
-  devTools: { mode: "remote", url: "ws://localhost:3333" }, // Custom URL
+  plugins: [createDevToolsPlugin()],
+});
+
+const remoteStore = createBitStore({
+  initialValues: { email: "" },
+  devTools: { mode: "remote", url: "ws://localhost:3333" },
+  plugins: [createDevToolsPlugin()],
 });
 ```
 
@@ -33,6 +40,6 @@ devTools: process.env.NODE_ENV !== "production";
 
 ## Runtime behavior
 
-- DevTools are initialized lazily (dynamic import) only when `devTools` is enabled.
-- Internally, they run as a built-in plugin with setup/teardown tied to store lifecycle.
+- DevTools are initialized lazily (dynamic import) only when `createDevToolsPlugin()` is installed and `devTools` is enabled.
+- They run as an external lifecycle plugin, keeping the core runtime free from direct DevTools imports.
 - `store.cleanup()` always tears down devtools connections/panels.
