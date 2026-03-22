@@ -4,17 +4,21 @@ import {
   createFormController,
   createStoreFormActions,
 } from "../core/form-controller";
-import { readFormMetaSnapshot, subscribeFormMetaSnapshot } from "../core";
+import { observeFormMetaSnapshot } from "../core";
 import type { UseBitFormResult } from "./types";
 
 export function useBitForm<T extends object>(): UseBitFormResult<T> {
   const store = useBitStore<T>();
-  const state = shallowRef(readFormMetaSnapshot(store));
+  const state = shallowRef({
+    isValid: true,
+    isDirty: false,
+    isSubmitting: false,
+  });
   const submitError = ref<Error | null>(null);
   const lastResponse = ref<unknown>(null);
 
-  const unsubscribe = subscribeFormMetaSnapshot(store, () => {
-    state.value = readFormMetaSnapshot(store);
+  const unsubscribe = observeFormMetaSnapshot(store, (nextMeta) => {
+    state.value = nextMeta;
   });
 
   onUnmounted(unsubscribe);
