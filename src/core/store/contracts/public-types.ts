@@ -29,11 +29,3 @@ export type {
   BitStoreHooksApi,
   BitFormBindingApi,
 } from "./public/store-api-types";
-
-export type {
-  BitStoreQueryVNextApi,
-  BitStoreWriteVNextApi,
-  BitStoreObserveVNextApi,
-  BitStoreFeaturesVNextApi,
-  BitStoreVNextApi,
-} from "./public/store-api-vnext-types";

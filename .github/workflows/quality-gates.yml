@@ -1,4 +1,4 @@
-name: Quality Gates (Informative)
+name: Quality Gates
 
 on:
   pull_request:
@@ -11,7 +11,7 @@ jobs:
   e2e-react-pilot:
     name: E2E React Pilot
     runs-on: ubuntu-latest
-    continue-on-error: true
+    continue-on-error: false
     steps:
       - uses: actions/checkout@v4
 
@@ -41,7 +41,7 @@ jobs:
   perf-baseline:
     name: Performance Baseline
     runs-on: ubuntu-latest
-    continue-on-error: true
+    continue-on-error: false
     steps:
       - uses: actions/checkout@v4
 
@@ -60,7 +60,7 @@ jobs:
   compat-smoke:
     name: Package Compatibility Smoke
     runs-on: ubuntu-latest
-    continue-on-error: true
+    continue-on-error: false
     steps:
       - uses: actions/checkout@v4
 
@@ -77,9 +77,9 @@ jobs:
         run: npm run test:compat
 
   release-gates:
-    name: Release Gates (Observability + Bundle)
+    name: Release Gates (Perf + Bundle + Observability)
     runs-on: ubuntu-latest
-    continue-on-error: true
+    continue-on-error: false
     steps:
       - uses: actions/checkout@v4
 

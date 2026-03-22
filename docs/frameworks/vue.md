@@ -149,13 +149,18 @@ const handleApiSubmit = form.onSubmit(async (values, dirtyValues) => {
 
 ## 4. Scoped Validation with `useBitScope`
 
-For multi-step or wizard forms, define `scopes` in your store and use `useBitScope` to validate and track status per step.
+For multi-step or wizard forms, define `scope` per field in `fields` and use `useBitScope` to validate and track status per step.
 
 ```vue
 <script setup lang="ts">
 import { useBitScope } from "@lehnihon/bit-form/vue";
 
-// Store config: scopes: { step1: ["name", "email"], step2: ["address"] }
+// Store config:
+// fields: {
+//   name: { scope: "step1" },
+//   email: { scope: "step1" },
+//   address: { scope: "step2" },
+// }
 const step1 = useBitScope("step1");
 
 const handleNext = async () => {

@@ -2,13 +2,11 @@ import type {
   BitFormMeta,
   BitFormMetaBindingApi,
 } from "../store/contracts/public-types";
-import { resolveSegmentedBinding } from "../store/segmented-binding";
 
 export function readFormMetaSnapshot<T extends object>(
   store: BitFormMetaBindingApi<T>,
 ): BitFormMeta {
-  const segmented = resolveSegmentedBinding(store as any);
-  const state = segmented.query.getState();
+  const state = store.getState();
   return {
     isValid: state.isValid,
     isDirty: state.isDirty,
@@ -20,8 +18,7 @@ export function subscribeFormMetaSnapshot<T extends object>(
   store: BitFormMetaBindingApi<T>,
   listener: () => void,
 ): () => void {
-  const segmented = resolveSegmentedBinding(store as any);
-  return segmented.observe.subscribeFormMeta(() => listener());
+  return store.subscribeFormMeta(() => listener());
 }
 
 export function observeFormMetaSnapshot<T extends object>(

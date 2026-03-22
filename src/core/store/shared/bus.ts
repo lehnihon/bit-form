@@ -8,8 +8,8 @@ const rootGlobal =
   typeof globalThis !== "undefined"
     ? globalThis
     : typeof global !== "undefined"
-    ? global
-    : window;
+      ? global
+      : window;
 
 if (!rootGlobal.__BIT_FORM__) {
   rootGlobal.__BIT_FORM__ = {
@@ -30,6 +30,17 @@ if (!rootGlobal.__BIT_FORM__) {
 }
 
 export const bitBus = rootGlobal.__BIT_FORM__ as BitFormGlobal;
+
+const noopBus: BitFormGlobal = {
+  stores: {},
+  listeners: new Set<BitBusListener>(),
+  dispatch: () => {},
+  subscribe: () => () => {},
+};
+
+export function getNoopBitBus(): BitFormGlobal {
+  return noopBus;
+}
 
 /**
  * Creates an isolated bus instance — not connected to the browser global.

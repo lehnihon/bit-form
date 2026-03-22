@@ -63,7 +63,7 @@ describe("Memory Profiling", () => {
   it("should efficiently handle 100 undo/redo cycles with history", async () => {
     const store = createBitStore<TestForm>({
       initialValues: { count: 0 },
-      historySize: 30,
+      history: { enabled: true, limit: 30 },
     });
 
     const beforeHeap = (process.memoryUsage().heapUsed || 0) / 1024 / 1024;

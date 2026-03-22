@@ -17,11 +17,14 @@ export class BitStoreEffectEngine<T extends object> {
     private readonly bus: BitFormGlobal,
     private readonly persistManager: BitPersistManager<T>,
     private readonly pluginManager: BitPluginManager<T>,
+    private readonly enableBusDispatch = true,
   ) {}
 
   initialize(): void {
     this.pluginManager.setupAll();
-    this.bus.stores[this.storeId] = this.storeInstance;
+    if (this.enableBusDispatch) {
+      this.bus.stores[this.storeId] = this.storeInstance;
+    }
   }
 
   onStateUpdated(nextState: BitState<T>, valuesChanged: boolean): void {
@@ -29,7 +32,9 @@ export class BitStoreEffectEngine<T extends object> {
       this.persistManager.queueSave();
     }
 
-    this.bus.dispatch(this.storeId, nextState);
+    if (this.enableBusDispatch) {
+      this.bus.dispatch(this.storeId, nextState);
+    }
   }
 
   restorePersisted(): Promise<boolean> {
@@ -79,6 +84,8 @@ export class BitStoreEffectEngine<T extends object> {
   destroy(): void {
     this.persistManager.destroy();
     this.pluginManager.destroy();
-    delete this.bus.stores[this.storeId];
+    if (this.enableBusDispatch) {
+      delete this.bus.stores[this.storeId];
+    }
   }
 }

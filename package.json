@@ -45,11 +45,6 @@
       "import": "./dist/core.js",
       "require": "./dist/core.cjs"
     },
-    "./compat": {
-      "types": "./dist/compat/index.d.ts",
-      "import": "./dist/compat/index.js",
-      "require": "./dist/compat/index.cjs"
-    },
     "./react": {
       "types": "./dist/react/index.d.ts",
       "import": "./dist/react/index.js",
@@ -129,7 +124,7 @@
     "test:compat": "node quality/compat/run-compat.mjs",
     "test:observability": "vitest run -c quality/vitest.quality.config.ts quality/release-gates/observability.test.ts",
     "test:bundle-size": "vitest run -c quality/vitest.quality.config.ts quality/release-gates/bundle-size.test.ts",
-    "test:release-gates": "npm run test:bundle-size && npm run test:observability",
+    "test:release-gates": "npm run test:bench && npm run test:bench:memory && npm run test:bundle-size && vitest run -c quality/vitest.quality.config.ts quality/release-gates/bundle-size-gate.test.ts && npm run test:observability",
     "clean": "rm -rf dist && rm -f *.tsbuildinfo",
     "lint": "npm run clean && tsc --build && tsc -p tsconfig.test.json",
     "prepublishOnly": "npm run build && npm run test",
