@@ -220,7 +220,7 @@ const store = createBitStore({
 Key points:
 
 - `initialValues` is optional at the type level, but the resolved config will always have a non-null `initialValues`.
-- `fields` is the single source for field config: conditional, validation, transform, computed, mask, scope. Masks are set per field via `fields.path.mask` (name or instance). Custom masks are registered with `store.registerMask()`.
+- `fields` is the single source for field config: conditional, validation, transform, computed, mask, scope. Masks are set per field via `fields.path.mask` (name or instance). Custom masks should be defined in the `masks` option of the store config.
 
 ---
 

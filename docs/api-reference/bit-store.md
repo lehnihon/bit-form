@@ -459,22 +459,6 @@ Framework adapters (React/Vue/Angular) are typed against `BitFormBindingApi<T>`,
 
 ---
 
-## Masks
-
-### `registerMask(name: string, mask: BitMask): void`
-
-Registers a custom mask that can be referenced by name in field configs.
-
-```ts
-store.registerMask("customCurrency", {
-  // custom BitMask implementation
-});
-```
-
-Masks are available via `store.getConfig().masks` (includes built-in and any registered via `registerMask`).
-
----
-
 ## Multi‑Step Flows & Scopes
 
 ### `getStepStatus(scopeName: string): { hasErrors: boolean; isDirty: boolean }`

@@ -86,9 +86,6 @@ export interface BitStoreFeaturesVNextApi<T extends object = any> {
   unregisterField(path: string): void;
   unregisterPrefix(prefix: string): void;
   markFieldsTouched(paths: string[]): void;
-  registerMask(name: BitMaskName, mask: BitMask): void;
-  unregisterMask(name: BitMaskName): void;
-  getMasksVersion(): number;
   resolveMask(path: string): BitMask | undefined;
   hasValidationsInProgress(scopeFields?: string[]): boolean;
   getScopeFields(scopeName: string): string[];

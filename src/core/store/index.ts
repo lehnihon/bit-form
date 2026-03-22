@@ -456,24 +456,6 @@ export class BitStore<T extends object = any> {
     return this._lifecycle.submit(onSuccess);
   }
 
-  registerMask(name: BitMaskName, mask: BitMask) {
-    this.maskManager.registerMask(name, mask);
-    this._cachedConfig = {
-      ...this._config,
-      masks: this.maskManager.getAllMasks(),
-    };
-    this.subscriptions.notify(this.state, ["__masks__"]);
-  }
-
-  unregisterMask(name: BitMaskName) {
-    this.maskManager.unregisterMask(name);
-    this._cachedConfig = {
-      ...this._config,
-      masks: this.maskManager.getAllMasks(),
-    };
-    this.subscriptions.notify(this.state, ["__masks__"]);
-  }
-
   getDirtyValues(): Partial<T> {
     return this.dirtyManager.buildDirtyValues(this.state.values);
   }
@@ -600,10 +582,6 @@ export class BitStore<T extends object = any> {
         this.flushBatchedStateUpdates();
       }
     }
-  }
-
-  getMasksVersion(): number {
-    return this.maskManager.getMasksVersion();
   }
 
   private onStateCommitted(payload: {

@@ -1,4 +1,4 @@
-import { useMemo, useCallback, useSyncExternalStore } from "react";
+import { useMemo, useCallback } from "react";
 import { useBitFieldBase } from "./use-bit-field-base";
 import { BitPath, BitPathValue } from "../core";
 import {
@@ -25,20 +25,9 @@ export function useBitField<
     store,
   } = useBitFieldBase<BitPathValue<TForm, P>, TForm, P>(path);
 
-  const masksVersion = useSyncExternalStore(
-    (cb) =>
-      store.subscribeSelector(
-        () => store.getMasksVersion(),
-        () => cb(),
-        { paths: ["__masks__"] },
-      ),
-    () => store.getMasksVersion(),
-    () => store.getMasksVersion(),
-  );
-
   const resolvedMask = useMemo(() => {
     return store.resolveMask(path as string);
-  }, [masksVersion, store.config.fields, path]);
+  }, [store.config.masks, store.config.fields, path]);
 
   const displayValue = useMemo(
     () => formatMaskedValue(fieldState.value, resolvedMask ?? undefined),

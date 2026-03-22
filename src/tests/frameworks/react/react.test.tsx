@@ -32,6 +32,7 @@ describe("React Integration (Context + Hooks)", () => {
   const createTestStore = (
     initialValues?: Partial<MyForm>,
     fields?: Record<string, any>,
+    masks?: Record<string, any>,
   ) =>
     new BitStore<MyForm>({
       initialValues: {
@@ -42,7 +43,7 @@ describe("React Integration (Context + Hooks)", () => {
         bonusValue: 0,
         ...initialValues,
       },
-      masks: { brl: maskBRL },
+      masks: { brl: maskBRL, ...masks },
       fields,
       validation: { delay: 0 },
     });
@@ -150,13 +151,17 @@ describe("React Integration (Context + Hooks)", () => {
     });
 
     it("deve aceitar máscaras de padrão (pattern) como CPF", async () => {
-      const store = createTestStore(undefined, {
-        "user.lastName": { mask: "cpf" },
-      });
-      store.registerMask("cpf", {
-        format: (v) => v.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4"),
-        parse: (v) => v.replace(/\D/g, ""),
-      });
+      const cpfMask = {
+        format: (v: string) =>
+          v.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4"),
+        parse: (v: string) => v.replace(/\D/g, ""),
+      };
+
+      const store = createTestStore(
+        {}, // initialValues
+        { "user.lastName": { mask: "cpf" } }, // fields
+        { cpf: cpfMask }, // masks
+      );
 
       const { result } = renderHook(() => useBitField("user.lastName"), {
         wrapper: (props) => wrapper({ ...props, store }),

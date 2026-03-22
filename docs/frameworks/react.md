@@ -68,9 +68,6 @@ history.canUndo; // boolean
 history.canRedo; // boolean
 history.historyIndex; // number
 history.historySize; // number
-
-// Custom mask registration — must be done BEFORE fields are mounted
-store.registerMask("myMask", myMask);
 ```
 
 ### Basic `submit`
