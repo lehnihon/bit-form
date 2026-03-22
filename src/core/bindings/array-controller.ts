@@ -126,16 +126,16 @@ export function createArrayBindingController<
     replace(items) {
       ids = items.map((_, index) => createId(index));
       store.setField(
-        path as unknown as BitPath<TForm>,
-        items as unknown as BitPathValue<TForm, BitPath<TForm>>,
+        path as P & BitPath<TForm>,
+        items as BitPathValue<TForm, P & BitPath<TForm>>,
       );
     },
 
     clear() {
       ids = [];
       store.setField(
-        path as unknown as BitPath<TForm>,
-        [] as unknown as BitPathValue<TForm, BitPath<TForm>>,
+        path as P & BitPath<TForm>,
+        [] as BitPathValue<TForm, P & BitPath<TForm>>,
       );
     },
   };

@@ -45,6 +45,11 @@
       "import": "./dist/core.js",
       "require": "./dist/core.cjs"
     },
+    "./compat": {
+      "types": "./dist/compat/index.d.ts",
+      "import": "./dist/compat/index.js",
+      "require": "./dist/compat/index.cjs"
+    },
     "./react": {
       "types": "./dist/react/index.d.ts",
       "import": "./dist/react/index.js",
@@ -120,6 +125,7 @@
     "test:bench:compare:browser": "playwright test -c quality/e2e/playwright.config.ts quality/e2e/tests/benchmark-compare.spec.ts --project=chromium",
     "test:bench:compare:browser:prod": "E2E_PROD=1 playwright test -c quality/e2e/playwright.config.ts quality/e2e/tests/benchmark-compare.spec.ts --project=chromium",
     "test:bench:all": "npm run test:bench && npm run test:bench:memory && npm run test:bench:compare",
+    "test:quality:critical": "npm run test:bench && npm run test:bench:memory && npm run test:release-gates",
     "test:compat": "node quality/compat/run-compat.mjs",
     "test:observability": "vitest run -c quality/vitest.quality.config.ts quality/release-gates/observability.test.ts",
     "test:bundle-size": "vitest run -c quality/vitest.quality.config.ts quality/release-gates/bundle-size.test.ts",

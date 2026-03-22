@@ -1,5 +1,6 @@
 import { executeSubmitHandler } from "./submit-handler";
 import type { BitFormBindingApi } from "./store/contracts/public-types";
+import { resolveSegmentedBinding } from "./store/segmented-binding";
 
 export type BitFormDomEvent = {
   preventDefault?: () => void;
@@ -19,29 +20,31 @@ export interface BitFormControllerOptions {
 export function createStoreFormActions<T extends object>(
   store: BitFormBindingApi<T>,
 ) {
+  const segmented = resolveSegmentedBinding(store);
+
   return {
     setField: <P extends Parameters<BitFormBindingApi<T>["setField"]>[0]>(
       path: P,
       value: Parameters<BitFormBindingApi<T>["setField"]>[1],
-    ) => store.setField(path, value),
+    ) => segmented.write.setField(path, value),
     blurField: <P extends Parameters<BitFormBindingApi<T>["blurField"]>[0]>(
       path: P,
-    ) => store.blurField(path),
+    ) => segmented.write.blurField(path),
     setValues: (
       values: Parameters<BitFormBindingApi<T>["setValues"]>[0],
       options?: Parameters<BitFormBindingApi<T>["setValues"]>[1],
-    ) => store.setValues(values, options),
+    ) => segmented.write.setValues(values, options),
     setError: (path: string, message: string | undefined) =>
-      store.setError(path, message),
+      segmented.write.setError(path, message),
     setErrors: (errors: Parameters<BitFormBindingApi<T>["setErrors"]>[0]) =>
-      store.setErrors(errors),
+      segmented.write.setErrors(errors),
     setServerErrors: (
       serverErrors: Parameters<BitFormBindingApi<T>["setServerErrors"]>[0],
-    ) => store.setServerErrors(serverErrors),
+    ) => segmented.write.setServerErrors(serverErrors),
     validate: (options?: Parameters<BitFormBindingApi<T>["validate"]>[0]) =>
-      store.validate(options),
+      segmented.write.validate(options),
     transaction: <TResult>(callback: () => TResult) =>
-      store.transaction(callback),
+      segmented.write.transaction(callback),
   };
 }
 
@@ -60,12 +63,14 @@ export function createFormController<T extends object>(
   runtime: BitFormControllerRuntime,
   options?: BitFormControllerOptions,
 ) {
+  const segmented = resolveSegmentedBinding(store);
+
   const submit = (
     onSuccess: (values: T, dirtyValues?: Partial<T>) => void | Promise<void>,
   ) => {
     return (event?: BitFormDomEvent) => {
       preventFormEvent(event, options);
-      return store.submit(onSuccess);
+      return segmented.write.submit(onSuccess);
     };
   };
 
@@ -76,14 +81,14 @@ export function createFormController<T extends object>(
       preventFormEvent(event, options);
       runtime.setSubmissionError(null);
 
-      return store.submit(async (values, dirtyValues) => {
+      return segmented.write.submit(async (values, dirtyValues) => {
         await executeSubmitHandler(handler, values, dirtyValues, {
           onSuccess: (result) => {
             runtime.setSubmissionResult(result);
             runtime.setSubmissionError(null);
           },
           onServerErrors: (serverErrors) => {
-            store.setServerErrors(serverErrors);
+            segmented.write.setServerErrors(serverErrors);
           },
           onUnhandledError: (error) => {
             runtime.setSubmissionError(error);
@@ -94,7 +99,7 @@ export function createFormController<T extends object>(
   };
 
   const reset = () => {
-    store.reset();
+    segmented.write.reset();
     runtime.clearSubmissionState();
   };
 
@@ -102,9 +107,9 @@ export function createFormController<T extends object>(
     submit,
     onSubmit,
     reset,
-    getValues: () => store.getState().values,
-    getErrors: () => store.getState().errors,
-    getTouched: () => store.getState().touched,
-    getDirtyValues: () => store.getDirtyValues(),
+    getValues: () => segmented.query.getState().values,
+    getErrors: () => segmented.query.getState().errors,
+    getTouched: () => segmented.query.getState().touched,
+    getDirtyValues: () => segmented.query.getDirtyValues(),
   };
 }

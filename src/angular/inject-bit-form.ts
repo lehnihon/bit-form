@@ -4,18 +4,22 @@ import {
   createFormController,
   createStoreFormActions,
 } from "../core/form-controller";
-import { readFormMetaSnapshot, subscribeFormMetaSnapshot } from "../core";
+import { observeFormMetaSnapshot } from "../core";
 import type { InjectBitFormResult } from "./types";
 
 export function injectBitForm<T extends object>(): InjectBitFormResult<T> {
   const store = useBitStore<T>();
   const destroyRef = inject(DestroyRef);
-  const stateSignal = signal(readFormMetaSnapshot(store));
+  const stateSignal = signal({
+    isValid: true,
+    isDirty: false,
+    isSubmitting: false,
+  });
   const submitError = signal<Error | null>(null);
   const lastResponse = signal<unknown>(null);
 
-  const sub = subscribeFormMetaSnapshot(store, () => {
-    stateSignal.set(readFormMetaSnapshot(store));
+  const sub = observeFormMetaSnapshot(store, (nextMeta) => {
+    stateSignal.set(nextMeta);
   });
 
   destroyRef.onDestroy(() => sub());

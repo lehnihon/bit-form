@@ -17,6 +17,7 @@ npm run test:e2e
 npm run test:bench
 npm run test:bench:compare
 npm run test:bench:all
+npm run test:quality:critical
 npm run test:compat
 npm run test:release-gates
 ```

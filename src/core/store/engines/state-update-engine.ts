@@ -1,4 +1,5 @@
 import type { BitErrors, BitState } from "../contracts/types";
+import { hasAnyError } from "../shared/error-map";
 
 function normalizeErrors<T extends object>(errors: BitErrors<T>): BitErrors<T> {
   let hasUndefined = false;
@@ -33,14 +34,6 @@ export interface BitStateUpdateResult<T extends object> {
   valuesChanged: boolean;
 }
 
-function hasErrors(errors: Record<string, unknown>) {
-  for (const _path in errors) {
-    return true;
-  }
-
-  return false;
-}
-
 export function applyStateUpdate<T extends object>(args: {
   currentState: BitState<T>;
   partialState: Partial<BitState<T>>;
@@ -59,7 +52,9 @@ export function applyStateUpdate<T extends object>(args: {
 
   if (partialState.errors) {
     nextState.errors = normalizeErrors(partialState.errors as BitErrors<T>);
-    nextState.isValid = !hasErrors(nextState.errors as Record<string, unknown>);
+    nextState.isValid = !hasAnyError(
+      nextState.errors as Record<string, unknown>,
+    );
   }
 
   const explicitChangedPaths =
