@@ -92,11 +92,6 @@ export interface BitStoreWriteApi<T extends object = any> {
   ): Promise<void>;
 }
 
-export interface BitStoreMaskFeatureApi {
-  registerMask(name: BitMaskName, mask: BitMask): void;
-  unregisterMask(name: BitMaskName): void;
-}
-
 export interface BitStorePersistFeatureApi {
   getPersistMetadata(): BitPersistMetadata;
   restorePersisted(): Promise<boolean>;
@@ -179,7 +174,6 @@ export interface BitArrayBindingApi<T extends object = any> extends Pick<
 
 export interface BitStoreFeatureApi<T extends object = any>
   extends
-    BitStoreMaskFeatureApi,
     BitStorePersistFeatureApi,
     BitStoreRegistrationFeatureApi<T>,
     BitStoreArrayFeatureApi<T>,

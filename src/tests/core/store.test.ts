@@ -943,19 +943,6 @@ describe("BitStore Core", () => {
     });
   });
 
-  describe("Masks Registration", () => {
-    it("should register dynamic masks", () => {
-      const store = new BitStore();
-
-      store.registerMask("custom", {
-        parse: (val) => val,
-        format: (val) => `X-${val}`,
-      });
-
-      expect(store.config.masks!["custom"]).toBeDefined();
-    });
-  });
-
   describe("BitStore - Validação Assíncrona (Async Validation)", () => {
     beforeEach(() => {
       vi.useFakeTimers();

@@ -20,7 +20,6 @@ export type {
   BitFormMetaBindingApi,
   BitFieldBindingApi,
   BitArrayBindingApi,
-  BitStoreMaskFeatureApi,
   BitStorePersistFeatureApi,
   BitStoreRegistrationFeatureApi,
   BitStoreArrayFeatureApi,

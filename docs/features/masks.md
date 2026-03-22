@@ -6,8 +6,6 @@ Bit-Form includes a highly advanced, zero-dependency masking engine. It parses u
 
 Bit-Form ships with a full set of standard presets that can be used instantly by passing their string identifiers.
 
-> **Note:** `registerMask` is designed for **pre-mount registration** only. Register custom masks before creating/mounting the store — dynamic registration after fields are mounted is not supported.
-
 ### Currencies
 
 | Key   | Format      |
@@ -69,11 +67,17 @@ Masks are defined in `fields.path.mask` at store construction (or by registering
 
 ### Option 1: `fields.path.mask` (declarative)
 
-Define the mask directly on the field. Use built-in names (`"brl"`, `"cpf"`, etc.) or a BitMask instance. For custom masks, register them first with `store.registerMask()`:
+Define the mask directly on the field. Use built-in names (`"brl"`, `"cpf"`, etc.) or a BitMask instance. For custom masks, create them and pass via `masks` in store config or directly as an instance on the field:
 
 ```tsx
 const store = createBitStore({
   initialValues: { salary: 0 },
+  masks: {
+    customSalary: {
+      format: (v) => `R$ ${v}`,
+      parse: (v) => v.replace(/\D/g, ""),
+    },
+  },
   fields: {
     salary: { mask: "brl" },
     age: { mask: "integer" }, // also accepts "int"
