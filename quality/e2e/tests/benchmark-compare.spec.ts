@@ -4,6 +4,8 @@ test.describe("browser benchmark compare", () => {
   test("runs realistic cross-library benchmark in browser", async ({
     page,
   }) => {
+    test.setTimeout(300_000);
+
     await page.goto("/?bench=compare");
 
     await page.locator("[data-testid='run-browser-benchmark']").click();

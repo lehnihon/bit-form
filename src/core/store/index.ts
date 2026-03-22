@@ -55,18 +55,10 @@ import {
 import { BitStoreEffectEngine } from "./engines/effect-engine";
 import type { BitStoreCapabilities } from "./orchestration/capabilities";
 import type { BitValidationTriggerOptions } from "./contracts/port-types";
-import {
-  createInitialStoreState,
-  createStoreCapabilities,
-  createStoreEffects,
-} from "./orchestration/store-bootstrap";
+import { createStoreEffects } from "./orchestration/store-bootstrap";
 import { BIT_HOOKS_API_SYMBOL } from "./orchestration/hook-brand";
 import { createTrackedSubscription } from "./orchestration/tracked-selector";
-import {
-  createArrayPort,
-  createLifecyclePort,
-  createValidationPort,
-} from "./orchestration/capability-ports";
+import { createStoreRuntime } from "./orchestration/store-runtime";
 import {
   registerStoreField,
   unregisterStoreField,
@@ -98,7 +90,7 @@ export class BitStore<T extends object = any> {
 
   public readonly storeId: string;
   get config(): Readonly<BitFrameworkConfig<T>> {
-    return this._cachedConfig;
+    return this._cachedConfig ?? this._config;
   }
 
   private readonly fieldRegistry: BitFieldRegistry<T>;
@@ -127,9 +119,19 @@ export class BitStore<T extends object = any> {
       });
     }
 
-    const validationPort = createValidationPort<T>({
+    const runtime = createStoreRuntime<T>({
+      rawConfig: config,
       config: this._config,
       fieldRegistry: this.fieldRegistry,
+      computedManager: this.computedManager,
+      dirtyManager: this.dirtyManager,
+      initialValuesRef: {
+        get: () => this._initialValues,
+        set: (values) => {
+          this._initialValues = values;
+        },
+      },
+      storeInstance: this,
       getState: () => this.getState(),
       dispatch: (operation) => this.dispatch(operation),
       setError: (path, message) => this.setError(path, message),
@@ -137,82 +139,31 @@ export class BitStore<T extends object = any> {
       getFieldConfig: (path) => this.getFieldConfig(path),
       getScopeFields: (scopeName) => this.getScopeFields(scopeName),
       getEffects: () => this.effects,
-    });
-
-    const lifecyclePort = createLifecyclePort<T>({
-      config: this._config,
-      fieldRegistry: this.fieldRegistry,
-      dirtyManager: this.dirtyManager,
-      getState: () => this.getState(),
-      dispatch: (operation) => this.dispatch(operation),
       saveHistorySnapshot: () => this.saveHistorySnapshot(),
       runStateBatch: (callback) => this.runStateBatch(callback),
       getTransformEntries: () => this.getTransformEntries(),
-      getInitialValues: () => this._initialValues,
-      setInitialValues: (values) => {
-        this._initialValues = values;
-      },
-      getValidation: () => this._validation,
       getHistory: () => this._history,
-      getEffects: () => this.effects,
-    });
-
-    const arrayPort = createArrayPort<T>({
-      getState: () => this.getState(),
-      dispatch: (operation) => this.dispatch(operation),
+      getValidation: () => this._validation,
       setFieldWithMeta: (path, value, meta) =>
         this.setFieldWithMeta(path, value, meta),
       unregisterPrefix: (prefix) => this.unregisterPrefix(prefix),
       triggerValidation: (scopeFields, options) =>
         this.triggerValidation(scopeFields, options),
-      dirtyManager: this.dirtyManager,
       getConfig: () => this.getConfig(),
-      getEffects: () => this.effects,
-      saveHistorySnapshot: () => this.saveHistorySnapshot(),
+      getDirtyValues: () => this.getDirtyValues(),
+      applyPersistedValues: (values) => this.applyPersistedValues(values),
     });
 
-    const capabilities = createStoreCapabilities<T>({
-      ports: {
-        config: this._config,
-        validationPort,
-        lifecyclePort,
-        arrayPort,
-        getScopeFields: (scopeName) => this.getScopeFields(scopeName),
-        getState: () => this.getState(),
-        dispatch: (operation) => this.dispatch(operation),
-        getInitialValues: () => this._initialValues,
-        isPathDirty: (path) => this.dirtyManager.isPathDirty(path),
-      },
-      fieldRegistry: this.fieldRegistry,
-    });
-    this._validation = capabilities.validation;
-    this._lifecycle = capabilities.lifecycle;
-    this._history = capabilities.history;
-    this._arrays = capabilities.arrays;
-    this._scope = capabilities.scope;
-    this._query = capabilities.query;
-    this._error = capabilities.error;
-
-    this.state = createInitialStoreState<T>({
-      config: this._config,
-      fieldRegistry: this.fieldRegistry,
-      computedManager: this.computedManager,
-    });
-    this.subscriptions = new BitSubscriptionEngine<T>(
-      () => this.state,
-      this._config.subscriptionCacheSize,
-    );
-
-    this.saveHistorySnapshot();
-
-    this.storeId =
-      config.storeId ||
-      this._config.name ||
-      this._config.idFactory({
-        scope: "store",
-        storeName: this._config.name,
-      });
-
+    this._validation = runtime.capabilities.validation;
+    this._lifecycle = runtime.capabilities.lifecycle;
+    this._history = runtime.capabilities.history;
+    this._arrays = runtime.capabilities.arrays;
+    this._scope = runtime.capabilities.scope;
+    this._query = runtime.capabilities.query;
+    this._error = runtime.capabilities.error;
+    this.state = runtime.state;
+    this.subscriptions = runtime.subscriptions;
+    this.storeId = runtime.storeId;
     this.effects = createStoreEffects<T>({
       storeId: this.storeId,
       storeInstance: this,
@@ -224,11 +175,13 @@ export class BitStore<T extends object = any> {
       applyPersistedValues: (values) => this.applyPersistedValues(values),
     });
 
+    this.saveHistorySnapshot();
+
     this._cachedConfig = this._config;
   }
 
   getConfig() {
-    return this._cachedConfig;
+    return this._cachedConfig ?? this._config;
   }
 
   getFieldConfig(path: string): BitFieldDefinition<T> | undefined {

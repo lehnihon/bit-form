@@ -2,6 +2,8 @@
 
 Bit-Form provides framework adapters for React, Vue, Angular, and React-Native. Each framework exposes hook/composable results with types specific to that framework's reactivity model.
 
+Internally, React, Vue and Angular now share a small binding-core layer for form-meta and field-array orchestration. React Native remains a thin derivative over the React binding surface, specializing only native field input behavior.
+
 All framework types are **publicly exported** via their respective sub-packages.
 
 ---

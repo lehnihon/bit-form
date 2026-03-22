@@ -226,12 +226,15 @@ The complete documentation is available in the `/docs` folder. Explore the guide
 
 This branch currently allows breaking changes while architecture/performance work is in progress.
 
+- **New explicit `@lehnihon/bit-form/core` subpath** for store/runtime contracts. Root export remains available, but framework/devtools internals should now prefer the dedicated core entry.
 - **History default limit changed** from `15` to `50` (`history.limit`).
 - **Selector subscriptions no longer rely on deep value diff inference** when no `paths` are provided internally; updates are now path-driven for predictable performance.
 - **New `subscribeTracked`** was added to auto-track selector dependencies and re-track when selector branches change.
 - **`resolveBitStoreForHooks` now uses symbol branding** instead of duck-typing checks.
 - **SSR/Edge support improved** with injectable bus instances (`createBitBus`, `config.bus`, `initDevTools({ bus })`).
 - **Field `asyncValidate` now defaults to `blur` trigger**. To keep validation while typing, set `validation.asyncValidateOn: "change"` explicitly.
+- **Framework bindings now share internal binding-core helpers** for form meta and field-array orchestration, reducing adapter drift across React, Vue and Angular.
+- **React Native is now treated as a thin derivative of the React binding layer**, keeping only native-specific field adaptation.
 
 ### Migration quick notes
 

@@ -67,5 +67,5 @@ Use UI-only hide only if you have very custom rendering logic and are comfortabl
 | Show CNPJ only when type=PJ     | `showIf` + `dependsOn`                                                          |
 | Validate step before "Next"     | `scopes` + `useBitScope` / `injectBitScope`                                     |
 | Undo/Redo                       | `history: { enabled: true }`, `undo()`, `redo()`                                |
-| Debug form state                | `devTools: true`                                                                |
+| Debug form state                | `devTools: true` + `createDevToolsPlugin()`                                     |
 | Release confidence              | `quality` gates (`test:e2e`, `test:bench`, `test:compat`, `test:release-gates`) |

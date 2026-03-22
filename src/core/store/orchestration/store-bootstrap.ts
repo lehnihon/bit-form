@@ -1,4 +1,3 @@
-import { createDevtoolsPlugin } from "../managers/features/devtools-plugin";
 import { BitPersistManager } from "../managers/features/persist-manager";
 import { BitPluginManager } from "../managers/features/plugin-manager";
 import { BitStoreEffectEngine } from "../engines/effect-engine";
@@ -97,13 +96,7 @@ export function createStoreEffects<T extends object>(args: {
     applyPersistedValues,
   );
 
-  const runtimePlugins = [...config.plugins];
-  const devtoolsPlugin = createDevtoolsPlugin<T>(config.devTools);
-  if (devtoolsPlugin) {
-    runtimePlugins.push(devtoolsPlugin);
-  }
-
-  const pluginManager = new BitPluginManager<T>(runtimePlugins, () => ({
+  const pluginManager = new BitPluginManager<T>([...config.plugins], () => ({
     storeId,
     getState: () => getState(),
     getConfig: () => getConfig(),

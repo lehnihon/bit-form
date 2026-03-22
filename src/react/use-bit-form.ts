@@ -10,6 +10,7 @@ import {
   createFormController,
   createStoreFormActions,
 } from "../core/form-controller";
+import { readFormMetaSnapshot, subscribeFormMetaSnapshot } from "../core";
 import type { UseBitFormResult } from "./types";
 
 export function useBitForm<T extends object>(): UseBitFormResult<T> {
@@ -17,19 +18,16 @@ export function useBitForm<T extends object>(): UseBitFormResult<T> {
 
   const [submitError, setSubmitError] = useState<Error | null>(null);
   const [lastResponse, setLastResponse] = useState<unknown>(null);
-  const lastMeta = useRef<{
-    isValid: boolean;
-    isDirty: boolean;
-    isSubmitting: boolean;
-  } | null>(null);
+  const lastMeta = useRef<ReturnType<typeof readFormMetaSnapshot<T>> | null>(
+    null,
+  );
 
+  const subscribeMeta = useCallback(
+    (cb: () => void) => subscribeFormMetaSnapshot(store, cb),
+    [store],
+  );
   const getMetaSnapshot = useCallback(() => {
-    const state = store.getState();
-    const nextMeta = {
-      isValid: state.isValid,
-      isDirty: state.isDirty,
-      isSubmitting: state.isSubmitting,
-    };
+    const nextMeta = readFormMetaSnapshot(store);
 
     if (
       lastMeta.current &&
@@ -43,13 +41,6 @@ export function useBitForm<T extends object>(): UseBitFormResult<T> {
     lastMeta.current = nextMeta;
     return nextMeta;
   }, [store]);
-
-  // Uses the native subscribeFormMeta API which pre-configures path scoping
-  // and structural equality check without manual selector composition.
-  const subscribeMeta = useCallback(
-    (cb: () => void) => store.subscribeFormMeta(() => cb()),
-    [store],
-  );
 
   const metaState = useSyncExternalStore(
     subscribeMeta,

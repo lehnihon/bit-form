@@ -7,6 +7,7 @@ export default defineConfig([
   {
     entry: {
       index: "src/index.ts",
+      core: "src/core/index.ts",
       mask: "src/mask.ts",
       "react/index": "src/react/index.ts",
       "react-native/index": "src/react-native/index.ts",
