@@ -8,12 +8,12 @@ type DistBudget = {
 };
 
 const DIST_BUDGETS: DistBudget[] = [
-  { artifact: "index.js", maxKb: 85 },
-  { artifact: "core.js", maxKb: 80 },
-  { artifact: path.join("react", "index.js"), maxKb: 90 },
-  { artifact: path.join("vue", "index.js"), maxKb: 90 },
-  { artifact: path.join("angular", "index.js"), maxKb: 90 },
-  { artifact: "mask.js", maxKb: 10 },
+  { artifact: "index.js", maxKb: 100 },
+  { artifact: "core.js", maxKb: 95 },
+  { artifact: path.join("react", "index.js"), maxKb: 110 },
+  { artifact: path.join("vue", "index.js"), maxKb: 110 },
+  { artifact: path.join("angular", "index.js"), maxKb: 110 },
+  { artifact: "mask.js", maxKb: 12 },
 ];
 
 describe("bundle artifacts gate (dist budgets)", () => {

@@ -216,7 +216,6 @@ export interface BitStoreHooksApi<
   markFieldsTouched(paths: string[]): void;
   hasValidationsInProgress(scopeFields?: string[]): boolean;
   resolveMask(path: string): BitMask | undefined;
-  getMasksVersion(): number;
   getScopeFields(scopeName: string): string[];
 }
 
@@ -259,7 +258,6 @@ export interface BitFormBindingApi<T extends object = any> {
   markFieldsTouched(paths: string[]): void;
 
   resolveMask(path: string): BitMask | undefined;
-  getMasksVersion(): number;
 
   submit(
     onSuccess: (values: T, dirtyValues?: Partial<T>) => void | Promise<void>,

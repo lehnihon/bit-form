@@ -9,11 +9,9 @@ import { BitMask, BitMaskName } from "../../../mask/types";
  * Responsibilities:
  * - Register/unregister masks
  * - Resolve masks by name
- * - Track mask version changes for reactive updates
  */
 export class BitMaskManager {
   private masks: Record<string, BitMask> = {};
-  private masksVersion = 0;
 
   /**
    * Register a new input mask
@@ -26,7 +24,6 @@ export class BitMaskManager {
       ...this.masks,
       [name]: mask,
     };
-    this.masksVersion += 1;
   }
 
   /**
@@ -41,7 +38,6 @@ export class BitMaskManager {
 
     const { [name]: _, ...remaining } = this.masks;
     this.masks = remaining;
-    this.masksVersion += 1;
   }
 
   /**
@@ -61,16 +57,6 @@ export class BitMaskManager {
    */
   getAllMasks(): Record<string, BitMask> {
     return this.masks;
-  }
-
-  /**
-   * Get current mask version number
-   * Used for change detection in React hooks via useSyncExternalStore
-   *
-   * @returns Version number that increments on each mask change
-   */
-  getMasksVersion(): number {
-    return this.masksVersion;
   }
 
   /**

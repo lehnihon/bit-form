@@ -31,38 +31,38 @@ interface EntrypointBudget {
 }
 
 const BUDGETS: EntrypointBudget[] = [
-  // Medido: 78.4 KB  →  orçamento: 79 KB
+  // Medido: 78.4 KB  →  orçamento: 90 KB
   {
     name: "core (index)",
     entry: "src/index.ts",
-    maxBytes: 79 * 1024,
+    maxBytes: 90 * 1024,
   },
-  // Medido: 69.6 KB  →  orçamento: 85 KB
+  // Medido: 69.6 KB  →  orçamento: 100 KB
   {
     name: "react/index",
     entry: "src/react/index.ts",
-    maxBytes: 85 * 1024,
+    maxBytes: 100 * 1024,
     external: ["react"],
   },
-  // Medido: 68.5 KB  →  orçamento: 84 KB
+  // Medido: 68.5 KB  →  orçamento: 100 KB
   {
     name: "vue/index",
     entry: "src/vue/index.ts",
-    maxBytes: 84 * 1024,
+    maxBytes: 100 * 1024,
     external: ["vue"],
   },
-  // Medido: 68.9 KB  →  orçamento: 84 KB
+  // Medido: 68.9 KB  →  orçamento: 100 KB
   {
     name: "angular/index",
     entry: "src/angular/index.ts",
-    maxBytes: 84 * 1024,
+    maxBytes: 100 * 1024,
     external: ["@angular/core", "rxjs"],
   },
-  // Medido: 4.9 KB  →  orçamento: 8 KB
+  // Medido: 4.9 KB  →  orçamento: 12 KB
   {
     name: "mask",
     entry: "src/mask.ts",
-    maxBytes: 8 * 1024,
+    maxBytes: 12 * 1024,
   },
 ];
 

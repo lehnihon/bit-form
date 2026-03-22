@@ -211,10 +211,6 @@ export class BitStore<T extends object = any> {
     });
   }
 
-  getMasksVersion(): number {
-    return this.maskManager.getMasksVersion();
-  }
-
   getState(): BitState<T> {
     return getEffectiveStoreState(this.state, this.batchState);
   }
