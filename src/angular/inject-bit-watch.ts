@@ -1,6 +1,6 @@
 import { DestroyRef, signal, Signal, inject } from "@angular/core";
 import { useBitStore } from "./provider";
-import { getDeepValue, deepEqual, BitPath, BitPathValue } from "../core";
+import { getDeepValue, valueEqual, BitPath, BitPathValue } from "../core";
 
 export function injectBitWatch<
   TForm extends object = any,
@@ -13,7 +13,7 @@ export function injectBitWatch<
       TForm,
       P
     >,
-    { equal: deepEqual },
+    { equal: valueEqual },
   );
 
   const unsub = store.subscribePath(path, (v) => {

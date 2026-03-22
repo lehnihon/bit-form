@@ -149,6 +149,19 @@ export function collectDirtyPaths(
 const PATH_CACHE_MAX = 5000;
 const pathCache = new Map<string, string[]>();
 
+function setPathCacheEntry(path: string, keys: string[]) {
+  if (pathCache.has(path)) {
+    pathCache.delete(path);
+  } else if (pathCache.size >= PATH_CACHE_MAX) {
+    const oldestKey = pathCache.keys().next().value;
+    if (oldestKey !== undefined) {
+      pathCache.delete(oldestKey);
+    }
+  }
+
+  pathCache.set(path, keys);
+}
+
 function getPathKeys(path: string): string[] {
   const cached = pathCache.get(path);
   if (cached) {
@@ -156,10 +169,7 @@ function getPathKeys(path: string): string[] {
   }
 
   const keys = path.split(".");
-  if (pathCache.size >= PATH_CACHE_MAX) {
-    pathCache.clear();
-  }
-  pathCache.set(path, keys);
+  setPathCacheEntry(path, keys);
   return keys;
 }
 

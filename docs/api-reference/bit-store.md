@@ -261,7 +261,7 @@ store.reset();
 
 Runs validation for the configured resolver and returns whether the form is valid.
 
-- **`scope`**: name of a scope defined in `BitConfig.scopes` (e.g. a wizard step).
+- **`scope`**: name of a scope inferred from `fields[path].scope` (e.g. a wizard step).
 - **`scopeFields`**: explicit list of field paths to validate.
 
 ```ts
@@ -463,7 +463,7 @@ Framework adapters (React/Vue/Angular) are typed against `BitFormBindingApi<T>`,
 
 ### `getStepStatus(scopeName: string): { hasErrors: boolean; isDirty: boolean }`
 
-Returns a summary of the state of a scope (typically a wizard step) based on `BitConfig.scopes[scopeName]`.
+Returns a summary of the state of a scope (typically a wizard step) based on fields mapped with `scope`.
 
 ```ts
 const shippingStatus = store.getStepStatus("shipping");

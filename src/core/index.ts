@@ -91,7 +91,6 @@ export {
   observeFormMetaSnapshot,
 } from "./bindings/form-meta";
 export { createArrayBindingController } from "./bindings/array-controller";
-export { resolveSegmentedBinding } from "./store/segmented-binding";
 export type {
   BitArrayBindingController,
   BitArrayBindingField,
