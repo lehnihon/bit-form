@@ -79,7 +79,8 @@ export function resolveSegmentedBinding<T extends object>(
         reset: () => store.write.reset(),
       },
       observe: {
-        subscribeFormMeta: (listener) => store.observe.subscribeFormMeta(listener),
+        subscribeFormMeta: (listener) =>
+          store.observe.subscribeFormMeta(listener),
         subscribeFieldState: (path, listener) =>
           store.observe.subscribeFieldState(path, listener),
         subscribe: (listener) => store.observe.subscribe(listener),

@@ -1,7 +1,4 @@
-import type {
-  BitErrors,
-  BitFieldDefinition,
-} from "../../../contracts/types";
+import type { BitErrors, BitFieldDefinition } from "../../../contracts/types";
 import { getDeepValue } from "../../../../utils";
 
 type BitAsyncValidateFn<T extends object> = NonNullable<
