@@ -10,6 +10,8 @@ export type {
   DevToolsActionName,
   DevToolsActionPayload,
   DevToolsActionMessage,
+  DevToolsHelloMessage,
+  DevToolsHelloPayload,
   DevToolsPingMessage,
   DevToolsRemoteMessage,
   DevToolsStateUpdateMessage,

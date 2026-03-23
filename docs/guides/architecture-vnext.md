@@ -203,3 +203,12 @@ determinismo de atualização em cenários de erro por caminho dinâmico.
 - consolidar facades públicas menores por capacidade no contrato principal de store
 - avaliar subpath dedicado para contratos de runtime interno (não consumíveis por adapters)
 - criar teste dedicado de portas DevTools (`store-port`) para evitar regressão de cast dinâmico
+
+## Atualizações da branch `feat/architecture-plan-all-phases`
+
+- exposição de contratos públicos por capacidade no `core` (`BitStoreQueryApi`, `BitStoreObserveApi`, `BitStoreWriteApi` e APIs de feature)
+- protocolo remoto de DevTools versionado com `DEVTOOLS_PROTOCOL_VERSION`
+- handshake explícito `HELLO` entre bridge e adapter remoto
+- guards de protocolo exigindo `protocolVersion` válido em todas as mensagens remotas
+- relay da CLI ignorando mensagens de controle (`PING`, `HELLO`) para reduzir ruído
+- gate de bundle ampliado para `devtools/*` e `cli/index`

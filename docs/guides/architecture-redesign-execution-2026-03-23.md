@@ -102,3 +102,15 @@ Validação pós-implementação:
 ## Próximo passo recomendado
 
 Iniciar implementação de refatoração por ondas (W2→W6) na mesma branch, mantendo os mesmos gates como critério de pronto em cada PR incremental.
+
+## Execução complementar — branch `feat/architecture-plan-all-phases`
+
+Mudanças aplicadas nesta execução complementar:
+
+- ✅ protocolo DevTools com versão explícita (`DEVTOOLS_PROTOCOL_VERSION`) e handshake `HELLO`.
+- ✅ bridge remota e adapter remoto enviando mensagens com `protocolVersion`.
+- ✅ relay da CLI filtrando mensagens de controle (`PING`/`HELLO`).
+- ✅ testes de protocolo DevTools adicionados (`src/tests/devtools/protocol.test.ts`).
+- ✅ exposição de APIs de capacidade no `core` (`BitStoreQueryApi`, `BitStoreObserveApi`, `BitStoreWriteApi`, etc.).
+- ✅ release gates de bundle ampliados para `devtools/index`, `devtools/bridge`, `devtools/protocol` e `cli/index`.
+- ✅ documentação de migração major e matriz de compatibilidade adicionadas.

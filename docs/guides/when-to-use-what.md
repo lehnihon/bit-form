@@ -69,3 +69,11 @@ Use UI-only hide only if you have very custom rendering logic and are comfortabl
 | Undo/Redo                       | `history: { enabled: true }`, `undo()`, `redo()`                                |
 | Debug form state                | `devTools: true` + `createDevToolsPlugin()`                                     |
 | Release confidence              | `quality` gates (`test:e2e`, `test:bench`, `test:compat`, `test:release-gates`) |
+
+---
+
+## Architecture and release references
+
+- Compatibility targets: `docs/guides/compatibility-matrix.md`
+- Major migration recipes: `docs/guides/major-v3-migration.md`
+- Release gate policy: `docs/guides/release-gates.md`

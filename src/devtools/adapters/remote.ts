@@ -1,11 +1,15 @@
 import { BitFormDevToolsUI } from "../ui";
 import type { BitBus } from "../../core";
 import type {
+  DevToolsHelloMessage,
   DevToolsActionMessage,
   DevToolsActionName,
   DevToolsRemoteMessage,
 } from "../types";
-import { isDevToolsStateUpdateMessage } from "../protocol";
+import {
+  DEVTOOLS_PROTOCOL_VERSION,
+  isDevToolsStateUpdateMessage,
+} from "../protocol";
 
 export function setupRemoteDevTools(
   container: HTMLElement,
@@ -27,6 +31,7 @@ export function setupRemoteDevTools(
   const sendAction = (storeId: string, action: DevToolsActionName) => {
     const message: DevToolsActionMessage = {
       type: "ACTION",
+      protocolVersion: DEVTOOLS_PROTOCOL_VERSION,
       payload: { storeId, action },
     };
     sendMessage(message);
@@ -39,6 +44,13 @@ export function setupRemoteDevTools(
   });
 
   socket.addEventListener("open", () => {
+    const helloMessage: DevToolsHelloMessage = {
+      type: "HELLO",
+      protocolVersion: DEVTOOLS_PROTOCOL_VERSION,
+      payload: { role: "client", protocolVersion: DEVTOOLS_PROTOCOL_VERSION },
+    };
+
+    sendMessage(helloMessage);
     console.log(`[bit-form] Conectado ao DevTools remoto em ${url}`);
   });
 
