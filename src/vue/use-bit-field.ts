@@ -6,6 +6,7 @@ import {
   createMaskedFieldController,
   subscribeFieldState,
 } from "../core/field-controller";
+import { cleanupRegisteredField } from "../core/bindings/framework-cleanup";
 import { deriveFieldMeta } from "../core/utils/field-meta";
 
 export function useBitField<
@@ -29,9 +30,7 @@ export function useBitField<
 
   onUnmounted(() => {
     unsubscribe();
-    if (store.unregisterField) {
-      store.unregisterField(path);
-    }
+    cleanupRegisteredField(store, path as string);
   });
 
   const rawValue = computed(() => state.value.value as BitPathValue<TForm, P>);

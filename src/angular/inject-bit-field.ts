@@ -5,6 +5,7 @@ import {
   createMaskedFieldController,
   subscribeFieldState,
 } from "../core/field-controller";
+import { cleanupRegisteredField } from "../core/bindings/framework-cleanup";
 import { isBitFieldInputEventObject } from "../core/mask/field-binding";
 import { deriveFieldMeta } from "../core/utils/field-meta";
 import type {
@@ -28,9 +29,7 @@ export function injectBitField<
 
   inject(DestroyRef).onDestroy(() => {
     unsubscribe();
-    if (store.unregisterField) {
-      store.unregisterField(path as string);
-    }
+    cleanupRegisteredField(store, path as string);
   });
 
   const value = computed(() => stateSignal().value as BitPathValue<TForm, P>);
@@ -63,7 +62,7 @@ export function injectBitField<
   const hasError = computed(() => metaState().hasError);
 
   const update = (e: BitFieldInputEvent) =>
-    setValue(isBitFieldInputEventObject(e) ? e.target?.value ?? null : e);
+    setValue(isBitFieldInputEventObject(e) ? (e.target?.value ?? null) : e);
 
   return {
     // Main handlers and values (flat)

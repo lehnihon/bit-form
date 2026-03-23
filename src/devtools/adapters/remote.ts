@@ -1,16 +1,16 @@
 import { BitFormDevToolsUI } from "../ui";
-import type { BitFormGlobal } from "../../core/store/contracts/bus-types";
+import type { BitBus } from "../../core";
 import type {
   DevToolsActionMessage,
   DevToolsActionName,
   DevToolsRemoteMessage,
-  DevToolsStateUpdateMessage,
 } from "../types";
+import { isDevToolsStateUpdateMessage } from "../protocol";
 
 export function setupRemoteDevTools(
   container: HTMLElement,
   url: string = "ws://localhost:3000",
-  _bus?: BitFormGlobal,
+  _bus?: BitBus,
 ) {
   const socket = new WebSocket(url);
 
@@ -45,8 +45,8 @@ export function setupRemoteDevTools(
   socket.addEventListener("message", (msg: MessageEvent) => {
     try {
       const data = JSON.parse(msg.data) as DevToolsRemoteMessage;
-      if (data.type === "STATE_UPDATE") {
-        ui.updateState((data as DevToolsStateUpdateMessage).payload);
+      if (isDevToolsStateUpdateMessage(data)) {
+        ui.updateState(data.payload);
       }
     } catch (e) {
       console.error("[bit-form] Erro ao processar mensagem do WebSocket:", e);

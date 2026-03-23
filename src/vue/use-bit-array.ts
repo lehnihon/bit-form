@@ -1,6 +1,7 @@
 import { shallowRef, computed, onUnmounted } from "vue";
 import { useBitStore } from "./context";
 import { createArrayBindingController, BitArrayPath } from "../core";
+import { cleanupRegisteredPrefix } from "../core/bindings/framework-cleanup";
 
 export function useBitArray<
   TForm extends object = any,
@@ -16,9 +17,7 @@ export function useBitArray<
 
   onUnmounted(() => {
     unsubscribe();
-    if (store.unregisterPrefix) {
-      store.unregisterPrefix(`${path as string}.`);
-    }
+    cleanupRegisteredPrefix(store, `${path as string}.`);
   });
 
   const fields = computed(() => controller.getFields(values.value));

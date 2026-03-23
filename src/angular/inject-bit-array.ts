@@ -6,6 +6,7 @@ import {
   BitPathValue,
   BitArrayItem,
 } from "../core";
+import { cleanupRegisteredPrefix } from "../core/bindings/framework-cleanup";
 
 export function injectBitArray<
   TForm extends object = any,
@@ -25,7 +26,7 @@ export function injectBitArray<
 
   destroyRef.onDestroy(() => {
     unsub();
-    if (store.unregisterPrefix) store.unregisterPrefix(`${path as string}.`);
+    cleanupRegisteredPrefix(store, `${path as string}.`);
   });
 
   return {

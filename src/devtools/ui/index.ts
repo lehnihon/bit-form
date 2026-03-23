@@ -1,5 +1,6 @@
 import { getDevToolsCSS } from "./styles";
 import type { DevToolsActions } from "../types";
+import type { DevToolsStoreSnapshots } from "../protocol";
 
 export type { DevToolsActions };
 
@@ -7,8 +8,8 @@ export class BitFormDevToolsUI {
   private container: HTMLElement;
   private actions: DevToolsActions;
   private rootElement: HTMLDivElement;
-  private currentStoresState: Record<string, any> = {};
-  private isOpen: boolean = false;
+  private currentStoresState: DevToolsStoreSnapshots = {};
+  private isOpen = false;
 
   constructor(container: HTMLElement, actions: DevToolsActions) {
     this.container = container;
@@ -50,7 +51,7 @@ export class BitFormDevToolsUI {
     });
   }
 
-  public updateState(storesState: Record<string, any>) {
+  public updateState(storesState: DevToolsStoreSnapshots) {
     this.currentStoresState = storesState;
     this.render();
   }

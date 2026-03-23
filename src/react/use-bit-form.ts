@@ -6,10 +6,7 @@ import {
   useState,
 } from "react";
 import { useBitStore } from "./context";
-import {
-  createFormController,
-  createStoreFormActions,
-} from "../core/form-controller";
+import { createFrameworkFormBinding } from "../core/bindings/form-binding";
 import { readFormMetaSnapshot, subscribeFormMetaSnapshot } from "../core";
 import type { UseBitFormResult } from "./types";
 
@@ -48,9 +45,9 @@ export function useBitForm<T extends object>(): UseBitFormResult<T> {
     getMetaSnapshot,
   );
 
-  const controller = useMemo(
+  const binding = useMemo(
     () =>
-      createFormController(store, {
+      createFrameworkFormBinding(store, {
         clearSubmissionState: () => {
           setSubmitError(null);
           setLastResponse(null);
@@ -65,7 +62,7 @@ export function useBitForm<T extends object>(): UseBitFormResult<T> {
     [store],
   );
 
-  const actions = useMemo(() => createStoreFormActions(store), [store]);
+  const { controller, actions } = binding;
 
   const submit = useCallback(controller.submit, [controller]);
   const onSubmit = useCallback(controller.onSubmit, [controller]);
