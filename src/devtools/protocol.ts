@@ -1,5 +1,11 @@
 export type DevToolsActionName = "undo" | "redo" | "reset";
 
+export const DEVTOOLS_PROTOCOL_VERSION = 1;
+
+export interface DevToolsProtocolMessageBase {
+  protocolVersion: number;
+}
+
 export interface DevToolsHistoryMeta {
   canUndo: boolean;
   canRedo: boolean;
@@ -26,24 +32,39 @@ export interface DevToolsActionPayload {
   action: DevToolsActionName;
 }
 
-export interface DevToolsStateUpdateMessage {
+export interface DevToolsStateUpdateMessage extends DevToolsProtocolMessageBase {
   type: "STATE_UPDATE";
   payload: DevToolsStoreSnapshots;
 }
 
-export interface DevToolsPingMessage {
+export interface DevToolsPingMessage extends DevToolsProtocolMessageBase {
   type: "PING";
 }
 
-export interface DevToolsActionMessage {
+export interface DevToolsActionMessage extends DevToolsProtocolMessageBase {
   type: "ACTION";
   payload: DevToolsActionPayload;
+}
+
+export interface DevToolsHelloPayload {
+  role: "client" | "server";
+  protocolVersion: number;
+}
+
+export interface DevToolsHelloMessage extends DevToolsProtocolMessageBase {
+  type: "HELLO";
+  payload: DevToolsHelloPayload;
 }
 
 export type DevToolsRemoteMessage =
   | DevToolsStateUpdateMessage
   | DevToolsPingMessage
-  | DevToolsActionMessage;
+  | DevToolsActionMessage
+  | DevToolsHelloMessage;
+
+function hasSupportedProtocolVersion(candidate: { protocolVersion?: unknown }) {
+  return candidate.protocolVersion === DEVTOOLS_PROTOCOL_VERSION;
+}
 
 export function isDevToolsActionPayload(
   payload: unknown,
@@ -75,10 +96,13 @@ export function isDevToolsActionMessage(
   const candidate = message as {
     type?: unknown;
     payload?: unknown;
+    protocolVersion?: unknown;
   };
 
   return (
-    candidate.type === "ACTION" && isDevToolsActionPayload(candidate.payload)
+    candidate.type === "ACTION" &&
+    hasSupportedProtocolVersion(candidate) &&
+    isDevToolsActionPayload(candidate.payload)
   );
 }
 
@@ -89,7 +113,14 @@ export function isDevToolsStateUpdateMessage(
     return false;
   }
 
-  return (message as { type?: unknown }).type === "STATE_UPDATE";
+  const candidate = message as {
+    type?: unknown;
+    protocolVersion?: unknown;
+  };
+
+  return (
+    candidate.type === "STATE_UPDATE" && hasSupportedProtocolVersion(candidate)
+  );
 }
 
 export function isDevToolsPingMessage(
@@ -99,5 +130,42 @@ export function isDevToolsPingMessage(
     return false;
   }
 
-  return (message as { type?: unknown }).type === "PING";
+  const candidate = message as {
+    type?: unknown;
+    protocolVersion?: unknown;
+  };
+
+  return candidate.type === "PING" && hasSupportedProtocolVersion(candidate);
+}
+
+export function isDevToolsHelloMessage(
+  message: unknown,
+): message is DevToolsHelloMessage {
+  if (!message || typeof message !== "object") {
+    return false;
+  }
+
+  const candidate = message as {
+    type?: unknown;
+    payload?: unknown;
+    protocolVersion?: unknown;
+  };
+
+  if (
+    candidate.type !== "HELLO" ||
+    !candidate.payload ||
+    !hasSupportedProtocolVersion(candidate)
+  ) {
+    return false;
+  }
+
+  const payload = candidate.payload as {
+    role?: unknown;
+    protocolVersion?: unknown;
+  };
+
+  return (
+    (payload.role === "client" || payload.role === "server") &&
+    payload.protocolVersion === DEVTOOLS_PROTOCOL_VERSION
+  );
 }

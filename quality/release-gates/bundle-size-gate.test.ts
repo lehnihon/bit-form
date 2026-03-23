@@ -13,6 +13,10 @@ const DIST_BUDGETS: DistBudget[] = [
   { artifact: path.join("react", "index.js"), maxKb: 110 },
   { artifact: path.join("vue", "index.js"), maxKb: 110 },
   { artifact: path.join("angular", "index.js"), maxKb: 110 },
+  { artifact: path.join("devtools", "index.js"), maxKb: 130 },
+  { artifact: path.join("devtools", "bridge.js"), maxKb: 35 },
+  { artifact: path.join("devtools", "protocol.js"), maxKb: 12 },
+  { artifact: path.join("cli", "index.cjs"), maxKb: 85 },
   { artifact: "mask.js", maxKb: 12 },
 ];
 

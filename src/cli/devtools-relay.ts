@@ -1,6 +1,9 @@
 import { WebSocketServer } from "ws";
 import type http from "node:http";
-import { isDevToolsPingMessage } from "../devtools/protocol";
+import {
+  isDevToolsHelloMessage,
+  isDevToolsPingMessage,
+} from "../devtools/protocol";
 
 export function attachDevToolsRelay(server: http.Server): WebSocketServer {
   const wss = new WebSocketServer({ server });
@@ -12,7 +15,7 @@ export function attachDevToolsRelay(server: http.Server): WebSocketServer {
       try {
         const data = JSON.parse(messageStr) as unknown;
 
-        if (isDevToolsPingMessage(data)) {
+        if (isDevToolsPingMessage(data) || isDevToolsHelloMessage(data)) {
           return;
         }
       } catch {

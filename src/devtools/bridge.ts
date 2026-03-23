@@ -1,6 +1,6 @@
 import { bitBus } from "../core";
 import type { BitBus } from "../core";
-import { isDevToolsActionMessage } from "./protocol";
+import { DEVTOOLS_PROTOCOL_VERSION, isDevToolsActionMessage } from "./protocol";
 import { createDevToolsSnapshotMap } from "./store-snapshot";
 import { getDevToolsActionableStore } from "./store-port";
 
@@ -52,7 +52,11 @@ export function setupRemoteBridge(url: string, bus: BitBus = bitBus) {
     batchFlushTimeout = null;
 
     if (Object.keys(payload).length > 0) {
-      sendWhenOpen({ type: "STATE_UPDATE", payload });
+      sendWhenOpen({
+        type: "STATE_UPDATE",
+        protocolVersion: DEVTOOLS_PROTOCOL_VERSION,
+        payload,
+      });
     }
   };
 
@@ -73,9 +77,19 @@ export function setupRemoteBridge(url: string, bus: BitBus = bitBus) {
     socket.onopen = () => {
       console.log("[bit-form] 🔌 Conectado ao CLI DevTools via WebSocket.");
 
+      sendWhenOpen({
+        type: "HELLO",
+        protocolVersion: DEVTOOLS_PROTOCOL_VERSION,
+        payload: { role: "server", protocolVersion: DEVTOOLS_PROTOCOL_VERSION },
+      });
+
       const initialState = createDevToolsSnapshotMap(bus.stores);
       if (Object.keys(initialState).length > 0) {
-        sendWhenOpen({ type: "STATE_UPDATE", payload: initialState });
+        sendWhenOpen({
+          type: "STATE_UPDATE",
+          protocolVersion: DEVTOOLS_PROTOCOL_VERSION,
+          payload: initialState,
+        });
       }
 
       unsubscribeBus = bus.subscribe((storeId, _newState) => {
@@ -84,7 +98,10 @@ export function setupRemoteBridge(url: string, bus: BitBus = bitBus) {
       });
 
       heartbeatInterval = setInterval(() => {
-        sendWhenOpen({ type: "PING" });
+        sendWhenOpen({
+          type: "PING",
+          protocolVersion: DEVTOOLS_PROTOCOL_VERSION,
+        });
       }, 30000);
     };
 

@@ -28,6 +28,10 @@ interface EntrypointBudget {
   maxBytes: number;
   /** Dependências externas que não devem ser embutidas */
   external?: string[];
+  /** Plataforma de build para o entrypoint */
+  platform?: "browser" | "node";
+  /** Formato de saída da medição */
+  format?: "esm" | "cjs";
 }
 
 const BUDGETS: EntrypointBudget[] = [
@@ -64,19 +68,48 @@ const BUDGETS: EntrypointBudget[] = [
     entry: "src/mask.ts",
     maxBytes: 12 * 1024,
   },
+  // Medido: baseline inicial desta fase — orçamento conservador
+  {
+    name: "devtools/index",
+    entry: "src/devtools/index.ts",
+    maxBytes: 120 * 1024,
+  },
+  // Medido: baseline inicial desta fase — orçamento conservador
+  {
+    name: "devtools/bridge",
+    entry: "src/devtools/bridge.ts",
+    maxBytes: 32 * 1024,
+  },
+  // Medido: baseline inicial desta fase — orçamento conservador
+  {
+    name: "cli/index",
+    entry: "src/cli/index.ts",
+    maxBytes: 80 * 1024,
+    platform: "node",
+    format: "cjs",
+    external: ["ws", "node:http", "node:fs", "node:path", "node:url"],
+  },
 ];
 
 describe("release-gate bundle size", () => {
-  for (const { name, entry, maxBytes, external = [] } of BUDGETS) {
+  for (const {
+    name,
+    entry,
+    maxBytes,
+    external = [],
+    platform = "browser",
+    format = "esm",
+  } of BUDGETS) {
     it(`${name} ≤ ${(maxBytes / 1024).toFixed(
       0,
-    )} KB (minified ESM)`, async () => {
+    )} KB (minified ${format.toUpperCase()})`, async () => {
       const result = await build({
         entryPoints: [resolve(root, entry)],
         bundle: true,
         write: false,
         minify: true,
-        format: "esm",
+        format,
+        platform,
         external,
         // Silencia avisos irrelevantes para a medição
         logLevel: "silent",
