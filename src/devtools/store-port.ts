@@ -20,7 +20,7 @@ export function isDevToolsReadableStore(
     return false;
   }
 
-  const candidate = value as Record<string, unknown>;
+  const candidate = value as unknown as Record<string, unknown>;
 
   return (
     typeof candidate.getState === "function" &&
@@ -35,7 +35,7 @@ export function isDevToolsActionableStore(
     return false;
   }
 
-  const candidate = value as Record<string, unknown>;
+  const candidate = value as unknown as Record<string, unknown>;
 
   return (
     typeof candidate.undo === "function" &&
