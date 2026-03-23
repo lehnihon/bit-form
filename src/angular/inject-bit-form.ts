@@ -1,9 +1,6 @@
 import { signal, computed, inject, DestroyRef } from "@angular/core";
 import { useBitStore } from "./provider";
-import {
-  createFormController,
-  createStoreFormActions,
-} from "../core/form-controller";
+import { createFrameworkFormBinding } from "../core/bindings/form-binding";
 import { observeFormMetaSnapshot } from "../core";
 import type { InjectBitFormResult } from "./types";
 
@@ -28,7 +25,7 @@ export function injectBitForm<T extends object>(): InjectBitFormResult<T> {
   const isSubmitting = computed(() => stateSignal().isSubmitting);
   const isDirty = computed(() => stateSignal().isDirty);
 
-  const controller = createFormController(
+  const { controller, actions } = createFrameworkFormBinding(
     store,
     {
       clearSubmissionState: () => {
@@ -44,7 +41,6 @@ export function injectBitForm<T extends object>(): InjectBitFormResult<T> {
     },
     { stopPropagation: true },
   );
-  const actions = createStoreFormActions(store);
 
   const meta = {
     isValid,

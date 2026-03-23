@@ -2,10 +2,9 @@ import { computed, onUnmounted, shallowRef } from "vue";
 import { useBitStore } from "./context";
 import type { UseBitFieldVueResult } from "./types";
 import type { BitPath, BitPathValue } from "../core";
-import {
-  createMaskedFieldController,
-  subscribeFieldState,
-} from "../core/field-controller";
+import { subscribeFieldState } from "../core/field-controller";
+import { createFrameworkMaskedFieldBinding } from "../core/bindings/field-binding";
+import { cleanupRegisteredField } from "../core/bindings/framework-cleanup";
 import { deriveFieldMeta } from "../core/utils/field-meta";
 
 export function useBitField<
@@ -14,12 +13,7 @@ export function useBitField<
 >(path: P): UseBitFieldVueResult<BitPathValue<TForm, P>> {
   const store = useBitStore<TForm>();
 
-  const resolvedMask = store.resolveMask(path);
-  const fieldController = createMaskedFieldController(
-    store,
-    path,
-    resolvedMask,
-  );
+  const { fieldController } = createFrameworkMaskedFieldBinding(store, path);
 
   const state = shallowRef(store.getFieldState(path));
 
@@ -29,9 +23,7 @@ export function useBitField<
 
   onUnmounted(() => {
     unsubscribe();
-    if (store.unregisterField) {
-      store.unregisterField(path);
-    }
+    cleanupRegisteredField(store, path as string);
   });
 
   const rawValue = computed(() => state.value.value as BitPathValue<TForm, P>);

@@ -1,9 +1,6 @@
 import { computed, onUnmounted, shallowRef, ref } from "vue";
 import { useBitStore } from "./context";
-import {
-  createFormController,
-  createStoreFormActions,
-} from "../core/form-controller";
+import { createFrameworkFormBinding } from "../core/bindings/form-binding";
 import { observeFormMetaSnapshot } from "../core";
 import type { UseBitFormResult } from "./types";
 
@@ -23,7 +20,7 @@ export function useBitForm<T extends object>(): UseBitFormResult<T> {
 
   onUnmounted(unsubscribe);
 
-  const controller = createFormController(store, {
+  const { controller, actions } = createFrameworkFormBinding(store, {
     clearSubmissionState: () => {
       submitError.value = null;
       lastResponse.value = null;
@@ -35,7 +32,6 @@ export function useBitForm<T extends object>(): UseBitFormResult<T> {
       submitError.value = error;
     },
   });
-  const actions = createStoreFormActions(store);
 
   const isValid = computed(() => state.value.isValid);
   const isSubmitting = computed(() => state.value.isSubmitting);

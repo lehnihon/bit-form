@@ -20,6 +20,7 @@ export default defineConfig([
       "resolvers/index": "src/resolvers/index.ts",
       "devtools/index": "src/devtools/index.ts",
       "devtools/bridge": "src/devtools/bridge.ts",
+      "devtools/protocol": "src/devtools/protocol.ts",
     },
     tsconfig: "./tsconfig.build.json",
     format: ["cjs", "esm"],

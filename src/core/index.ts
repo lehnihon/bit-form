@@ -17,9 +17,9 @@ export type {
   BitSelector,
   BitEqualityFn,
   BitSelectorSubscriptionOptions,
-} from "./store/contracts/public-types";
+} from "./public-types";
 
-export { bitBus, createBitBus } from "./store/shared/bus";
+export { bitBus, createBitBus } from "./bus";
 
 export {
   getDeepValue,
@@ -75,9 +75,9 @@ export type {
   BitAfterValidateEvent,
   BitBeforeSubmitEvent,
   BitAfterSubmitEvent,
-} from "./store/contracts/types";
+} from "./public-types";
 
-export type { BitFormGlobal, BitBus } from "./store/contracts/bus-types";
+export type { BitFormGlobal, BitBus, BitBusListener } from "./bus";
 
 export type {
   BitUploadFn,

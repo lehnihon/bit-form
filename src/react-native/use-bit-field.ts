@@ -1,10 +1,7 @@
 import { useMemo, useCallback } from "react";
 import { useBitFieldBase } from "../react/use-bit-field-base";
 import { BitPath, BitPathValue } from "../core";
-import {
-  formatMaskedValue,
-  parseMaskedInput,
-} from "../core/mask/field-binding";
+import { createFrameworkMaskedFieldBinding } from "../core/bindings/field-binding";
 import { deriveFieldMeta } from "../core/utils/field-meta";
 import type { UseBitFieldNativeResult } from "./types";
 
@@ -12,32 +9,29 @@ export function useBitField<
   TForm extends object = any,
   P extends BitPath<TForm> = BitPath<TForm>,
 >(path: P): UseBitFieldNativeResult<TForm, P> {
-  const {
-    fieldState,
-    setValue: rawSetValue,
-    setBlur,
-    store,
-  } = useBitFieldBase<BitPathValue<TForm, P>, TForm, P>(path);
+  const { fieldState, setBlur, store } = useBitFieldBase<
+    BitPathValue<TForm, P>,
+    TForm,
+    P
+  >(path);
 
-  const resolvedMask = useMemo(() => {
-    return store.resolveMask(path as string);
+  const { fieldController } = useMemo(() => {
+    return createFrameworkMaskedFieldBinding(store, path);
   }, [store.config.masks, store.config.fields, path]);
 
   const displayValue = useMemo(
-    () => formatMaskedValue(fieldState.value, resolvedMask ?? undefined),
-    [fieldState.value, resolvedMask],
+    () => fieldController.displayValue(fieldState.value),
+    [fieldState.value, fieldController],
   );
 
   const handleChange = useCallback(
-    (text: string) =>
-      rawSetValue(parseMaskedInput(text, resolvedMask ?? undefined) as any),
-    [resolvedMask, rawSetValue],
+    (text: string) => fieldController.setValue(text),
+    [fieldController],
   );
 
   const setValue = useCallback(
-    (val: any) =>
-      rawSetValue(parseMaskedInput(val, resolvedMask ?? undefined) as any),
-    [resolvedMask, rawSetValue],
+    (val: any) => fieldController.setValue(val),
+    [fieldController],
   );
 
   const { value } = fieldState;

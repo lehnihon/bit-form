@@ -89,6 +89,11 @@
       "types": "./dist/devtools/bridge.d.ts",
       "import": "./dist/devtools/bridge.js",
       "require": "./dist/devtools/bridge.cjs"
+    },
+    "./devtools/protocol": {
+      "types": "./dist/devtools/protocol.d.ts",
+      "import": "./dist/devtools/protocol.js",
+      "require": "./dist/devtools/protocol.cjs"
     }
   },
   "files": [

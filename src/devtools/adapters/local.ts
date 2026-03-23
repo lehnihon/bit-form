@@ -1,45 +1,20 @@
 import { bitBus } from "../../core";
 import type { BitStoreHooksApi } from "../../core";
-import type { BitFormGlobal } from "../../core/store/contracts/bus-types";
+import type { BitBus } from "../../core";
 import { BitFormDevToolsUI } from "../ui";
+import { createDevToolsSnapshotMap } from "../store-snapshot";
 
 export function setupLocalDevTools(
   container: HTMLElement,
-  bus: BitFormGlobal = bitBus,
+  bus: BitBus = bitBus,
 ) {
   const ui = new BitFormDevToolsUI(container, {
-    onUndo: (id) => (bus.stores[id] as BitStoreHooksApi<any>)?.undo(),
-    onRedo: (id) => (bus.stores[id] as BitStoreHooksApi<any>)?.redo(),
-    onReset: (id) => (bus.stores[id] as BitStoreHooksApi<any>)?.reset(),
+    onUndo: (id) => (bus.stores[id] as BitStoreHooksApi<object>)?.undo(),
+    onRedo: (id) => (bus.stores[id] as BitStoreHooksApi<object>)?.redo(),
+    onReset: (id) => (bus.stores[id] as BitStoreHooksApi<object>)?.reset(),
   });
 
-  const getFullSnapshot = () => {
-    const states: Record<string, unknown> = {};
-
-    for (const [id, instance] of Object.entries(bus.stores)) {
-      const storeInstance = instance as BitStoreHooksApi<any>;
-      const state = storeInstance.getState();
-
-      const historyMeta = storeInstance?.getHistoryMetadata?.() || {
-        enabled: false,
-        canUndo: false,
-        canRedo: false,
-        historyIndex: -1,
-        historySize: 0,
-      };
-
-      states[id] = {
-        ...state,
-        _meta: {
-          canUndo: historyMeta.canUndo,
-          canRedo: historyMeta.canRedo,
-          totalSteps: historyMeta.historySize,
-          currentIndex: historyMeta.historyIndex,
-        },
-      };
-    }
-    return states;
-  };
+  const getFullSnapshot = () => createDevToolsSnapshotMap(bus.stores);
 
   ui.updateState(getFullSnapshot());
 

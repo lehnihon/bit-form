@@ -1,6 +1,7 @@
 import { useCallback, useSyncExternalStore, useRef, useEffect } from "react";
 import { useBitStore } from "./context";
 import { BitPath, BitPathValue } from "../core";
+import { cleanupRegisteredField } from "../core/bindings/framework-cleanup";
 import { subscribeFieldState } from "../core/field-controller";
 import {
   createFieldStateSnapshot,
@@ -18,11 +19,7 @@ export function useBitFieldBase<
   );
 
   useEffect(() => {
-    return () => {
-      if (store.unregisterField) {
-        store.unregisterField(path);
-      }
-    };
+    return () => cleanupRegisteredField(store, path as string);
   }, [store, path]);
 
   const getSnapshot = useCallback(() => {

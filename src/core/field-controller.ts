@@ -1,11 +1,7 @@
 import { formatMaskedValue, parseMaskedInput } from "./mask/field-binding";
 import type { BitMask } from "./mask/types";
-import type { BitFormBindingApi } from "./store/contracts/public-types";
-import type {
-  BitFieldState,
-  BitPath,
-  BitPathValue,
-} from "./store/contracts/types";
+import type { BitFieldBindingApi, BitFormBindingApi } from "./public-types";
+import type { BitFieldState, BitPath, BitPathValue } from "./public-types";
 
 export function subscribeFieldState<
   TForm extends object,
@@ -25,7 +21,7 @@ export function subscribeFieldState<
 export function createMaskedFieldController<
   TForm extends object,
   P extends BitPath<TForm>,
->(store: BitFormBindingApi<TForm>, path: P, mask: BitMask | undefined) {
+>(store: BitFieldBindingApi<TForm>, path: P, mask: BitMask | undefined) {
   const setValue = (value: unknown) => {
     store.setField(
       path,

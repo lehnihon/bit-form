@@ -1,4 +1,4 @@
-import { BitMask, BitMaskName } from "../mask/types";
+import { BitMask } from "../mask/types";
 import {
   BitConfig,
   BitErrors,
@@ -22,7 +22,7 @@ import type {
   BitSelectorSubscriptionOptions,
   BitValidationOptions,
 } from "./contracts/public-types";
-import { getDeepValue, valueEqual } from "../utils";
+import { getDeepValue } from "../utils";
 import { normalizeConfig } from "./shared/config";
 import { BitFieldRegistry } from "./registry/field-registry";
 import {
@@ -33,9 +33,7 @@ import { BitDirtyManager } from "./managers/core/dirty-manager";
 import { BitMaskManager } from "./managers/features/mask-manager";
 import { BitSubscriptionEngine } from "./engines/subscription-engine";
 import {
-  beginStoreBatch,
   createStoreBatchState,
-  endStoreBatch,
   getEffectiveStoreState,
   type BitStoreBatchState,
 } from "./engines/store-batch-engine";
@@ -44,12 +42,7 @@ import {
   resolveFieldMask,
 } from "./engines/store-field-query-engine";
 import {
-  dispatchStoreKernelOperation,
-  flushStoreKernelBatch,
-} from "./engines/store-commit-engine";
-import {
   BitStoreOperation,
-  patchStateOperation,
   touchFieldsOperation,
 } from "./engines/operation-engine";
 import { BitStoreEffectEngine } from "./engines/effect-engine";
@@ -57,7 +50,20 @@ import type { BitStoreCapabilities } from "./orchestration/capabilities";
 import type { BitValidationTriggerOptions } from "./contracts/port-types";
 import { createStoreEffects } from "./orchestration/store-bootstrap";
 import { BIT_HOOKS_API_SYMBOL } from "./orchestration/hook-brand";
-import { createTrackedSubscription } from "./orchestration/tracked-selector";
+import {
+  subscribeStoreFieldState,
+  subscribeStoreFormMeta,
+  subscribeStorePath,
+  subscribeStoreSelector,
+  subscribeStoreTracked,
+} from "./orchestration/store-observe-ops";
+import {
+  commitStoreStateUpdate,
+  dispatchStoreStateOperation,
+  flushStoreBatchedStateUpdates,
+  runStoreStateBatch,
+  saveStoreHistorySnapshot,
+} from "./orchestration/store-state-ops";
 import { createStoreRuntime } from "./orchestration/store-runtime";
 import { createStoreRuntimeContext } from "./orchestration/runtime-context";
 import {
@@ -65,12 +71,15 @@ import {
   unregisterStoreField,
   unregisterStorePrefix,
 } from "./orchestration/store-registration-ops";
+import { applyStorePersistedValues } from "./orchestration/store-persist-ops";
 import {
-  applyStorePersistedValues,
-  clearStorePersisted,
-  forceStorePersistedSave,
-  restoreStorePersisted,
-} from "./orchestration/store-persist-ops";
+  clearPersistedFeature,
+  forceSavePersistedFeature,
+  readHistoryFeatureMetadata,
+  restorePersistedFeature,
+  runRedoFeature,
+  runUndoFeature,
+} from "./orchestration/store-feature-ops";
 export class BitStore<T extends object = any> {
   public readonly [BIT_HOOKS_API_SYMBOL] = true;
 
@@ -306,13 +315,12 @@ export class BitStore<T extends object = any> {
     listener: (slice: TSlice) => void,
     options?: BitSelectorSubscriptionOptions<TSlice>,
   ) {
-    const equalityFn = options?.equalityFn ?? valueEqual;
-    return this.subscriptions.subscribeSelector(
+    return subscribeStoreSelector({
+      subscriptions: this.subscriptions,
       selector,
       listener,
       options,
-      equalityFn,
-    );
+    });
   }
 
   subscribeTracked<TSlice>(
@@ -320,7 +328,7 @@ export class BitStore<T extends object = any> {
     listener: (slice: TSlice) => void,
     options?: Omit<BitSelectorSubscriptionOptions<TSlice>, "paths">,
   ) {
-    return createTrackedSubscription({
+    return subscribeStoreTracked({
       getState: () => this.getState(),
       subscribeSelector: (trackedSelector, trackedListener, trackedOptions) =>
         this.subscribeSelector(
@@ -339,59 +347,34 @@ export class BitStore<T extends object = any> {
     listener: (value: BitPathValue<T, P>) => void,
     options?: BitSelectorSubscriptionOptions<BitPathValue<T, P>>,
   ) {
-    const mergedPaths = [...(options?.paths ?? []), path as string];
-
-    return this.subscribeSelector(
-      (state) =>
-        getDeepValue(state.values, path as string) as BitPathValue<T, P>,
+    return subscribeStorePath({
+      path,
       listener,
-      {
-        ...options,
-        paths: mergedPaths,
-      },
-    );
+      options,
+      subscribeSelector: (selector, pathListener, pathOptions) =>
+        this.subscribeSelector(selector, pathListener, pathOptions),
+    });
   }
 
   subscribeFieldState<P extends BitPath<T>>(
     path: P,
     listener: (state: Readonly<BitFieldState<T, BitPathValue<T, P>>>) => void,
   ): () => void {
-    return this.subscribeSelector(
-      () =>
-        this.getFieldState(path) as Readonly<
-          BitFieldState<T, BitPathValue<T, P>>
-        >,
+    return subscribeStoreFieldState({
+      path,
       listener,
-      {
-        paths: [path as string],
-        equalityFn: (prev, next) =>
-          prev.value === next.value &&
-          prev.error === next.error &&
-          prev.touched === next.touched &&
-          prev.isHidden === next.isHidden &&
-          prev.isRequired === next.isRequired &&
-          prev.isDirty === next.isDirty &&
-          prev.isValidating === next.isValidating,
-      },
-    );
+      getFieldState: (fieldPath) => this.getFieldState(fieldPath),
+      subscribeSelector: (selector, fieldStateListener, fieldStateOptions) =>
+        this.subscribeSelector(selector, fieldStateListener, fieldStateOptions),
+    });
   }
 
   subscribeFormMeta(listener: (meta: BitFormMeta) => void): () => void {
-    return this.subscribeSelector(
-      (state) => ({
-        isValid: state.isValid,
-        isDirty: state.isDirty,
-        isSubmitting: state.isSubmitting,
-      }),
+    return subscribeStoreFormMeta({
       listener,
-      {
-        paths: ["isValid", "isDirty", "isSubmitting"],
-        equalityFn: (prev, next) =>
-          prev.isValid === next.isValid &&
-          prev.isDirty === next.isDirty &&
-          prev.isSubmitting === next.isSubmitting,
-      },
-    );
+      subscribeSelector: (selector, metaListener, metaOptions) =>
+        this.subscribeSelector(selector, metaListener, metaOptions),
+    });
   }
 
   setField<P extends BitPath<T>>(path: P, value: BitPathValue<T, P>) {
@@ -465,21 +448,21 @@ export class BitStore<T extends object = any> {
   }
 
   async restorePersisted(): Promise<boolean> {
-    return restoreStorePersisted({
+    return restorePersistedFeature({
       dispatch: (operation) => this.dispatch(operation),
       effects: this.effects,
     });
   }
 
   async forceSave(): Promise<void> {
-    return forceStorePersistedSave({
+    return forceSavePersistedFeature({
       dispatch: (operation) => this.dispatch(operation),
       effects: this.effects,
     });
   }
 
   async clearPersisted(): Promise<void> {
-    return clearStorePersisted({
+    return clearPersistedFeature({
       dispatch: (operation) => this.dispatch(operation),
       effects: this.effects,
     });
@@ -532,21 +515,21 @@ export class BitStore<T extends object = any> {
   }
 
   undo() {
-    const prevState = this._history.undo();
-    if (prevState) {
-      this._lifecycle.applyHistoryState(prevState);
-    }
+    runUndoFeature({
+      history: this._history,
+      applyHistoryState: (values) => this._lifecycle.applyHistoryState(values),
+    });
   }
 
   redo() {
-    const nextState = this._history.redo();
-    if (nextState) {
-      this._lifecycle.applyHistoryState(nextState);
-    }
+    runRedoFeature({
+      history: this._history,
+      applyHistoryState: (values) => this._lifecycle.applyHistoryState(values),
+    });
   }
 
   getHistoryMetadata(): BitHistoryMetadata {
-    return this._history.getMetadata();
+    return readHistoryFeatureMetadata({ history: this._history });
   }
 
   validate(options?: BitValidationOptions): Promise<boolean> {
@@ -573,15 +556,11 @@ export class BitStore<T extends object = any> {
   }
 
   private runStateBatch<TResult>(callback: () => TResult): TResult {
-    beginStoreBatch(this.batchState);
-
-    try {
-      return callback();
-    } finally {
-      if (endStoreBatch(this.batchState)) {
-        this.flushBatchedStateUpdates();
-      }
-    }
+    return runStoreStateBatch({
+      batchState: this.batchState,
+      callback,
+      flushBatchedStateUpdates: () => this.flushBatchedStateUpdates(),
+    });
   }
 
   private onStateCommitted(payload: {
@@ -589,28 +568,39 @@ export class BitStore<T extends object = any> {
     changedPaths?: Iterable<string>;
     valuesChanged: boolean;
   }): void {
-    this.state = payload.nextState;
-    this.subscriptions.notify(this.state, payload.changedPaths);
-    this.effects.onStateUpdated(this.state, payload.valuesChanged);
+    commitStoreStateUpdate({
+      payload,
+      setState: (state) => {
+        this.state = state;
+      },
+      notifySubscriptions: (state, changedPaths) =>
+        this.subscriptions.notify(state, changedPaths),
+      notifyEffects: (state, valuesChanged) =>
+        this.effects.onStateUpdated(state, valuesChanged),
+    });
   }
 
   private dispatch(operation: BitStoreOperation<T>) {
-    this.state = dispatchStoreKernelOperation({
+    this.state = dispatchStoreStateOperation({
       state: this.state,
       batchState: this.batchState,
       operation,
-      applyComputedValues: (values, changedPaths) =>
-        this.computedManager.apply(values, changedPaths),
+      applyComputedValues: (values, changedPaths) => {
+        const normalizedPaths = changedPaths
+          ? Array.from(changedPaths)
+          : undefined;
+        return this.computedManager.apply(values, normalizedPaths);
+      },
       onStateCommitted: (payload) => this.onStateCommitted(payload),
     });
   }
 
   private saveHistorySnapshot() {
-    if (this.batchState.depth > 0) {
-      this.batchState.pendingHistorySnapshot = true;
-      return;
-    }
-    this._history.saveSnapshot(this.state.values);
+    saveStoreHistorySnapshot({
+      batchState: this.batchState,
+      values: this.state.values,
+      saveHistory: (values) => this._history.saveSnapshot(values),
+    });
   }
 
   private applyPersistedValues(values: Partial<T>) {
@@ -633,17 +623,17 @@ export class BitStore<T extends object = any> {
   }
 
   private flushBatchedStateUpdates() {
-    this.state = flushStoreKernelBatch({
+    this.state = flushStoreBatchedStateUpdates({
       state: this.state,
       batchState: this.batchState,
-      applyComputedValues: (values, changedPaths) =>
-        this.computedManager.apply(values, changedPaths),
+      applyComputedValues: (values, changedPaths) => {
+        const normalizedPaths = changedPaths
+          ? Array.from(changedPaths)
+          : undefined;
+        return this.computedManager.apply(values, normalizedPaths);
+      },
       onStateCommitted: (payload) => this.onStateCommitted(payload),
+      saveHistory: (values) => this._history.saveSnapshot(values),
     });
-
-    if (this.batchState.pendingHistorySnapshot) {
-      this.batchState.pendingHistorySnapshot = false;
-      this._history.saveSnapshot(this.state.values);
-    }
   }
 }
