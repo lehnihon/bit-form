@@ -1,6 +1,7 @@
 import { useMemo, useCallback } from "react";
 import { useBitFieldBase } from "./use-bit-field-base";
 import { BitPath, BitPathValue } from "../core";
+import { createFrameworkMaskedFieldBinding } from "../core/bindings/field-binding";
 import {
   formatMaskedValue,
   parseMaskedInput,
@@ -26,7 +27,7 @@ export function useBitField<
   } = useBitFieldBase<BitPathValue<TForm, P>, TForm, P>(path);
 
   const resolvedMask = useMemo(() => {
-    return store.resolveMask(path as string);
+    return createFrameworkMaskedFieldBinding(store, path).resolvedMask;
   }, [store.config.masks, store.config.fields, path]);
 
   const displayValue = useMemo(

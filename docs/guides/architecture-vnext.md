@@ -78,6 +78,47 @@ Foi adicionado um teste de arquitetura em:
 Esse teste impede regressão de fronteira, garantindo que `src/devtools/**` e `src/cli/**`
 não importem contratos internos de `core/store/contracts/*`.
 
+### 8. Extração de state-ops do BitStore
+
+As operações de estado/batch/commit foram extraídas para:
+
+- `src/core/store/orchestration/store-state-ops.ts`
+
+Com isso, `BitStore` delega:
+
+- execução de batch (`runStoreStateBatch`)
+- commit de estado/notificações (`commitStoreStateUpdate`)
+- dispatch do kernel (`dispatchStoreStateOperation`)
+- snapshot de histórico (`saveStoreHistorySnapshot`)
+- flush de batch (`flushStoreBatchedStateUpdates`)
+
+### 9. Consolidação parcial de field bindings
+
+Foi introduzido um helper compartilhado para bindings de campo mascarado:
+
+- `src/core/bindings/field-binding.ts`
+
+Aplicado em:
+
+- `src/vue/use-bit-field.ts`
+- `src/angular/inject-bit-field.ts`
+- `src/react/use-bit-field.ts`
+- `src/react-native/use-bit-field.ts`
+
+### 10. Subpath público de protocolo DevTools
+
+Foi formalizado um subpath dedicado para contratos do protocolo remoto:
+
+- `@lehnihon/bit-form/devtools/protocol`
+
+Incluído no build (`tsup`) e no `exports` de `package.json`.
+
+### 11. Guardrail ampliado de imports internos
+
+O teste de fronteira arquitetural também passou a validar que adapters/frameworks
+e tooling (`react`, `react-native`, `vue`, `angular`, `devtools`, `cli`) não importem
+`core/store/*` diretamente.
+
 ## Próximas fases sugeridas
 
 1. reduzir responsabilidades de `BitStore`

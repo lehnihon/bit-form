@@ -1,10 +1,8 @@
 import { inject, DestroyRef, computed, signal } from "@angular/core";
 import { BIT_STORE_TOKEN } from "./provider";
 import { BitPath, BitPathValue } from "../core";
-import {
-  createMaskedFieldController,
-  subscribeFieldState,
-} from "../core/field-controller";
+import { subscribeFieldState } from "../core/field-controller";
+import { createFrameworkMaskedFieldBinding } from "../core/bindings/field-binding";
 import { cleanupRegisteredField } from "../core/bindings/framework-cleanup";
 import { isBitFieldInputEventObject } from "../core/mask/field-binding";
 import { deriveFieldMeta } from "../core/utils/field-meta";
@@ -42,12 +40,7 @@ export function injectBitField<
   const isHidden = computed(() => metaState().isHidden);
   const isRequired = computed(() => metaState().isRequired);
 
-  const resolvedMask = store.resolveMask(path as string);
-  const fieldController = createMaskedFieldController(
-    store,
-    path,
-    resolvedMask,
-  );
+  const { fieldController } = createFrameworkMaskedFieldBinding(store, path);
 
   const displayValue = computed(() => fieldController.displayValue(value()));
 
