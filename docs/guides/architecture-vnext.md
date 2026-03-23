@@ -147,6 +147,19 @@ Também foi ampliado o guardrail em:
 
 para impedir regressão de imports diretos de `store/contracts` fora da camada de runtime.
 
+### 14. Consolidação de field bindings em runtime compartilhado
+
+Os adapters de campo de todos os frameworks passaram a convergir para o mesmo runtime
+compartilhado de field binding (`createFrameworkMaskedFieldBinding`), incluindo:
+
+- `src/react/use-bit-field.ts`
+- `src/react-native/use-bit-field.ts`
+- `src/vue/use-bit-field.ts`
+- `src/angular/inject-bit-field.ts`
+
+Com isso, parsing/format de máscara e operações de update/blur ficam centralizados
+em um único controlador de campo reutilizável.
+
 ## Próximas fases sugeridas
 
-1. consolidar também os field bindings em um runtime compartilhado
+- sem pendências arquiteturais críticas mapeadas neste ciclo
