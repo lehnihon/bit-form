@@ -1,11 +1,11 @@
 import { getDeepValue } from "../utils";
 import type {
   BitArrayItem,
+  BitArrayBindingApi,
   BitArrayPath,
   BitPath,
   BitPathValue,
-} from "../store/contracts/types";
-import type { BitArrayBindingApi } from "../store/contracts/public-types";
+} from "../public-types";
 
 export interface BitArrayBindingField<TItem> {
   key: string;

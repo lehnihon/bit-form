@@ -68,4 +68,32 @@ describe("architecture boundaries", () => {
 
     expect(violations).toEqual([]);
   });
+
+  it("core fora de store runtime não deve importar store/contracts diretamente", () => {
+    const coreRoot = path.join(SRC_ROOT, "core");
+    const sourceFiles = walkTsFiles(coreRoot).filter((filePath) => {
+      const relative = path.relative(coreRoot, filePath);
+
+      if (relative.startsWith(`store${path.sep}`)) {
+        return false;
+      }
+
+      if (relative === "public-types.ts" || relative === "bus-types.ts") {
+        return false;
+      }
+
+      return true;
+    });
+
+    const forbiddenImportPattern = /from\s+["'][^"']*store\/contracts\//g;
+
+    const violations = sourceFiles.flatMap((filePath) => {
+      const source = fs.readFileSync(filePath, "utf8");
+      const hasViolation = forbiddenImportPattern.test(source);
+
+      return hasViolation ? [path.relative(SRC_ROOT, filePath)] : [];
+    });
+
+    expect(violations).toEqual([]);
+  });
 });

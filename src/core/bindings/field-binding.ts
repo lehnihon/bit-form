@@ -1,6 +1,5 @@
 import { createMaskedFieldController } from "../field-controller";
-import type { BitFieldBindingApi } from "../store/contracts/public-types";
-import type { BitPath } from "../store/contracts/types";
+import type { BitFieldBindingApi, BitPath } from "../public-types";
 
 export function createFrameworkMaskedFieldBinding<
   TForm extends object,

@@ -1,4 +1,4 @@
-import type { ScopeStatus } from "./store/contracts/types";
+import type { ScopeStatus } from "./public-types";
 
 export function areScopeErrorsEqual(
   currentErrors: Record<string, string>,

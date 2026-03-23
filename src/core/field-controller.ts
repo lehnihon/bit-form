@@ -3,12 +3,12 @@ import type { BitMask } from "./mask/types";
 import type {
   BitFieldBindingApi,
   BitFormBindingApi,
-} from "./store/contracts/public-types";
+} from "./public-types";
 import type {
   BitFieldState,
   BitPath,
   BitPathValue,
-} from "./store/contracts/types";
+} from "./public-types";
 
 export function subscribeFieldState<
   TForm extends object,

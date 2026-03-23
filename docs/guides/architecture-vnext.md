@@ -130,7 +130,23 @@ Com isso, `BitStore` delega:
 - `restorePersisted`, `forceSave`, `clearPersisted`
 - `undo`, `redo`, `getHistoryMetadata`
 
+### 13. Separação de `core public API` e `runtime internals`
+
+Foi introduzida uma fachada de contratos públicos em:
+
+- `src/core/public-types.ts`
+- `src/core/bus-types.ts`
+
+Com isso, módulos fora de `src/core/store/**` (incluindo bindings, controladores,
+tipos globais e testes) passam a importar tipos via `core` e não mais via
+`core/store/contracts/*` diretamente.
+
+Também foi ampliado o guardrail em:
+
+- `src/tests/core/architecture-boundaries.test.ts`
+
+para impedir regressão de imports diretos de `store/contracts` fora da camada de runtime.
+
 ## Próximas fases sugeridas
 
-1. separar `core public API` de `core runtime internals`
-2. consolidar também os field bindings em um runtime compartilhado
+1. consolidar também os field bindings em um runtime compartilhado

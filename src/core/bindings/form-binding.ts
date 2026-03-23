@@ -2,7 +2,7 @@ import {
   createFormController,
   createStoreFormActions,
 } from "../form-controller";
-import type { BitFormBindingApi } from "../store/contracts/public-types";
+import type { BitFormBindingApi } from "../public-types";
 import type {
   BitFormControllerOptions,
   BitFormControllerRuntime,
