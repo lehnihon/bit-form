@@ -65,7 +65,6 @@ import {
   saveStoreHistorySnapshot,
 } from "./orchestration/store-state-ops";
 import { createStoreRuntime } from "./orchestration/store-runtime";
-import { createStoreRuntimeContext } from "./orchestration/runtime-context";
 import {
   registerStoreField,
   unregisterStoreField,
@@ -129,42 +128,40 @@ export class BitStore<T extends object = any> {
       });
     }
 
-    const runtime = createStoreRuntime<T>(
-      createStoreRuntimeContext<T>({
-        rawConfig: config,
-        config: this._config,
-        fieldRegistry: this.fieldRegistry,
-        computedManager: this.computedManager,
-        dirtyManager: this.dirtyManager,
-        initialValuesRef: {
-          get: () => this._initialValues,
-          set: (values) => {
-            this._initialValues = values;
-          },
+    const runtime = createStoreRuntime<T>({
+      rawConfig: config,
+      config: this._config,
+      fieldRegistry: this.fieldRegistry,
+      computedManager: this.computedManager,
+      dirtyManager: this.dirtyManager,
+      initialValuesRef: {
+        get: () => this._initialValues,
+        set: (values) => {
+          this._initialValues = values;
         },
-        storeInstance: this,
-        getState: () => this.getState(),
-        dispatch: (operation) => this.dispatch(operation),
-        setError: (path, message) => this.setError(path, message),
-        validate: (options) => this.validate(options),
-        getFieldConfig: (path) => this.getFieldConfig(path),
-        getScopeFields: (scopeName) => this.getScopeFields(scopeName),
-        getEffects: () => this.effects,
-        saveHistorySnapshot: () => this.saveHistorySnapshot(),
-        runStateBatch: (callback) => this.runStateBatch(callback),
-        getTransformEntries: () => this.getTransformEntries(),
-        getHistory: () => this._history,
-        getValidation: () => this._validation,
-        setFieldWithMeta: (path, value, meta) =>
-          this.setFieldWithMeta(path, value, meta),
-        unregisterPrefix: (prefix) => this.unregisterPrefix(prefix),
-        triggerValidation: (scopeFields, options) =>
-          this.triggerValidation(scopeFields, options),
-        getConfig: () => this.getConfig(),
-        getDirtyValues: () => this.getDirtyValues(),
-        applyPersistedValues: (values) => this.applyPersistedValues(values),
-      }),
-    );
+      },
+      storeInstance: this,
+      getState: () => this.getState(),
+      dispatch: (operation) => this.dispatch(operation),
+      setError: (path, message) => this.setError(path, message),
+      validate: (options) => this.validate(options),
+      getFieldConfig: (path) => this.getFieldConfig(path),
+      getScopeFields: (scopeName) => this.getScopeFields(scopeName),
+      getEffects: () => this.effects,
+      saveHistorySnapshot: () => this.saveHistorySnapshot(),
+      runStateBatch: (callback) => this.runStateBatch(callback),
+      getTransformEntries: () => this.getTransformEntries(),
+      getHistory: () => this._history,
+      getValidation: () => this._validation,
+      setFieldWithMeta: (path, value, meta) =>
+        this.setFieldWithMeta(path, value, meta),
+      unregisterPrefix: (prefix) => this.unregisterPrefix(prefix),
+      triggerValidation: (scopeFields, options) =>
+        this.triggerValidation(scopeFields, options),
+      getConfig: () => this.getConfig(),
+      getDirtyValues: () => this.getDirtyValues(),
+      applyPersistedValues: (values) => this.applyPersistedValues(values),
+    });
 
     this._validation = runtime.capabilities.validation;
     this._lifecycle = runtime.capabilities.lifecycle;

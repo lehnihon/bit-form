@@ -8,12 +8,11 @@ export function injectBitPersist<
   const store = useBitStore<T>();
   const persist = signal(store.getPersistMetadata());
 
-  const unsubscribe = store.subscribeSelector(
+  const unsubscribe = store.subscribeTracked(
     (state) => state.persist,
     (nextPersist) => {
       persist.set(nextPersist);
     },
-    { paths: ["persist"] },
   );
 
   try {

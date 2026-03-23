@@ -2,6 +2,7 @@ import { bitBus } from "../core";
 import type { BitBus } from "../core";
 import { isDevToolsActionMessage } from "./protocol";
 import { createDevToolsSnapshotMap } from "./store-snapshot";
+import { getDevToolsActionableStore } from "./store-port";
 
 let activeBridgeCleanup: (() => void) | null = null;
 const STATE_BATCH_INTERVAL_MS = 50;
@@ -93,24 +94,22 @@ export function setupRemoteBridge(url: string, bus: BitBus = bitBus) {
 
         if (isDevToolsActionMessage(message)) {
           const { storeId, action } = message.payload;
+          const store = getDevToolsActionableStore(bus.stores, storeId);
 
-          const store = bus.stores[storeId];
-
-          if (!store || typeof store !== "object") {
+          if (!store) {
             return;
           }
 
-          const methodByAction = {
-            undo: "undo",
-            redo: "redo",
-            reset: "reset",
-          };
-
-          const method = (store as Record<string, unknown>)[
-            methodByAction[action]
-          ];
-          if (typeof method === "function") {
-            (method as () => void).call(store);
+          switch (action) {
+            case "undo":
+              store.undo();
+              break;
+            case "redo":
+              store.redo();
+              break;
+            case "reset":
+              store.reset();
+              break;
           }
         }
       } catch (e) {
