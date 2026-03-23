@@ -1,6 +1,6 @@
 import type { BitState } from "../core";
-import type { BitStoreHooksApi } from "../core";
 import type { DevToolsStoreSnapshot, DevToolsStoreSnapshots } from "./protocol";
+import { isDevToolsReadableStore } from "./store-port";
 
 function normalizeStoreState<T extends object>(
   state: Readonly<BitState<T>>,
@@ -17,9 +17,15 @@ function normalizeStoreState<T extends object>(
   };
 }
 
-export function createDevToolsStoreSnapshot<T extends object>(
-  store: BitStoreHooksApi<T>,
-): DevToolsStoreSnapshot {
+export function createDevToolsStoreSnapshot<T extends object>(store: {
+  getState: () => Readonly<BitState<T>>;
+  getHistoryMetadata: () => {
+    canUndo: boolean;
+    canRedo: boolean;
+    historySize: number;
+    historyIndex: number;
+  };
+}): DevToolsStoreSnapshot {
   const historyMeta = store.getHistoryMetadata();
 
   return {
@@ -39,16 +45,11 @@ export function createDevToolsSnapshotMap(
   const snapshots: DevToolsStoreSnapshots = {};
 
   for (const [storeId, instance] of Object.entries(stores)) {
-    if (!instance || typeof instance !== "object") {
+    if (!isDevToolsReadableStore(instance)) {
       continue;
     }
 
-    const store = instance as BitStoreHooksApi<object>;
-    if (typeof store.getState !== "function") {
-      continue;
-    }
-
-    snapshots[storeId] = createDevToolsStoreSnapshot(store);
+    snapshots[storeId] = createDevToolsStoreSnapshot(instance);
   }
 
   return snapshots;

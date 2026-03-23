@@ -160,6 +160,46 @@ compartilhado de field binding (`createFrameworkMaskedFieldBinding`), incluindo:
 Com isso, parsing/format de máscara e operações de update/blur ficam centralizados
 em um único controlador de campo reutilizável.
 
+### 15. Simplificação do bootstrap de runtime
+
+Foi removida a camada intermediária de contexto de runtime:
+
+- `src/core/store/orchestration/runtime-context.ts` (removido)
+
+Com isso, `BitStore` passa a instanciar `createStoreRuntime` diretamente com
+um único contrato de entrada, reduzindo duplicação de tipos e pontos de acoplamento
+entre `store/index.ts` e `orchestration`.
+
+### 16. Portas explícitas para DevTools sobre o bus global
+
+Foi introduzido um contrato dedicado para stores observáveis/acionáveis pelo DevTools:
+
+- `src/devtools/store-port.ts`
+
+Aplicado em:
+
+- `src/devtools/store-snapshot.ts`
+- `src/devtools/adapters/local.ts`
+- `src/devtools/bridge.ts`
+
+Com isso, o DevTools deixa de depender de casts para `BitStoreHooksApi` e passa
+a validar stores via type guards e portas mínimas (`getState`, `getHistoryMetadata`,
+`undo`, `redo`, `reset`).
+
+### 17. Migração seletiva de bindings para `subscribeTracked`
+
+Os bindings de persistência migraram para subscription auto-tracked (sem `paths`
+manuais), reduzindo boilerplate e drift entre frameworks:
+
+- `src/react/use-bit-persist.ts`
+- `src/vue/use-bit-persist.ts`
+- `src/angular/inject-bit-persist.ts`
+
+Para `scope/steps`, o projeto manteve `subscribeSelector` path-driven por
+determinismo de atualização em cenários de erro por caminho dinâmico.
+
 ## Próximas fases sugeridas
 
-- sem pendências arquiteturais críticas mapeadas neste ciclo
+- consolidar facades públicas menores por capacidade no contrato principal de store
+- avaliar subpath dedicado para contratos de runtime interno (não consumíveis por adapters)
+- criar teste dedicado de portas DevTools (`store-port`) para evitar regressão de cast dinâmico

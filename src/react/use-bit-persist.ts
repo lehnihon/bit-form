@@ -7,10 +7,9 @@ export function useBitPersist(): UseBitPersistResult {
 
   const persistMeta = useSyncExternalStore(
     (cb) =>
-      store.subscribeSelector(
+      store.subscribeTracked(
         (state) => state.persist,
         () => cb(),
-        { paths: ["persist"] },
       ),
     () => store.getPersistMetadata(),
     () => store.getPersistMetadata(),

@@ -6,12 +6,11 @@ export function useBitPersist<T extends object = any>(): UseBitPersistResult {
   const store = useBitStore<T>();
   const meta = ref(store.getPersistMetadata());
 
-  const unsubscribe = store.subscribeSelector(
+  const unsubscribe = store.subscribeTracked(
     (state) => state.persist,
     (nextMeta) => {
       meta.value = nextMeta;
     },
-    { paths: ["persist"] },
   );
 
   onUnmounted(() => unsubscribe());
