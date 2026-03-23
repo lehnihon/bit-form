@@ -57,7 +57,13 @@ import type { BitStoreCapabilities } from "./orchestration/capabilities";
 import type { BitValidationTriggerOptions } from "./contracts/port-types";
 import { createStoreEffects } from "./orchestration/store-bootstrap";
 import { BIT_HOOKS_API_SYMBOL } from "./orchestration/hook-brand";
-import { createTrackedSubscription } from "./orchestration/tracked-selector";
+import {
+  subscribeStoreFieldState,
+  subscribeStoreFormMeta,
+  subscribeStorePath,
+  subscribeStoreSelector,
+  subscribeStoreTracked,
+} from "./orchestration/store-observe-ops";
 import { createStoreRuntime } from "./orchestration/store-runtime";
 import { createStoreRuntimeContext } from "./orchestration/runtime-context";
 import {
@@ -306,13 +312,12 @@ export class BitStore<T extends object = any> {
     listener: (slice: TSlice) => void,
     options?: BitSelectorSubscriptionOptions<TSlice>,
   ) {
-    const equalityFn = options?.equalityFn ?? valueEqual;
-    return this.subscriptions.subscribeSelector(
+    return subscribeStoreSelector({
+      subscriptions: this.subscriptions,
       selector,
       listener,
       options,
-      equalityFn,
-    );
+    });
   }
 
   subscribeTracked<TSlice>(
@@ -320,7 +325,7 @@ export class BitStore<T extends object = any> {
     listener: (slice: TSlice) => void,
     options?: Omit<BitSelectorSubscriptionOptions<TSlice>, "paths">,
   ) {
-    return createTrackedSubscription({
+    return subscribeStoreTracked({
       getState: () => this.getState(),
       subscribeSelector: (trackedSelector, trackedListener, trackedOptions) =>
         this.subscribeSelector(
@@ -339,59 +344,34 @@ export class BitStore<T extends object = any> {
     listener: (value: BitPathValue<T, P>) => void,
     options?: BitSelectorSubscriptionOptions<BitPathValue<T, P>>,
   ) {
-    const mergedPaths = [...(options?.paths ?? []), path as string];
-
-    return this.subscribeSelector(
-      (state) =>
-        getDeepValue(state.values, path as string) as BitPathValue<T, P>,
+    return subscribeStorePath({
+      path,
       listener,
-      {
-        ...options,
-        paths: mergedPaths,
-      },
-    );
+      options,
+      subscribeSelector: (selector, pathListener, pathOptions) =>
+        this.subscribeSelector(selector, pathListener, pathOptions),
+    });
   }
 
   subscribeFieldState<P extends BitPath<T>>(
     path: P,
     listener: (state: Readonly<BitFieldState<T, BitPathValue<T, P>>>) => void,
   ): () => void {
-    return this.subscribeSelector(
-      () =>
-        this.getFieldState(path) as Readonly<
-          BitFieldState<T, BitPathValue<T, P>>
-        >,
+    return subscribeStoreFieldState({
+      path,
       listener,
-      {
-        paths: [path as string],
-        equalityFn: (prev, next) =>
-          prev.value === next.value &&
-          prev.error === next.error &&
-          prev.touched === next.touched &&
-          prev.isHidden === next.isHidden &&
-          prev.isRequired === next.isRequired &&
-          prev.isDirty === next.isDirty &&
-          prev.isValidating === next.isValidating,
-      },
-    );
+      getFieldState: (fieldPath) => this.getFieldState(fieldPath),
+      subscribeSelector: (selector, fieldStateListener, fieldStateOptions) =>
+        this.subscribeSelector(selector, fieldStateListener, fieldStateOptions),
+    });
   }
 
   subscribeFormMeta(listener: (meta: BitFormMeta) => void): () => void {
-    return this.subscribeSelector(
-      (state) => ({
-        isValid: state.isValid,
-        isDirty: state.isDirty,
-        isSubmitting: state.isSubmitting,
-      }),
+    return subscribeStoreFormMeta({
       listener,
-      {
-        paths: ["isValid", "isDirty", "isSubmitting"],
-        equalityFn: (prev, next) =>
-          prev.isValid === next.isValid &&
-          prev.isDirty === next.isDirty &&
-          prev.isSubmitting === next.isSubmitting,
-      },
-    );
+      subscribeSelector: (selector, metaListener, metaOptions) =>
+        this.subscribeSelector(selector, metaListener, metaOptions),
+    });
   }
 
   setField<P extends BitPath<T>>(path: P, value: BitPathValue<T, P>) {

@@ -55,6 +55,29 @@ O servidor de DevTools da CLI foi quebrado em:
 - `src/cli/devtools-relay.ts`
 - `src/cli/server.ts` como composição fina
 
+### 6. Extração de observe-ops do BitStore
+
+Parte da orquestração de subscriptions foi movida para:
+
+- `src/core/store/orchestration/store-observe-ops.ts`
+
+Com isso, `BitStore` passa a delegar operações de:
+
+- selector subscriptions
+- tracked subscriptions
+- path subscriptions
+- field-state subscriptions
+- form-meta subscriptions
+
+### 7. Guardrail de fronteira arquitetural
+
+Foi adicionado um teste de arquitetura em:
+
+- `src/tests/core/architecture-boundaries.test.ts`
+
+Esse teste impede regressão de fronteira, garantindo que `src/devtools/**` e `src/cli/**`
+não importem contratos internos de `core/store/contracts/*`.
+
 ## Próximas fases sugeridas
 
 1. reduzir responsabilidades de `BitStore`
