@@ -119,10 +119,18 @@ O teste de fronteira arquitetural também passou a validar que adapters/framewor
 e tooling (`react`, `react-native`, `vue`, `angular`, `devtools`, `cli`) não importem
 `core/store/*` diretamente.
 
+### 12. Extração de feature-ops do BitStore
+
+As operações de persistência e histórico foram extraídas para:
+
+- `src/core/store/orchestration/store-feature-ops.ts`
+
+Com isso, `BitStore` delega:
+
+- `restorePersisted`, `forceSave`, `clearPersisted`
+- `undo`, `redo`, `getHistoryMetadata`
+
 ## Próximas fases sugeridas
 
-1. reduzir responsabilidades de `BitStore`
-2. separar `core public API` de `core runtime internals`
-3. consolidar também os field bindings em um runtime compartilhado
-4. introduzir testes de fronteira de imports por camada
-5. formalizar subpaths extras para contratos de inspeção/devtools
+1. separar `core public API` de `core runtime internals`
+2. consolidar também os field bindings em um runtime compartilhado

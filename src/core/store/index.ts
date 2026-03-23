@@ -71,12 +71,15 @@ import {
   unregisterStoreField,
   unregisterStorePrefix,
 } from "./orchestration/store-registration-ops";
+import { applyStorePersistedValues } from "./orchestration/store-persist-ops";
 import {
-  applyStorePersistedValues,
-  clearStorePersisted,
-  forceStorePersistedSave,
-  restoreStorePersisted,
-} from "./orchestration/store-persist-ops";
+  clearPersistedFeature,
+  forceSavePersistedFeature,
+  readHistoryFeatureMetadata,
+  restorePersistedFeature,
+  runRedoFeature,
+  runUndoFeature,
+} from "./orchestration/store-feature-ops";
 export class BitStore<T extends object = any> {
   public readonly [BIT_HOOKS_API_SYMBOL] = true;
 
@@ -445,21 +448,21 @@ export class BitStore<T extends object = any> {
   }
 
   async restorePersisted(): Promise<boolean> {
-    return restoreStorePersisted({
+    return restorePersistedFeature({
       dispatch: (operation) => this.dispatch(operation),
       effects: this.effects,
     });
   }
 
   async forceSave(): Promise<void> {
-    return forceStorePersistedSave({
+    return forceSavePersistedFeature({
       dispatch: (operation) => this.dispatch(operation),
       effects: this.effects,
     });
   }
 
   async clearPersisted(): Promise<void> {
-    return clearStorePersisted({
+    return clearPersistedFeature({
       dispatch: (operation) => this.dispatch(operation),
       effects: this.effects,
     });
@@ -512,21 +515,21 @@ export class BitStore<T extends object = any> {
   }
 
   undo() {
-    const prevState = this._history.undo();
-    if (prevState) {
-      this._lifecycle.applyHistoryState(prevState);
-    }
+    runUndoFeature({
+      history: this._history,
+      applyHistoryState: (values) => this._lifecycle.applyHistoryState(values),
+    });
   }
 
   redo() {
-    const nextState = this._history.redo();
-    if (nextState) {
-      this._lifecycle.applyHistoryState(nextState);
-    }
+    runRedoFeature({
+      history: this._history,
+      applyHistoryState: (values) => this._lifecycle.applyHistoryState(values),
+    });
   }
 
   getHistoryMetadata(): BitHistoryMetadata {
-    return this._history.getMetadata();
+    return readHistoryFeatureMetadata({ history: this._history });
   }
 
   validate(options?: BitValidationOptions): Promise<boolean> {
