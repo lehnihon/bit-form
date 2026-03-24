@@ -1,8 +1,8 @@
 import { inject, InjectionToken, Provider } from "@angular/core";
-import type { BitFormBindingApi } from "../core";
+import type { BitFrameworkStoreApi } from "../core";
 import { createFrameworkStoreAdapter } from "../core";
 
-export const BIT_STORE_TOKEN = new InjectionToken<BitFormBindingApi<any>>(
+export const BIT_STORE_TOKEN = new InjectionToken<BitFrameworkStoreApi<any>>(
   "BIT_STORE",
 );
 
@@ -23,5 +23,5 @@ export function useBitStore<T extends object>() {
     );
   }
 
-  return store as BitFormBindingApi<T>;
+  return store as BitFrameworkStoreApi<T>;
 }

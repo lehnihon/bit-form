@@ -1,5 +1,5 @@
 import { executeSubmitHandler } from "./submit-handler";
-import type { BitFormBindingApi } from "./public-types";
+import type { BitFrameworkStoreApi } from "./store/contracts/public-types";
 
 export type BitFormDomEvent = {
   preventDefault?: () => void;
@@ -27,7 +27,7 @@ export function preventFormEvent(
 }
 
 export function createFormController<T extends object>(
-  store: BitFormBindingApi<T>,
+  store: BitFrameworkStoreApi<T>,
   runtime: BitFormControllerRuntime,
   options?: BitFormControllerOptions,
 ) {

@@ -3,7 +3,7 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { TestBed } from "@angular/core/testing";
 import { Component, DestroyRef } from "@angular/core";
-import { BitStore } from "../../../core/store";
+import { createBitStore } from "../../../core";
 import { maskBRL } from "../../../mask";
 import {
   injectBitField,
@@ -35,10 +35,10 @@ class HostComponent {
 }
 
 describe("Angular Integration (Signals)", () => {
-  let store: BitStore<MyForm>;
+  let store: ReturnType<typeof createBitStore<MyForm>>;
 
   beforeEach(() => {
-    store = new BitStore<MyForm>({
+    store = createBitStore<MyForm>({
       initialValues: {
         user: { name: "Leo" },
         salary: 10,
@@ -228,7 +228,7 @@ describe("Angular Integration (Signals)", () => {
   });
 
   it("deve validar campos dinamicamente com Signals e resolver", async () => {
-    const storeWithResolver = new BitStore<MyForm>({
+    const storeWithResolver = createBitStore<MyForm>({
       initialValues: {
         user: { name: "" },
         salary: 0,
@@ -261,7 +261,7 @@ describe("Angular Integration (Signals)", () => {
   });
 
   it("deve rastrear status do scope com injectBitScope", () => {
-    const storeWithScopes = new BitStore<MyForm>({
+    const storeWithScopes = createBitStore<MyForm>({
       initialValues: {
         user: { name: "" },
         salary: 0,
@@ -305,7 +305,7 @@ describe("Angular Integration (Signals)", () => {
   });
 
   it("deve navegar entre steps com injectBitSteps", async () => {
-    const storeWithScopes = new BitStore<MyForm>({
+    const storeWithScopes = createBitStore<MyForm>({
       initialValues: {
         user: { name: "" },
         salary: 0,
@@ -374,7 +374,7 @@ describe("Angular Integration (Signals)", () => {
 
     it("deve expor restore, save, clear e meta como signals", async () => {
       const storage = createMockStorage();
-      const persistStore = new BitStore<MyForm>({
+      const persistStore = createBitStore<MyForm>({
         initialValues: {
           user: { name: "Leo" },
           salary: 0,
@@ -405,7 +405,7 @@ describe("Angular Integration (Signals)", () => {
 
     it("deve salvar e restaurar valores", async () => {
       const storage = createMockStorage();
-      const persistStore = new BitStore<MyForm>({
+      const persistStore = createBitStore<MyForm>({
         initialValues: {
           user: { name: "Leo" },
           salary: 0,

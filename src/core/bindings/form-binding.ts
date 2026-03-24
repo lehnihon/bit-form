@@ -1,12 +1,12 @@
 import { createFormController } from "../form-controller";
-import type { BitFormBindingApi } from "../public-types";
+import type { BitFrameworkStoreApi } from "../store/contracts/public-types";
 import type {
   BitFormControllerOptions,
   BitFormControllerRuntime,
 } from "../form-controller";
 
 export function createFrameworkFormBinding<T extends object>(
-  store: BitFormBindingApi<T>,
+  store: BitFrameworkStoreApi<T>,
   runtime: BitFormControllerRuntime,
   options?: BitFormControllerOptions,
 ) {

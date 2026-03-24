@@ -5,19 +5,19 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { renderHook, act, waitFor } from "@testing-library/react";
 import { useBitUpload, BitFormProvider } from "bit-form/react";
 import type { BitUploadFn } from "../../../core/types/upload";
-import { BitStore } from "../../../core/store";
+import { createBitStore } from "../../../core";
 
 describe("useBitUpload (React)", () => {
   let mockUpload: ReturnType<typeof vi.fn> & BitUploadFn;
   let mockDelete: ReturnType<typeof vi.fn>;
-  let store: BitStore<any>;
+  let store: ReturnType<typeof createBitStore<any>>;
 
   const wrapper = ({ children, testStore }: any) => (
     <BitFormProvider store={testStore}>{children}</BitFormProvider>
   );
 
   beforeEach(() => {
-    store = new BitStore({
+    store = createBitStore({
       initialValues: { avatar: undefined },
       validation: { delay: 0 },
     });

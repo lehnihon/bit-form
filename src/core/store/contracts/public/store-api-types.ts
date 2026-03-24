@@ -101,6 +101,10 @@ export interface BitStoreWriteApi<T extends object = any> {
   ): Promise<BitSubmitResult>;
 }
 
+export interface BitStoreLifecycleApi {
+  cleanup(): void;
+}
+
 export interface BitStorePersistFeatureApi {
   getPersistMetadata(): BitPersistMetadata;
   restorePersisted(): Promise<boolean>;
@@ -109,8 +113,6 @@ export interface BitStorePersistFeatureApi {
 }
 
 export interface BitStoreRegistrationFeatureApi<T extends object = any> {
-  cleanup(): void;
-
   registerField(path: string, config: BitFieldDefinition<T>): void;
   unregisterField(path: string): void;
 }
@@ -153,96 +155,7 @@ export interface BitFormMetaBindingApi<T extends object = any> {
   subscribeFormMeta(listener: (meta: BitFormMeta) => void): () => void;
 }
 
-export interface BitFieldBindingApi<T extends object = any> {
-  getFieldState<P extends BitPath<T>>(
-    path: P,
-  ): Readonly<BitFieldState<T, BitPathValue<T, P>>>;
-  subscribeFieldState<P extends BitPath<T>>(
-    path: P,
-    listener: (state: Readonly<BitFieldState<T, BitPathValue<T, P>>>) => void,
-  ): () => void;
-
-  setField<P extends BitPath<T>>(path: P, value: BitPathValue<T, P>): void;
-  blurField<P extends BitPath<T>>(path: P): void;
-  resolveMask(path: string): BitMask | undefined;
-  unregisterField?(path: string): void;
-}
-
-export interface BitArrayBindingApi<T extends object = any> extends Pick<
-  BitFormBindingApi<T>,
-  | "getState"
-  | "setField"
-  | "subscribePath"
-  | "pushItem"
-  | "prependItem"
-  | "insertItem"
-  | "removeItem"
-  | "moveItem"
-  | "swapItems"
-  | "replaceItems"
-  | "clearItems"
-  | "createArrayItemId"
-> {}
-
-export interface BitStoreFeatureApi<T extends object = any>
-  extends
-    BitStorePersistFeatureApi,
-    BitStoreRegistrationFeatureApi<T>,
-    BitStoreArrayFeatureApi<T>,
-    BitStoreHistoryFeatureApi {}
-
-export interface BitStoreApi<T extends object = any>
-  extends
-    BitStoreQueryApi<T>,
-    BitStoreObserveApi<T>,
-    BitStoreWriteApi<T>,
-    BitStoreFeatureApi<T> {}
-
-export interface BitStoreHooksApi<
-  T extends object = any,
-> extends BitStoreApi<T> {
-  getFieldState<P extends BitPath<T>>(
-    path: P,
-  ): Readonly<BitFieldState<T, BitPathValue<T, P>>>;
-  subscribeFieldState<P extends BitPath<T>>(
-    path: P,
-    listener: (state: Readonly<BitFieldState<T, BitPathValue<T, P>>>) => void,
-  ): () => void;
-  subscribeFormMeta(listener: (meta: BitFormMeta) => void): () => void;
-  subscribePath<P extends BitPath<T>>(
-    path: P,
-    listener: (value: BitPathValue<T, P>) => void,
-    options?: BitSelectorSubscriptionOptions<BitPathValue<T, P>>,
-  ): () => void;
-  subscribeSelector<TSlice>(
-    selector: BitSelector<T, TSlice>,
-    listener: (slice: TSlice) => void,
-    options?: BitSelectorSubscriptionOptions<TSlice>,
-  ): () => void;
-  subscribeTracked<TSlice>(
-    selector: BitSelector<T, TSlice>,
-    listener: (slice: TSlice) => void,
-    options?: Omit<BitSelectorSubscriptionOptions<TSlice>, "paths">,
-  ): () => void;
-  unregisterPrefix?(prefix: string): void;
-  markFieldsTouched(paths: string[]): void;
-  hasValidationsInProgress(scopeFields?: string[]): boolean;
-  resolveMask(path: string): BitMask | undefined;
-  getScopeFields(scopeName: string): string[];
-  createArrayItemId(path: string, index?: number): string;
-}
-
-export interface BitFormBindingApi<T extends object = any> {
-  getFieldState<P extends BitPath<T>>(
-    path: P,
-  ): Readonly<BitFieldState<T, BitPathValue<T, P>>>;
-  subscribeFieldState<P extends BitPath<T>>(
-    path: P,
-    listener: (state: Readonly<BitFieldState<T, BitPathValue<T, P>>>) => void,
-  ): () => void;
-
-  getState(): Readonly<BitState<T>>;
-  subscribeFormMeta(listener: (meta: BitFormMeta) => void): () => void;
+export interface BitStoreSelectorBindingApi<T extends object = any> {
   subscribe(listener: () => void): () => void;
   subscribePath<P extends BitPath<T>>(
     path: P,
@@ -259,17 +172,27 @@ export interface BitFormBindingApi<T extends object = any> {
     listener: (slice: TSlice) => void,
     options?: Omit<BitSelectorSubscriptionOptions<TSlice>, "paths">,
   ): () => void;
+}
+
+export interface BitFieldBindingApi<T extends object = any> {
+  getFieldState<P extends BitPath<T>>(
+    path: P,
+  ): Readonly<BitFieldState<T, BitPathValue<T, P>>>;
+  subscribeFieldState<P extends BitPath<T>>(
+    path: P,
+    listener: (state: Readonly<BitFieldState<T, BitPathValue<T, P>>>) => void,
+  ): () => void;
 
   setField<P extends BitPath<T>>(path: P, value: BitPathValue<T, P>): void;
   blurField<P extends BitPath<T>>(path: P): void;
-
-  registerField?(path: string, config: BitFieldDefinition<T>): void;
-  unregisterField?(path: string): void;
-  unregisterPrefix?(prefix: string): void;
-  markFieldsTouched(paths: string[]): void;
-
   resolveMask(path: string): BitMask | undefined;
+  unregisterField(path: string): void;
+}
 
+export interface BitFormActionBindingApi<T extends object = any> {
+  getState(): Readonly<BitState<T>>;
+  setField<P extends BitPath<T>>(path: P, value: BitPathValue<T, P>): void;
+  blurField<P extends BitPath<T>>(path: P): void;
   submit(
     onSuccess: (values: T, dirtyValues?: Partial<T>) => void | Promise<void>,
   ): Promise<BitSubmitResult>;
@@ -283,7 +206,22 @@ export interface BitFormBindingApi<T extends object = any> {
     options?: { partial?: boolean; rebase?: boolean },
   ): void;
   transaction<TResult>(callback: () => TResult): TResult;
+}
 
+export interface BitFieldRegistrationBindingApi<T extends object = any> {
+  registerField(path: string, config: BitFieldDefinition<T>): void;
+  unregisterField(path: string): void;
+  unregisterPrefix(prefix: string): void;
+  markFieldsTouched(paths: string[]): void;
+}
+
+export interface BitDirtyTrackingBindingApi<T extends object = any> {
+  getDirtyValues(): Partial<T>;
+}
+
+export interface BitArrayMutationBindingApi<T extends object = any> {
+  getState(): Readonly<BitState<T>>;
+  setField<P extends BitPath<T>>(path: P, value: BitPathValue<T, P>): void;
   pushItem<P extends BitArrayPath<T>>(
     path: P,
     value: BitArrayItem<BitPathValue<T, P>>,
@@ -309,30 +247,84 @@ export interface BitFormBindingApi<T extends object = any> {
     items: BitArrayItem<BitPathValue<T, P>>[],
   ): void;
   clearItems<P extends BitArrayPath<T>>(path: P): void;
+  createArrayItemId(path: string, index?: number): string;
+}
 
+export interface BitArrayBindingApi<T extends object = any>
+  extends
+    BitArrayMutationBindingApi<T>,
+    Pick<BitStoreSelectorBindingApi<T>, "subscribePath"> {}
+
+export interface BitHistoryBindingApi {
   undo(): void;
   redo(): void;
   getHistoryMetadata(): BitHistoryMetadata;
+  subscribeHistoryMeta(
+    listener: (meta: BitHistoryMetadata) => void,
+  ): () => void;
+}
 
+export interface BitPersistBindingApi {
   getPersistMetadata(): BitPersistMetadata;
   restorePersisted(): Promise<boolean>;
   forceSave(): Promise<void>;
   clearPersisted(): Promise<void>;
+  subscribePersistMeta(
+    listener: (meta: BitPersistMetadata) => void,
+  ): () => void;
+}
 
-  getDirtyValues(): Partial<T>;
+export interface BitScopeBindingApi<T extends object = any> {
   hasValidationsInProgress(scopeFields?: string[]): boolean;
   getScopeFields(scopeName: string): string[];
   getScopeStatus(scopeName: string): ScopeStatus;
   getStepErrors(scopeName: string): Record<string, string>;
-  subscribePersistMeta(
-    listener: (meta: BitPersistMetadata) => void,
-  ): () => void;
-  subscribeHistoryMeta(
-    listener: (meta: BitHistoryMetadata) => void,
-  ): () => void;
   subscribeScopeStatus(
     scopeName: string,
     listener: (status: ScopeStatus) => void,
   ): () => void;
+}
+
+export interface BitFrameworkStoreApi<T extends object = any>
+  extends
+    BitFieldBindingApi<T>,
+    BitFormMetaBindingApi<T>,
+    BitStoreSelectorBindingApi<T>,
+    BitFormActionBindingApi<T>,
+    BitFieldRegistrationBindingApi<T>,
+    BitDirtyTrackingBindingApi<T>,
+    BitArrayMutationBindingApi<T>,
+    BitHistoryBindingApi,
+    BitPersistBindingApi,
+    BitScopeBindingApi<T> {}
+
+export interface BitStoreFeatureApi<T extends object = any>
+  extends
+    BitStoreLifecycleApi,
+    BitStorePersistFeatureApi,
+    BitStoreRegistrationFeatureApi<T>,
+    BitStoreArrayFeatureApi<T>,
+    BitStoreHistoryFeatureApi {}
+
+export interface BitStoreApi<T extends object = any>
+  extends
+    BitStoreQueryApi<T>,
+    BitStoreObserveApi<T>,
+    BitStoreWriteApi<T>,
+    BitStoreFeatureApi<T> {}
+
+export interface BitStoreHooksApi<T extends object = any>
+  extends
+    BitStoreApi<T>,
+    BitFieldBindingApi<T>,
+    BitFormMetaBindingApi<T>,
+    BitStoreSelectorBindingApi<T>,
+    BitFieldRegistrationBindingApi<T>,
+    BitScopeBindingApi<T> {
+  resolveMask(path: string): BitMask | undefined;
   createArrayItemId(path: string, index?: number): string;
 }
+
+export interface BitFormBindingApi<
+  T extends object = any,
+> extends BitFrameworkStoreApi<T> {}

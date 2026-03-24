@@ -69,27 +69,28 @@ describe("architecture boundaries", () => {
     expect(violations).toEqual([]);
   });
 
-  it("core fora de store runtime não deve importar store/contracts diretamente", () => {
+  it("core fora de contracts não deve depender do wrapper public-types", () => {
     const coreRoot = path.join(SRC_ROOT, "core");
     const sourceFiles = walkTsFiles(coreRoot).filter((filePath) => {
       const relative = path.relative(coreRoot, filePath);
 
-      if (relative.startsWith(`store${path.sep}`)) {
+      if (relative.endsWith("public-types.ts")) {
         return false;
       }
 
-      if (
-        relative === "index.ts" ||
-        relative === "public-types.ts" ||
-        relative === "bus-types.ts"
-      ) {
+      if (relative === "index.ts") {
+        return false;
+      }
+
+      if (relative === `store${path.sep}contracts${path.sep}port-types.ts`) {
         return false;
       }
 
       return true;
     });
 
-    const forbiddenImportPattern = /from\s+["'][^"']*store\/contracts\//g;
+    const forbiddenImportPattern =
+      /from\s+["'](?:\.\/|\.\.\/)+public-types["']/g;
 
     const violations = sourceFiles.flatMap((filePath) => {
       const source = fs.readFileSync(filePath, "utf8");
@@ -99,5 +100,34 @@ describe("architecture boundaries", () => {
     });
 
     expect(violations).toEqual([]);
+  });
+
+  it("testes de framework/integration não devem importar core/store internamente", () => {
+    const targetDirs = [
+      path.join(SRC_ROOT, "tests", "frameworks"),
+      path.join(SRC_ROOT, "tests", "integration"),
+    ];
+
+    const sourceFiles = targetDirs.flatMap((dir) => walkTsFiles(dir));
+
+    const forbiddenImportPattern = /from\s+["'][^"']*core\/store\//g;
+
+    const violations = sourceFiles.flatMap((filePath) => {
+      const source = fs.readFileSync(filePath, "utf8");
+      const hasViolation = forbiddenImportPattern.test(source);
+
+      return hasViolation ? [path.relative(SRC_ROOT, filePath)] : [];
+    });
+
+    expect(violations).toEqual([]);
+  });
+
+  it("package root deve permanecer curado e não espelhar contratos avançados de core", () => {
+    const rootEntry = fs.readFileSync(path.join(SRC_ROOT, "index.ts"), "utf8");
+
+    expect(rootEntry).not.toMatch(/BitFormBindingApi/);
+    expect(rootEntry).not.toMatch(/BitFieldBindingApi/);
+    expect(rootEntry).not.toMatch(/BitArrayBindingApi/);
+    expect(rootEntry).not.toMatch(/BitStoreQueryApi/);
   });
 });

@@ -1,4 +1,4 @@
-import type { BitHistoryMetadata } from "./public-types";
+import type { BitHistoryMetadata } from "./store/contracts/public-types";
 
 /**
  * Subconjunto relevante de BitHistoryMetadata para comparação de igualdade.

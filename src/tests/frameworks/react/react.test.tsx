@@ -3,7 +3,7 @@
 import React from "react";
 import { describe, it, expect, vi } from "vitest";
 import { renderHook, act } from "@testing-library/react";
-import { BitStore } from "../../../core/store";
+import { createBitStore } from "../../../core";
 import { maskBRL } from "../../../mask";
 import {
   BitFormProvider,
@@ -34,7 +34,7 @@ describe("React Integration (Context + Hooks)", () => {
     fields?: Record<string, any>,
     masks?: Record<string, any>,
   ) =>
-    new BitStore<MyForm>({
+    createBitStore<MyForm>({
       initialValues: {
         salary: 10,
         user: { firstName: "Leandro", lastName: "Ishikawa" },
@@ -258,7 +258,7 @@ describe("React Integration (Context + Hooks)", () => {
     });
 
     it("deve expor undo/redo e metadados no useBitHistory", async () => {
-      const store = new BitStore<MyForm>({
+      const store = createBitStore<MyForm>({
         initialValues: {
           salary: 10,
           user: { firstName: "Leandro", lastName: "Ishikawa" },
@@ -407,7 +407,7 @@ describe("React Integration (Context + Hooks)", () => {
 
   describe("Scope Validation (useBitScope)", () => {
     it("deve rastrear status do step com reatividade e expor validateStep", async () => {
-      const store = new BitStore<MyForm>({
+      const store = createBitStore<MyForm>({
         initialValues: {
           salary: 10,
           user: { firstName: "", lastName: "" },
@@ -464,7 +464,7 @@ describe("React Integration (Context + Hooks)", () => {
 
   describe("Wizard Steps (useBitSteps)", () => {
     it("deve navegar entre steps e validar antes de avançar", async () => {
-      const store = new BitStore<MyForm>({
+      const store = createBitStore<MyForm>({
         initialValues: {
           salary: 10,
           user: { firstName: "", lastName: "" },
@@ -526,7 +526,7 @@ describe("React Integration (Context + Hooks)", () => {
     it("deve bloquear next enquanto o scope atual estiver validando assincronamente", async () => {
       vi.useFakeTimers();
 
-      const store = new BitStore<{ name: string; email: string }>({
+      const store = createBitStore<{ name: string; email: string }>({
         initialValues: { name: "", email: "" },
         fields: {
           name: {
@@ -593,7 +593,7 @@ describe("React Integration (Context + Hooks)", () => {
 
     it("deve expor restore, save, clear e meta", async () => {
       const storage = createMockStorage();
-      const store = new BitStore<MyForm>({
+      const store = createBitStore<MyForm>({
         initialValues: {
           salary: 0,
           user: { firstName: "", lastName: "" },
@@ -619,7 +619,7 @@ describe("React Integration (Context + Hooks)", () => {
 
     it("deve salvar com save() e restaurar com restore()", async () => {
       const storage = createMockStorage();
-      const store = new BitStore<MyForm>({
+      const store = createBitStore<MyForm>({
         initialValues: {
           salary: 0,
           user: { firstName: "Leo", lastName: "" },
@@ -648,7 +648,7 @@ describe("React Integration (Context + Hooks)", () => {
       const storage = createMockStorage();
       storage._data["react-test"] = JSON.stringify({ salary: 999 });
 
-      const store = new BitStore<MyForm>({
+      const store = createBitStore<MyForm>({
         initialValues: {
           salary: 0,
           user: { firstName: "", lastName: "" },
