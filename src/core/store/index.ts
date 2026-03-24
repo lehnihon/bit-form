@@ -1,5 +1,5 @@
 import { BitMask } from "../mask/types";
-import { getDeepValue } from "../utils";
+import { getDeepValue, setDeepValues, valueEqual } from "../utils";
 import {
   BitArrayItem,
   BitArrayPath,
@@ -19,6 +19,9 @@ import {
 } from "./contracts/types";
 import type {
   BitFormMeta,
+  BitStoreFeatureApi,
+  BitStoreQueryApi,
+  BitStoreWriteApi,
   BitFrameworkConfig,
   BitHistoryMetadata,
   BitSelector,
@@ -75,6 +78,10 @@ export class BitStore<T extends object = any> {
   private readonly maskManager: BitMaskManager;
   private readonly _config: BitFrameworkConfig<T>;
   private _initialValues!: T;
+
+  public readonly queryFacade!: BitStoreQueryApi<T>;
+  public readonly writeFacade!: BitStoreWriteApi<T>;
+  public readonly featureFacade!: BitStoreFeatureApi<T>;
 
   public readonly storeId: string;
   get config(): Readonly<BitFrameworkConfig<T>> {
@@ -174,9 +181,55 @@ export class BitStore<T extends object = any> {
       effects,
       capabilities: runtime.capabilities,
       computedManager: this.computedManager,
+      applyPostBatchValues: (values) => this.applyPostBatchValues(values),
     });
 
     this.runtime = runtimeKernel;
+    this.queryFacade = {
+      getConfig: () => this.getConfig(),
+      getState: () => this.getState(),
+      isHidden: (path) => this.isHidden(path),
+      isRequired: (path) => this.isRequired(path),
+      isFieldDirty: (path) => this.isFieldDirty(path),
+      isFieldValidating: (path) => this.isFieldValidating(path),
+      getDirtyValues: () => this.getDirtyValues(),
+      getPersistMetadata: () => this.getPersistMetadata(),
+      getHistoryMetadata: () => this.getHistoryMetadata(),
+      getScopeStatus: (scopeName) => this.getScopeStatus(scopeName),
+      getStepErrors: (scopeName) => this.getStepErrors(scopeName),
+    };
+
+    this.writeFacade = {
+      setField: (path, value) => this.setField(path, value),
+      blurField: (path) => this.blurField(path),
+      setValues: (values, options) => this.setValues(values, options),
+      setError: (path, message) => this.setError(path, message),
+      setErrors: (errors) => this.setErrors(errors),
+      setServerErrors: (serverErrors) => this.setServerErrors(serverErrors),
+      validate: (options) => this.validate(options),
+      reset: () => this.reset(),
+      transaction: (callback) => this.transaction(callback),
+      submit: (onSuccess) => this.submit(onSuccess),
+    };
+
+    this.featureFacade = {
+      getPersistMetadata: () => this.getPersistMetadata(),
+      restorePersisted: () => this.restorePersisted(),
+      forceSave: () => this.forceSave(),
+      clearPersisted: () => this.clearPersisted(),
+      cleanup: () => this.cleanup(),
+      registerField: (path, config) => this.registerField(path, config),
+      unregisterField: (path) => this.unregisterField(path),
+      pushItem: (path, value) => this.pushItem(path, value),
+      prependItem: (path, value) => this.prependItem(path, value),
+      insertItem: (path, index, value) => this.insertItem(path, index, value),
+      removeItem: (path, index) => this.removeItem(path, index),
+      moveItem: (path, from, to) => this.moveItem(path, from, to),
+      swapItems: (path, indexA, indexB) => this.swapItems(path, indexA, indexB),
+      undo: () => this.undo(),
+      redo: () => this.redo(),
+    };
+
     this.runtime.saveHistorySnapshot();
   }
 
@@ -198,6 +251,30 @@ export class BitStore<T extends object = any> {
 
   private getTransformEntries(): [string, BitTransformFn<T>][] {
     return this.fieldRegistry.getTransformEntries();
+  }
+
+  private applyPostBatchValues(values: T): T {
+    const transforms = this.getTransformEntries();
+    if (transforms.length === 0) {
+      return values;
+    }
+
+    const updates: Array<[string, unknown]> = [];
+
+    for (const [path, transformer] of transforms) {
+      const currentValue = getDeepValue(values, path);
+      const transformedValue = transformer(currentValue, values);
+
+      if (!valueEqual(currentValue, transformedValue)) {
+        updates.push([path, transformedValue]);
+      }
+    }
+
+    if (updates.length === 0) {
+      return values;
+    }
+
+    return setDeepValues(values, updates);
   }
 
   resolveMask(path: string): BitMask | undefined {

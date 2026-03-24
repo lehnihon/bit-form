@@ -162,18 +162,26 @@ export function flushStoreKernelBatch<T extends object>(args: {
   state: BitState<T>;
   batchState: BitStoreBatchState<T>;
   applyComputedValues: (values: T, changedPaths?: readonly string[]) => T;
+  applyPostBatchValues?: (values: T) => T;
   onStateCommitted: (payload: {
     nextState: BitState<T>;
     changedPaths?: Iterable<string>;
     valuesChanged: boolean;
   }) => void;
 }): BitState<T> {
-  const { state, batchState, applyComputedValues, onStateCommitted } = args;
+  const {
+    state,
+    batchState,
+    applyComputedValues,
+    applyPostBatchValues,
+    onStateCommitted,
+  } = args;
 
   const flushResult = flushStoreBatchState({
     currentState: state,
     batchState,
     applyComputedValues,
+    applyPostBatchValues,
   });
 
   if (!flushResult) {
