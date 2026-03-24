@@ -49,5 +49,6 @@ export function normalizeConfig<T extends object>(
     scheduler: config.scheduler,
     subscriptionCacheSize: config.subscriptionCacheSize,
     bus: config.bus,
+    onUnhandledError: config.onUnhandledError,
   } as BitFrameworkConfig<T>;
 }

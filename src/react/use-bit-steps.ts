@@ -12,7 +12,7 @@ export function useBitSteps(scopeNames: string[]): UseBitStepsResult {
   const lastStatus = useRef<ScopeStatus | null>(null);
 
   const getStatusSnapshot = useCallback(() => {
-    const nextStatus = store.getStepStatus(scope);
+    const nextStatus = store.getScopeStatus(scope);
 
     if (
       lastStatus.current &&

@@ -1,7 +1,4 @@
-import {
-  createFormController,
-  createStoreFormActions,
-} from "../form-controller";
+import { createFormController } from "../form-controller";
 import type { BitFormBindingApi } from "../public-types";
 import type {
   BitFormControllerOptions,
@@ -15,6 +12,15 @@ export function createFrameworkFormBinding<T extends object>(
 ) {
   return {
     controller: createFormController(store, runtime, options),
-    actions: createStoreFormActions(store),
+    actions: {
+      setField: store.setField.bind(store),
+      blurField: store.blurField.bind(store),
+      setValues: store.setValues.bind(store),
+      setError: store.setError.bind(store),
+      setErrors: store.setErrors.bind(store),
+      setServerErrors: store.setServerErrors.bind(store),
+      validate: store.validate.bind(store),
+      transaction: store.transaction.bind(store),
+    },
   };
 }

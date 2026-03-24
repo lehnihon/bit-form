@@ -17,6 +17,7 @@ import {
   BitPersistMetadata,
   BitIdFactory,
   BitScheduler,
+  BitSubmitResult,
 } from "../types";
 import { BitMask, BitMaskName } from "../../../mask/types";
 import type { BitFormGlobal } from "../bus-types";
@@ -59,7 +60,7 @@ export interface BitStoreQueryApi<T extends object = any> {
   getDirtyValues(): Partial<T>;
   getPersistMetadata(): BitPersistMetadata;
   getHistoryMetadata(): BitHistoryMetadata;
-  getStepStatus(scopeName: string): ScopeStatus;
+  getScopeStatus(scopeName: string): ScopeStatus;
   getStepErrors(scopeName: string): Record<string, string>;
 }
 
@@ -97,7 +98,7 @@ export interface BitStoreWriteApi<T extends object = any> {
 
   submit(
     onSuccess: (values: T, dirtyValues?: Partial<T>) => void | Promise<void>,
-  ): Promise<void>;
+  ): Promise<BitSubmitResult>;
 }
 
 export interface BitStorePersistFeatureApi {
@@ -264,7 +265,7 @@ export interface BitFormBindingApi<T extends object = any> {
 
   submit(
     onSuccess: (values: T, dirtyValues?: Partial<T>) => void | Promise<void>,
-  ): Promise<void>;
+  ): Promise<BitSubmitResult>;
   reset(): void;
   validate(options?: BitValidationOptions): Promise<boolean>;
   setError(path: string, message: string | undefined): void;
@@ -309,7 +310,7 @@ export interface BitFormBindingApi<T extends object = any> {
   getDirtyValues(): Partial<T>;
   hasValidationsInProgress(scopeFields?: string[]): boolean;
   getScopeFields(scopeName: string): string[];
-  getStepStatus(scopeName: string): ScopeStatus;
+  getScopeStatus(scopeName: string): ScopeStatus;
   getStepErrors(scopeName: string): Record<string, string>;
   subscribePersistMeta(
     listener: (meta: BitPersistMetadata) => void,

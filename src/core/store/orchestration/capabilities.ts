@@ -6,10 +6,7 @@ import type { BitLifecycleManager } from "../managers/features/lifecycle-manager
 import type { BitScopeManager } from "../managers/features/scope-manager";
 import type { BitValidationManager } from "../managers/features/validation-manager";
 
-export interface BitStoreCapabilities<T extends object> extends Record<
-  string,
-  unknown
-> {
+export interface BitStoreCapabilities<T extends object> {
   validation: BitValidationManager<T>;
   lifecycle: BitLifecycleManager<T>;
   history: BitHistoryManager<T>;

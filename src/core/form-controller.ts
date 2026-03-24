@@ -16,35 +16,6 @@ export interface BitFormControllerOptions {
   stopPropagation?: boolean;
 }
 
-export function createStoreFormActions<T extends object>(
-  store: BitFormBindingApi<T>,
-) {
-  return {
-    setField: <P extends Parameters<BitFormBindingApi<T>["setField"]>[0]>(
-      path: P,
-      value: Parameters<BitFormBindingApi<T>["setField"]>[1],
-    ) => store.setField(path, value),
-    blurField: <P extends Parameters<BitFormBindingApi<T>["blurField"]>[0]>(
-      path: P,
-    ) => store.blurField(path),
-    setValues: (
-      values: Parameters<BitFormBindingApi<T>["setValues"]>[0],
-      options?: Parameters<BitFormBindingApi<T>["setValues"]>[1],
-    ) => store.setValues(values, options),
-    setError: (path: string, message: string | undefined) =>
-      store.setError(path, message),
-    setErrors: (errors: Parameters<BitFormBindingApi<T>["setErrors"]>[0]) =>
-      store.setErrors(errors),
-    setServerErrors: (
-      serverErrors: Parameters<BitFormBindingApi<T>["setServerErrors"]>[0],
-    ) => store.setServerErrors(serverErrors),
-    validate: (options?: Parameters<BitFormBindingApi<T>["validate"]>[0]) =>
-      store.validate(options),
-    transaction: <TResult>(callback: () => TResult) =>
-      store.transaction(callback),
-  };
-}
-
 export function preventFormEvent(
   event?: BitFormDomEvent,
   options?: BitFormControllerOptions,
@@ -63,20 +34,20 @@ export function createFormController<T extends object>(
   const submit = (
     onSuccess: (values: T, dirtyValues?: Partial<T>) => void | Promise<void>,
   ) => {
-    return (event?: BitFormDomEvent) => {
+    return async (event?: BitFormDomEvent): Promise<void> => {
       preventFormEvent(event, options);
-      return store.submit(onSuccess);
+      await store.submit(onSuccess);
     };
   };
 
   const onSubmit = (
     handler: (values: T, dirtyValues?: Partial<T>) => Promise<unknown>,
   ) => {
-    return (event?: BitFormDomEvent) => {
+    return async (event?: BitFormDomEvent): Promise<void> => {
       preventFormEvent(event, options);
       runtime.setSubmissionError(null);
 
-      return store.submit(async (values, dirtyValues) => {
+      await store.submit(async (values, dirtyValues) => {
         await executeSubmitHandler(handler, values, dirtyValues, {
           onSuccess: (result) => {
             runtime.setSubmissionResult(result);

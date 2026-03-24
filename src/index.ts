@@ -9,9 +9,6 @@ export {
   deepMerge,
   deepEqual,
   valueEqual,
-  cleanPrefixedKeys,
-  isValidationErrorShape,
-  extractServerErrors,
   createFieldStateSnapshot,
   areFieldSnapshotsEqual,
 } from "./core";

@@ -50,7 +50,7 @@ export function deepMerge<T>(target: T, source: any): T {
 
 /**
  * Fast equality for single values. Uses === for primitives, deepEqual for objects/arrays.
- * Prefer over deepEqual when comparing a single field value (e.g. isFieldDirty, getStepStatus).
+ * Prefer over deepEqual when comparing a single field value (e.g. isFieldDirty, getScopeStatus).
  */
 export function valueEqual(a: any, b: any): boolean {
   if (a === b) return true;

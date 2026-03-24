@@ -17,17 +17,21 @@ export type {
   BitFormMetaBindingApi,
   BitFieldBindingApi,
   BitArrayBindingApi,
-  BitFormMeta,
   BitFrameworkConfig,
+} from "./store/contracts/public/store-api-types";
+export type {
   BitValidationOptions,
   BitHistoryMetadata,
-  BitPersistMetadata,
+  BitFormMeta,
+} from "./store/contracts/public/meta-types";
+export type {
   BitSelector,
   BitEqualityFn,
   BitSelectorSubscriptionOptions,
-} from "./public-types";
+} from "./store/contracts/public/subscription-types";
+export type { BitPersistMetadata } from "./store/contracts/types";
 
-export { bitBus, createBitBus } from "./bus";
+export { bitBus, createBitBus } from "./store/shared/bus";
 
 export {
   getDeepValue,
@@ -83,9 +87,14 @@ export type {
   BitAfterValidateEvent,
   BitBeforeSubmitEvent,
   BitAfterSubmitEvent,
-} from "./public-types";
+  BitSubmitResult,
+} from "./store/contracts/types";
 
-export type { BitFormGlobal, BitBus, BitBusListener } from "./bus";
+export type {
+  BitFormGlobal,
+  BitBus,
+  BitBusListener,
+} from "./store/contracts/bus-types";
 
 export type {
   BitUploadFn,

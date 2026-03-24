@@ -31,7 +31,7 @@ export function getScopeSubscriptionPaths(scopeFields: readonly string[]) {
 
 export function observeScopeStatusSnapshot(
   store: {
-    getStepStatus(scopeName: string): ScopeStatus;
+    getScopeStatus(scopeName: string): ScopeStatus;
     subscribeScopeStatus(
       scopeName: string,
       listener: (status: ScopeStatus) => void,
@@ -40,7 +40,7 @@ export function observeScopeStatusSnapshot(
   scopeName: string,
   listener: (status: ScopeStatus) => void,
 ): () => void {
-  listener(store.getStepStatus(scopeName));
+  listener(store.getScopeStatus(scopeName));
 
   return store.subscribeScopeStatus(scopeName, listener);
 }

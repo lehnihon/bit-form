@@ -22,10 +22,18 @@ export class BitComputedManager<T extends object> {
 
   constructor(private getComputedEntries: () => BitComputedEntry<T>[]) {}
 
+  private isCacheableScalar(value: unknown): boolean {
+    return (
+      value === null ||
+      (typeof value !== "object" && typeof value !== "function")
+    );
+  }
+
   invalidateReverseDeps(): void {
     this.reverseDepsCache = null;
     this.childDepsIndex = null;
     this.orderedAllEntriesCache = null;
+    this.validatedEntriesSignature = null;
     this.equalityCache.clear();
   }
 
@@ -52,8 +60,12 @@ export class BitComputedManager<T extends object> {
 
       const cached = this.equalityCache.get(entry.path);
       let valuesEqual: boolean;
+      const canUseScalarCache =
+        this.isCacheableScalar(currentValue) &&
+        this.isCacheableScalar(newValue);
 
       if (
+        canUseScalarCache &&
         cached &&
         cached.current === currentValue &&
         cached.next === newValue
@@ -61,11 +73,16 @@ export class BitComputedManager<T extends object> {
         valuesEqual = cached.equal;
       } else {
         valuesEqual = deepEqual(currentValue, newValue);
-        this.equalityCache.set(entry.path, {
-          current: currentValue,
-          next: newValue,
-          equal: valuesEqual,
-        });
+
+        if (canUseScalarCache) {
+          this.equalityCache.set(entry.path, {
+            current: currentValue,
+            next: newValue,
+            equal: valuesEqual,
+          });
+        } else {
+          this.equalityCache.delete(entry.path);
+        }
       }
 
       if (!valuesEqual) {

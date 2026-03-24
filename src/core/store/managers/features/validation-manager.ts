@@ -235,6 +235,12 @@ export class BitValidationManager<T extends object> {
   }
 
   async validate(options?: BitValidationOptions): Promise<boolean> {
+    if (options?.scopeFields?.length) {
+      options.scopeFields.forEach((fieldPath) =>
+        this.cancelFieldAsync(fieldPath),
+      );
+    }
+
     const context: ValidationPipelineContext<T> = {
       options,
       validationId: ++this.currentValidationId,

@@ -34,6 +34,40 @@ export interface BitStoreRuntimeMembers<T extends object> {
   storeId: string;
 }
 
+export interface BitStoreRuntimeStateAccess<T extends object> {
+  getState(): BitState<T>;
+  dispatch(operation: BitStoreOperation<T>): void;
+  saveHistorySnapshot(): void;
+  runStateBatch<TResult>(callback: () => TResult): TResult;
+}
+
+export interface BitStoreRuntimeFieldAccess<T extends object> {
+  getFieldConfig(path: string): BitFieldDefinition<T> | undefined;
+  getScopeFields(scopeName: string): string[];
+  getTransformEntries(): [string, BitTransformFn<T>][];
+}
+
+export interface BitStoreRuntimeFeatureAccess<T extends object> {
+  getEffects(): BitStoreEffectEngine<T>;
+  getHistory(): BitStoreCapabilities<T>["history"];
+  getValidation(): BitStoreCapabilities<T>["validation"];
+}
+
+export interface BitStoreRuntimeActions<T extends object> {
+  setError(path: string, message: string | undefined): void;
+  validate(options?: {
+    scope?: string;
+    scopeFields?: string[];
+  }): Promise<boolean>;
+  setFieldWithMeta(path: string, value: any, meta?: BitFieldChangeMeta): void;
+  unregisterPrefix(prefix: string): void;
+  triggerValidation(
+    scopeFields?: string[],
+    options?: BitValidationTriggerOptions,
+  ): void;
+  getConfig(): Readonly<BitFrameworkConfig<T>>;
+}
+
 export interface CreateStoreRuntimeArgs<T extends object> {
   rawConfig: BitConfig<T>;
   config: BitFrameworkConfig<T>;
@@ -44,28 +78,10 @@ export interface CreateStoreRuntimeArgs<T extends object> {
     get(): T;
     set(values: T): void;
   };
-  getState(): BitState<T>;
-  dispatch(operation: BitStoreOperation<T>): void;
-  setError(path: string, message: string | undefined): void;
-  validate(options?: {
-    scope?: string;
-    scopeFields?: string[];
-  }): Promise<boolean>;
-  getFieldConfig(path: string): BitFieldDefinition<T> | undefined;
-  getScopeFields(scopeName: string): string[];
-  getEffects(): BitStoreEffectEngine<T>;
-  saveHistorySnapshot(): void;
-  runStateBatch<TResult>(callback: () => TResult): TResult;
-  getTransformEntries(): [string, BitTransformFn<T>][];
-  getHistory(): BitStoreCapabilities<T>["history"];
-  getValidation(): BitStoreCapabilities<T>["validation"];
-  setFieldWithMeta(path: string, value: any, meta?: BitFieldChangeMeta): void;
-  unregisterPrefix(prefix: string): void;
-  triggerValidation(
-    scopeFields?: string[],
-    options?: BitValidationTriggerOptions,
-  ): void;
-  getConfig(): Readonly<BitFrameworkConfig<T>>;
+  stateAccess: BitStoreRuntimeStateAccess<T>;
+  fieldAccess: BitStoreRuntimeFieldAccess<T>;
+  featureAccess: BitStoreRuntimeFeatureAccess<T>;
+  actions: BitStoreRuntimeActions<T>;
 }
 
 export function createStoreRuntime<T extends object>(
@@ -74,43 +90,43 @@ export function createStoreRuntime<T extends object>(
   const validationPort = createValidationPort<T>({
     config: args.config,
     fieldRegistry: args.fieldRegistry,
-    getState: () => args.getState(),
-    dispatch: (operation) => args.dispatch(operation),
-    setError: (path, message) => args.setError(path, message),
-    validate: (options) => args.validate(options),
-    getFieldConfig: (path) => args.getFieldConfig(path),
-    getScopeFields: (scopeName) => args.getScopeFields(scopeName),
-    getEffects: () => args.getEffects(),
+    getState: () => args.stateAccess.getState(),
+    dispatch: (operation) => args.stateAccess.dispatch(operation),
+    setError: (path, message) => args.actions.setError(path, message),
+    validate: (options) => args.actions.validate(options),
+    getFieldConfig: (path) => args.fieldAccess.getFieldConfig(path),
+    getScopeFields: (scopeName) => args.fieldAccess.getScopeFields(scopeName),
+    getEffects: () => args.featureAccess.getEffects(),
   });
 
   const lifecyclePort = createLifecyclePort<T>({
     config: args.config,
     fieldRegistry: args.fieldRegistry,
     dirtyManager: args.dirtyManager,
-    getState: () => args.getState(),
-    dispatch: (operation) => args.dispatch(operation),
-    saveHistorySnapshot: () => args.saveHistorySnapshot(),
-    runStateBatch: (callback) => args.runStateBatch(callback),
-    getTransformEntries: () => args.getTransformEntries(),
+    getState: () => args.stateAccess.getState(),
+    dispatch: (operation) => args.stateAccess.dispatch(operation),
+    saveHistorySnapshot: () => args.stateAccess.saveHistorySnapshot(),
+    runStateBatch: (callback) => args.stateAccess.runStateBatch(callback),
+    getTransformEntries: () => args.fieldAccess.getTransformEntries(),
     getInitialValues: () => args.initialValuesRef.get(),
     setInitialValues: (values) => args.initialValuesRef.set(values),
-    getValidation: () => args.getValidation(),
-    getHistory: () => args.getHistory(),
-    getEffects: () => args.getEffects(),
+    getValidation: () => args.featureAccess.getValidation(),
+    getHistory: () => args.featureAccess.getHistory(),
+    getEffects: () => args.featureAccess.getEffects(),
   });
 
   const arrayPort = createArrayPort<T>({
-    getState: () => args.getState(),
-    dispatch: (operation) => args.dispatch(operation),
+    getState: () => args.stateAccess.getState(),
+    dispatch: (operation) => args.stateAccess.dispatch(operation),
     setFieldWithMeta: (path, value, meta) =>
-      args.setFieldWithMeta(path, value, meta),
-    unregisterPrefix: (prefix) => args.unregisterPrefix(prefix),
+      args.actions.setFieldWithMeta(path, value, meta),
+    unregisterPrefix: (prefix) => args.actions.unregisterPrefix(prefix),
     triggerValidation: (scopeFields, options) =>
-      args.triggerValidation(scopeFields, options),
+      args.actions.triggerValidation(scopeFields, options),
     dirtyManager: args.dirtyManager,
-    getConfig: () => args.getConfig(),
-    getEffects: () => args.getEffects(),
-    saveHistorySnapshot: () => args.saveHistorySnapshot(),
+    getConfig: () => args.actions.getConfig(),
+    getEffects: () => args.featureAccess.getEffects(),
+    saveHistorySnapshot: () => args.stateAccess.saveHistorySnapshot(),
   });
 
   const capabilities = createStoreCapabilities<T>({
@@ -119,9 +135,9 @@ export function createStoreRuntime<T extends object>(
       validationPort,
       lifecyclePort,
       arrayPort,
-      getScopeFields: (scopeName) => args.getScopeFields(scopeName),
-      getState: () => args.getState(),
-      dispatch: (operation) => args.dispatch(operation),
+      getScopeFields: (scopeName) => args.fieldAccess.getScopeFields(scopeName),
+      getState: () => args.stateAccess.getState(),
+      dispatch: (operation) => args.stateAccess.dispatch(operation),
       getInitialValues: () => args.initialValuesRef.get(),
       isPathDirty: (path) => args.dirtyManager.isPathDirty(path),
     },
@@ -135,7 +151,7 @@ export function createStoreRuntime<T extends object>(
   });
 
   const subscriptions = new BitSubscriptionEngine<T>(
-    () => args.getState(),
+    () => args.stateAccess.getState(),
     args.config.subscriptionCacheSize,
   );
 

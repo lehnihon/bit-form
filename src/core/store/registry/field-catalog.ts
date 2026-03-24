@@ -4,7 +4,7 @@ import type { BitComputedEntry } from "../managers/core/computed-manager";
 export class BitFieldCatalog<T extends object = any> {
   private readonly fieldConfigs: Map<string, BitFieldDefinition<T>> = new Map();
 
-  private scopeFieldsIndex: Map<string, string[]> | null = null;
+  private scopeFieldsIndex: Map<string, Set<string>> | null = null;
   private computedEntriesCache: BitComputedEntry<T>[] | null = null;
   private transformEntriesCache: [string, BitTransformFn<T>][] | null = null;
 
@@ -38,19 +38,19 @@ export class BitFieldCatalog<T extends object = any> {
 
   getScopeFields(scopeName: string): string[] {
     if (!this.scopeFieldsIndex) {
-      const index = new Map<string, string[]>();
+      const index = new Map<string, Set<string>>();
       this.forEach((cfg, path) => {
         if (!cfg.scope) {
           return;
         }
-        const list = index.get(cfg.scope) ?? [];
-        list.push(path);
+        const list = index.get(cfg.scope) ?? new Set<string>();
+        list.add(path);
         index.set(cfg.scope, list);
       });
       this.scopeFieldsIndex = index;
     }
 
-    return this.scopeFieldsIndex.get(scopeName) ?? [];
+    return Array.from(this.scopeFieldsIndex.get(scopeName) ?? []);
   }
 
   getComputedEntries(): BitComputedEntry<T>[] {
@@ -93,11 +93,10 @@ export class BitFieldCatalog<T extends object = any> {
 
   private registerCachedIndexes(path: string, config: BitFieldDefinition<T>) {
     if (this.scopeFieldsIndex && config.scope) {
-      const scopedPaths = this.scopeFieldsIndex.get(config.scope) ?? [];
-      if (!scopedPaths.includes(path)) {
-        scopedPaths.push(path);
-        this.scopeFieldsIndex.set(config.scope, scopedPaths);
-      }
+      const scopedPaths =
+        this.scopeFieldsIndex.get(config.scope) ?? new Set<string>();
+      scopedPaths.add(path);
+      this.scopeFieldsIndex.set(config.scope, scopedPaths);
     }
 
     if (this.computedEntriesCache && config.computed) {
@@ -125,9 +124,10 @@ export class BitFieldCatalog<T extends object = any> {
     if (this.scopeFieldsIndex && config.scope) {
       const scopedPaths = this.scopeFieldsIndex.get(config.scope);
       if (scopedPaths) {
-        const nextPaths = scopedPaths.filter((fieldPath) => fieldPath !== path);
-        if (nextPaths.length > 0) {
-          this.scopeFieldsIndex.set(config.scope, nextPaths);
+        scopedPaths.delete(path);
+
+        if (scopedPaths.size > 0) {
+          this.scopeFieldsIndex.set(config.scope, scopedPaths);
         } else {
           this.scopeFieldsIndex.delete(config.scope);
         }
