@@ -1,10 +1,10 @@
-import { BitStore } from "../index";
+import { createInternalBitStore } from "../index";
 import { BitConfig } from "../contracts/types";
 import {
-  BitFormBindingApi,
-  BitStoreApi,
+  BitFrameworkStoreApi,
   BitStoreHooksApi,
 } from "../contracts/public-types";
+import { BIT_FRAMEWORK_STORE_SYMBOL } from "./framework-store-brand";
 import { BIT_HOOKS_API_SYMBOL } from "./hook-brand";
 
 function isHookCompatibleStore<T extends object>(
@@ -32,69 +32,20 @@ export function resolveBitStoreForHooks<T extends object>(
 
 function isFrameworkBindingStore<T extends object>(
   store: unknown,
-): store is BitFormBindingApi<T> {
+): store is BitFrameworkStoreApi<T> {
   if (!store || typeof store !== "object") {
     return false;
   }
 
-  const candidate = store as Record<string, unknown>;
-  const requiredMethods: Array<keyof BitFormBindingApi<T>> = [
-    "getFieldState",
-    "subscribeFieldState",
-    "getState",
-    "subscribeFormMeta",
-    "subscribe",
-    "subscribePath",
-    "subscribeSelector",
-    "subscribeTracked",
-    "setField",
-    "blurField",
-    "markFieldsTouched",
-    "resolveMask",
-    "submit",
-    "reset",
-    "validate",
-    "setError",
-    "setErrors",
-    "setServerErrors",
-    "setValues",
-    "transaction",
-    "pushItem",
-    "prependItem",
-    "insertItem",
-    "removeItem",
-    "moveItem",
-    "swapItems",
-    "replaceItems",
-    "clearItems",
-    "undo",
-    "redo",
-    "getHistoryMetadata",
-    "getPersistMetadata",
-    "restorePersisted",
-    "forceSave",
-    "clearPersisted",
-    "getDirtyValues",
-    "hasValidationsInProgress",
-    "getScopeFields",
-    "getScopeStatus",
-    "getStepErrors",
-    "subscribePersistMeta",
-    "subscribeHistoryMeta",
-    "subscribeScopeStatus",
-    "createArrayItemId",
-  ];
-
-  return requiredMethods.every((methodName) => {
-    return typeof candidate[methodName as string] === "function";
-  });
+  const candidate = store as Record<PropertyKey, unknown>;
+  return candidate[BIT_FRAMEWORK_STORE_SYMBOL] === true;
 }
 
 export function createFrameworkStoreAdapter<T extends object>(
   store: unknown,
-): BitFormBindingApi<T> {
+): BitFrameworkStoreApi<T> {
   if (isHookCompatibleStore<T>(store)) {
-    return store as unknown as BitFormBindingApi<T>;
+    return store as unknown as BitFrameworkStoreApi<T>;
   }
 
   if (isFrameworkBindingStore<T>(store)) {
@@ -109,5 +60,5 @@ export function createFrameworkStoreAdapter<T extends object>(
 export function createBitStore<T extends object = any>(
   config: BitConfig<T> = {},
 ): BitStoreHooksApi<T> {
-  return new BitStore<T>(config) as unknown as BitStoreHooksApi<T>;
+  return createInternalBitStore<T>(config) as unknown as BitStoreHooksApi<T>;
 }

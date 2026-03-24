@@ -2,12 +2,12 @@
 
 import { describe, it, expect, vi } from "vitest";
 import { renderHook, act } from "@testing-library/react";
-import { BitStore } from "../../../core/store";
+import { createBitStore } from "../../../core";
 import { BitFormProvider, useBitField } from "../../../react-native";
 
 describe("React Native Integration (bit-form/react-native)", () => {
   const createTestStore = (initialValues: any) =>
-    new BitStore({
+    createBitStore({
       initialValues,
       validation: { delay: 0 },
     });

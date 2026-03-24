@@ -1,4 +1,4 @@
-import type { BitPersistMetadata } from "../public-types";
+import type { BitPersistMetadata } from "../store/contracts/public-types";
 
 export function readPersistMetaSnapshot(store: {
   getPersistMetadata(): BitPersistMetadata;

@@ -1,5 +1,5 @@
-import { BitMask } from "../mask/types";
-import { getDeepValue, setDeepValues, valueEqual } from "../utils";
+import { BitMask, BitMaskName } from "../mask/types";
+import { getDeepValue } from "../utils";
 import {
   BitArrayItem,
   BitArrayPath,
@@ -8,13 +8,11 @@ import {
   BitFieldChangeMeta,
   BitFieldDefinition,
   BitFieldState,
-  BitNormalizeFn,
   BitPath,
   BitPathValue,
   BitPersistMetadata,
   BitSubmitResult,
   BitState,
-  BitTransformFn,
   DeepPartial,
   ScopeStatus,
 } from "./contracts/types";
@@ -32,15 +30,9 @@ import {
   resolveFieldMask,
 } from "./engines/store-field-query-engine";
 import { touchFieldsOperation } from "./engines/operation-engine";
-import {
-  BitComputedEntry,
-  BitComputedManager,
-} from "./managers/core/computed-manager";
 import { BitDirtyManager } from "./managers/core/dirty-manager";
 import { BitMaskManager } from "./managers/features/mask-manager";
 import { BitFieldRegistry } from "./registry/field-registry";
-import { normalizeConfig } from "./shared/config";
-import { createStoreEffects } from "./orchestration/store-bootstrap";
 import {
   clearPersistedFeature,
   forceSavePersistedFeature,
@@ -49,6 +41,7 @@ import {
   runRedoFeature,
   runUndoFeature,
 } from "./orchestration/store-feature-ops";
+import { BIT_FRAMEWORK_STORE_SYMBOL } from "./orchestration/framework-store-brand";
 import { BIT_HOOKS_API_SYMBOL } from "./orchestration/hook-brand";
 import {
   registerStoreField,
@@ -66,16 +59,15 @@ import {
   subscribeStoreTracked,
 } from "./orchestration/store-observe-ops";
 import { applyStorePersistedValues } from "./orchestration/store-persist-ops";
-import { createStoreRuntime } from "./orchestration/store-runtime";
+import { composeBitStoreRuntime } from "./orchestration/store-composition-root";
 import { BitStoreRuntimeKernel } from "./orchestration/store-runtime-kernel";
 
-export class BitStore<T extends object = any> {
+class BitStore<T extends object = any> {
   public readonly [BIT_HOOKS_API_SYMBOL] = true;
+  public readonly [BIT_FRAMEWORK_STORE_SYMBOL] = true;
 
   private readonly runtime: BitStoreRuntimeKernel<T>;
-  private readonly maskManager: BitMaskManager;
   private readonly _config: BitFrameworkConfig<T>;
-  private _initialValues!: T;
 
   public readonly storeId: string;
   get config(): Readonly<BitFrameworkConfig<T>> {
@@ -83,104 +75,26 @@ export class BitStore<T extends object = any> {
   }
 
   private readonly fieldRegistry: BitFieldRegistry<T>;
-  private readonly computedManager: BitComputedManager<T>;
+  private readonly maskManager: BitMaskManager;
   private readonly dirtyManager: BitDirtyManager<T>;
-
-  private invalidateFieldIndexes() {
-    this.fieldRegistry.invalidateIndexes();
-    this.computedManager.invalidateReverseDeps();
-  }
+  private readonly initialValuesRef: {
+    get(): T;
+    set(values: T): void;
+  };
 
   constructor(config: BitConfig<T> = {}) {
-    this._config = normalizeConfig(config);
-    this._initialValues = this._config.initialValues;
-    this.fieldRegistry = new BitFieldRegistry<T>();
-    this.computedManager = new BitComputedManager<T>(() =>
-      this.getComputedEntries(),
-    );
-    this.dirtyManager = new BitDirtyManager<T>();
-    this.maskManager = new BitMaskManager();
-
-    if (this._config.masks) {
-      Object.entries(this._config.masks).forEach(([name, mask]) => {
-        this.maskManager.registerMask(name, mask);
-      });
-    }
-
-    let runtimeKernel: BitStoreRuntimeKernel<T> | null = null;
-
-    const requireRuntimeKernel = () => {
-      if (!runtimeKernel) {
-        throw new Error("BitStore runtime kernel is not initialized yet.");
-      }
-      return runtimeKernel;
-    };
-
-    const runtime = createStoreRuntime<T>({
+    const composition = composeBitStoreRuntime<T>({
       rawConfig: config,
-      config: this._config,
-      fieldRegistry: this.fieldRegistry,
-      computedManager: this.computedManager,
-      dirtyManager: this.dirtyManager,
-      initialValuesRef: {
-        get: () => this._initialValues,
-        set: (values) => {
-          this._initialValues = values;
-        },
-      },
-      stateAccess: {
-        getState: () => runtimeKernel?.getState() ?? runtime.state,
-        dispatch: (operation) => requireRuntimeKernel().dispatch(operation),
-        saveHistorySnapshot: () => requireRuntimeKernel().saveHistorySnapshot(),
-        runStateBatch: (callback) => requireRuntimeKernel().runBatch(callback),
-      },
-      fieldAccess: {
-        getFieldConfig: (path) => this.getFieldConfig(path),
-        getScopeFields: (scopeName) => this.getScopeFields(scopeName),
-        getNormalizerEntries: () => this.getNormalizerEntries(),
-        getTransformEntries: () => this.getTransformEntries(),
-      },
-      featureAccess: {
-        getEffects: () => requireRuntimeKernel().effects,
-        getHistory: () => requireRuntimeKernel().capabilities.history,
-        getValidation: () => requireRuntimeKernel().capabilities.validation,
-      },
-      actions: {
-        setError: (path, message) => this.setError(path, message),
-        validate: (options) => this.validate(options),
-        setFieldWithMeta: (path, value, meta) =>
-          this.setFieldWithMeta(path, value, meta),
-        unregisterPrefix: (prefix) => this.unregisterPrefix(prefix),
-        triggerValidation: (scopeFields, options) =>
-          this.triggerValidation(scopeFields, options),
-        getConfig: () => this.getConfig(),
-      },
-    });
-
-    this.storeId = runtime.storeId;
-
-    const effects = createStoreEffects<T>({
-      storeId: this.storeId,
       storeInstance: this,
-      config: this._config,
-      getState: () => runtimeKernel?.getState() ?? runtime.state,
-      getConfig: () => this.getConfig(),
-      getValues: () => (runtimeKernel?.getState() ?? runtime.state).values,
-      getDirtyValues: () => this.getDirtyValues(),
-      applyPersistedValues: (values) => this.applyPersistedValues(values),
     });
 
-    runtimeKernel = new BitStoreRuntimeKernel<T>({
-      state: runtime.state,
-      subscriptions: runtime.subscriptions,
-      effects,
-      capabilities: runtime.capabilities,
-      computedManager: this.computedManager,
-      applyPostBatchValues: (values) => this.applyPostBatchValues(values),
-    });
-
-    this.runtime = runtimeKernel;
-    this.runtime.saveHistorySnapshot();
+    this._config = composition.config;
+    this.storeId = composition.storeId;
+    this.runtime = composition.runtime;
+    this.fieldRegistry = composition.fieldRegistry;
+    this.maskManager = composition.maskManager;
+    this.dirtyManager = composition.dirtyManager;
+    this.initialValuesRef = composition.initialValuesRef;
   }
 
   getConfig() {
@@ -195,47 +109,11 @@ export class BitStore<T extends object = any> {
     return this.fieldRegistry.getScopeFields(scopeName);
   }
 
-  private getComputedEntries(): BitComputedEntry<T>[] {
-    return this.fieldRegistry.getComputedEntries();
-  }
-
-  private getNormalizerEntries(): [string, BitNormalizeFn<T>][] {
-    return this.fieldRegistry.getNormalizerEntries();
-  }
-
-  private getTransformEntries(): [string, BitTransformFn<T>][] {
-    return this.fieldRegistry.getTransformEntries();
-  }
-
-  private applyPostBatchValues(values: T): T {
-    const normalizers = this.getNormalizerEntries();
-    if (normalizers.length === 0) {
-      return values;
-    }
-
-    const updates: Array<[string, unknown]> = [];
-
-    for (const [path, normalize] of normalizers) {
-      const currentValue = getDeepValue(values, path);
-      const normalizedValue = normalize(currentValue, values);
-
-      if (!valueEqual(currentValue, normalizedValue)) {
-        updates.push([path, normalizedValue]);
-      }
-    }
-
-    if (updates.length === 0) {
-      return values;
-    }
-
-    return setDeepValues(values, updates);
-  }
-
   resolveMask(path: string): BitMask | undefined {
-    return resolveFieldMask({
+    return resolveFieldMask<T>({
       path,
       getFieldConfig: (fieldPath) => this.getFieldConfig(fieldPath),
-      masks: this.maskManager.getAllMasks(),
+      masks: this.maskManager.getAllMasks() as Record<BitMaskName, BitMask>,
     });
   }
 
@@ -290,7 +168,9 @@ export class BitStore<T extends object = any> {
       state: this.getState(),
       fieldRegistry: this.fieldRegistry,
       subscriptions: this.runtime.subscriptions,
-      invalidateFieldIndexes: () => this.invalidateFieldIndexes(),
+      invalidateFieldIndexes: () => {
+        this.fieldRegistry.invalidateIndexes();
+      },
     });
   }
 
@@ -303,7 +183,9 @@ export class BitStore<T extends object = any> {
       subscriptions: this.runtime.subscriptions,
       validationCleanupField: (fieldPath) =>
         this.runtime.capabilities.validation.cleanupField(fieldPath),
-      invalidateFieldIndexes: () => this.invalidateFieldIndexes(),
+      invalidateFieldIndexes: () => {
+        this.fieldRegistry.invalidateIndexes();
+      },
       dispatch: (operation) => this.runtime.dispatch(operation),
     });
   }
@@ -316,7 +198,9 @@ export class BitStore<T extends object = any> {
       subscriptions: this.runtime.subscriptions,
       validationCleanupPrefix: (fieldPrefix) =>
         this.runtime.capabilities.validation.cleanupPrefix(fieldPrefix),
-      invalidateFieldIndexes: () => this.invalidateFieldIndexes(),
+      invalidateFieldIndexes: () => {
+        this.fieldRegistry.invalidateIndexes();
+      },
     });
   }
 
@@ -643,7 +527,7 @@ export class BitStore<T extends object = any> {
     applyStorePersistedValues({
       values,
       state: this.getState(),
-      initialValues: this._initialValues,
+      initialValues: this.initialValuesRef.get(),
       validation: this.runtime.capabilities.validation,
       fieldRegistry: this.fieldRegistry,
       dirtyManager: this.dirtyManager,
@@ -655,4 +539,10 @@ export class BitStore<T extends object = any> {
   cleanup() {
     this.runtime.cleanup();
   }
+}
+
+export function createInternalBitStore<T extends object = any>(
+  config: BitConfig<T> = {},
+) {
+  return new BitStore<T>(config);
 }

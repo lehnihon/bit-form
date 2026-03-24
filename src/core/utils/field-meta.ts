@@ -1,4 +1,4 @@
-import type { BitFieldState } from "../public-types";
+import type { BitFieldState } from "../store/contracts/types";
 
 export interface BitDerivedFieldMeta {
   error: string | undefined;

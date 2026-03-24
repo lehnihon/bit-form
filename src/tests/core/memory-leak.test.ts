@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import { createBitStore } from "../../core/store/orchestration/create-store";
+import { createBitStore } from "../../core";
 
 /**
  * Memory Leak Detection Tests

@@ -5,13 +5,13 @@ import { defineComponent, nextTick } from "vue";
 import { mount } from "@vue/test-utils";
 import { useBitUpload, type UseBitUploadResult } from "bit-form/vue";
 import type { BitUploadFn } from "../../../core/types/upload";
-import { BitStore } from "../../../core/store";
+import { createBitStore } from "../../../core";
 import { BIT_STORE_KEY } from "../../../vue/context";
 
 describe("useBitUpload (Vue)", () => {
   let mockUpload: ReturnType<typeof vi.fn> & BitUploadFn;
   let mockDelete: ReturnType<typeof vi.fn>;
-  let store: BitStore<any>;
+  let store: ReturnType<typeof createBitStore<any>>;
 
   const mountUpload = (
     factory: () => UseBitUploadResult,
@@ -34,7 +34,7 @@ describe("useBitUpload (Vue)", () => {
   };
 
   beforeEach(() => {
-    store = new BitStore({
+    store = createBitStore({
       initialValues: { avatar: undefined },
       validation: { delay: 0 },
     });
