@@ -1,6 +1,7 @@
 export {
   createBitStore,
   resolveBitStoreForHooks,
+  createFrameworkStoreAdapter,
   bitBus,
   createBitBus,
   getDeepValue,
@@ -51,6 +52,7 @@ export type {
   BitFieldValidation,
   ValidatorFn,
   BitComputedFn,
+  BitNormalizeFn,
   BitTransformFn,
   BitPath,
   BitPathValue,

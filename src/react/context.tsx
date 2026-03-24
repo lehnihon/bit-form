@@ -1,6 +1,6 @@
 import React, { createContext, useContext } from "react";
-import type { BitFormBindingApi, BitStoreHooksApi } from "../core";
-import { resolveBitStoreForHooks } from "../core";
+import type { BitFormBindingApi } from "../core";
+import { createFrameworkStoreAdapter } from "../core";
 
 const BitContext = createContext<BitFormBindingApi<any> | null>(null);
 
@@ -8,10 +8,10 @@ export const BitFormProvider = ({
   store,
   children,
 }: {
-  store: BitStoreHooksApi<any>;
+  store: unknown;
   children: React.ReactNode;
 }) => (
-  <BitContext.Provider value={resolveBitStoreForHooks(store)}>
+  <BitContext.Provider value={createFrameworkStoreAdapter(store)}>
     {children}
   </BitContext.Provider>
 );

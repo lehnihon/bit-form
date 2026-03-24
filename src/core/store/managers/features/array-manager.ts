@@ -159,6 +159,38 @@ export class BitArrayManager<T extends object = any> {
     });
   }
 
+  replaceItems(path: string, items: any[]) {
+    const state = this.store.getState();
+    const current = getDeepValue(state.values, path) || [];
+    const previousArray = Array.isArray(current) ? [...current] : [];
+
+    this.commitReindexedArrayMutation({
+      path,
+      previousArray,
+      nextArray: items,
+      meta: { origin: "array", operation: "replace" },
+      reindex: (currentIdx) => (currentIdx < items.length ? currentIdx : null),
+    });
+  }
+
+  clearItems(path: string) {
+    const state = this.store.getState();
+    const current = getDeepValue(state.values, path) || [];
+    const previousArray = Array.isArray(current) ? [...current] : [];
+
+    if (this.store.unregisterPrefix) {
+      this.store.unregisterPrefix(`${path}.`);
+    }
+
+    this.commitReindexedArrayMutation({
+      path,
+      previousArray,
+      nextArray: [],
+      meta: { origin: "array", operation: "clear" },
+      reindex: () => null,
+    });
+  }
+
   private revalidate(path: string) {
     this.store.triggerValidation([path]);
   }

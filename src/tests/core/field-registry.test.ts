@@ -101,6 +101,7 @@ describe("BitFieldRegistry", () => {
     registry.register(
       "name",
       {
+        normalize: (value) => String(value).trim(),
         transform: (value) => String(value).trim(),
       },
       { price: 10, total: 0, name: "", items: [] },
@@ -111,6 +112,9 @@ describe("BitFieldRegistry", () => {
       "total",
     ]);
     expect(registry.getTransformEntries().map(([path]) => path)).toEqual([
+      "name",
+    ]);
+    expect(registry.getNormalizerEntries().map(([path]) => path)).toEqual([
       "name",
     ]);
 
