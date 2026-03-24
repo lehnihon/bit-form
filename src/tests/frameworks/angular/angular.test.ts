@@ -61,7 +61,7 @@ describe("Angular Integration (Signals)", () => {
   });
 
   it("deve gerenciar listas com keys estáveis e remapear erros ao mover", () => {
-    store.triggerValidation = vi.fn();
+    (store as any).triggerValidation = vi.fn();
 
     const fixture = TestBed.createComponent(HostComponent);
     const app = fixture.componentInstance;
@@ -79,7 +79,7 @@ describe("Angular Integration (Signals)", () => {
   });
 
   it("deve limpar erros residuais ao remover item da lista", () => {
-    store.triggerValidation = vi.fn();
+    (store as any).triggerValidation = vi.fn();
 
     const fixture = TestBed.createComponent(HostComponent);
     const app = fixture.componentInstance;
