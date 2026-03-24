@@ -6,9 +6,7 @@ export const BIT_STORE_TOKEN = new InjectionToken<BitFormBindingApi<any>>(
   "BIT_STORE",
 );
 
-export function provideBitStore<T extends object>(
-  store: unknown,
-): Provider {
+export function provideBitStore<T extends object>(store: unknown): Provider {
   return {
     provide: BIT_STORE_TOKEN,
     useValue: createFrameworkStoreAdapter<T>(store),
