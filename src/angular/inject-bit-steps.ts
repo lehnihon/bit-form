@@ -1,9 +1,6 @@
 import { signal, computed, DestroyRef, inject } from "@angular/core";
 import type { ScopeStatus, ValidateScopeResult } from "../core";
-import {
-  getScopeSubscriptionPaths,
-  isScopeStatusEqual,
-} from "../core/scope-status";
+import { isScopeStatusEqual } from "../core";
 import { useBitStore } from "./provider";
 import type { InjectBitStepsResult } from "./types";
 
@@ -25,13 +22,12 @@ export function injectBitSteps(scopeNames: string[]): InjectBitStepsResult {
     }
   };
 
-  const unsubscribe = store.subscribeSelector(
-    (state) => ({ errors: state.errors, isDirty: state.isDirty }),
-    updateStatus,
-    {
-      paths: getScopeSubscriptionPaths(store.getScopeFields(getCurrentScope())),
-    },
-  );
+  let unsubscribe = store.subscribeScopeStatus(getCurrentScope(), updateStatus);
+
+  const rebindScopeSubscription = () => {
+    unsubscribe();
+    unsubscribe = store.subscribeScopeStatus(getCurrentScope(), updateStatus);
+  };
 
   try {
     const destroyRef = inject(DestroyRef);
@@ -60,6 +56,7 @@ export function injectBitSteps(scopeNames: string[]): InjectBitStepsResult {
       const newIndex = Math.min(stepIndex() + 1, scopeNames.length - 1);
       stepIndex.set(newIndex);
       status.set(store.getStepStatus(scopeNames[newIndex] ?? ""));
+      rebindScopeSubscription();
     } else {
       const errors = store.getStepErrors(scopeName);
       const pathsWithErrors = Object.keys(errors);
@@ -74,6 +71,7 @@ export function injectBitSteps(scopeNames: string[]): InjectBitStepsResult {
     const newIndex = Math.max(stepIndex() - 1, 0);
     stepIndex.set(newIndex);
     status.set(store.getStepStatus(scopeNames[newIndex] ?? ""));
+    rebindScopeSubscription();
   };
 
   const goTo = (targetStep: number) => {
@@ -83,6 +81,7 @@ export function injectBitSteps(scopeNames: string[]): InjectBitStepsResult {
     );
     stepIndex.set(newIndex);
     status.set(store.getStepStatus(scopeNames[newIndex] ?? ""));
+    rebindScopeSubscription();
   };
 
   const step = computed(() => stepIndex() + 1);

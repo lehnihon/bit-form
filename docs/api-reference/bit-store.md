@@ -3,6 +3,7 @@
 `BitStore` is the core engine of Bit-Form. For direct consumer usage, the recommended entrypoint is `createBitStore`, which returns the official store instance consumed by React, Vue and Angular integrations.
 
 For explicit runtime-only imports, Bit-Form also exposes the dedicated subpath `@lehnihon/bit-form/core`.
+The package root remains the recommended application entrypoint, but it no longer mirrors every adapter/runtime helper from the core subpath.
 
 All framework bindings (`useBitForm`, `injectBitForm`, etc.) are thin adapters on top of the internal store engine.
 
@@ -118,6 +119,36 @@ Subscribes to form-level metadata updates only (`isValid`, `isDirty`, `isSubmitt
 ```ts
 const unsubscribe = store.subscribeFormMeta((meta) => {
   console.log(meta.isValid, meta.isDirty, meta.isSubmitting);
+});
+```
+
+### `subscribePersistMeta(listener: (meta: BitPersistMetadata) => void): () => void`
+
+Subscribes only to persistence metadata updates (`isSaving`, `isRestoring`, `error`).
+
+```ts
+const unsubscribe = store.subscribePersistMeta((meta) => {
+  console.log(meta.isSaving, meta.isRestoring, meta.error);
+});
+```
+
+### `subscribeHistoryMeta(listener: (meta: BitHistoryMetadata) => void): () => void`
+
+Subscribes to undo/redo metadata updates (`canUndo`, `canRedo`, `historyIndex`, `historySize`).
+
+```ts
+const unsubscribe = store.subscribeHistoryMeta((meta) => {
+  console.log(meta.canUndo, meta.canRedo, meta.historyIndex);
+});
+```
+
+### `subscribeScopeStatus(scopeName: string, listener: (status: ScopeStatus) => void): () => void`
+
+Subscribes to the aggregated status of a configured scope/step.
+
+```ts
+const unsubscribe = store.subscribeScopeStatus("shipping", (status) => {
+  console.log(status.hasErrors, status.isDirty, status.errors);
 });
 ```
 

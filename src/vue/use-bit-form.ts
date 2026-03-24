@@ -1,7 +1,6 @@
 import { computed, onUnmounted, shallowRef, ref } from "vue";
 import { useBitStore } from "./context";
-import { createFrameworkFormBinding } from "../core/bindings/form-binding";
-import { observeFormMetaSnapshot } from "../core";
+import { createFrameworkFormBinding, observeFormMetaSnapshot } from "../core";
 import type { UseBitFormResult } from "./types";
 
 export function useBitForm<T extends object>(): UseBitFormResult<T> {

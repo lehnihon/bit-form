@@ -1,18 +1,20 @@
 import { BitMask } from "../mask/types";
+import { getDeepValue } from "../utils";
 import {
+  BitArrayItem,
+  BitArrayPath,
   BitConfig,
   BitErrors,
-  BitPersistMetadata,
-  BitFieldState,
-  BitTransformFn,
-  BitState,
+  BitFieldChangeMeta,
   BitFieldDefinition,
+  BitFieldState,
   BitPath,
   BitPathValue,
-  BitArrayPath,
-  BitArrayItem,
+  BitPersistMetadata,
+  BitState,
+  BitTransformFn,
   DeepPartial,
-  BitFieldChangeMeta,
+  ScopeStatus,
 } from "./contracts/types";
 import type {
   BitFormMeta,
@@ -22,55 +24,21 @@ import type {
   BitSelectorSubscriptionOptions,
   BitValidationOptions,
 } from "./contracts/public-types";
-import { getDeepValue } from "../utils";
-import { normalizeConfig } from "./shared/config";
-import { BitFieldRegistry } from "./registry/field-registry";
+import type { BitValidationTriggerOptions } from "./contracts/port-types";
+import {
+  createFieldStateSnapshot,
+  resolveFieldMask,
+} from "./engines/store-field-query-engine";
+import { touchFieldsOperation } from "./engines/operation-engine";
 import {
   BitComputedEntry,
   BitComputedManager,
 } from "./managers/core/computed-manager";
 import { BitDirtyManager } from "./managers/core/dirty-manager";
 import { BitMaskManager } from "./managers/features/mask-manager";
-import { BitSubscriptionEngine } from "./engines/subscription-engine";
-import {
-  createStoreBatchState,
-  getEffectiveStoreState,
-  type BitStoreBatchState,
-} from "./engines/store-batch-engine";
-import {
-  createFieldStateSnapshot,
-  resolveFieldMask,
-} from "./engines/store-field-query-engine";
-import {
-  BitStoreOperation,
-  touchFieldsOperation,
-} from "./engines/operation-engine";
-import { BitStoreEffectEngine } from "./engines/effect-engine";
-import type { BitStoreCapabilities } from "./orchestration/capabilities";
-import type { BitValidationTriggerOptions } from "./contracts/port-types";
+import { BitFieldRegistry } from "./registry/field-registry";
+import { normalizeConfig } from "./shared/config";
 import { createStoreEffects } from "./orchestration/store-bootstrap";
-import { BIT_HOOKS_API_SYMBOL } from "./orchestration/hook-brand";
-import {
-  subscribeStoreFieldState,
-  subscribeStoreFormMeta,
-  subscribeStorePath,
-  subscribeStoreSelector,
-  subscribeStoreTracked,
-} from "./orchestration/store-observe-ops";
-import {
-  commitStoreStateUpdate,
-  dispatchStoreStateOperation,
-  flushStoreBatchedStateUpdates,
-  runStoreStateBatch,
-  saveStoreHistorySnapshot,
-} from "./orchestration/store-state-ops";
-import { createStoreRuntime } from "./orchestration/store-runtime";
-import {
-  registerStoreField,
-  unregisterStoreField,
-  unregisterStorePrefix,
-} from "./orchestration/store-registration-ops";
-import { applyStorePersistedValues } from "./orchestration/store-persist-ops";
 import {
   clearPersistedFeature,
   forceSavePersistedFeature,
@@ -79,20 +47,31 @@ import {
   runRedoFeature,
   runUndoFeature,
 } from "./orchestration/store-feature-ops";
+import { BIT_HOOKS_API_SYMBOL } from "./orchestration/hook-brand";
+import {
+  registerStoreField,
+  unregisterStoreField,
+  unregisterStorePrefix,
+} from "./orchestration/store-registration-ops";
+import {
+  subscribeStoreFieldState,
+  subscribeStoreFormMeta,
+  subscribeStoreHistoryMeta,
+  subscribeStorePath,
+  subscribeStorePersistMeta,
+  subscribeStoreScopeStatus,
+  subscribeStoreSelector,
+  subscribeStoreTracked,
+} from "./orchestration/store-observe-ops";
+import { applyStorePersistedValues } from "./orchestration/store-persist-ops";
+import { createStoreRuntime } from "./orchestration/store-runtime";
+import { BitStoreRuntimeKernel } from "./orchestration/store-runtime-kernel";
+
 export class BitStore<T extends object = any> {
   public readonly [BIT_HOOKS_API_SYMBOL] = true;
 
-  private state: BitState<T>;
-  private readonly subscriptions: BitSubscriptionEngine<T>;
-  private readonly effects: BitStoreEffectEngine<T>;
+  private readonly runtime: BitStoreRuntimeKernel<T>;
   private readonly maskManager: BitMaskManager;
-  private readonly _validation: BitStoreCapabilities<T>["validation"];
-  private readonly _lifecycle: BitStoreCapabilities<T>["lifecycle"];
-  private readonly _history: BitStoreCapabilities<T>["history"];
-  private readonly _arrays: BitStoreCapabilities<T>["arrays"];
-  private readonly _scope: BitStoreCapabilities<T>["scope"];
-  private readonly _query: BitStoreCapabilities<T>["query"];
-  private readonly _error: BitStoreCapabilities<T>["error"];
   private readonly _config: BitFrameworkConfig<T>;
   private _cachedConfig: BitFrameworkConfig<T>;
   private _initialValues!: T;
@@ -105,8 +84,6 @@ export class BitStore<T extends object = any> {
   private readonly fieldRegistry: BitFieldRegistry<T>;
   private readonly computedManager: BitComputedManager<T>;
   private readonly dirtyManager: BitDirtyManager<T>;
-  private readonly batchState: BitStoreBatchState<T> =
-    createStoreBatchState<T>();
 
   private invalidateFieldIndexes() {
     this.fieldRegistry.invalidateIndexes();
@@ -122,11 +99,14 @@ export class BitStore<T extends object = any> {
     );
     this.dirtyManager = new BitDirtyManager<T>();
     this.maskManager = new BitMaskManager();
+
     if (this._config.masks) {
       Object.entries(this._config.masks).forEach(([name, mask]) => {
         this.maskManager.registerMask(name, mask);
       });
     }
+
+    let runtimeKernel: BitStoreRuntimeKernel<T> | null = null;
 
     const runtime = createStoreRuntime<T>({
       rawConfig: config,
@@ -140,52 +120,49 @@ export class BitStore<T extends object = any> {
           this._initialValues = values;
         },
       },
-      storeInstance: this,
-      getState: () => this.getState(),
-      dispatch: (operation) => this.dispatch(operation),
+      getState: () => runtimeKernel?.getState() ?? runtime.state,
+      dispatch: (operation) => runtimeKernel?.dispatch(operation),
       setError: (path, message) => this.setError(path, message),
       validate: (options) => this.validate(options),
       getFieldConfig: (path) => this.getFieldConfig(path),
       getScopeFields: (scopeName) => this.getScopeFields(scopeName),
-      getEffects: () => this.effects,
-      saveHistorySnapshot: () => this.saveHistorySnapshot(),
-      runStateBatch: (callback) => this.runStateBatch(callback),
+      getEffects: () => runtimeKernel!.effects,
+      saveHistorySnapshot: () => runtimeKernel?.saveHistorySnapshot(),
+      runStateBatch: (callback) => runtimeKernel!.runBatch(callback),
       getTransformEntries: () => this.getTransformEntries(),
-      getHistory: () => this._history,
-      getValidation: () => this._validation,
+      getHistory: () => runtimeKernel!.capabilities.history,
+      getValidation: () => runtimeKernel!.capabilities.validation,
       setFieldWithMeta: (path, value, meta) =>
         this.setFieldWithMeta(path, value, meta),
       unregisterPrefix: (prefix) => this.unregisterPrefix(prefix),
       triggerValidation: (scopeFields, options) =>
         this.triggerValidation(scopeFields, options),
       getConfig: () => this.getConfig(),
-      getDirtyValues: () => this.getDirtyValues(),
-      applyPersistedValues: (values) => this.applyPersistedValues(values),
     });
 
-    this._validation = runtime.capabilities.validation;
-    this._lifecycle = runtime.capabilities.lifecycle;
-    this._history = runtime.capabilities.history;
-    this._arrays = runtime.capabilities.arrays;
-    this._scope = runtime.capabilities.scope;
-    this._query = runtime.capabilities.query;
-    this._error = runtime.capabilities.error;
-    this.state = runtime.state;
-    this.subscriptions = runtime.subscriptions;
     this.storeId = runtime.storeId;
-    this.effects = createStoreEffects<T>({
+
+    const effects = createStoreEffects<T>({
       storeId: this.storeId,
       storeInstance: this,
       config: this._config,
-      getState: () => this.getState(),
+      getState: () => runtimeKernel?.getState() ?? runtime.state,
       getConfig: () => this.getConfig(),
-      getValues: () => this.state.values,
+      getValues: () => (runtimeKernel?.getState() ?? runtime.state).values,
       getDirtyValues: () => this.getDirtyValues(),
       applyPersistedValues: (values) => this.applyPersistedValues(values),
     });
 
-    this.saveHistorySnapshot();
+    runtimeKernel = new BitStoreRuntimeKernel<T>({
+      state: runtime.state,
+      subscriptions: runtime.subscriptions,
+      effects,
+      capabilities: runtime.capabilities,
+      computedManager: this.computedManager,
+    });
 
+    this.runtime = runtimeKernel;
+    this.runtime.saveHistorySnapshot();
     this._cachedConfig = this._config;
   }
 
@@ -217,8 +194,16 @@ export class BitStore<T extends object = any> {
     });
   }
 
+  createArrayItemId(path: string, index?: number): string {
+    return this._config.idFactory({
+      scope: "array",
+      path,
+      index,
+    });
+  }
+
   getState(): BitState<T> {
-    return getEffectiveStoreState(this.state, this.batchState);
+    return this.runtime.getState();
   }
 
   getFieldState<P extends BitPath<T>>(
@@ -242,24 +227,24 @@ export class BitStore<T extends object = any> {
   }
 
   get isValid(): boolean {
-    return this.state.isValid;
+    return this.getState().isValid;
   }
 
   get isSubmitting(): boolean {
-    return this.state.isSubmitting;
+    return this.getState().isSubmitting;
   }
 
   get isDirty(): boolean {
-    return this.state.isDirty;
+    return this.getState().isDirty;
   }
 
   registerField(path: string, config: BitFieldDefinition<T>) {
     registerStoreField({
       path,
       config,
-      state: this.state,
+      state: this.getState(),
       fieldRegistry: this.fieldRegistry,
-      subscriptions: this.subscriptions,
+      subscriptions: this.runtime.subscriptions,
       invalidateFieldIndexes: () => this.invalidateFieldIndexes(),
     });
   }
@@ -267,13 +252,13 @@ export class BitStore<T extends object = any> {
   unregisterField(path: string) {
     unregisterStoreField({
       path,
-      state: this.state,
+      state: this.getState(),
       hasStaticConfig: !!this._config.fields?.[path as string],
       fieldRegistry: this.fieldRegistry,
       validationCleanupField: (fieldPath) =>
-        this._validation.cleanupField(fieldPath),
+        this.runtime.capabilities.validation.cleanupField(fieldPath),
       invalidateFieldIndexes: () => this.invalidateFieldIndexes(),
-      dispatch: (operation) => this.dispatch(operation),
+      dispatch: (operation) => this.runtime.dispatch(operation),
     });
   }
 
@@ -282,29 +267,63 @@ export class BitStore<T extends object = any> {
       prefix,
       fieldRegistry: this.fieldRegistry,
       validationCleanupPrefix: (fieldPrefix) =>
-        this._validation.cleanupPrefix(fieldPrefix),
+        this.runtime.capabilities.validation.cleanupPrefix(fieldPrefix),
       invalidateFieldIndexes: () => this.invalidateFieldIndexes(),
     });
   }
 
   isHidden<P extends BitPath<T>>(path: P): boolean {
-    return this._query.isHidden(path);
+    return this.runtime.capabilities.query.isHidden(path);
   }
 
   isRequired<P extends BitPath<T>>(path: P): boolean {
-    return this._query.isRequired(path);
+    return this.runtime.capabilities.query.isRequired(path);
   }
 
   isFieldDirty(path: string): boolean {
-    return this._query.isFieldDirty(path);
+    return this.runtime.capabilities.query.isFieldDirty(path);
   }
 
   isFieldValidating(path: string): boolean {
-    return this._query.isFieldValidating(path);
+    return this.runtime.capabilities.query.isFieldValidating(path);
   }
 
   subscribe(listener: () => void): () => void {
-    return this.subscriptions.subscribe(listener);
+    return this.runtime.subscriptions.subscribe(listener);
+  }
+
+  subscribePersistMeta(
+    listener: (meta: BitPersistMetadata) => void,
+  ): () => void {
+    return subscribeStorePersistMeta({
+      listener,
+      subscribeSelector: (selector, persistListener, options) =>
+        this.subscribeSelector(selector, persistListener, options),
+    });
+  }
+
+  subscribeHistoryMeta(
+    listener: (meta: BitHistoryMetadata) => void,
+  ): () => void {
+    return subscribeStoreHistoryMeta({
+      readHistoryMeta: () => this.getHistoryMetadata(),
+      subscribe: (metaListener) => this.subscribe(metaListener),
+      listener,
+    });
+  }
+
+  subscribeScopeStatus(
+    scopeName: string,
+    listener: (status: ScopeStatus) => void,
+  ): () => void {
+    return subscribeStoreScopeStatus({
+      scopeName,
+      readScopeStatus: (targetScopeName) => this.getStepStatus(targetScopeName),
+      getScopeFields: (targetScopeName) => this.getScopeFields(targetScopeName),
+      subscribeSelector: (selector, statusListener, options) =>
+        this.subscribeSelector(selector, statusListener, options),
+      listener,
+    });
   }
 
   subscribeSelector<TSlice>(
@@ -313,7 +332,7 @@ export class BitStore<T extends object = any> {
     options?: BitSelectorSubscriptionOptions<TSlice>,
   ) {
     return subscribeStoreSelector({
-      subscriptions: this.subscriptions,
+      subscriptions: this.runtime.subscriptions,
       selector,
       listener,
       options,
@@ -383,85 +402,85 @@ export class BitStore<T extends object = any> {
     value: any,
     meta: BitFieldChangeMeta = { origin: "setField" },
   ) {
-    this._lifecycle.updateField(path, value, meta);
+    this.runtime.capabilities.lifecycle.updateField(path, value, meta);
   }
 
   blurField<P extends BitPath<T>>(path: P) {
-    this.saveHistorySnapshot();
+    this.runtime.saveHistorySnapshot();
 
-    if (!this._query.isTouched(path as string)) {
-      this.runStateBatch(() => {
-        this.dispatch(touchFieldsOperation([path as string]));
+    if (!this.runtime.capabilities.query.isTouched(path as string)) {
+      this.runtime.runBatch(() => {
+        this.runtime.dispatch(touchFieldsOperation([path as string]));
       });
     }
 
-    this._validation.trigger([path]);
+    this.runtime.capabilities.validation.trigger([path]);
   }
 
   markFieldsTouched(paths: string[]) {
     if (paths.length === 0) return;
-    this.dispatch(touchFieldsOperation(paths));
+    this.runtime.dispatch(touchFieldsOperation(paths));
   }
 
   setValues(
     values: T | DeepPartial<T>,
     options?: { partial?: boolean; rebase?: boolean },
   ) {
-    this._lifecycle.setValues(values, options);
+    this.runtime.capabilities.lifecycle.setValues(values, options);
   }
 
   setError(path: string, message: string | undefined) {
-    this._error.setError(path, message);
+    this.runtime.capabilities.error.setError(path, message);
   }
 
   setErrors(errors: BitErrors<T>) {
-    this._error.setErrors(errors);
+    this.runtime.capabilities.error.setErrors(errors);
   }
 
   setServerErrors(serverErrors: Record<string, string[] | string>) {
-    this._error.setServerErrors(serverErrors);
+    this.runtime.capabilities.error.setServerErrors(serverErrors);
   }
 
   reset() {
-    this._lifecycle.reset();
+    this.runtime.capabilities.lifecycle.reset();
   }
 
   transaction<TResult>(callback: () => TResult): TResult {
-    return this.runStateBatch(callback);
+    return this.runtime.runBatch(callback);
   }
 
   async submit(
     onSuccess: (values: T, dirtyValues?: Partial<T>) => void | Promise<void>,
   ) {
-    return this._lifecycle.submit(onSuccess);
+    return this.runtime.capabilities.lifecycle.submit(onSuccess);
   }
 
   getDirtyValues(): Partial<T> {
-    return this.dirtyManager.buildDirtyValues(this.state.values);
+    return this.dirtyManager.buildDirtyValues(this.getState().values);
   }
 
   getPersistMetadata(): BitPersistMetadata {
-    return this.state.persist;
+    return this.getState().persist;
   }
 
   async restorePersisted(): Promise<boolean> {
     return restorePersistedFeature({
-      dispatch: (operation) => this.dispatch(operation),
-      effects: this.effects,
+      dispatch: (operation) => this.runtime.dispatch(operation),
+      effects: this.runtime.effects,
     });
   }
 
   async forceSave(): Promise<void> {
     return forceSavePersistedFeature({
-      dispatch: (operation) => this.dispatch(operation),
-      effects: this.effects,
+      dispatch: (operation) => this.runtime.dispatch(operation),
+      effects: this.runtime.effects,
     });
   }
 
   async clearPersisted(): Promise<void> {
     return clearPersistedFeature({
-      dispatch: (operation) => this.dispatch(operation),
-      effects: this.effects,
+      dispatch: (operation) => this.runtime.dispatch(operation),
+      effects: this.runtime.effects,
     });
   }
 
@@ -469,14 +488,14 @@ export class BitStore<T extends object = any> {
     path: P,
     value: BitArrayItem<BitPathValue<T, P>>,
   ) {
-    this._arrays.pushItem(path, value);
+    this.runtime.capabilities.arrays.pushItem(path, value);
   }
 
   prependItem<P extends BitArrayPath<T>>(
     path: P,
     value: BitArrayItem<BitPathValue<T, P>>,
   ) {
-    this._arrays.prependItem(path, value);
+    this.runtime.capabilities.arrays.prependItem(path, value);
   }
 
   insertItem<P extends BitArrayPath<T>>(
@@ -484,11 +503,11 @@ export class BitStore<T extends object = any> {
     index: number,
     value: BitArrayItem<BitPathValue<T, P>>,
   ) {
-    this._arrays.insertItem(path, index, value);
+    this.runtime.capabilities.arrays.insertItem(path, index, value);
   }
 
   removeItem<P extends BitArrayPath<T>>(path: P, index: number) {
-    this._arrays.removeItem(path, index);
+    this.runtime.capabilities.arrays.removeItem(path, index);
   }
 
   swapItems<P extends BitArrayPath<T>>(
@@ -496,141 +515,82 @@ export class BitStore<T extends object = any> {
     indexA: number,
     indexB: number,
   ) {
-    this._arrays.swapItems(path, indexA, indexB);
+    this.runtime.capabilities.arrays.swapItems(path, indexA, indexB);
   }
 
   moveItem<P extends BitArrayPath<T>>(path: P, from: number, to: number) {
-    this._arrays.moveItem(path, from, to);
+    this.runtime.capabilities.arrays.moveItem(path, from, to);
   }
 
   get canUndo(): boolean {
-    return this._history.canUndo;
+    return this.runtime.capabilities.history.canUndo;
   }
 
   get canRedo(): boolean {
-    return this._history.canRedo;
+    return this.runtime.capabilities.history.canRedo;
   }
 
   undo() {
     runUndoFeature({
-      history: this._history,
-      applyHistoryState: (values) => this._lifecycle.applyHistoryState(values),
+      history: this.runtime.capabilities.history,
+      applyHistoryState: (values) =>
+        this.runtime.capabilities.lifecycle.applyHistoryState(values),
     });
   }
 
   redo() {
     runRedoFeature({
-      history: this._history,
-      applyHistoryState: (values) => this._lifecycle.applyHistoryState(values),
+      history: this.runtime.capabilities.history,
+      applyHistoryState: (values) =>
+        this.runtime.capabilities.lifecycle.applyHistoryState(values),
     });
   }
 
   getHistoryMetadata(): BitHistoryMetadata {
-    return readHistoryFeatureMetadata({ history: this._history });
+    return readHistoryFeatureMetadata({
+      history: this.runtime.capabilities.history,
+    });
   }
 
   validate(options?: BitValidationOptions): Promise<boolean> {
-    return this._validation.validate(options);
+    return this.runtime.capabilities.validation.validate(options);
   }
 
   hasValidationsInProgress(scopeFields?: string[]): boolean {
-    return this._validation.hasValidationsInProgress(scopeFields);
+    return this.runtime.capabilities.validation.hasValidationsInProgress(
+      scopeFields,
+    );
   }
 
   triggerValidation(
     scopeFields?: string[],
     options?: BitValidationTriggerOptions,
   ) {
-    this._validation.trigger(scopeFields, options);
+    this.runtime.capabilities.validation.trigger(scopeFields, options);
   }
 
   getStepStatus(scopeName: string) {
-    return this._scope.getStepStatus(scopeName);
+    return this.runtime.capabilities.scope.getStepStatus(scopeName);
   }
 
   getStepErrors(scopeName: string): Record<string, string> {
-    return this._scope.getStepErrors(scopeName);
-  }
-
-  private runStateBatch<TResult>(callback: () => TResult): TResult {
-    return runStoreStateBatch({
-      batchState: this.batchState,
-      callback,
-      flushBatchedStateUpdates: () => this.flushBatchedStateUpdates(),
-    });
-  }
-
-  private onStateCommitted(payload: {
-    nextState: BitState<T>;
-    changedPaths?: Iterable<string>;
-    valuesChanged: boolean;
-  }): void {
-    commitStoreStateUpdate({
-      payload,
-      setState: (state) => {
-        this.state = state;
-      },
-      notifySubscriptions: (state, changedPaths) =>
-        this.subscriptions.notify(state, changedPaths),
-      notifyEffects: (state, valuesChanged) =>
-        this.effects.onStateUpdated(state, valuesChanged),
-    });
-  }
-
-  private dispatch(operation: BitStoreOperation<T>) {
-    this.state = dispatchStoreStateOperation({
-      state: this.state,
-      batchState: this.batchState,
-      operation,
-      applyComputedValues: (values, changedPaths) => {
-        const normalizedPaths = changedPaths
-          ? Array.from(changedPaths)
-          : undefined;
-        return this.computedManager.apply(values, normalizedPaths);
-      },
-      onStateCommitted: (payload) => this.onStateCommitted(payload),
-    });
-  }
-
-  private saveHistorySnapshot() {
-    saveStoreHistorySnapshot({
-      batchState: this.batchState,
-      values: this.state.values,
-      saveHistory: (values) => this._history.saveSnapshot(values),
-    });
+    return this.runtime.capabilities.scope.getStepErrors(scopeName);
   }
 
   private applyPersistedValues(values: Partial<T>) {
     applyStorePersistedValues({
       values,
-      state: this.state,
+      state: this.getState(),
       initialValues: this._initialValues,
-      validation: this._validation,
+      validation: this.runtime.capabilities.validation,
       fieldRegistry: this.fieldRegistry,
       dirtyManager: this.dirtyManager,
-      dispatch: (operation) => this.dispatch(operation),
-      saveHistorySnapshot: () => this.saveHistorySnapshot(),
+      dispatch: (operation) => this.runtime.dispatch(operation),
+      saveHistorySnapshot: () => this.runtime.saveHistorySnapshot(),
     });
   }
 
   cleanup() {
-    this.subscriptions.destroy();
-    this._validation.cancelAll();
-    this.effects.destroy();
-  }
-
-  private flushBatchedStateUpdates() {
-    this.state = flushStoreBatchedStateUpdates({
-      state: this.state,
-      batchState: this.batchState,
-      applyComputedValues: (values, changedPaths) => {
-        const normalizedPaths = changedPaths
-          ? Array.from(changedPaths)
-          : undefined;
-        return this.computedManager.apply(values, normalizedPaths);
-      },
-      onStateCommitted: (payload) => this.onStateCommitted(payload),
-      saveHistory: (values) => this._history.saveSnapshot(values),
-    });
+    this.runtime.cleanup();
   }
 }

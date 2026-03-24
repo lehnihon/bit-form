@@ -5,10 +5,9 @@ export function createFrameworkMaskedFieldBinding<
   TForm extends object,
   P extends BitPath<TForm>,
 >(store: BitFieldBindingApi<TForm>, path: P) {
-  const resolvedMask = store.resolveMask(path as string);
-
   return {
-    resolvedMask,
-    fieldController: createMaskedFieldController(store, path, resolvedMask),
+    fieldController: createMaskedFieldController(store, path, () =>
+      store.resolveMask(path as string),
+    ),
   };
 }

@@ -98,8 +98,40 @@ export {
   subscribeFormMetaSnapshot,
   observeFormMetaSnapshot,
 } from "./bindings/form-meta";
+export {
+  readPersistMetaSnapshot,
+  subscribePersistMetaSnapshot,
+  observePersistMetaSnapshot,
+} from "./bindings/persist-meta";
+export { createFrameworkFormBinding } from "./bindings/form-binding";
+export { createFrameworkMaskedFieldBinding } from "./bindings/field-binding";
 export { createArrayBindingController } from "./bindings/array-controller";
+export {
+  cleanupRegisteredField,
+  cleanupRegisteredPrefix,
+} from "./bindings/framework-cleanup";
 export type {
   BitArrayBindingController,
   BitArrayBindingField,
 } from "./bindings/array-controller";
+export { subscribeFieldState } from "./field-controller";
+export {
+  isHistoryMetaEqual,
+  readHistoryMetaSnapshot,
+  observeHistoryMetaSnapshot,
+} from "./history-status";
+export type { HistoryMeta } from "./history-status";
+export {
+  areScopeErrorsEqual,
+  isScopeStatusEqual,
+  getScopeSubscriptionPaths,
+  observeScopeStatusSnapshot,
+} from "./scope-status";
+export {
+  isBitFieldInputEventObject,
+  formatMaskedValue,
+  parseMaskedInput,
+} from "./mask/field-binding";
+export type { BitFieldInputEvent } from "./mask/field-binding";
+export { deriveFieldMeta } from "./utils/field-meta";
+export type { BitDerivedFieldMeta } from "./utils/field-meta";

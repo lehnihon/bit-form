@@ -1,9 +1,6 @@
 import { useCallback, useSyncExternalStore, useRef } from "react";
 import type { ScopeStatus, ValidateScopeResult } from "../core";
-import {
-  getScopeSubscriptionPaths,
-  isScopeStatusEqual,
-} from "../core/scope-status";
+import { isScopeStatusEqual } from "../core";
 import { useBitStore } from "./context";
 
 export type { ScopeStatus, ValidateScopeResult };
@@ -32,13 +29,8 @@ export function useBitScope(scopeName: string) {
   // isDirty), evitando execuções desnecessárias do getStatusSnapshot em
   // mudanças não relacionadas (isSubmitting, isValidating de outros campos…)
   const subscribe = useCallback(
-    (cb: () => void) =>
-      store.subscribeSelector(
-        (state) => ({ errors: state.errors, isDirty: state.isDirty }),
-        () => cb(),
-        { paths: getScopeSubscriptionPaths(scopeFields) },
-      ),
-    [store, scopeFields],
+    (cb: () => void) => store.subscribeScopeStatus(scopeName, () => cb()),
+    [store, scopeName],
   );
 
   const status = useSyncExternalStore(

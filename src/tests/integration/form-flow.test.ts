@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import { createPatternMask, unmaskCurrency } from "../../core/mask/creators";
-import { BitStore } from "../../core/store";
+import { createBitStore } from "../../core";
 
 describe("Form Lifecycle Flow", () => {
   it("should process the full complex lifecycle including dependencies and array remapping", async () => {
@@ -11,7 +11,7 @@ describe("Form Lifecycle Flow", () => {
       return Object.keys(errors).length > 0 ? errors : {};
     });
 
-    store = new BitStore({
+    store = createBitStore({
       initialValues: {
         coupon: "",
         price: "",

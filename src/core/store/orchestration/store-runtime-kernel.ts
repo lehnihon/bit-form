@@ -1,0 +1,116 @@
+import {
+  createStoreBatchState,
+  getEffectiveStoreState,
+  type BitStoreBatchState,
+} from "../engines/store-batch-engine";
+import type { BitStoreEffectEngine } from "../engines/effect-engine";
+import type { BitStoreOperation } from "../engines/operation-engine";
+import type { BitSubscriptionEngine } from "../engines/subscription-engine";
+import type { BitState } from "../contracts/types";
+import type { BitComputedManager } from "../managers/core/computed-manager";
+import type { BitStoreCapabilities } from "./capabilities";
+import {
+  commitStoreStateUpdate,
+  dispatchStoreStateOperation,
+  flushStoreBatchedStateUpdates,
+  runStoreStateBatch,
+  saveStoreHistorySnapshot,
+} from "./store-state-ops";
+
+export interface BitStoreRuntimeKernelArgs<T extends object> {
+  state: BitState<T>;
+  subscriptions: BitSubscriptionEngine<T>;
+  effects: BitStoreEffectEngine<T>;
+  capabilities: BitStoreCapabilities<T>;
+  computedManager: BitComputedManager<T>;
+}
+
+export class BitStoreRuntimeKernel<T extends object> {
+  private state: BitState<T>;
+  private readonly batchState: BitStoreBatchState<T> =
+    createStoreBatchState<T>();
+
+  readonly subscriptions: BitSubscriptionEngine<T>;
+  readonly effects: BitStoreEffectEngine<T>;
+  readonly capabilities: BitStoreCapabilities<T>;
+
+  constructor(private readonly args: BitStoreRuntimeKernelArgs<T>) {
+    this.state = args.state;
+    this.subscriptions = args.subscriptions;
+    this.effects = args.effects;
+    this.capabilities = args.capabilities;
+  }
+
+  getState(): BitState<T> {
+    return getEffectiveStoreState(this.state, this.batchState);
+  }
+
+  runBatch<TResult>(callback: () => TResult): TResult {
+    return runStoreStateBatch({
+      batchState: this.batchState,
+      callback,
+      flushBatchedStateUpdates: () => this.flushBatchedStateUpdates(),
+    });
+  }
+
+  dispatch(operation: BitStoreOperation<T>): void {
+    this.state = dispatchStoreStateOperation({
+      state: this.state,
+      batchState: this.batchState,
+      operation,
+      applyComputedValues: (values, changedPaths) => {
+        const normalizedPaths = changedPaths
+          ? Array.from(changedPaths)
+          : undefined;
+        return this.args.computedManager.apply(values, normalizedPaths);
+      },
+      onStateCommitted: (payload) => this.onStateCommitted(payload),
+    });
+  }
+
+  saveHistorySnapshot(): void {
+    saveStoreHistorySnapshot({
+      batchState: this.batchState,
+      values: this.state.values,
+      saveHistory: (values) => this.capabilities.history.saveSnapshot(values),
+    });
+  }
+
+  cleanup(): void {
+    this.subscriptions.destroy();
+    this.capabilities.validation.cancelAll();
+    this.effects.destroy();
+  }
+
+  private onStateCommitted(payload: {
+    nextState: BitState<T>;
+    changedPaths?: Iterable<string>;
+    valuesChanged: boolean;
+  }): void {
+    commitStoreStateUpdate({
+      payload,
+      setState: (state) => {
+        this.state = state;
+      },
+      notifySubscriptions: (state, changedPaths) =>
+        this.subscriptions.notify(state, changedPaths),
+      notifyEffects: (state, valuesChanged) =>
+        this.effects.onStateUpdated(state, valuesChanged),
+    });
+  }
+
+  private flushBatchedStateUpdates(): void {
+    this.state = flushStoreBatchedStateUpdates({
+      state: this.state,
+      batchState: this.batchState,
+      applyComputedValues: (values, changedPaths) => {
+        const normalizedPaths = changedPaths
+          ? Array.from(changedPaths)
+          : undefined;
+        return this.args.computedManager.apply(values, normalizedPaths);
+      },
+      onStateCommitted: (payload) => this.onStateCommitted(payload),
+      saveHistory: (values) => this.capabilities.history.saveSnapshot(values),
+    });
+  }
+}

@@ -1,9 +1,6 @@
 import { useCallback, useSyncExternalStore, useRef, useState } from "react";
 import type { ScopeStatus, ValidateScopeResult } from "../core";
-import {
-  getScopeSubscriptionPaths,
-  isScopeStatusEqual,
-} from "../core/scope-status";
+import { isScopeStatusEqual } from "../core";
 import { useBitStore } from "./context";
 import type { UseBitStepsResult } from "./types";
 
@@ -12,7 +9,6 @@ export function useBitSteps(scopeNames: string[]): UseBitStepsResult {
   const [stepIndex, setStepIndex] = useState(0);
 
   const scope = scopeNames[stepIndex] ?? "";
-  const scopeFields = store.getScopeFields(scope);
   const lastStatus = useRef<ScopeStatus | null>(null);
 
   const getStatusSnapshot = useCallback(() => {
@@ -31,13 +27,8 @@ export function useBitSteps(scopeNames: string[]): UseBitStepsResult {
 
   const status = useSyncExternalStore(
     useCallback(
-      (cb: () => void) =>
-        store.subscribeSelector(
-          (state) => ({ errors: state.errors, isDirty: state.isDirty }),
-          () => cb(),
-          { paths: getScopeSubscriptionPaths(scopeFields) },
-        ),
-      [store, scopeFields],
+      (cb: () => void) => store.subscribeScopeStatus(scope, () => cb()),
+      [store, scope],
     ),
     getStatusSnapshot,
     getStatusSnapshot,

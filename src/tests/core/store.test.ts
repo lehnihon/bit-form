@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { createBitStore, resolveBitStoreForHooks } from "../../core";
-import { BitStore } from "../../core/store";
 
 describe("BitStore Core", () => {
   beforeEach(() => {
@@ -59,18 +58,18 @@ describe("BitStore Core", () => {
 
   describe("Basic State and Getters", () => {
     it("should initialize with correct state", () => {
-      const store = new BitStore({ initialValues: { name: "Leo" } });
+      const store = createBitStore({ initialValues: { name: "Leo" } });
       const state = store.getState();
 
       expect(state.values.name).toBe("Leo");
-      expect(store.isValid).toBe(true);
-      expect(store.isDirty).toBe(false);
-      expect(store.isSubmitting).toBe(false);
+      expect(store.getState().isValid).toBe(true);
+      expect(store.getState().isDirty).toBe(false);
+      expect(store.getState().isSubmitting).toBe(false);
       expect(store.getConfig().initialValues).toEqual({ name: "Leo" });
     });
 
     it("should update field and notify listeners", () => {
-      const store = new BitStore({ initialValues: { name: "" } });
+      const store = createBitStore({ initialValues: { name: "" } });
       const listener = vi.fn();
       store.subscribe(listener);
 
@@ -81,7 +80,7 @@ describe("BitStore Core", () => {
     });
 
     it("should batch updates inside transaction and notify once", () => {
-      const store = new BitStore({ initialValues: { name: "Leo", age: 30 } });
+      const store = createBitStore({ initialValues: { name: "Leo", age: 30 } });
       const listener = vi.fn();
 
       store.subscribe(listener);
@@ -96,7 +95,7 @@ describe("BitStore Core", () => {
     });
 
     it("should allow watching specific fields", () => {
-      const store = new BitStore({
+      const store = createBitStore({
         initialValues: { user: { name: "Leo", age: 30 } },
       });
       const watcher = vi.fn();
@@ -111,7 +110,7 @@ describe("BitStore Core", () => {
     });
 
     it("should support selector-based subscriptions", () => {
-      const store = new BitStore({
+      const store = createBitStore({
         initialValues: { user: { name: "Leo" }, age: 30 },
       });
       const listener = vi.fn();
@@ -132,7 +131,7 @@ describe("BitStore Core", () => {
     });
 
     it("should require explicit selector paths and notify on matching nested updates", () => {
-      const store = new BitStore({
+      const store = createBitStore({
         initialValues: { user: { name: "Leo", age: 30 }, city: "Tokyo" },
       });
       const listener = vi.fn();
@@ -157,7 +156,7 @@ describe("BitStore Core", () => {
     });
 
     it("should notify field subscribers when dependency toggles hidden state", () => {
-      const store = new BitStore({
+      const store = createBitStore({
         initialValues: { country: "BR", state: "SP" },
       });
 
@@ -188,7 +187,7 @@ describe("BitStore Core", () => {
     });
 
     it("should support selector options emitImmediately and equalityFn", () => {
-      const store = new BitStore({
+      const store = createBitStore({
         initialValues: { user: { name: "Leo" }, age: 30 },
       });
 
@@ -218,7 +217,7 @@ describe("BitStore Core", () => {
     });
 
     it("should support tracked selector subscriptions without explicit paths", () => {
-      const store = new BitStore({
+      const store = createBitStore({
         initialValues: { user: { name: "Leo" }, age: 30 },
       });
 
@@ -240,7 +239,7 @@ describe("BitStore Core", () => {
     });
 
     it("should re-track tracked selector paths when selector branch changes", async () => {
-      const store = new BitStore({
+      const store = createBitStore({
         initialValues: {
           mode: "name" as "name" | "city",
           user: { name: "Leo" },
@@ -275,7 +274,7 @@ describe("BitStore Core", () => {
     });
 
     it("should support path-based subscriptions", () => {
-      const store = new BitStore({
+      const store = createBitStore({
         initialValues: { user: { name: "Leo" }, age: 30 },
       });
       const listener = vi.fn();
@@ -292,7 +291,7 @@ describe("BitStore Core", () => {
     });
 
     it("should support native subscribeFieldState with field-level equality", () => {
-      const store = new BitStore({
+      const store = createBitStore({
         initialValues: { name: "Leo", age: 30 },
       });
       const listener = vi.fn();
@@ -310,7 +309,7 @@ describe("BitStore Core", () => {
     });
 
     it("should support native subscribeFormMeta and notify only form flags", () => {
-      const store = new BitStore({
+      const store = createBitStore({
         initialValues: { name: "Leo" },
       });
       const listener = vi.fn();
@@ -335,7 +334,7 @@ describe("BitStore Core", () => {
     });
 
     it("should persist a single history snapshot for multiple mutations inside transaction", () => {
-      const store = new BitStore({
+      const store = createBitStore({
         initialValues: { items: [1] },
         history: { enabled: true, limit: 20 },
       });
@@ -355,7 +354,7 @@ describe("BitStore Core", () => {
     });
 
     it("should update nested fields using dot notation", () => {
-      const store = new BitStore({
+      const store = createBitStore({
         initialValues: { user: { profile: { name: "" } } },
       });
 
@@ -364,29 +363,29 @@ describe("BitStore Core", () => {
     });
 
     it("should mark field as touched on blur", () => {
-      const store = new BitStore({ initialValues: { name: "" } });
+      const store = createBitStore({ initialValues: { name: "" } });
 
       store.blurField("name");
       expect(store.getState().touched.name).toBe(true);
     });
 
     it("should track isDirty state accurately", () => {
-      const store = new BitStore({ initialValues: { name: "Leo" } });
+      const store = createBitStore({ initialValues: { name: "Leo" } });
 
-      expect(store.isDirty).toBe(false);
+      expect(store.getState().isDirty).toBe(false);
       expect(store.isFieldDirty("name")).toBe(false);
 
       store.setField("name", "Leandro");
-      expect(store.isDirty).toBe(true);
+      expect(store.getState().isDirty).toBe(true);
       expect(store.isFieldDirty("name")).toBe(true);
 
       store.setField("name", "Leo");
-      expect(store.isDirty).toBe(false);
+      expect(store.getState().isDirty).toBe(false);
       expect(store.isFieldDirty("name")).toBe(false);
     });
 
     it("should return only dirty values", () => {
-      const store = new BitStore({
+      const store = createBitStore({
         initialValues: { name: "Leo", age: 30, city: "Tokyo" },
       });
 
@@ -403,7 +402,7 @@ describe("BitStore Core", () => {
     });
 
     it("should return dirty values for nested objects", () => {
-      const store = new BitStore({
+      const store = createBitStore({
         initialValues: { user: { name: "Leo", profile: { bio: "Dev" } } },
       });
 
@@ -417,7 +416,7 @@ describe("BitStore Core", () => {
     });
 
     it("should return full array when any index changes", () => {
-      const store = new BitStore({
+      const store = createBitStore({
         initialValues: { tags: ["react", "vue"], count: 0 },
       });
 
@@ -431,7 +430,7 @@ describe("BitStore Core", () => {
 
   describe("Computed Fields", () => {
     it("should calculate fields on initialization", () => {
-      const store = new BitStore({
+      const store = createBitStore({
         initialValues: { price: 10, qty: 2, total: 0 },
         fields: {
           total: {
@@ -445,7 +444,7 @@ describe("BitStore Core", () => {
     });
 
     it("should update computed field when dependencies change", () => {
-      const store = new BitStore({
+      const store = createBitStore({
         initialValues: {
           firstName: "Leandro",
           lastName: "Ishikawa",
@@ -464,7 +463,7 @@ describe("BitStore Core", () => {
     });
 
     it("should handle cascading computed fields (double pass)", () => {
-      const store = new BitStore({
+      const store = createBitStore({
         initialValues: { netPrice: 100, tax: 0, finalPrice: 0 },
         fields: {
           tax: {
@@ -485,28 +484,27 @@ describe("BitStore Core", () => {
     });
 
     it("should fail fast on explicit cyclic computed dependencies", () => {
-      expect(
-        () =>
-          new BitStore({
-            initialValues: { price: 10, total: 0, grandTotal: 0 },
-            fields: {
-              total: {
-                computed: (vals) => vals.grandTotal,
-                computedDependsOn: ["grandTotal"],
-              },
-              grandTotal: {
-                computed: (vals) => vals.total,
-                computedDependsOn: ["total"],
-              },
+      expect(() =>
+        createBitStore({
+          initialValues: { price: 10, total: 0, grandTotal: 0 },
+          fields: {
+            total: {
+              computed: (vals) => vals.grandTotal,
+              computedDependsOn: ["grandTotal"],
             },
-          }),
+            grandTotal: {
+              computed: (vals) => vals.total,
+              computedDependsOn: ["total"],
+            },
+          },
+        }),
       ).toThrow(/cyclic computed dependencies/i);
     });
   });
 
   describe("Conditional Logic (Dependency Manager)", () => {
     it("should hide field based on initial values", () => {
-      const store = new BitStore({
+      const store = createBitStore({
         initialValues: { country: "US", state: "" },
       });
       store.registerField("state", {
@@ -520,7 +518,7 @@ describe("BitStore Core", () => {
     });
 
     it("should show field and trigger re-render when dependency changes", () => {
-      const store = new BitStore({
+      const store = createBitStore({
         initialValues: { country: "US", state: "" },
       });
       const listener = vi.fn();
@@ -540,7 +538,7 @@ describe("BitStore Core", () => {
     });
 
     it("should clear errors when a field becomes hidden", () => {
-      const store = new BitStore({
+      const store = createBitStore({
         initialValues: { type: "company", cnpj: "" },
       });
       store.registerField("cnpj", {
@@ -559,7 +557,7 @@ describe("BitStore Core", () => {
     });
 
     it("should unregister field configurations and dependencies", () => {
-      const store = new BitStore({
+      const store = createBitStore({
         initialValues: { country: "BR", state: "" },
       });
 
@@ -579,7 +577,7 @@ describe("BitStore Core", () => {
     });
 
     it("should NOT unregister fields from config.fields (keeps them for validation)", () => {
-      const store = new BitStore({
+      const store = createBitStore({
         initialValues: { bonus: false, bonusValue: 0 },
         fields: {
           bonus: { scope: "step1" },
@@ -594,28 +592,28 @@ describe("BitStore Core", () => {
         },
       });
 
-      expect(store.getFieldConfig("bonusValue")).toBeDefined();
+      expect((store as any).getFieldConfig("bonusValue")).toBeDefined();
 
       store.unregisterField("bonusValue");
 
-      expect(store.getFieldConfig("bonusValue")).toBeDefined();
+      expect((store as any).getFieldConfig("bonusValue")).toBeDefined();
     });
   });
 
   describe("Validation & Scopes", () => {
     it("should handle manual error setting with setError and setErrors", () => {
-      const store = new BitStore({ initialValues: { email: "" } });
+      const store = createBitStore({ initialValues: { email: "" } });
 
       store.setError("email", "Invalid email");
       expect(store.getState().errors.email).toBe("Invalid email");
-      expect(store.isValid).toBe(false);
+      expect(store.getState().isValid).toBe(false);
 
       store.setErrors({ email: "Too short" });
       expect(store.getState().errors.email).toBe("Too short");
     });
 
     it("should clear field error instantly when value changes", () => {
-      const store = new BitStore({ initialValues: { name: "" } });
+      const store = createBitStore({ initialValues: { name: "" } });
       store.setError("name", "Required");
 
       store.setField("name", "L");
@@ -623,7 +621,7 @@ describe("BitStore Core", () => {
     });
 
     it("should evaluate step status correctly", () => {
-      const store = new BitStore({
+      const store = createBitStore({
         initialValues: { p1: "", p2: "" },
         fields: {
           p1: { scope: "step1" },
@@ -640,7 +638,7 @@ describe("BitStore Core", () => {
     });
 
     it("should map server errors", () => {
-      const store = new BitStore({ initialValues: { email: "", cpf: "" } });
+      const store = createBitStore({ initialValues: { email: "", cpf: "" } });
 
       store.setServerErrors({
         email: ["Already taken"],
@@ -649,11 +647,11 @@ describe("BitStore Core", () => {
 
       expect(store.getState().errors.email).toBe("Already taken");
       expect(store.getState().errors.cpf).toBe("Invalid format");
-      expect(store.isValid).toBe(false);
+      expect(store.getState().isValid).toBe(false);
     });
 
     it("should trigger requiredIf validation dynamically", async () => {
-      const store = new BitStore({
+      const store = createBitStore({
         initialValues: { hasLicense: true, licenseNumber: "" },
       });
 
@@ -674,7 +672,7 @@ describe("BitStore Core", () => {
     });
 
     it("should use conditional.requiredMessage when defined", async () => {
-      const store = new BitStore({
+      const store = createBitStore({
         initialValues: { hasBonus: true, bonusValue: "" },
       });
 
@@ -696,7 +694,7 @@ describe("BitStore Core", () => {
 
   describe("Undo/Redo History", () => {
     it("should track history correctly", () => {
-      const store = new BitStore({
+      const store = createBitStore({
         initialValues: { name: "Leo" },
         history: { enabled: true },
       });
@@ -707,18 +705,18 @@ describe("BitStore Core", () => {
       store.setField("name", "Ishikawa");
       store.blurField("name");
 
-      expect(store.canUndo).toBe(true);
+      expect(store.getHistoryMetadata().canUndo).toBe(true);
 
       store.undo();
       expect(store.getState().values.name).toBe("Leandro");
-      expect(store.canRedo).toBe(true);
+      expect(store.getHistoryMetadata().canRedo).toBe(true);
 
       store.redo();
       expect(store.getState().values.name).toBe("Ishikawa");
     });
 
     it("should expose history metadata", () => {
-      const store = new BitStore({
+      const store = createBitStore({
         initialValues: { name: "Leo" },
         history: { enabled: true },
       });
@@ -738,7 +736,7 @@ describe("BitStore Core", () => {
     });
 
     it("should not allow redo after undo followed by new write", () => {
-      const store = new BitStore({
+      const store = createBitStore({
         initialValues: { name: "A" },
         history: { enabled: true },
       });
@@ -751,12 +749,12 @@ describe("BitStore Core", () => {
 
       store.undo();
       expect(store.getState().values.name).toBe("B");
-      expect(store.canRedo).toBe(true);
+      expect(store.getHistoryMetadata().canRedo).toBe(true);
 
       store.setField("name", "D");
       store.blurField("name");
 
-      expect(store.canRedo).toBe(false);
+      expect(store.getHistoryMetadata().canRedo).toBe(false);
       expect(store.redo()).toBeUndefined();
       expect(store.getState().values.name).toBe("D");
     });
@@ -764,7 +762,7 @@ describe("BitStore Core", () => {
 
   describe("Form Lifecycle & Submissions", () => {
     it("should reset form to initial values", () => {
-      const store = new BitStore({ initialValues: { name: "Leo" } });
+      const store = createBitStore({ initialValues: { name: "Leo" } });
 
       store.setField("name", "Leandro");
       store.setError("name", "Error");
@@ -773,29 +771,29 @@ describe("BitStore Core", () => {
 
       expect(store.getState().values.name).toBe("Leo");
       expect(store.getState().errors).toEqual({});
-      expect(store.isDirty).toBe(false);
+      expect(store.getState().isDirty).toBe(false);
     });
 
     it("should reset baseline using rebase", () => {
-      const store = new BitStore({ initialValues: { name: "" } });
+      const store = createBitStore({ initialValues: { name: "" } });
 
       store.setValues({ name: "Leandro" }, { rebase: true });
       expect(store.getState().values.name).toBe("Leandro");
-      expect(store.isDirty).toBe(false);
+      expect(store.getState().isDirty).toBe(false);
     });
 
     it("should replace values without rebasing the initial state", () => {
-      const store = new BitStore({ initialValues: { name: "Leo", age: 30 } });
+      const store = createBitStore({ initialValues: { name: "Leo", age: 30 } });
 
       store.setValues({ name: "Leandro", age: 31 });
 
       expect(store.getState().values).toEqual({ name: "Leandro", age: 31 });
       expect(store.getConfig().initialValues).toEqual({ name: "Leo", age: 30 });
-      expect(store.isDirty).toBe(true);
+      expect(store.getState().isDirty).toBe(true);
     });
 
     it("should hydrate current values with deep merge semantics", () => {
-      const store = new BitStore({
+      const store = createBitStore({
         initialValues: { user: { name: "Leo", profile: { city: "Tokyo" } } },
       });
 
@@ -807,21 +805,21 @@ describe("BitStore Core", () => {
       expect(store.getState().values).toEqual({
         user: { name: "Leo", profile: { city: "Osaka" } },
       });
-      expect(store.isDirty).toBe(true);
+      expect(store.getState().isDirty).toBe(true);
     });
 
     it("should rebase values explicitly", () => {
-      const store = new BitStore({ initialValues: { name: "Leo", age: 30 } });
+      const store = createBitStore({ initialValues: { name: "Leo", age: 30 } });
 
       store.setValues({ name: "Leandro", age: 31 }, { rebase: true });
 
       expect(store.getState().values).toEqual({ name: "Leandro", age: 31 });
       expect(store.getConfig().initialValues).toEqual({ name: "Leo", age: 30 });
-      expect(store.isDirty).toBe(false);
+      expect(store.getState().isDirty).toBe(false);
     });
 
     it("should remove hidden fields and apply transforms on submit", async () => {
-      const store = new BitStore({
+      const store = createBitStore({
         initialValues: { newsletter: false, email: "test@test.com", price: 10 },
         fields: {
           price: { transform: (val) => val * 2 },
@@ -841,11 +839,11 @@ describe("BitStore Core", () => {
 
       expect(submittedData.email).toBeUndefined();
       expect(submittedData.price).toBe(20);
-      expect(store.isSubmitting).toBe(false);
+      expect(store.getState().isSubmitting).toBe(false);
     });
 
     it("should pass dirtyValues as second parameter to submit callback", async () => {
-      const store = new BitStore({
+      const store = createBitStore({
         initialValues: { name: "Leo", age: 30, city: "Tokyo" },
       });
 
@@ -869,7 +867,7 @@ describe("BitStore Core", () => {
     });
 
     it("should calculate dirtyValues after transforms on submit", async () => {
-      const store = new BitStore({
+      const store = createBitStore({
         initialValues: { price: 10, discount: 0 },
         fields: {
           price: { transform: (val) => val * 2 },
@@ -890,7 +888,7 @@ describe("BitStore Core", () => {
 
   describe("Array Operations", () => {
     it("should push and prepend items", () => {
-      const store = new BitStore({ initialValues: { list: [2] } });
+      const store = createBitStore({ initialValues: { list: [2] } });
 
       store.pushItem("list", 3);
       expect(store.getState().values.list).toEqual([2, 3]);
@@ -900,15 +898,17 @@ describe("BitStore Core", () => {
     });
 
     it("should insert item at specific index", () => {
-      const store = new BitStore({ initialValues: { list: [1, 3] } });
+      const store = createBitStore({ initialValues: { list: [1, 3] } });
 
       store.insertItem("list", 1, 2);
       expect(store.getState().values.list).toEqual([1, 2, 3]);
     });
 
     it("should clean up and shift errors when item is removed", () => {
-      const store = new BitStore({ initialValues: { list: ["A", "B", "C"] } });
-      store.triggerValidation = vi.fn();
+      const store = createBitStore({
+        initialValues: { list: ["A", "B", "C"] },
+      });
+      (store as any).triggerValidation = vi.fn();
 
       store.setError("list.2", "Error on C");
       store.removeItem("list", 1);
@@ -919,8 +919,8 @@ describe("BitStore Core", () => {
     });
 
     it("should swap items and swap their errors", () => {
-      const store = new BitStore({ initialValues: { list: ["A", "B"] } });
-      store.triggerValidation = vi.fn();
+      const store = createBitStore({ initialValues: { list: ["A", "B"] } });
+      (store as any).triggerValidation = vi.fn();
 
       store.setError("list.0", "Error on A");
       store.swapItems("list", 0, 1);
@@ -931,8 +931,10 @@ describe("BitStore Core", () => {
     });
 
     it("should move items and shift errors accordingly", () => {
-      const store = new BitStore({ initialValues: { list: ["A", "B", "C"] } });
-      store.triggerValidation = vi.fn();
+      const store = createBitStore({
+        initialValues: { list: ["A", "B", "C"] },
+      });
+      (store as any).triggerValidation = vi.fn();
 
       store.setError("list.0", "Error on A");
       store.moveItem("list", 0, 2);
@@ -954,7 +956,7 @@ describe("BitStore Core", () => {
     });
 
     it("deve aplicar debounce e gerenciar o estado isValidating corretamente", async () => {
-      const store = new BitStore({ initialValues: { username: "" } });
+      const store = createBitStore({ initialValues: { username: "" } });
 
       let resolveApi: (msg: string | null) => void;
       const mockApi = vi.fn().mockImplementation(() => {
@@ -994,7 +996,7 @@ describe("BitStore Core", () => {
     });
 
     it("deve bloquear submit enquanto houver validação assíncrona pendente", async () => {
-      const store = new BitStore({ initialValues: { username: "" } });
+      const store = createBitStore({ initialValues: { username: "" } });
 
       let resolveApi: (msg: string | null) => void;
       const mockApi = vi.fn().mockImplementation(() => {
@@ -1033,7 +1035,7 @@ describe("BitStore Core", () => {
     });
 
     it("deve evitar Race Conditions ignorando respostas de requisições antigas", async () => {
-      const store = new BitStore({ initialValues: { email: "" } });
+      const store = createBitStore({ initialValues: { email: "" } });
 
       let resolveFirstReq: (msg: string | null) => void;
       let resolveSecondReq: (msg: string | null) => void;
@@ -1079,7 +1081,7 @@ describe("BitStore Core", () => {
         name: "Nome inválido",
       });
 
-      const store = new BitStore({
+      const store = createBitStore({
         initialValues: { email: "", name: "" },
         validation: {
           resolver,
@@ -1087,9 +1089,9 @@ describe("BitStore Core", () => {
         },
       });
 
-      store.triggerValidation(["email"]);
+      (store as any).triggerValidation(["email"]);
       await vi.advanceTimersByTimeAsync(10);
-      store.triggerValidation(["name"]);
+      (store as any).triggerValidation(["name"]);
 
       await vi.advanceTimersByTimeAsync(25);
 
@@ -1107,7 +1109,7 @@ describe("BitStore Core", () => {
         password: "Senha fraca",
       });
 
-      const store = new BitStore({
+      const store = createBitStore({
         initialValues: { username: "leandro", password: "" },
         validation: { resolver: mockResolver, delay: 0 },
       });
@@ -1135,7 +1137,7 @@ describe("BitStore Core", () => {
     });
 
     it("deve manter erro do resolver quando asyncValidate passa (não limpar erro Zod)", async () => {
-      const store = new BitStore({
+      const store = createBitStore({
         initialValues: { email: "invalido" },
         validation: {
           resolver: (values) =>
@@ -1165,7 +1167,7 @@ describe("BitStore Core", () => {
     });
 
     it("deve limpar a memória do erro assíncrono ao ocultar e recalcular quando validado novamente", async () => {
-      const store = new BitStore({
+      const store = createBitStore({
         initialValues: { hasCnpj: true, cnpj: "111" },
       });
 
@@ -1197,7 +1199,7 @@ describe("BitStore Core", () => {
     });
 
     it("deve executar asyncValidate apenas no blur por padrão", async () => {
-      const store = new BitStore({
+      const store = createBitStore({
         initialValues: { username: "" },
         validation: { delay: 0 },
       });
@@ -1229,7 +1231,7 @@ describe("BitStore Core", () => {
       const teardown = vi.fn();
       const setup = vi.fn(() => teardown);
 
-      const store = new BitStore({
+      const store = createBitStore({
         initialValues: { name: "" },
         plugins: [{ name: "setup-plugin", setup }],
       });
@@ -1242,7 +1244,7 @@ describe("BitStore Core", () => {
     it("should trigger beforeValidate and afterValidate in order", async () => {
       const calls: string[] = [];
 
-      const store = new BitStore({
+      const store = createBitStore({
         initialValues: { name: "Leo" },
         validation: {
           resolver: () => ({}),
@@ -1273,7 +1275,7 @@ describe("BitStore Core", () => {
     it("should trigger beforeSubmit and afterSubmit around successful submit", async () => {
       const calls: string[] = [];
 
-      const store = new BitStore({
+      const store = createBitStore({
         initialValues: { name: "Leo" },
         validation: {
           resolver: () => ({}),
@@ -1310,7 +1312,7 @@ describe("BitStore Core", () => {
         path: string;
       }> = [];
 
-      const store = new BitStore({
+      const store = createBitStore({
         initialValues: { name: "", items: ["A"] },
         plugins: [
           {
@@ -1346,7 +1348,7 @@ describe("BitStore Core", () => {
     it("should be fail-open when plugin throws and report via onError", async () => {
       const onError = vi.fn();
 
-      const store = new BitStore({
+      const store = createBitStore({
         initialValues: { email: "x" },
         validation: {
           resolver: () => ({}),
@@ -1391,7 +1393,7 @@ describe("BitStore Core", () => {
       const onError = vi.fn();
       const afterSubmit = vi.fn();
 
-      const store = new BitStore({
+      const store = createBitStore({
         initialValues: { name: "Leo" },
         validation: {
           resolver: () => ({}),

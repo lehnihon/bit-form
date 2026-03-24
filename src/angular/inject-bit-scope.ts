@@ -1,30 +1,22 @@
 import { signal, computed, DestroyRef, inject } from "@angular/core";
 import type { ScopeStatus, ValidateScopeResult } from "../core";
-import {
-  getScopeSubscriptionPaths,
-  isScopeStatusEqual,
-} from "../core/scope-status";
+import { observeScopeStatusSnapshot } from "../core";
 import { useBitStore } from "./provider";
 
 export type { ScopeStatus, ValidateScopeResult };
 
 export function injectBitScope(scopeName: string) {
   const store = useBitStore();
-  const scopeFields = store.getScopeFields(scopeName);
   const initialStatus = store.getStepStatus(scopeName);
 
   const status = signal<ScopeStatus>(initialStatus);
 
-  const unsubscribe = store.subscribeSelector(
-    (state) => ({ errors: state.errors, isDirty: state.isDirty }),
-    () => {
-      const newStatus = store.getStepStatus(scopeName);
-      const current = status();
-      if (!isScopeStatusEqual(current, newStatus)) {
-        status.set(newStatus);
-      }
+  const unsubscribe = observeScopeStatusSnapshot(
+    store,
+    scopeName,
+    (nextStatus) => {
+      status.set(nextStatus);
     },
-    { paths: getScopeSubscriptionPaths(scopeFields) },
   );
 
   try {

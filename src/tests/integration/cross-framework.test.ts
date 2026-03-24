@@ -1,11 +1,11 @@
 import { describe, it, expect, vi } from "vitest";
 import { createPatternMask } from "../../core/mask/creators";
-import { BitStore } from "../../core/store";
+import { createBitStore } from "../../core";
 import { maskBRL } from "../../mask";
 
 describe("Cross-Framework Consistency", () => {
   it("should maintain data integrity and case sensitivity across adapters", async () => {
-    const store = new BitStore({ initialValues: { apiKey: "" } });
+    const store = createBitStore({ initialValues: { apiKey: "" } });
     const mask = createPatternMask("XXXX-####");
     const formatted = mask.format("test1234");
 
@@ -18,11 +18,11 @@ describe("Cross-Framework Consistency", () => {
   });
 
   it("should exhibit identical behavior for currency between frameworks", () => {
-    const store = new BitStore({
+    const store = createBitStore({
       initialValues: { balance: 10 },
       masks: { brl: maskBRL },
     });
-    const brl = store.config.masks!.brl;
+    const brl = store.getConfig().masks!.brl;
 
     const display = brl.format(store.getState().values.balance);
     expect(display).toBe("R$ 10,00");
@@ -32,8 +32,8 @@ describe("Cross-Framework Consistency", () => {
   });
 
   it("should handle array error shifting and value integrity consistently", () => {
-    const store = new BitStore({ initialValues: { list: ["A", "B", "C"] } });
-    store.triggerValidation = vi.fn();
+    const store = createBitStore({ initialValues: { list: ["A", "B", "C"] } });
+    (store as any).triggerValidation = vi.fn();
 
     store.setError("list.2", "Error C");
     store.removeItem("list", 1);
@@ -47,7 +47,7 @@ describe("Cross-Framework Consistency", () => {
   });
 
   it("should evaluate conditional visibility and requirement consistently", () => {
-    const store = new BitStore({ initialValues: { type: "A", detail: "" } });
+    const store = createBitStore({ initialValues: { type: "A", detail: "" } });
 
     store.registerField("detail", {
       conditional: {
@@ -63,7 +63,7 @@ describe("Cross-Framework Consistency", () => {
   });
 
   it("should apply transforms consistently before submission", async () => {
-    const store = new BitStore({
+    const store = createBitStore({
       initialValues: { count: 10 },
       fields: { count: { transform: (v) => v * 2 } },
     });

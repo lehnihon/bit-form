@@ -1,18 +1,15 @@
 import { computed, onUnmounted, shallowRef } from "vue";
-import { isHistoryMetaEqual } from "../core/history-status";
+import { observeHistoryMetaSnapshot, readHistoryMetaSnapshot } from "../core";
 import { useBitStore } from "./context";
 import type { UseBitHistoryResult } from "./types";
 
 export function useBitHistory<T extends object = any>(): UseBitHistoryResult {
   const store = useBitStore<T>();
 
-  const meta = shallowRef(store.getHistoryMetadata());
+  const meta = shallowRef(readHistoryMetaSnapshot(store));
 
-  const unsubscribe = store.subscribe(() => {
-    const nextMeta = store.getHistoryMetadata();
-    if (!isHistoryMetaEqual(meta.value, nextMeta)) {
-      meta.value = nextMeta;
-    }
+  const unsubscribe = observeHistoryMetaSnapshot(store, (nextMeta) => {
+    meta.value = nextMeta;
   });
 
   onUnmounted(unsubscribe);

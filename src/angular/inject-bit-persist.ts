@@ -1,5 +1,6 @@
 import { computed, inject, signal, DestroyRef } from "@angular/core";
 import { useBitStore } from "./provider";
+import { observePersistMetaSnapshot } from "../core";
 import type { InjectBitPersistResult } from "./types";
 
 export function injectBitPersist<
@@ -8,12 +9,9 @@ export function injectBitPersist<
   const store = useBitStore<T>();
   const persist = signal(store.getPersistMetadata());
 
-  const unsubscribe = store.subscribeTracked(
-    (state) => state.persist,
-    (nextPersist) => {
-      persist.set(nextPersist);
-    },
-  );
+  const unsubscribe = observePersistMetaSnapshot(store, (nextPersist) => {
+    persist.set(nextPersist);
+  });
 
   try {
     inject(DestroyRef).onDestroy(() => unsubscribe());

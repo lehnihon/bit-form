@@ -21,8 +21,13 @@ export function subscribeFieldState<
 export function createMaskedFieldController<
   TForm extends object,
   P extends BitPath<TForm>,
->(store: BitFieldBindingApi<TForm>, path: P, mask: BitMask | undefined) {
+>(
+  store: BitFieldBindingApi<TForm>,
+  path: P,
+  resolveMask: () => BitMask | undefined,
+) {
   const setValue = (value: unknown) => {
+    const mask = resolveMask();
     store.setField(
       path,
       parseMaskedInput(value, mask) as BitPathValue<TForm, P>,
@@ -31,7 +36,8 @@ export function createMaskedFieldController<
 
   const setBlur = () => store.blurField(path);
 
-  const displayValue = (value: unknown) => formatMaskedValue(value, mask);
+  const displayValue = (value: unknown) =>
+    formatMaskedValue(value, resolveMask());
 
   return {
     setValue,

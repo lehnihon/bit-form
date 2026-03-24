@@ -6,8 +6,11 @@ import {
   useState,
 } from "react";
 import { useBitStore } from "./context";
-import { createFrameworkFormBinding } from "../core/bindings/form-binding";
-import { readFormMetaSnapshot, subscribeFormMetaSnapshot } from "../core";
+import {
+  createFrameworkFormBinding,
+  readFormMetaSnapshot,
+  subscribeFormMetaSnapshot,
+} from "../core";
 import type { UseBitFormResult } from "./types";
 
 export function useBitForm<T extends object>(): UseBitFormResult<T> {

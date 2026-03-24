@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { createBitStore } from "../../core";
-import { BitStore } from "../../core/store";
 
 interface TestForm {
   name: string;
@@ -34,7 +33,7 @@ describe("Persist Feature (BitPersistManager)", () => {
   describe("disabled by default", () => {
     it("should not save when persist is not enabled", async () => {
       const storage = createMockStorage();
-      const store = new BitStore<TestForm>({
+      const store = createBitStore<TestForm>({
         initialValues: { name: "Leo", email: "leo@test.com", age: 30 },
         persist: {
           enabled: false,
@@ -53,7 +52,7 @@ describe("Persist Feature (BitPersistManager)", () => {
 
     it("should return false on restorePersisted when disabled", async () => {
       const storage = createMockStorage();
-      const store = new BitStore<TestForm>({
+      const store = createBitStore<TestForm>({
         initialValues: { name: "Leo", email: "leo@test.com", age: 30 },
         persist: {
           enabled: false,
@@ -71,7 +70,7 @@ describe("Persist Feature (BitPersistManager)", () => {
   describe("autosave", () => {
     it("should autosave after value changes (debounced)", async () => {
       const storage = createMockStorage();
-      const store = new BitStore<TestForm>({
+      const store = createBitStore<TestForm>({
         initialValues: { name: "Leo", email: "leo@test.com", age: 30 },
         persist: {
           enabled: true,
@@ -100,7 +99,7 @@ describe("Persist Feature (BitPersistManager)", () => {
 
     it("should not autosave if autoSave is false", async () => {
       const storage = createMockStorage();
-      const store = new BitStore<TestForm>({
+      const store = createBitStore<TestForm>({
         initialValues: { name: "Leo", email: "leo@test.com", age: 30 },
         persist: {
           enabled: true,
@@ -120,7 +119,7 @@ describe("Persist Feature (BitPersistManager)", () => {
 
     it("should debounce multiple rapid changes into one save", async () => {
       const storage = createMockStorage();
-      const store = new BitStore<TestForm>({
+      const store = createBitStore<TestForm>({
         initialValues: { name: "Leo", email: "leo@test.com", age: 30 },
         persist: {
           enabled: true,
@@ -144,7 +143,7 @@ describe("Persist Feature (BitPersistManager)", () => {
   describe("forceSave", () => {
     it("should save immediately when forceSave is called", async () => {
       const storage = createMockStorage();
-      const store = new BitStore<TestForm>({
+      const store = createBitStore<TestForm>({
         initialValues: { name: "Leo", email: "leo@test.com", age: 30 },
         persist: {
           enabled: true,
@@ -176,7 +175,7 @@ describe("Persist Feature (BitPersistManager)", () => {
         age: 99,
       });
 
-      const store = new BitStore<TestForm>({
+      const store = createBitStore<TestForm>({
         initialValues: { name: "Leo", email: "leo@test.com", age: 30 },
         persist: {
           enabled: true,
@@ -195,7 +194,7 @@ describe("Persist Feature (BitPersistManager)", () => {
 
     it("should return false when nothing is saved", async () => {
       const storage = createMockStorage();
-      const store = new BitStore<TestForm>({
+      const store = createBitStore<TestForm>({
         initialValues: { name: "Leo", email: "leo@test.com", age: 30 },
         persist: {
           enabled: true,
@@ -213,7 +212,7 @@ describe("Persist Feature (BitPersistManager)", () => {
       const storage = createMockStorage();
       storage._data["test-form"] = JSON.stringify({ name: "Partial" });
 
-      const store = new BitStore<TestForm>({
+      const store = createBitStore<TestForm>({
         initialValues: { name: "Leo", email: "leo@test.com", age: 30 },
         persist: {
           enabled: true,
@@ -236,7 +235,7 @@ describe("Persist Feature (BitPersistManager)", () => {
       const storage = createMockStorage();
       storage._data["test-form"] = JSON.stringify({ name: "Saved" });
 
-      const store = new BitStore<TestForm>({
+      const store = createBitStore<TestForm>({
         initialValues: { name: "Leo", email: "leo@test.com", age: 30 },
         persist: {
           enabled: true,
@@ -266,7 +265,7 @@ describe("Persist Feature (BitPersistManager)", () => {
         }),
       };
 
-      const store = new BitStore<TestForm>({
+      const store = createBitStore<TestForm>({
         initialValues: { name: "Leo", email: "leo@test.com", age: 30 },
         persist: {
           enabled: true,
@@ -298,7 +297,7 @@ describe("Persist Feature (BitPersistManager)", () => {
         removeItem: vi.fn(),
       };
 
-      const store = new BitStore<TestForm>({
+      const store = createBitStore<TestForm>({
         initialValues: { name: "Leo", email: "leo@test.com", age: 30 },
         persist: {
           enabled: true,

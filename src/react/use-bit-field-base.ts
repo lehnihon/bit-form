@@ -1,12 +1,13 @@
 import { useCallback, useSyncExternalStore, useRef, useEffect } from "react";
 import { useBitStore } from "./context";
-import { BitPath, BitPathValue } from "../core";
-import { cleanupRegisteredField } from "../core/bindings/framework-cleanup";
-import { subscribeFieldState } from "../core/field-controller";
 import {
-  createFieldStateSnapshot,
   BitFieldSnapshot,
-} from "../core/utils/field-state-snapshot";
+  BitPath,
+  BitPathValue,
+  cleanupRegisteredField,
+  createFieldStateSnapshot,
+  subscribeFieldState,
+} from "../core";
 
 export function useBitFieldBase<
   TValue = any,

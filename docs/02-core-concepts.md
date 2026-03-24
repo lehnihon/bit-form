@@ -10,15 +10,16 @@ When you use framework-specific wrappers like `useBitForm` (React/Vue) or `injec
 
 ### V4 Runtime Architecture
 
-In V4, `BitStore` acts mainly as an orchestrator/facade over specialized runtime modules:
+In the current V4 runtime, `BitStore` is intentionally a thin facade over a dedicated runtime kernel and specialized modules:
 
 - `subscription-engine`: handles `subscribe`, selector subscriptions and scoped path subscriptions with explicit paths.
 - `state-update-engine`: normalizes state updates (`changedPaths`, `valuesChanged`, computed apply).
 - `store-commit-engine`: centralizes operation routing + patch commit + batch flush semantics.
+- `store-runtime-kernel`: owns effective state access, batching, commit flushing, effect notification and history snapshot persistence.
 - `effect-engine`: centralizes side effects (persist, plugin lifecycle hooks, bus dispatch).
 - `store-bootstrap`: builds capabilities and initial state during store construction. Capabilities are now composed as a plain object — no registry indirection.
 
-This separation reduces coupling inside `BitStore` and makes behavior easier to test in isolated units.
+This separation reduces coupling inside `BitStore`, keeps the public store facade smaller and makes behavior easier to test in isolated units.
 
 Current internal folder layout in `src/core/store`:
 
@@ -49,12 +50,12 @@ Framework adapters (React/Vue/Angular) become thin bindings over these controlle
 
 ## 🔒 Public vs Internal Boundaries
 
-- `src/core/index.ts` is the public core entrypoint and should expose stable contracts only.
-- `src/core.ts` publishes the explicit package subpath `@lehnihon/bit-form/core`, making the runtime boundary clearer for framework adapters and devtools wiring.
+- `src/core/index.ts` is the public core entrypoint for runtime and adapter contracts.
+- The package root (`@lehnihon/bit-form`) is now a curated application entrypoint and should not be treated as a mirror of the entire core surface.
 - `BitStore` is intentionally internal and exposed to consumers through the `createBitStore()` facade.
-- Devtools and framework bindings should prefer `BitStoreApi` / `BitFormBindingApi` instead of importing concrete store internals.
+- Devtools and framework bindings should prefer `BitStoreApi` / `BitFormBindingApi` plus stable core helpers exported by `@lehnihon/bit-form/core`, instead of importing concrete store internals.
 
-This keeps the public API centered on `createBitStore()` while preserving an explicit escape hatch for internal integration code.
+This keeps the public API centered on `createBitStore()` while preserving an explicit core subpath for framework and integration code.
 
 ## 📊 Form State (`BitState`)
 
@@ -113,6 +114,13 @@ Bit-Form uses both specialized managers (domain behavior) and runtime engines (o
 - **Computed Manager**: Reactively calculates derived field values from explicit `computedDependsOn` declarations.
 
 `subscription-engine` now uses path-prefix indexing for scoped subscriptions, reducing notification overhead in large forms.
+
+Dedicated metadata subscriptions are also available for framework bindings and external observers:
+
+- `subscribeFormMeta()` for `isValid`, `isDirty`, `isSubmitting`
+- `subscribePersistMeta()` for persistence runtime metadata
+- `subscribeHistoryMeta()` for undo/redo metadata
+- `subscribeScopeStatus()` for per-scope status snapshots
 
 ---
 

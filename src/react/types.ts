@@ -6,7 +6,7 @@ import type {
   BitPersistMetadata,
   BitTouched,
 } from "../core";
-import type { BitFieldInputEvent } from "../core/mask/field-binding";
+import type { BitFieldInputEvent } from "../core";
 export type { BitFieldInputEvent };
 
 /**

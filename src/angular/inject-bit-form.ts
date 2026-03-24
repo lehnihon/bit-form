@@ -1,7 +1,6 @@
 import { signal, computed, inject, DestroyRef } from "@angular/core";
 import { useBitStore } from "./provider";
-import { createFrameworkFormBinding } from "../core/bindings/form-binding";
-import { observeFormMetaSnapshot } from "../core";
+import { createFrameworkFormBinding, observeFormMetaSnapshot } from "../core";
 import type { InjectBitFormResult } from "./types";
 
 export function injectBitForm<T extends object>(): InjectBitFormResult<T> {

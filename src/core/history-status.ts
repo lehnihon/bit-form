@@ -22,3 +22,32 @@ export function isHistoryMetaEqual(a: HistoryMeta, b: HistoryMeta): boolean {
     a.historySize === b.historySize
   );
 }
+
+export function readHistoryMetaSnapshot<T extends object>(store: {
+  getHistoryMetadata(): BitHistoryMetadata;
+}): HistoryMeta {
+  const nextMeta = store.getHistoryMetadata();
+
+  return {
+    canUndo: nextMeta.canUndo,
+    canRedo: nextMeta.canRedo,
+    historyIndex: nextMeta.historyIndex,
+    historySize: nextMeta.historySize,
+  };
+}
+
+export function observeHistoryMetaSnapshot<T extends object>(
+  store: {
+    getHistoryMetadata(): BitHistoryMetadata;
+    subscribeHistoryMeta(
+      listener: (meta: BitHistoryMetadata) => void,
+    ): () => void;
+  },
+  listener: (meta: HistoryMeta) => void,
+): () => void {
+  listener(readHistoryMetaSnapshot(store));
+
+  return store.subscribeHistoryMeta(() => {
+    listener(readHistoryMetaSnapshot(store));
+  });
+}
