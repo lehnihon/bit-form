@@ -71,8 +71,12 @@ export function flushStoreBatchState<T extends object>(args: {
   applyComputedValues: (values: T, changedPaths?: readonly string[]) => T;
   applyPostBatchValues?: (values: T) => T;
 }): BitStoreBatchFlushResult<T> | null {
-  const { currentState, batchState, applyComputedValues, applyPostBatchValues } =
-    args;
+  const {
+    currentState,
+    batchState,
+    applyComputedValues,
+    applyPostBatchValues,
+  } = args;
 
   if (!batchState.pendingState) {
     batchState.pendingHistorySnapshot = false;
