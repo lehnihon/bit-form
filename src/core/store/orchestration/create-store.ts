@@ -28,6 +28,6 @@ export function resolveBitStoreForHooks<T extends object>(
 
 export function createBitStore<T extends object = any>(
   config: BitConfig<T> = {},
-): BitStoreApi<T> {
-  return new BitStore<T>(config) as unknown as BitStoreApi<T>;
+): BitStoreHooksApi<T> {
+  return new BitStore<T>(config) as unknown as BitStoreHooksApi<T>;
 }

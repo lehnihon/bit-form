@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { BitStore } from "../../core/store";
+import { createBitStore } from "../../core";
 import { createDevToolsPlugin } from "../../devtools";
 import * as devtools from "../../devtools/init-dev-tools";
 import * as bridge from "../../devtools/bridge";
@@ -20,7 +20,7 @@ describe("BitDevtoolsManager", () => {
   });
 
   it("deve ignorar a inicializacao se devTools for undefined", async () => {
-    new BitStore({ initialValues: {} });
+    createBitStore({ initialValues: {} });
 
     await Promise.resolve();
 
@@ -29,7 +29,7 @@ describe("BitDevtoolsManager", () => {
   });
 
   it("deve inicializar em modo local se devTools for true", async () => {
-    new BitStore({
+    createBitStore({
       initialValues: {},
       devTools: true,
       plugins: [createDevToolsPlugin()],
@@ -43,7 +43,7 @@ describe("BitDevtoolsManager", () => {
   });
 
   it("deve inicializar em modo remote com url padrao", async () => {
-    new BitStore({
+    createBitStore({
       initialValues: {},
       devTools: { mode: "remote" },
       plugins: [createDevToolsPlugin()],
@@ -60,7 +60,7 @@ describe("BitDevtoolsManager", () => {
   });
 
   it("deve inicializar em modo remote com url customizada", async () => {
-    new BitStore({
+    createBitStore({
       initialValues: {},
       devTools: { mode: "remote", url: "ws://meu-app.com:4000" },
       plugins: [createDevToolsPlugin()],
@@ -80,7 +80,7 @@ describe("BitDevtoolsManager", () => {
       destroy: mockDestroyLocal,
     } as any);
 
-    const storeLocal = new BitStore({
+    const storeLocal = createBitStore({
       initialValues: {},
       devTools: true,
       plugins: [createDevToolsPlugin()],
@@ -96,7 +96,7 @@ describe("BitDevtoolsManager", () => {
     const mockDestroyRemote = vi.fn();
     vi.mocked(bridge.setupRemoteBridge).mockReturnValueOnce(mockDestroyRemote);
 
-    const storeRemote = new BitStore({
+    const storeRemote = createBitStore({
       initialValues: {},
       devTools: { mode: "remote" },
       plugins: [createDevToolsPlugin()],

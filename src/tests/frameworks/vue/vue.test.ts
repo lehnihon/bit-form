@@ -3,7 +3,7 @@
 import { describe, it, expect, vi } from "vitest";
 import { mount } from "@vue/test-utils";
 import { defineComponent, nextTick } from "vue";
-import { BitStore } from "../../../core/store";
+import { createBitStore, BitStoreApi } from "../../../core";
 import { maskBRL } from "../../../mask";
 import {
   useBitField,
@@ -17,7 +17,7 @@ import {
 import { BIT_STORE_KEY } from "../../../vue/context";
 
 describe("Vue Integration", () => {
-  const createWrapper = (store: BitStore<any>, setupFn: () => any) => {
+  const createWrapper = (store: BitStoreApi<any>, setupFn: () => any) => {
     const TestComponent = defineComponent({
       setup() {
         return setupFn();
@@ -31,7 +31,7 @@ describe("Vue Integration", () => {
   };
 
   it("should handle deep nested updates and isDirty state", async () => {
-    const store = new BitStore({
+    const store = createBitStore({
       initialValues: { user: { info: { name: "Leo" } } },
     });
 
@@ -50,7 +50,7 @@ describe("Vue Integration", () => {
   });
 
   it("should react to isHidden and isRequired changes", async () => {
-    const store = new BitStore({ initialValues: { type: "PF", cnpj: "" } });
+    const store = createBitStore({ initialValues: { type: "PF", cnpj: "" } });
     store.registerField("cnpj", {
       conditional: {
         dependsOn: ["type"],
@@ -73,7 +73,7 @@ describe("Vue Integration", () => {
   });
 
   it("should call unregisterField on unmount", async () => {
-    const store = new BitStore({ initialValues: { name: "" } });
+    const store = createBitStore({ initialValues: { name: "" } });
     const spy = vi.spyOn(store, "unregisterField");
 
     const wrapper = createWrapper(store, () => ({
@@ -84,7 +84,7 @@ describe("Vue Integration", () => {
   });
 
   it("should apply masks and handle displayValue vs raw value", async () => {
-    const store = new BitStore({
+    const store = createBitStore({
       initialValues: { salary: 10 },
       masks: { brl: maskBRL },
       fields: { salary: { mask: "brl" } },
@@ -102,8 +102,8 @@ describe("Vue Integration", () => {
   });
 
   it("should shift errors and keep stable keys in arrays", async () => {
-    const store = new BitStore({ initialValues: { tags: ["A", "B", "C"] } });
-    store.triggerValidation = vi.fn();
+    const store = createBitStore({ initialValues: { tags: ["A", "B", "C"] } });
+    (store as any).triggerValidation = vi.fn();
 
     const wrapper = createWrapper(store, () => ({
       list: useBitArray("tags"),
@@ -122,8 +122,8 @@ describe("Vue Integration", () => {
   });
 
   it("should swap items and their respective errors", async () => {
-    const store = new BitStore({ initialValues: { tags: ["A", "B"] } });
-    store.triggerValidation = vi.fn();
+    const store = createBitStore({ initialValues: { tags: ["A", "B"] } });
+    (store as any).triggerValidation = vi.fn();
 
     const wrapper = createWrapper(store, () => ({
       list: useBitArray("tags"),
@@ -138,7 +138,7 @@ describe("Vue Integration", () => {
   });
 
   it("should call unregisterPrefix on array unmount", async () => {
-    const store = new BitStore({ initialValues: { tags: [] } });
+    const store = createBitStore({ initialValues: { tags: [] } });
     const spy = vi.spyOn(store, "unregisterPrefix");
 
     const wrapper = createWrapper(store, () => ({
@@ -149,7 +149,7 @@ describe("Vue Integration", () => {
   });
 
   it("should track isSubmitting and validation state", async () => {
-    const store = new BitStore({
+    const store = createBitStore({
       initialValues: { email: "" },
       validation: {
         delay: 0,
@@ -169,7 +169,7 @@ describe("Vue Integration", () => {
   });
 
   it("should reset form to initial values", async () => {
-    const store = new BitStore({ initialValues: { count: 0 } });
+    const store = createBitStore({ initialValues: { count: 0 } });
     const wrapper = createWrapper(store, () => ({ form: useBitForm() }));
 
     store.setField("count", 10);
@@ -182,7 +182,7 @@ describe("Vue Integration", () => {
   });
 
   it("should expose undo/redo and metadata through useBitHistory", async () => {
-    const store = new BitStore({
+    const store = createBitStore({
       initialValues: { name: "Leo" },
       history: { enabled: true },
     });
@@ -212,14 +212,14 @@ describe("Vue Integration", () => {
   });
 
   it("should not expose registerMask on useBitForm", () => {
-    const store = new BitStore({ initialValues: { name: "" } });
+    const store = createBitStore({ initialValues: { name: "" } });
     const wrapper = createWrapper(store, () => ({ form: useBitForm() }));
 
     expect("registerMask" in wrapper.vm.form).toBe(false);
   });
 
   it("should expose getDirtyValues and return only changed values", async () => {
-    const store = new BitStore({ initialValues: { name: "Leo", age: 30 } });
+    const store = createBitStore({ initialValues: { name: "Leo", age: 30 } });
     const wrapper = createWrapper(store, () => ({ form: useBitForm() }));
 
     expect(wrapper.vm.form.getDirtyValues()).toEqual({});
@@ -231,7 +231,7 @@ describe("Vue Integration", () => {
   });
 
   it("should pass dirtyValues as second parameter in submit", async () => {
-    const store = new BitStore({ initialValues: { name: "Leo", age: 30 } });
+    const store = createBitStore({ initialValues: { name: "Leo", age: 30 } });
     const submitHandler = vi.fn();
     const wrapper = createWrapper(store, () => ({ form: useBitForm() }));
 
@@ -248,7 +248,7 @@ describe("Vue Integration", () => {
   });
 
   it("should pass dirtyValues as second parameter in onSubmit", async () => {
-    const store = new BitStore({ initialValues: { email: "old@test.com" } });
+    const store = createBitStore({ initialValues: { email: "old@test.com" } });
     const apiHandler = vi.fn().mockResolvedValue({ success: true });
     const wrapper = createWrapper(store, () => ({ form: useBitForm() }));
 
@@ -265,7 +265,7 @@ describe("Vue Integration", () => {
   });
 
   it("should track scope status with useBitScope", async () => {
-    const store = new BitStore({
+    const store = createBitStore({
       initialValues: { name: "", email: "" },
       fields: {
         name: { scope: "step1" },
@@ -295,7 +295,7 @@ describe("Vue Integration", () => {
   });
 
   it("should navigate steps with useBitSteps", async () => {
-    const store = new BitStore({
+    const store = createBitStore({
       initialValues: { name: "", email: "" },
       fields: {
         name: { scope: "step1" },
@@ -342,7 +342,7 @@ describe("Vue Integration", () => {
 
     it("deve expor restore, save, clear e meta reativos", async () => {
       const storage = createMockStorage();
-      const store = new BitStore({
+      const store = createBitStore({
         initialValues: { name: "Leo" },
         persist: { enabled: true, key: "vue-test", storage, autoSave: false },
       });
@@ -362,7 +362,7 @@ describe("Vue Integration", () => {
 
     it("deve salvar e restaurar valores", async () => {
       const storage = createMockStorage();
-      const store = new BitStore({
+      const store = createBitStore({
         initialValues: { name: "Leo" },
         persist: { enabled: true, key: "vue-test", storage, autoSave: false },
       });

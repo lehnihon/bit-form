@@ -19,6 +19,7 @@ import {
   BitAsyncValidationScheduler,
   type BitAsyncValidateFn,
 } from "./validation/async-validation-scheduler";
+import { BitValidationDebouncer } from "./validation/validation-debouncer";
 import type {
   BitAfterValidateEvent,
   BitBeforeValidateEvent,
@@ -44,11 +45,8 @@ interface ValidationPipelineContext<
 }
 
 export class BitValidationManager<T extends object> {
-  private cancelValidationTimeout?: () => void;
   private currentValidationId: number = 0;
   private validatingCount = 0;
-  /** Paths acumulados durante o debounce — evita descartar paths de calls anteriores */
-  private pendingScopeFields: Set<string> | null = null;
   private readonly asyncErrors = new Map<string, string>();
   private readonly immediateAbortControllers = new Map<
     string,
@@ -59,6 +57,7 @@ export class BitValidationManager<T extends object> {
   >;
   private readonly schedule: (fn: () => void, delayMs: number) => () => void;
   private readonly asyncScheduler: BitAsyncValidationScheduler<T>;
+  private readonly debouncer: BitValidationDebouncer;
 
   constructor(private store: BitValidationStorePort<T>) {
     this.schedule =
@@ -67,6 +66,12 @@ export class BitValidationManager<T extends object> {
         const timeoutId = setTimeout(fn, delayMs);
         return () => clearTimeout(timeoutId);
       });
+
+    this.debouncer = new BitValidationDebouncer({
+      schedule: (fn, delayMs) => this.schedule(fn, delayMs),
+      validate: (options) => this.validate(options),
+      validationDelay: store.config.validationDelay ?? 300,
+    });
 
     this.asyncScheduler = new BitAsyncValidationScheduler<T>({
       schedule: (fn, delayMs) => this.schedule(fn, delayMs),
@@ -226,43 +231,7 @@ export class BitValidationManager<T extends object> {
   }
 
   trigger(scopeFields?: string[], options?: BitValidationTriggerOptions) {
-    if (this.cancelValidationTimeout) {
-      this.cancelValidationTimeout();
-      this.cancelValidationTimeout = undefined;
-    }
-
-    const configuredDelay = this.store.config.validationDelay ?? 300;
-    const delay = options?.forceDebounce
-      ? Math.max(1, configuredDelay)
-      : configuredDelay;
-
-    if (delay > 0) {
-      // Acumula paths em vez de substituir — garante que paths de calls
-      // anteriores dentro do mesmo debounce não sejam descartados.
-      if (scopeFields && scopeFields.length > 0) {
-        if (!this.pendingScopeFields) {
-          this.pendingScopeFields = new Set(scopeFields);
-        } else {
-          for (const f of scopeFields) this.pendingScopeFields.add(f);
-        }
-      } else {
-        // Sem scope = validação global, descarta paths acumulados
-        this.pendingScopeFields = null;
-      }
-
-      const resolvedScopeFields = this.pendingScopeFields
-        ? Array.from(this.pendingScopeFields)
-        : undefined;
-
-      this.cancelValidationTimeout = this.schedule(() => {
-        this.pendingScopeFields = null;
-        this.cancelValidationTimeout = undefined;
-        void this.validate({ scopeFields: resolvedScopeFields });
-      }, delay);
-    } else {
-      this.pendingScopeFields = null;
-      void this.validate({ scopeFields });
-    }
+    this.debouncer.trigger(scopeFields, options);
   }
 
   async validate(options?: BitValidationOptions): Promise<boolean> {
@@ -291,13 +260,7 @@ export class BitValidationManager<T extends object> {
 
   cancelAll() {
     this.validatingCount = 0;
-    this.pendingScopeFields = null;
-
-    if (this.cancelValidationTimeout) {
-      this.cancelValidationTimeout();
-      this.cancelValidationTimeout = undefined;
-    }
-
+    this.debouncer.cancelPending();
     this.asyncScheduler.cancelAll();
     this.asyncErrors.clear();
 
