@@ -1,9 +1,6 @@
 import { ref, computed, watch, onMounted, onUnmounted } from "vue";
 import type { ScopeStatus, ValidateScopeResult } from "../core";
-import {
-  getScopeSubscriptionPaths,
-  isScopeStatusEqual,
-} from "../core/scope-status";
+import { isScopeStatusEqual } from "../core";
 import { useBitStore } from "./context";
 import type { UseBitStepsResult } from "./types";
 
@@ -13,10 +10,12 @@ export function useBitSteps(scopeNames: string[]): UseBitStepsResult {
 
   const scope = computed(() => scopeNames[stepIndex.value] ?? "");
   const status = ref<ScopeStatus>(store.getStepStatus(scope.value));
-  let unsubscribe: () => void;
+  let unsubscribe: (() => void) | undefined;
 
   watch(scope, (newScope) => {
     status.value = store.getStepStatus(newScope);
+    unsubscribe?.();
+    unsubscribe = store.subscribeScopeStatus(newScope, updateStatus);
   });
 
   const updateStatus = () => {
@@ -28,11 +27,7 @@ export function useBitSteps(scopeNames: string[]): UseBitStepsResult {
   };
 
   onMounted(() => {
-    unsubscribe = store.subscribeSelector(
-      (state) => ({ errors: state.errors, isDirty: state.isDirty }),
-      updateStatus,
-      { paths: getScopeSubscriptionPaths(store.getScopeFields(scope.value)) },
-    );
+    unsubscribe = store.subscribeScopeStatus(scope.value, updateStatus);
   });
 
   onUnmounted(() => {

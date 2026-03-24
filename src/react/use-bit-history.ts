@@ -1,5 +1,5 @@
 import { useCallback, useRef, useSyncExternalStore } from "react";
-import { isHistoryMetaEqual, type HistoryMeta } from "../core/history-status";
+import { readHistoryMetaSnapshot, type HistoryMeta } from "../core";
 import { useBitStore } from "./context";
 import type { UseBitHistoryResult } from "./types";
 
@@ -8,25 +8,24 @@ export function useBitHistory<T extends object = any>(): UseBitHistoryResult {
   const lastMeta = useRef<HistoryMeta | null>(null);
 
   const getSnapshot = useCallback(() => {
-    const nextMeta = store.getHistoryMetadata();
+    const nextMeta = readHistoryMetaSnapshot(store);
 
-    if (lastMeta.current && isHistoryMetaEqual(lastMeta.current, nextMeta)) {
+    if (
+      lastMeta.current &&
+      lastMeta.current.canUndo === nextMeta.canUndo &&
+      lastMeta.current.canRedo === nextMeta.canRedo &&
+      lastMeta.current.historyIndex === nextMeta.historyIndex &&
+      lastMeta.current.historySize === nextMeta.historySize
+    ) {
       return lastMeta.current;
     }
 
-    const stableMeta = {
-      canUndo: nextMeta.canUndo,
-      canRedo: nextMeta.canRedo,
-      historyIndex: nextMeta.historyIndex,
-      historySize: nextMeta.historySize,
-    };
-
-    lastMeta.current = stableMeta;
-    return stableMeta;
+    lastMeta.current = nextMeta;
+    return nextMeta;
   }, [store]);
 
   const subscribe = useCallback(
-    (cb: () => void) => store.subscribe(cb),
+    (cb: () => void) => store.subscribeHistoryMeta(() => cb()),
     [store],
   );
 

@@ -1,18 +1,15 @@
 import { useCallback, useMemo, useSyncExternalStore } from "react";
 import { useBitStore } from "./context";
+import { readPersistMetaSnapshot, subscribePersistMetaSnapshot } from "../core";
 import type { UseBitPersistResult } from "./types";
 
 export function useBitPersist(): UseBitPersistResult {
   const store = useBitStore<any>();
 
   const persistMeta = useSyncExternalStore(
-    (cb) =>
-      store.subscribeTracked(
-        (state) => state.persist,
-        () => cb(),
-      ),
-    () => store.getPersistMetadata(),
-    () => store.getPersistMetadata(),
+    (cb) => subscribePersistMetaSnapshot(store, cb),
+    () => readPersistMetaSnapshot(store),
+    () => readPersistMetaSnapshot(store),
   );
 
   const restore = useCallback(async () => {

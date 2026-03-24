@@ -15,6 +15,10 @@ import {
   resolveAsyncValidationPaths,
   runImmediateAsyncValidationStage,
 } from "./validation/validation-stages";
+import {
+  BitAsyncValidationScheduler,
+  type BitAsyncValidateFn,
+} from "./validation/async-validation-scheduler";
 import type {
   BitAfterValidateEvent,
   BitBeforeValidateEvent,
@@ -39,33 +43,22 @@ interface ValidationPipelineContext<
   aborted: boolean;
 }
 
-type BitAsyncValidateFn<T extends object> = NonNullable<
-  NonNullable<BitFieldDefinition<T>["validation"]>["asyncValidate"]
->;
-
 export class BitValidationManager<T extends object> {
   private cancelValidationTimeout?: () => void;
-  private cancelAsyncSchedulerTimeout?: () => void;
   private currentValidationId: number = 0;
   private validatingCount = 0;
   /** Paths acumulados durante o debounce — evita descartar paths de calls anteriores */
   private pendingScopeFields: Set<string> | null = null;
   private readonly asyncErrors = new Map<string, string>();
-  /** AbortControllers per field for canceling async validation requests */
-  private readonly asyncAbortControllers = new Map<string, AbortController>();
-  private readonly pendingAsyncValidations = new Map<
+  private readonly immediateAbortControllers = new Map<
     string,
-    {
-      value: any;
-      dueAt: number;
-      validate: BitAsyncValidateFn<T>;
-      controller: AbortController;
-    }
+    AbortController
   >();
   private readonly validationPipeline: BitPipelineRunner<
     ValidationPipelineContext<T>
   >;
   private readonly schedule: (fn: () => void, delayMs: number) => () => void;
+  private readonly asyncScheduler: BitAsyncValidationScheduler<T>;
 
   constructor(private store: BitValidationStorePort<T>) {
     this.schedule =
@@ -74,6 +67,23 @@ export class BitValidationManager<T extends object> {
         const timeoutId = setTimeout(fn, delayMs);
         return () => clearTimeout(timeoutId);
       });
+
+    this.asyncScheduler = new BitAsyncValidationScheduler<T>({
+      schedule: (fn, delayMs) => this.schedule(fn, delayMs),
+      getValues: () => this.store.getState().values,
+      setFieldValidating: (path, isValidating) =>
+        this.updateFieldValidating(path, isValidating),
+      setAsyncError: (path, message) => {
+        this.asyncErrors.set(path, message);
+        this.store.setError(path, message);
+      },
+      clearAsyncError: (path) => {
+        this.asyncErrors.delete(path);
+      },
+      onValidationPassed: async (path) => {
+        await this.commitSynchronousScopeValidation([path]);
+      },
+    });
 
     this.validationPipeline = new BitPipelineRunner<
       ValidationPipelineContext<T>
@@ -135,15 +145,12 @@ export class BitValidationManager<T extends object> {
   }
 
   private cancelFieldAsync(path: string) {
-    if (this.pendingAsyncValidations.has(path)) {
-      this.pendingAsyncValidations.delete(path);
-      this.schedulePendingAsyncValidations();
-    }
+    this.asyncScheduler.cancel(path);
 
-    const abortController = this.asyncAbortControllers.get(path);
+    const abortController = this.immediateAbortControllers.get(path);
     if (abortController) {
       abortController.abort();
-      this.asyncAbortControllers.delete(path);
+      this.immediateAbortControllers.delete(path);
     }
   }
 
@@ -154,7 +161,9 @@ export class BitValidationManager<T extends object> {
   }
 
   cleanupPrefix(prefix: string) {
-    for (const path of this.pendingAsyncValidations.keys()) {
+    this.asyncScheduler.cleanupPrefix(prefix);
+
+    for (const path of this.immediateAbortControllers.keys()) {
       if (path === prefix || path.startsWith(`${prefix}.`)) {
         this.cleanupField(path);
       }
@@ -202,20 +211,8 @@ export class BitValidationManager<T extends object> {
       return;
     }
 
-    this.cancelFieldAsync(path);
-
     const delay = config.validation?.asyncValidateDelay ?? 500;
-    this.updateFieldValidating(path, true);
-    const abortController = new AbortController();
-    this.asyncAbortControllers.set(path, abortController);
-
-    this.pendingAsyncValidations.set(path, {
-      value,
-      dueAt: Date.now() + delay,
-      validate: asyncValidate,
-      controller: abortController,
-    });
-    this.schedulePendingAsyncValidations();
+    this.asyncScheduler.handle(path, value, asyncValidate, delay);
   }
 
   hasValidationsInProgress(scopeFields?: string[]) {
@@ -301,18 +298,13 @@ export class BitValidationManager<T extends object> {
       this.cancelValidationTimeout = undefined;
     }
 
-    if (this.cancelAsyncSchedulerTimeout) {
-      this.cancelAsyncSchedulerTimeout();
-      this.cancelAsyncSchedulerTimeout = undefined;
-    }
-
-    this.pendingAsyncValidations.clear();
+    this.asyncScheduler.cancelAll();
     this.asyncErrors.clear();
 
-    this.asyncAbortControllers.forEach((controller) => {
+    this.immediateAbortControllers.forEach((controller) => {
       controller.abort();
     });
-    this.asyncAbortControllers.clear();
+    this.immediateAbortControllers.clear();
 
     this.store.dispatch(patchStateOperation({ isValidating: {} }));
   }
@@ -442,10 +434,10 @@ export class BitValidationManager<T extends object> {
       cancelFieldAsync: (fieldPath) => this.cancelFieldAsync(fieldPath),
       createAbortController: () => new AbortController(),
       setAbortController: (fieldPath, controller) => {
-        this.asyncAbortControllers.set(fieldPath, controller);
+        this.immediateAbortControllers.set(fieldPath, controller);
       },
       clearAbortController: (fieldPath) => {
-        this.asyncAbortControllers.delete(fieldPath);
+        this.immediateAbortControllers.delete(fieldPath);
       },
       setFieldValidating: (fieldPath, isValidating) =>
         this.updateFieldValidating(fieldPath, isValidating),
@@ -456,95 +448,6 @@ export class BitValidationManager<T extends object> {
         this.asyncErrors.delete(fieldPath);
       },
     });
-  }
-
-  private schedulePendingAsyncValidations() {
-    if (this.cancelAsyncSchedulerTimeout) {
-      this.cancelAsyncSchedulerTimeout();
-      this.cancelAsyncSchedulerTimeout = undefined;
-    }
-
-    let nextDueAt = Number.POSITIVE_INFINITY;
-
-    for (const job of this.pendingAsyncValidations.values()) {
-      if (job.dueAt < nextDueAt) {
-        nextDueAt = job.dueAt;
-      }
-    }
-
-    if (!Number.isFinite(nextDueAt)) {
-      return;
-    }
-
-    this.cancelAsyncSchedulerTimeout = this.schedule(
-      () => {
-        this.cancelAsyncSchedulerTimeout = undefined;
-        void this.flushPendingAsyncValidations();
-      },
-      Math.max(0, nextDueAt - Date.now()),
-    );
-  }
-
-  private async flushPendingAsyncValidations() {
-    this.cancelAsyncSchedulerTimeout = undefined;
-
-    const now = Date.now();
-    const dueJobs = Array.from(this.pendingAsyncValidations.entries()).filter(
-      ([, job]) => job.dueAt <= now,
-    );
-
-    if (dueJobs.length === 0) {
-      this.schedulePendingAsyncValidations();
-      return;
-    }
-
-    dueJobs.forEach(([path]) => {
-      this.pendingAsyncValidations.delete(path);
-    });
-
-    await Promise.all(
-      dueJobs.map(([path, job]) => this.runAsyncValidation(path, job)),
-    );
-
-    this.schedulePendingAsyncValidations();
-  }
-
-  private async runAsyncValidation(
-    path: string,
-    job: {
-      value: any;
-      dueAt: number;
-      validate: BitAsyncValidateFn<T>;
-      controller: AbortController;
-    },
-  ) {
-    if (job.controller.signal.aborted) {
-      return;
-    }
-
-    try {
-      const errorMessage = await job.validate(
-        job.value,
-        this.store.getState().values,
-      );
-
-      if (job.controller.signal.aborted) {
-        return;
-      }
-
-      if (errorMessage) {
-        this.asyncErrors.set(path, errorMessage);
-        this.store.setError(path, errorMessage);
-      } else {
-        this.asyncErrors.delete(path);
-        await this.commitSynchronousScopeValidation([path]);
-      }
-    } finally {
-      if (!job.controller.signal.aborted) {
-        this.updateFieldValidating(path, false);
-      }
-      this.asyncAbortControllers.delete(path);
-    }
   }
 
   private async commitSynchronousScopeValidation(scopeFields: string[]) {

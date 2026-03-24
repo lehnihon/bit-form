@@ -10,9 +10,9 @@ import type {
   ValidateScopeResult,
 } from "../core";
 
-// BitFieldInputEvent é definido em core/mask/field-binding e re-exportado aqui
+// BitFieldInputEvent é definido no core e re-exportado aqui
 // para evitar duplicação com a definição equivalente em react/types.ts
-import type { BitFieldInputEvent } from "../core/mask/field-binding";
+import type { BitFieldInputEvent } from "../core";
 export type { BitFieldInputEvent };
 
 /**

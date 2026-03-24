@@ -43,11 +43,7 @@ export function createArrayBindingController<
   let ids: string[] = [];
 
   const createId = (index?: number) =>
-    store.config.idFactory({
-      scope: "array",
-      path: path as string,
-      index,
-    });
+    store.createArrayItemId(path as string, index);
 
   const normalizeItems = (value: unknown): Item[] =>
     Array.isArray(value) ? (value as Item[]) : [];

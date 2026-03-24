@@ -1,30 +1,19 @@
 import { ref, computed, onMounted, onUnmounted } from "vue";
 import type { ScopeStatus, ValidateScopeResult } from "../core";
-import {
-  getScopeSubscriptionPaths,
-  isScopeStatusEqual,
-} from "../core/scope-status";
+import { observeScopeStatusSnapshot } from "../core";
 import { useBitStore } from "./context";
 
 export type { ScopeStatus, ValidateScopeResult };
 
 export function useBitScope(scopeName: string) {
   const store = useBitStore();
-  const scopeFields = store.getScopeFields(scopeName);
   const status = ref<ScopeStatus>(store.getStepStatus(scopeName));
   let unsubscribe: () => void;
 
   onMounted(() => {
-    unsubscribe = store.subscribeSelector(
-      (state) => ({ errors: state.errors, isDirty: state.isDirty }),
-      () => {
-        const newStatus = store.getStepStatus(scopeName);
-        if (!isScopeStatusEqual(status.value, newStatus)) {
-          status.value = newStatus;
-        }
-      },
-      { paths: getScopeSubscriptionPaths(scopeFields) },
-    );
+    unsubscribe = observeScopeStatusSnapshot(store, scopeName, (nextStatus) => {
+      status.value = nextStatus;
+    });
   });
 
   onUnmounted(() => {

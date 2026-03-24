@@ -1,17 +1,15 @@
 import { computed, onUnmounted, ref } from "vue";
 import { useBitStore } from "./context";
+import { observePersistMetaSnapshot } from "../core";
 import type { UseBitPersistResult } from "./types";
 
 export function useBitPersist<T extends object = any>(): UseBitPersistResult {
   const store = useBitStore<T>();
   const meta = ref(store.getPersistMetadata());
 
-  const unsubscribe = store.subscribeTracked(
-    (state) => state.persist,
-    (nextMeta) => {
-      meta.value = nextMeta;
-    },
-  );
+  const unsubscribe = observePersistMetaSnapshot(store, (nextMeta) => {
+    meta.value = nextMeta;
+  });
 
   onUnmounted(() => unsubscribe());
 

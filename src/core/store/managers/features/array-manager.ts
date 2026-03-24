@@ -37,32 +37,33 @@ export class BitArrayManager<T extends object = any> {
   constructor(private store: BitArrayStorePort<T>) {}
 
   pushItem(path: string, value: any) {
-    const arr = getDeepValue(this.store.getState().values, path) || [];
-    this.store.setFieldWithMeta(path, [...arr, value], {
+    this.mutateArrayWithSetField(path, (arr) => [...arr, value], {
       origin: "array",
       operation: "push",
     });
-    this.store.internalSaveSnapshot();
   }
 
   prependItem(path: string, value: any) {
-    const arr = getDeepValue(this.store.getState().values, path) || [];
-    this.store.setFieldWithMeta(path, [value, ...arr], {
+    this.mutateArrayWithSetField(path, (arr) => [value, ...arr], {
       origin: "array",
       operation: "prepend",
     });
-    this.store.internalSaveSnapshot();
   }
 
   insertItem(path: string, index: number, value: any) {
-    const arr = [...(getDeepValue(this.store.getState().values, path) || [])];
-    arr.splice(index, 0, value);
-    this.store.setFieldWithMeta(path, arr, {
-      origin: "array",
-      operation: "insert",
-      index,
-    });
-    this.store.internalSaveSnapshot();
+    this.mutateArrayWithSetField(
+      path,
+      (arr) => {
+        const next = [...arr];
+        next.splice(index, 0, value);
+        return next;
+      },
+      {
+        origin: "array",
+        operation: "insert",
+        index,
+      },
+    );
   }
 
   removeItem(path: string, index: number) {
@@ -77,46 +78,20 @@ export class BitArrayManager<T extends object = any> {
     }
 
     const newArray = arr.filter((_, i) => i !== index);
-    const newValues = setDeepValue(state.values, path, newArray);
 
-    const isDirty = this.store.updateDirtyForPath(
+    this.commitReindexedArrayMutation({
       path,
-      newValues,
-      this.store.getConfig().initialValues,
-    );
-
-    const reindexedMeta = reindexFieldArrayMeta(state, path, (currentIdx) => {
-      if (currentIdx === index) {
-        return null;
-      }
-
-      return currentIdx > index ? currentIdx - 1 : currentIdx;
-    });
-
-    this.store.dispatch(
-      patchStateOperation(
-        {
-          values: newValues,
-          errors: reindexedMeta.errors,
-          touched: reindexedMeta.touched,
-          isValidating: reindexedMeta.isValidating,
-          isDirty,
-        },
-        [path],
-      ),
-    );
-
-    this.store.emitFieldChange({
-      path,
-      previousValue: previousArray,
-      nextValue: newArray,
-      values: this.store.getState().values,
-      state: this.store.getState(),
+      previousArray,
+      nextArray: newArray,
       meta: { origin: "array", operation: "remove", index },
-    });
+      reindex: (currentIdx) => {
+        if (currentIdx === index) {
+          return null;
+        }
 
-    this.store.internalSaveSnapshot();
-    this.revalidate(path);
+        return currentIdx > index ? currentIdx - 1 : currentIdx;
+      },
+    });
   }
 
   swapItems(path: string, indexA: number, indexB: number) {
@@ -125,55 +100,28 @@ export class BitArrayManager<T extends object = any> {
     const previousArray = [...arr];
     [arr[indexA], arr[indexB]] = [arr[indexB], arr[indexA]];
 
-    const newValues = setDeepValue(state.values, path, arr);
-
-    const isDirty = this.store.updateDirtyForPath(
+    this.commitReindexedArrayMutation({
       path,
-      newValues,
-      this.store.getConfig().initialValues,
-    );
-
-    const reindexedMeta = reindexFieldArrayMeta(state, path, (currentIdx) => {
-      if (currentIdx === indexA) {
-        return indexB;
-      }
-
-      if (currentIdx === indexB) {
-        return indexA;
-      }
-
-      return currentIdx;
-    });
-
-    this.store.dispatch(
-      patchStateOperation(
-        {
-          values: newValues,
-          errors: reindexedMeta.errors,
-          touched: reindexedMeta.touched,
-          isValidating: reindexedMeta.isValidating,
-          isDirty,
-        },
-        [path],
-      ),
-    );
-
-    this.store.emitFieldChange({
-      path,
-      previousValue: previousArray,
-      nextValue: arr,
-      values: this.store.getState().values,
-      state: this.store.getState(),
+      previousArray,
+      nextArray: arr,
       meta: {
         origin: "array",
         operation: "swap",
         from: indexA,
         to: indexB,
       },
-    });
+      reindex: (currentIdx) => {
+        if (currentIdx === indexA) {
+          return indexB;
+        }
 
-    this.store.internalSaveSnapshot();
-    this.revalidate(path);
+        if (currentIdx === indexB) {
+          return indexA;
+        }
+
+        return currentIdx;
+      },
+    });
   }
 
   moveItem(path: string, from: number, to: number) {
@@ -183,7 +131,58 @@ export class BitArrayManager<T extends object = any> {
     const [item] = arr.splice(from, 1);
     arr.splice(to, 0, item);
 
-    const newValues = setDeepValue(state.values, path, arr);
+    this.commitReindexedArrayMutation({
+      path,
+      previousArray,
+      nextArray: arr,
+      meta: {
+        origin: "array",
+        operation: "move",
+        from,
+        to,
+      },
+      reindex: (currentIdx) => {
+        if (currentIdx === from) {
+          return to;
+        }
+
+        if (from < to && currentIdx > from && currentIdx <= to) {
+          return currentIdx - 1;
+        }
+
+        if (from > to && currentIdx >= to && currentIdx < from) {
+          return currentIdx + 1;
+        }
+
+        return currentIdx;
+      },
+    });
+  }
+
+  private revalidate(path: string) {
+    this.store.triggerValidation([path]);
+  }
+
+  private mutateArrayWithSetField(
+    path: string,
+    mutate: (current: any[]) => any[],
+    meta: BitFieldChangeMeta,
+  ) {
+    const current = getDeepValue(this.store.getState().values, path) || [];
+    this.store.setFieldWithMeta(path, mutate(current), meta);
+    this.store.internalSaveSnapshot();
+  }
+
+  private commitReindexedArrayMutation(args: {
+    path: string;
+    previousArray: unknown[];
+    nextArray: unknown[];
+    meta: BitFieldChangeMeta;
+    reindex: (currentIdx: number) => number | null;
+  }) {
+    const { path, previousArray, nextArray, meta, reindex } = args;
+    const state = this.store.getState();
+    const newValues = setDeepValue(state.values, path, nextArray);
 
     const isDirty = this.store.updateDirtyForPath(
       path,
@@ -191,21 +190,7 @@ export class BitArrayManager<T extends object = any> {
       this.store.getConfig().initialValues,
     );
 
-    const reindexedMeta = reindexFieldArrayMeta(state, path, (currentIdx) => {
-      if (currentIdx === from) {
-        return to;
-      }
-
-      if (from < to && currentIdx > from && currentIdx <= to) {
-        return currentIdx - 1;
-      }
-
-      if (from > to && currentIdx >= to && currentIdx < from) {
-        return currentIdx + 1;
-      }
-
-      return currentIdx;
-    });
+    const reindexedMeta = reindexFieldArrayMeta(state, path, reindex);
 
     this.store.dispatch(
       patchStateOperation(
@@ -223,22 +208,13 @@ export class BitArrayManager<T extends object = any> {
     this.store.emitFieldChange({
       path,
       previousValue: previousArray,
-      nextValue: arr,
+      nextValue: nextArray,
       values: this.store.getState().values,
       state: this.store.getState(),
-      meta: {
-        origin: "array",
-        operation: "move",
-        from,
-        to,
-      },
+      meta,
     });
 
     this.store.internalSaveSnapshot();
     this.revalidate(path);
-  }
-
-  private revalidate(path: string) {
-    this.store.triggerValidation([path]);
   }
 }

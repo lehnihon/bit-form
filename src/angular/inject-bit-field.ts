@@ -1,11 +1,14 @@
 import { inject, DestroyRef, computed, signal } from "@angular/core";
 import { BIT_STORE_TOKEN } from "./provider";
-import { BitPath, BitPathValue } from "../core";
-import { subscribeFieldState } from "../core/field-controller";
-import { createFrameworkMaskedFieldBinding } from "../core/bindings/field-binding";
-import { cleanupRegisteredField } from "../core/bindings/framework-cleanup";
-import { isBitFieldInputEventObject } from "../core/mask/field-binding";
-import { deriveFieldMeta } from "../core/utils/field-meta";
+import {
+  BitPath,
+  BitPathValue,
+  cleanupRegisteredField,
+  createFrameworkMaskedFieldBinding,
+  deriveFieldMeta,
+  isBitFieldInputEventObject,
+  subscribeFieldState,
+} from "../core";
 import type {
   BitFieldInputEvent,
   InjectBitFieldMeta,

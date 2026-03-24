@@ -28,3 +28,19 @@ export function isScopeStatusEqual(
 export function getScopeSubscriptionPaths(scopeFields: readonly string[]) {
   return [...scopeFields, "isDirty"];
 }
+
+export function observeScopeStatusSnapshot(
+  store: {
+    getStepStatus(scopeName: string): ScopeStatus;
+    subscribeScopeStatus(
+      scopeName: string,
+      listener: (status: ScopeStatus) => void,
+    ): () => void;
+  },
+  scopeName: string,
+  listener: (status: ScopeStatus) => void,
+): () => void {
+  listener(store.getStepStatus(scopeName));
+
+  return store.subscribeScopeStatus(scopeName, listener);
+}

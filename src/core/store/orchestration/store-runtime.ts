@@ -44,7 +44,6 @@ export interface CreateStoreRuntimeArgs<T extends object> {
     get(): T;
     set(values: T): void;
   };
-  storeInstance: unknown;
   getState(): BitState<T>;
   dispatch(operation: BitStoreOperation<T>): void;
   setError(path: string, message: string | undefined): void;
@@ -67,8 +66,6 @@ export interface CreateStoreRuntimeArgs<T extends object> {
     options?: BitValidationTriggerOptions,
   ): void;
   getConfig(): Readonly<BitFrameworkConfig<T>>;
-  getDirtyValues(): Partial<T>;
-  applyPersistedValues(values: Partial<T>): void;
 }
 
 export function createStoreRuntime<T extends object>(

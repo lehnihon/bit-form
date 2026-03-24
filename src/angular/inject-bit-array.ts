@@ -5,8 +5,8 @@ import {
   BitArrayPath,
   BitPathValue,
   BitArrayItem,
+  cleanupRegisteredPrefix,
 } from "../core";
-import { cleanupRegisteredPrefix } from "../core/bindings/framework-cleanup";
 
 export function injectBitArray<
   TForm extends object = any,

@@ -49,8 +49,6 @@ export interface BitFrameworkConfig<
 }
 
 export interface BitStoreQueryApi<T extends object = any> {
-  readonly config: Readonly<BitFrameworkConfig<T>>;
-
   getConfig(): Readonly<BitFrameworkConfig<T>>;
   getState(): Readonly<BitState<T>>;
 
@@ -67,6 +65,16 @@ export interface BitStoreQueryApi<T extends object = any> {
 
 export interface BitStoreObserveApi<T extends object = any> {
   subscribe(listener: () => void): () => void;
+  subscribePersistMeta(
+    listener: (meta: BitPersistMetadata) => void,
+  ): () => void;
+  subscribeHistoryMeta(
+    listener: (meta: BitHistoryMetadata) => void,
+  ): () => void;
+  subscribeScopeStatus(
+    scopeName: string,
+    listener: (status: ScopeStatus) => void,
+  ): () => void;
 }
 
 export interface BitStoreWriteApi<T extends object = any> {
@@ -135,15 +143,11 @@ export interface BitStoreHistoryFeatureApi {
 }
 
 export interface BitFormMetaBindingApi<T extends object = any> {
-  readonly config: Readonly<BitFrameworkConfig<T>>;
-
   getState(): Readonly<BitState<T>>;
   subscribeFormMeta(listener: (meta: BitFormMeta) => void): () => void;
 }
 
 export interface BitFieldBindingApi<T extends object = any> {
-  readonly config: Readonly<BitFrameworkConfig<T>>;
-
   getFieldState<P extends BitPath<T>>(
     path: P,
   ): Readonly<BitFieldState<T, BitPathValue<T, P>>>;
@@ -160,7 +164,6 @@ export interface BitFieldBindingApi<T extends object = any> {
 
 export interface BitArrayBindingApi<T extends object = any> extends Pick<
   BitFormBindingApi<T>,
-  | "config"
   | "getState"
   | "setField"
   | "subscribePath"
@@ -170,6 +173,7 @@ export interface BitArrayBindingApi<T extends object = any> extends Pick<
   | "removeItem"
   | "moveItem"
   | "swapItems"
+  | "createArrayItemId"
 > {}
 
 export interface BitStoreFeatureApi<T extends object = any>
@@ -217,11 +221,10 @@ export interface BitStoreHooksApi<
   hasValidationsInProgress(scopeFields?: string[]): boolean;
   resolveMask(path: string): BitMask | undefined;
   getScopeFields(scopeName: string): string[];
+  createArrayItemId(path: string, index?: number): string;
 }
 
 export interface BitFormBindingApi<T extends object = any> {
-  readonly config: Readonly<BitFrameworkConfig<T>>;
-
   getFieldState<P extends BitPath<T>>(
     path: P,
   ): Readonly<BitFieldState<T, BitPathValue<T, P>>>;
@@ -308,4 +311,15 @@ export interface BitFormBindingApi<T extends object = any> {
   getScopeFields(scopeName: string): string[];
   getStepStatus(scopeName: string): ScopeStatus;
   getStepErrors(scopeName: string): Record<string, string>;
+  subscribePersistMeta(
+    listener: (meta: BitPersistMetadata) => void,
+  ): () => void;
+  subscribeHistoryMeta(
+    listener: (meta: BitHistoryMetadata) => void,
+  ): () => void;
+  subscribeScopeStatus(
+    scopeName: string,
+    listener: (status: ScopeStatus) => void,
+  ): () => void;
+  createArrayItemId(path: string, index?: number): string;
 }

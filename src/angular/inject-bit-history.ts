@@ -1,5 +1,5 @@
 import { computed, DestroyRef, inject, signal } from "@angular/core";
-import { isHistoryMetaEqual } from "../core/history-status";
+import { observeHistoryMetaSnapshot, readHistoryMetaSnapshot } from "../core";
 import { useBitStore } from "./provider";
 import type { InjectBitHistoryResult } from "./types";
 
@@ -9,13 +9,10 @@ export function injectBitHistory<
   const store = useBitStore<T>();
   const destroyRef = inject(DestroyRef);
 
-  const meta = signal(store.getHistoryMetadata());
+  const meta = signal(readHistoryMetaSnapshot(store));
 
-  const sub = store.subscribe(() => {
-    const nextMeta = store.getHistoryMetadata();
-    if (!isHistoryMetaEqual(meta(), nextMeta)) {
-      meta.set(nextMeta);
-    }
+  const sub = observeHistoryMetaSnapshot(store, (nextMeta) => {
+    meta.set(nextMeta);
   });
 
   destroyRef.onDestroy(() => sub());

@@ -2,12 +2,19 @@ import { getDeepValue, valueEqual } from "../../utils";
 import { createTrackedSubscription } from "./tracked-selector";
 import type {
   BitFormMeta,
+  BitHistoryMetadata,
   BitSelector,
   BitSelectorSubscriptionOptions,
 } from "../contracts/public-types";
 import type { BitFieldState, BitPath, BitPathValue } from "../contracts/types";
 import type { BitState } from "../contracts/types";
 import type { BitSubscriptionEngine } from "../engines/subscription-engine";
+import type { BitPersistMetadata, ScopeStatus } from "../contracts/types";
+import { isHistoryMetaEqual } from "../../history-status";
+import {
+  getScopeSubscriptionPaths,
+  isScopeStatusEqual,
+} from "../../scope-status";
 
 export function subscribeStoreSelector<T extends object, TSlice>(args: {
   subscriptions: Pick<BitSubscriptionEngine<T>, "subscribeSelector">;
@@ -128,6 +135,92 @@ export function subscribeStoreFormMeta<T extends object>(args: {
         prev.isValid === next.isValid &&
         prev.isDirty === next.isDirty &&
         prev.isSubmitting === next.isSubmitting,
+    },
+  );
+}
+
+export function subscribeStorePersistMeta<T extends object>(args: {
+  listener: (meta: BitPersistMetadata) => void;
+  subscribeSelector: (
+    selector: BitSelector<T, BitPersistMetadata>,
+    listener: (meta: BitPersistMetadata) => void,
+    options?: BitSelectorSubscriptionOptions<BitPersistMetadata>,
+  ) => () => void;
+}): () => void {
+  const { listener, subscribeSelector } = args;
+
+  return subscribeSelector((state) => state.persist, listener, {
+    paths: ["persist"],
+    equalityFn: (prev, next) =>
+      prev.isSaving === next.isSaving &&
+      prev.isRestoring === next.isRestoring &&
+      prev.error === next.error,
+  });
+}
+
+export function subscribeStoreHistoryMeta<T extends object>(args: {
+  readHistoryMeta: () => BitHistoryMetadata;
+  subscribe: (listener: () => void) => () => void;
+  listener: (meta: BitHistoryMetadata) => void;
+}): () => void {
+  const { readHistoryMeta, subscribe, listener } = args;
+  let lastMeta = readHistoryMeta();
+
+  return subscribe(() => {
+    const nextMeta = readHistoryMeta();
+
+    if (isHistoryMetaEqual(lastMeta, nextMeta)) {
+      return;
+    }
+
+    lastMeta = nextMeta;
+    listener(nextMeta);
+  });
+}
+
+export function subscribeStoreScopeStatus<T extends object>(args: {
+  scopeName: string;
+  readScopeStatus: (scopeName: string) => ScopeStatus;
+  getScopeFields: (scopeName: string) => string[];
+  subscribeSelector: (
+    selector: BitSelector<
+      T,
+      { errors: BitState<T>["errors"]; isDirty: boolean }
+    >,
+    listener: (slice: {
+      errors: BitState<T>["errors"];
+      isDirty: boolean;
+    }) => void,
+    options?: BitSelectorSubscriptionOptions<{
+      errors: BitState<T>["errors"];
+      isDirty: boolean;
+    }>,
+  ) => () => void;
+  listener: (status: ScopeStatus) => void;
+}): () => void {
+  const {
+    scopeName,
+    readScopeStatus,
+    getScopeFields,
+    subscribeSelector,
+    listener,
+  } = args;
+
+  let lastStatus = readScopeStatus(scopeName);
+
+  return subscribeSelector(
+    (state) => ({ errors: state.errors, isDirty: state.isDirty }),
+    () => {
+      const nextStatus = readScopeStatus(scopeName);
+      if (isScopeStatusEqual(lastStatus, nextStatus)) {
+        return;
+      }
+
+      lastStatus = nextStatus;
+      listener(nextStatus);
+    },
+    {
+      paths: getScopeSubscriptionPaths(getScopeFields(scopeName)),
     },
   );
 }

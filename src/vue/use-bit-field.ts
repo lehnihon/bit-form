@@ -2,10 +2,12 @@ import { computed, onUnmounted, shallowRef } from "vue";
 import { useBitStore } from "./context";
 import type { UseBitFieldVueResult } from "./types";
 import type { BitPath, BitPathValue } from "../core";
-import { subscribeFieldState } from "../core/field-controller";
-import { createFrameworkMaskedFieldBinding } from "../core/bindings/field-binding";
-import { cleanupRegisteredField } from "../core/bindings/framework-cleanup";
-import { deriveFieldMeta } from "../core/utils/field-meta";
+import {
+  cleanupRegisteredField,
+  createFrameworkMaskedFieldBinding,
+  deriveFieldMeta,
+  subscribeFieldState,
+} from "../core";
 
 export function useBitField<
   TForm extends object = any,

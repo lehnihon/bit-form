@@ -1,7 +1,7 @@
 import { shallowRef, computed, onUnmounted } from "vue";
 import { useBitStore } from "./context";
 import { createArrayBindingController, BitArrayPath } from "../core";
-import { cleanupRegisteredPrefix } from "../core/bindings/framework-cleanup";
+import { cleanupRegisteredPrefix } from "../core";
 
 export function useBitArray<
   TForm extends object = any,

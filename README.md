@@ -226,7 +226,7 @@ The complete documentation is available in the `/docs` folder. Explore the guide
 
 This branch currently allows breaking changes while architecture/performance work is in progress.
 
-- **New explicit `@lehnihon/bit-form/core` subpath** for store/runtime contracts. Root export remains available, but framework/devtools internals should now prefer the dedicated core entry.
+- **New explicit `@lehnihon/bit-form/core` subpath** for store/runtime contracts. The package root is now curated for app usage and no longer mirrors every core helper/export.
 - **History default limit changed** from `15` to `50` (`history.limit`).
 - **Selector subscriptions no longer rely on deep value diff inference** when no `paths` are provided internally; updates are now path-driven for predictable performance.
 - **New `subscribeTracked`** was added to auto-track selector dependencies and re-track when selector branches change.
@@ -234,11 +234,13 @@ This branch currently allows breaking changes while architecture/performance wor
 - **SSR/Edge support improved** with injectable bus instances (`createBitBus`, `config.bus`, `initDevTools({ bus })`).
 - **Field `asyncValidate` now defaults to `blur` trigger**. To keep validation while typing, set `validation.asyncValidateOn: "change"` explicitly.
 - **Framework bindings now share internal binding-core helpers** for form meta and field-array orchestration, reducing adapter drift across React, Vue and Angular.
+- **New dedicated metadata subscriptions**: `subscribePersistMeta`, `subscribeHistoryMeta` and `subscribeScopeStatus` reduce adapter reliance on generic selectors/tracked subscriptions.
 - **React Native is now treated as a thin derivative of the React binding layer**, keeping only native-specific field adaptation.
 
 ### Migration quick notes
 
 - If you relied on implicit broad selector notifications, prefer explicit `paths` or use `subscribeTracked`.
+- If you built internal adapters over generic metadata selectors, migrate to `subscribePersistMeta`, `subscribeHistoryMeta` and `subscribeScopeStatus`.
 - If you need old history density, set `history: { limit: 15 }` explicitly.
 - In SSR/Edge runtimes, create one bus per request scope and inject it into the store and DevTools.
 - If you relied on async validation firing while typing, add `asyncValidateOn: "change"` to the field config. `validate()` and submit still execute async validators.

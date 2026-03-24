@@ -1,8 +1,11 @@
 import { useMemo, useCallback } from "react";
 import { useBitFieldBase } from "../react/use-bit-field-base";
-import { BitPath, BitPathValue } from "../core";
-import { createFrameworkMaskedFieldBinding } from "../core/bindings/field-binding";
-import { deriveFieldMeta } from "../core/utils/field-meta";
+import {
+  BitPath,
+  BitPathValue,
+  createFrameworkMaskedFieldBinding,
+  deriveFieldMeta,
+} from "../core";
 import type { UseBitFieldNativeResult } from "./types";
 
 export function useBitField<
@@ -17,7 +20,7 @@ export function useBitField<
 
   const { fieldController } = useMemo(() => {
     return createFrameworkMaskedFieldBinding(store, path);
-  }, [store.config.masks, store.config.fields, path]);
+  }, [store, path]);
 
   const displayValue = useMemo(
     () => fieldController.displayValue(fieldState.value),
