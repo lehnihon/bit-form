@@ -217,6 +217,19 @@ describe("React Integration (Context + Hooks)", () => {
       expect(store.getState().values.skills).toEqual(["React"]);
       expect(store.getState().errors["skills.1"]).toBeUndefined();
     });
+
+    it("deve chamar unregisterPrefix ao desmontar useBitArray", () => {
+      const store = createTestStore({ skills: [] });
+      const spy = vi.spyOn(store, "unregisterPrefix");
+
+      const { unmount } = renderHook(() => useBitArray("skills"), {
+        wrapper: (props) => wrapper({ ...props, store }),
+      });
+
+      unmount();
+
+      expect(spy).toHaveBeenCalledWith("skills.");
+    });
   });
 
   describe("Watchers & Helpers", () => {

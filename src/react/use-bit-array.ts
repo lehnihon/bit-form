@@ -1,6 +1,10 @@
-import { useCallback, useSyncExternalStore, useMemo } from "react";
+import { useCallback, useEffect, useSyncExternalStore, useMemo } from "react";
 import { useBitStore } from "./context";
-import { createArrayBindingController, BitArrayPath } from "../core";
+import {
+  createArrayBindingController,
+  BitArrayPath,
+  cleanupRegisteredPrefix,
+} from "../core";
 
 export function useBitArray<
   TForm extends object = any,
@@ -24,6 +28,12 @@ export function useBitArray<
   const data = useSyncExternalStore(subscribeArray, getSnapshot, getSnapshot);
 
   const fields = useMemo(() => controller.getFields(data), [controller, data]);
+
+  useEffect(() => {
+    return () => {
+      cleanupRegisteredPrefix(store, `${path as string}.`);
+    };
+  }, [store, path]);
 
   return {
     fields,

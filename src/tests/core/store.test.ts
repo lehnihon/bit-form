@@ -1,5 +1,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { createBitStore, resolveBitStoreForHooks } from "../../core";
+import {
+  createBitStore,
+  createFrameworkStoreAdapter,
+  resolveBitStoreForHooks,
+} from "../../core";
 
 describe("BitStore Core", () => {
   beforeEach(() => {
@@ -53,6 +57,16 @@ describe("BitStore Core", () => {
       expect(typeof hooksStore.subscribeSelector).toBe("function");
       expect(typeof hooksStore.subscribePath).toBe("function");
       expect(typeof hooksStore.getFieldState).toBe("function");
+    });
+
+    it("should build framework adapter from store instance", () => {
+      const store = createBitStore({ initialValues: { name: "Leo" } }) as any;
+
+      const frameworkStore = createFrameworkStoreAdapter(store);
+
+      expect(typeof frameworkStore.subscribeSelector).toBe("function");
+      expect(typeof frameworkStore.setField).toBe("function");
+      expect(typeof frameworkStore.submit).toBe("function");
     });
   });
 
@@ -884,6 +898,22 @@ describe("BitStore Core", () => {
 
       expect(receivedDirtyValues).toEqual({ price: 40 });
     });
+
+    it("should normalize runtime values without mutating submit transforms", () => {
+      const store = createBitStore({
+        initialValues: { name: "" },
+        fields: {
+          name: {
+            normalize: (value) => String(value).trim(),
+            transform: (value) => String(value).toUpperCase(),
+          },
+        },
+      });
+
+      store.setField("name", "  leandro  ");
+
+      expect(store.getState().values.name).toBe("leandro");
+    });
   });
 
   describe("Array Operations", () => {
@@ -941,6 +971,33 @@ describe("BitStore Core", () => {
 
       expect(store.getState().values.list).toEqual(["B", "C", "A"]);
       expect(store.getState().errors["list.2"]).toBe("Error on A");
+      expect(store.getState().errors["list.0"]).toBeUndefined();
+    });
+
+    it("should replace array items through native array capability", () => {
+      const store = createBitStore({
+        initialValues: { list: ["A", "B", "C"] },
+      });
+      (store as any).triggerValidation = vi.fn();
+
+      store.setError("list.2", "Error on C");
+      store.replaceItems("list", ["X"]);
+
+      expect(store.getState().values.list).toEqual(["X"]);
+      expect(store.getState().errors["list.0"]).toBeUndefined();
+      expect(store.getState().errors["list.2"]).toBeUndefined();
+    });
+
+    it("should clear array items through native array capability", () => {
+      const store = createBitStore({
+        initialValues: { list: ["A", "B"] },
+      });
+      (store as any).triggerValidation = vi.fn();
+
+      store.setError("list.0", "Error on A");
+      store.clearItems("list");
+
+      expect(store.getState().values.list).toEqual([]);
       expect(store.getState().errors["list.0"]).toBeUndefined();
     });
   });

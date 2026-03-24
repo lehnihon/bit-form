@@ -121,18 +121,12 @@ export function createArrayBindingController<
 
     replace(items) {
       ids = items.map((_, index) => createId(index));
-      store.setField(
-        path as P & BitPath<TForm>,
-        items as BitPathValue<TForm, P & BitPath<TForm>>,
-      );
+      store.replaceItems(path, items);
     },
 
     clear() {
       ids = [];
-      store.setField(
-        path as P & BitPath<TForm>,
-        [] as BitPathValue<TForm, P & BitPath<TForm>>,
-      );
+      store.clearItems(path);
     },
   };
 }

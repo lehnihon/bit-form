@@ -12,6 +12,7 @@ import type { BitSubscriptionEngine } from "../engines/subscription-engine";
 import type { BitPersistMetadata, ScopeStatus } from "../contracts/types";
 import { isHistoryMetaEqual } from "../../history-status";
 import {
+  getScopeRegistrySubscriptionPath,
   getScopeSubscriptionPaths,
   isScopeStatusEqual,
 } from "../../scope-status";
@@ -220,7 +221,10 @@ export function subscribeStoreScopeStatus<T extends object>(args: {
       listener(nextStatus);
     },
     {
-      paths: getScopeSubscriptionPaths(getScopeFields(scopeName)),
+      paths: [
+        ...getScopeSubscriptionPaths(getScopeFields(scopeName)),
+        getScopeRegistrySubscriptionPath(scopeName),
+      ],
     },
   );
 }

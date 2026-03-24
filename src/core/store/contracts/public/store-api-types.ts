@@ -136,6 +136,11 @@ export interface BitStoreArrayFeatureApi<T extends object = any> {
     indexA: number,
     indexB: number,
   ): void;
+  replaceItems<P extends BitArrayPath<T>>(
+    path: P,
+    items: BitArrayItem<BitPathValue<T, P>>[],
+  ): void;
+  clearItems<P extends BitArrayPath<T>>(path: P): void;
 }
 
 export interface BitStoreHistoryFeatureApi {
@@ -174,6 +179,8 @@ export interface BitArrayBindingApi<T extends object = any> extends Pick<
   | "removeItem"
   | "moveItem"
   | "swapItems"
+  | "replaceItems"
+  | "clearItems"
   | "createArrayItemId"
 > {}
 
@@ -297,6 +304,11 @@ export interface BitFormBindingApi<T extends object = any> {
     indexA: number,
     indexB: number,
   ): void;
+  replaceItems<P extends BitArrayPath<T>>(
+    path: P,
+    items: BitArrayItem<BitPathValue<T, P>>[],
+  ): void;
+  clearItems<P extends BitArrayPath<T>>(path: P): void;
 
   undo(): void;
   redo(): void;

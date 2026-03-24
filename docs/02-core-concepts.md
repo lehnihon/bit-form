@@ -86,7 +86,7 @@ As your UI renders, fields are "registered" into the store (automatically handle
 
 ### 3. Interaction (Update & Blur)
 
-- **`setField(path, value)`**: When a user types, the store updates the value, recalculates computed fields, evaluates conditional dependencies (showing/hiding other fields), and triggers validations if configured.
+- **`setField(path, value)`**: When a user types, the store updates the value, applies runtime `normalize` rules, recalculates computed fields, evaluates conditional dependencies (showing/hiding other fields), and triggers validations if configured.
 - **`blurField(path)`**: When an input loses focus, the store marks it as `touched` in the state and usually triggers the validation step for that specific field.
 
 ### 4. Submission
@@ -95,7 +95,7 @@ When you call the `submit(onSuccess)` method, the `BitStore` executes a staged p
 
 1. `submit:start` → marks `isSubmitting` and validates.
 2. `submit:invalid` → marks touched fields and exits early when invalid.
-3. `submit:prepare` → strips hidden fields and applies `transform`.
+3. `submit:prepare` → strips hidden fields and applies `transform` to the outbound payload.
 4. `submit:before-hooks` → runs plugin `beforeSubmit` hooks.
 5. `submit:user-handler` → executes your callback.
 6. `submit:after-hooks` → runs plugin `afterSubmit` hooks.
@@ -110,7 +110,7 @@ Bit-Form uses both specialized managers (domain behavior) and runtime engines (o
 - **Dependency Manager**: Evaluates `showIf` and `requiredIf` conditions.
 - **Validation Manager**: Handles synchronous resolvers (Zod, Yup, Joi) and debounced asynchronous API validations.
 - **History Manager**: Tracks incremental patches between states, enabling `undo` / `redo` with lower memory pressure.
-- **Array Manager**: Exposes native methods to securely append, prepend, insert, remove, move, and swap items within array fields.
+- **Array Manager**: Exposes native methods to securely append, prepend, insert, remove, move, swap, replace and clear items within array fields.
 - **Computed Manager**: Reactively calculates derived field values from explicit `computedDependsOn` declarations.
 
 `subscription-engine` now uses path-prefix indexing for scoped subscriptions, reducing notification overhead in large forms.

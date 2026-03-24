@@ -29,6 +29,10 @@ export function getScopeSubscriptionPaths(scopeFields: readonly string[]) {
   return [...scopeFields, "isDirty"];
 }
 
+export function getScopeRegistrySubscriptionPath(scopeName: string) {
+  return `__scope__.${scopeName}`;
+}
+
 export function observeScopeStatusSnapshot(
   store: {
     getScopeStatus(scopeName: string): ScopeStatus;

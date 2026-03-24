@@ -1,6 +1,7 @@
 export {
   createBitStore,
   resolveBitStoreForHooks,
+  createFrameworkStoreAdapter,
 } from "./store/orchestration/create-store";
 export type {
   BitStoreApi,
@@ -66,6 +67,7 @@ export type {
   BitFieldValidation,
   ValidatorFn,
   BitComputedFn,
+  BitNormalizeFn,
   BitTransformFn,
   BitPath,
   BitPathValue,

@@ -1,4 +1,8 @@
-import type { BitFieldDefinition, BitTransformFn } from "../contracts/types";
+import type {
+  BitFieldDefinition,
+  BitNormalizeFn,
+  BitTransformFn,
+} from "../contracts/types";
 import type { BitComputedEntry } from "../managers/core/computed-manager";
 
 export class BitFieldCatalog<T extends object = any> {
@@ -6,6 +10,7 @@ export class BitFieldCatalog<T extends object = any> {
 
   private scopeFieldsIndex: Map<string, Set<string>> | null = null;
   private computedEntriesCache: BitComputedEntry<T>[] | null = null;
+  private normalizerEntriesCache: [string, BitNormalizeFn<T>][] | null = null;
   private transformEntriesCache: [string, BitTransformFn<T>][] | null = null;
 
   get(path: string): BitFieldDefinition<T> | undefined {
@@ -85,9 +90,24 @@ export class BitFieldCatalog<T extends object = any> {
     return this.transformEntriesCache;
   }
 
+  getNormalizerEntries(): [string, BitNormalizeFn<T>][] {
+    if (!this.normalizerEntriesCache) {
+      const result: [string, BitNormalizeFn<T>][] = [];
+      this.forEach((cfg, path) => {
+        if (cfg.normalize) {
+          result.push([path, cfg.normalize]);
+        }
+      });
+      this.normalizerEntriesCache = result;
+    }
+
+    return this.normalizerEntriesCache;
+  }
+
   invalidateIndexes() {
     this.scopeFieldsIndex = null;
     this.computedEntriesCache = null;
+    this.normalizerEntriesCache = null;
     this.transformEntriesCache = null;
   }
 
@@ -105,6 +125,10 @@ export class BitFieldCatalog<T extends object = any> {
         compute: config.computed,
         dependsOn: config.computedDependsOn,
       });
+    }
+
+    if (this.normalizerEntriesCache && config.normalize) {
+      this.normalizerEntriesCache.push([path, config.normalize]);
     }
 
     if (this.transformEntriesCache && config.transform) {
@@ -137,6 +161,12 @@ export class BitFieldCatalog<T extends object = any> {
     if (this.computedEntriesCache && config.computed) {
       this.computedEntriesCache = this.computedEntriesCache.filter(
         (entry) => entry.path !== path,
+      );
+    }
+
+    if (this.normalizerEntriesCache && config.normalize) {
+      this.normalizerEntriesCache = this.normalizerEntriesCache.filter(
+        ([entryPath]) => entryPath !== path,
       );
     }
 

@@ -110,9 +110,21 @@ Used in `BitFieldDefinition.transform` (per-field transforms).
 
 ---
 
+## `BitNormalizeFn<T>`
+
+Represents a normalization applied to a field during runtime writes.
+
+```ts
+type BitNormalizeFn<T> = (value: any, allValues: T) => any;
+```
+
+Used in `BitFieldDefinition.normalize` when the store state itself should be normalized after updates.
+
+---
+
 ## `BitFieldDefinition<T>`
 
-Configuration for an individual field, used in `BitConfig.fields` or at runtime via `store.registerField`. All field-level config (conditional, validation, transform, computed, mask, scope) lives here.
+Configuration for an individual field, used in `BitConfig.fields` or at runtime via `store.registerField`. All field-level config (conditional, validation, normalize, transform, computed, mask, scope) lives here.
 
 ```ts
 interface BitFieldConditional<T> {
@@ -132,6 +144,7 @@ interface BitFieldValidation<T> {
 interface BitFieldDefinition<T> {
   conditional?: BitFieldConditional<T>;
   validation?: BitFieldValidation<T>;
+  normalize?: (value: any, allValues: T) => any;
   transform?: (value: any, allValues: T) => any;
   computed?: (values: T) => any;
   mask?: BitMask | string;
@@ -141,7 +154,8 @@ interface BitFieldDefinition<T> {
 
 - **`conditional`** — visibility and dynamic required logic (`dependsOn`, `showIf`, `requiredIf`, `requiredMessage`).
 - **`validation`** — async validation only. `asyncValidateOn` defaults to `"blur"`; use `"change"` for live validation while typing.
-- **`transform`** — applied before submit.
+- **`normalize`** — applied to runtime state after writes/batches.
+- **`transform`** — applied only when preparing the submit payload.
 - **`computed`** — derives value from other fields.
 - **`mask`** — mask name or instance.
 - **`scope`** — scope name (e.g. wizard step).
@@ -210,6 +224,7 @@ const store = createBitStore({
   history: { enabled: true, limit: 20 },
   fields: {
     email: {
+      normalize: (v) => v?.trim(),
       transform: (v) => v?.toLowerCase(),
       scope: "step1",
     },
@@ -220,7 +235,7 @@ const store = createBitStore({
 Key points:
 
 - `initialValues` is optional at the type level, but the resolved config will always have a non-null `initialValues`.
-- `fields` is the single source for field config: conditional, validation, transform, computed, mask, scope. Masks are set per field via `fields.path.mask` (name or instance). Custom masks should be defined in the `masks` option of the store config.
+- `fields` is the single source for field config: conditional, validation, normalize, transform, computed, mask, scope. Masks are set per field via `fields.path.mask` (name or instance). Custom masks should be defined in the `masks` option of the store config.
 
 ---
 

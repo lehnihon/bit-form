@@ -38,6 +38,7 @@ export type {
   BitFieldValidation,
   ValidatorFn,
   BitComputedFn,
+  BitNormalizeFn,
   BitTransformFn,
   BitPath,
   BitPathValue,

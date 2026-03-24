@@ -34,6 +34,7 @@ export type BitTouched<T extends object> = Partial<
   Record<BitPath<T>, boolean | undefined>
 >;
 export type BitComputedFn<T> = (values: T) => any;
+export type BitNormalizeFn<T> = (value: any, allValues: T) => any;
 export type BitTransformFn<T> = (value: any, allValues: T) => any;
 
 export interface BitPersistMetadata {
@@ -100,6 +101,7 @@ export interface BitFieldValidation<T extends object = any> {
 interface BitFieldDefinitionBase<T extends object = any> {
   conditional?: BitFieldConditional<T>;
   validation?: BitFieldValidation<T>;
+  normalize?: BitNormalizeFn<T>;
   transform?: BitTransformFn<T>;
   /** Mask name (built-in or custom registry key) or BitMask instance. */
   mask?: BitMask | BitMaskName;
@@ -148,7 +150,9 @@ export type BitArrayOperation =
   | "insert"
   | "remove"
   | "move"
-  | "swap";
+  | "swap"
+  | "replace"
+  | "clear";
 
 export interface BitFieldChangeMeta {
   origin: BitFieldChangeOrigin;
