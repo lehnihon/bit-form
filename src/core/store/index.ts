@@ -62,7 +62,7 @@ import { applyStorePersistedValues } from "./orchestration/store-persist-ops";
 import { composeBitStoreRuntime } from "./orchestration/store-composition-root";
 import { BitStoreRuntimeKernel } from "./orchestration/store-runtime-kernel";
 
-export class BitStore<T extends object = any> {
+class BitStore<T extends object = any> {
   public readonly [BIT_HOOKS_API_SYMBOL] = true;
   public readonly [BIT_FRAMEWORK_STORE_SYMBOL] = true;
 
@@ -539,4 +539,10 @@ export class BitStore<T extends object = any> {
   cleanup() {
     this.runtime.cleanup();
   }
+}
+
+export function createInternalBitStore<T extends object = any>(
+  config: BitConfig<T> = {},
+) {
+  return new BitStore<T>(config);
 }

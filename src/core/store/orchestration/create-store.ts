@@ -1,8 +1,7 @@
-import { BitStore } from "../index";
+import { createInternalBitStore } from "../index";
 import { BitConfig } from "../contracts/types";
 import {
   BitFrameworkStoreApi,
-  BitStoreApi,
   BitStoreHooksApi,
 } from "../contracts/public-types";
 import { BIT_FRAMEWORK_STORE_SYMBOL } from "./framework-store-brand";
@@ -61,5 +60,5 @@ export function createFrameworkStoreAdapter<T extends object>(
 export function createBitStore<T extends object = any>(
   config: BitConfig<T> = {},
 ): BitStoreHooksApi<T> {
-  return new BitStore<T>(config) as unknown as BitStoreHooksApi<T>;
+  return createInternalBitStore<T>(config) as unknown as BitStoreHooksApi<T>;
 }
