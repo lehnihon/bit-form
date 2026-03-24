@@ -11,7 +11,7 @@ import { BitMask, BitMaskName } from "../../../mask/types";
  * - Resolve masks by name
  */
 export class BitMaskManager {
-  private masks: Record<string, BitMask> = {};
+  private masks: Map<string, BitMask> = new Map();
 
   /**
    * Register a new input mask
@@ -20,10 +20,7 @@ export class BitMaskManager {
    * @param mask - Mask configuration/pattern
    */
   registerMask(name: BitMaskName, mask: BitMask): void {
-    this.masks = {
-      ...this.masks,
-      [name]: mask,
-    };
+    this.masks.set(name, mask);
   }
 
   /**
@@ -32,12 +29,11 @@ export class BitMaskManager {
    * @param name - Mask identifier to remove
    */
   unregisterMask(name: BitMaskName): void {
-    if (!(name in this.masks)) {
+    if (!this.masks.has(name)) {
       return; // Silently ignore non-existent masks
     }
 
-    const { [name]: _, ...remaining } = this.masks;
-    this.masks = remaining;
+    this.masks.delete(name);
   }
 
   /**
@@ -47,7 +43,7 @@ export class BitMaskManager {
    * @returns Mask configuration or undefined if not found
    */
   resolveMask(name: BitMaskName): BitMask | undefined {
-    return this.masks[name];
+    return this.masks.get(name);
   }
 
   /**
@@ -56,13 +52,13 @@ export class BitMaskManager {
    * @returns Object map of all registered masks
    */
   getAllMasks(): Record<string, BitMask> {
-    return this.masks;
+    return Object.fromEntries(this.masks.entries());
   }
 
   /**
    * Clear all registered masks
    */
   clear(): void {
-    this.masks = {};
+    this.masks.clear();
   }
 }

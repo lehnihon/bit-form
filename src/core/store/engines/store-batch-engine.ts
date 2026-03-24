@@ -69,8 +69,10 @@ export function flushStoreBatchState<T extends object>(args: {
   currentState: BitState<T>;
   batchState: BitStoreBatchState<T>;
   applyComputedValues: (values: T, changedPaths?: readonly string[]) => T;
+  applyPostBatchValues?: (values: T) => T;
 }): BitStoreBatchFlushResult<T> | null {
-  const { currentState, batchState, applyComputedValues } = args;
+  const { currentState, batchState, applyComputedValues, applyPostBatchValues } =
+    args;
 
   if (!batchState.pendingState) {
     batchState.pendingHistorySnapshot = false;
@@ -78,7 +80,7 @@ export function flushStoreBatchState<T extends object>(args: {
   }
 
   let nextState = batchState.pendingState;
-  const changedPaths = batchState.changedPathSet ?? undefined;
+  let changedPaths = batchState.changedPathSet ?? undefined;
   const valuesChanged = batchState.valuesChanged;
 
   if (valuesChanged) {
@@ -87,6 +89,20 @@ export function flushStoreBatchState<T extends object>(args: {
       ...nextState,
       values: applyComputedValues(nextState.values, computedChangedPaths),
     };
+
+    if (applyPostBatchValues) {
+      const postBatchValues = applyPostBatchValues(nextState.values);
+      if (postBatchValues !== nextState.values) {
+        const mergedChangedPaths = changedPaths ?? new Set<string>();
+        mergedChangedPaths.add("*");
+        changedPaths = mergedChangedPaths;
+
+        nextState = {
+          ...nextState,
+          values: postBatchValues,
+        };
+      }
+    }
   }
 
   batchState.pendingState = null;

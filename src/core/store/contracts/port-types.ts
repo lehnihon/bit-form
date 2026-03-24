@@ -33,15 +33,13 @@ export interface BitValidationTriggerOptions {
   forceDebounce?: boolean;
 }
 
-interface BitLifecycleStatePort<T extends object> {
+export interface BitLifecycleStorePort<T extends object> {
   getState: () => BitState<T>;
   dispatch: (operation: BitStoreOperation<T>) => void;
   internalSaveSnapshot: () => void;
   batchStateUpdates<TResult>(callback: () => TResult): TResult;
   config: BitFrameworkConfig<T>;
-}
 
-interface BitLifecycleDependencyPort<T extends object> {
   getFieldConfig: (path: string) => BitFieldDefinition<T> | undefined;
   getTransformEntries: () => [string, BitTransformFn<T>][];
   updateDependencies: (changedPath: string, newValues: T) => string[];
@@ -49,9 +47,7 @@ interface BitLifecycleDependencyPort<T extends object> {
   isFieldHidden: (path: string) => boolean;
   evaluateAllDependencies: (values: T) => void;
   getHiddenFields: () => ReadonlySet<string>;
-}
 
-interface BitLifecycleValidationPort<T extends object> {
   clearFieldValidation: (path: string) => void;
   triggerValidation: (
     scopeFields?: string[],
@@ -61,9 +57,7 @@ interface BitLifecycleValidationPort<T extends object> {
   cancelAllValidations: () => void;
   validateNow: (options?: BitValidationOptions) => Promise<boolean>;
   hasValidationsInProgress: (scopeFields?: string[]) => boolean;
-}
 
-interface BitLifecycleDirtyPort<T extends object> {
   updateDirtyForPath: (
     path: string,
     nextValues: T,
@@ -75,9 +69,7 @@ interface BitLifecycleDirtyPort<T extends object> {
   getInitialValues: () => T;
   setInitialValues: (values: T) => void;
   resetHistory: (initialValues: T) => void;
-}
 
-interface BitLifecycleEffectsPort<T extends object> {
   emitFieldChange: (event: BitFieldChangeEvent<T>) => void;
   emitBeforeSubmit: (event: BitBeforeSubmitEvent<T>) => Promise<void>;
   emitAfterSubmit: (event: BitAfterSubmitEvent<T>) => Promise<void>;
@@ -86,10 +78,6 @@ interface BitLifecycleEffectsPort<T extends object> {
     error: unknown;
     payload?: unknown;
   }) => Promise<void>;
-}
 
-export type BitLifecycleStorePort<T extends object> = BitLifecycleStatePort<T> &
-  BitLifecycleDependencyPort<T> &
-  BitLifecycleValidationPort<T> &
-  BitLifecycleDirtyPort<T> &
-  BitLifecycleEffectsPort<T>;
+  onUnhandledError?: (error: unknown, source: "submit") => void;
+}

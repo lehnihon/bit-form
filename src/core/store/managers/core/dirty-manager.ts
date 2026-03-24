@@ -80,12 +80,14 @@ export class BitDirtyManager<T extends object = any> {
       return true;
     }
 
-    const segments = path.split(".");
-    while (segments.length > 1) {
-      segments.pop();
-      if (this.dirtyPaths.has(segments.join("."))) {
+    let separatorIndex = path.lastIndexOf(".");
+    while (separatorIndex > -1) {
+      const ancestorPath = path.slice(0, separatorIndex);
+      if (this.dirtyPathIndex.has(ancestorPath)) {
         return true;
       }
+
+      separatorIndex = path.lastIndexOf(".", separatorIndex - 1);
     }
 
     return false;

@@ -35,7 +35,19 @@ export class BitSyncPipelineRunner<TContext extends BitPipelineContext> {
         break;
       }
 
-      step.run(context);
+      const result = step.run(context) as unknown;
+
+      if (
+        result !== null &&
+        result !== undefined &&
+        typeof (result as Promise<unknown>).then === "function" &&
+        typeof process !== "undefined" &&
+        process.env?.NODE_ENV !== "production"
+      ) {
+        console.warn(
+          `BitSyncPipelineRunner: step \"${step.name}\" returned a Promise and will not be awaited.`,
+        );
+      }
     }
   }
 }

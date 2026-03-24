@@ -8,8 +8,15 @@ export class BitFieldConditions<T extends object = any> {
   private readonly requiredPathsByDependency: Map<string, Set<string>> =
     new Map();
   private readonly requiredConditionalPaths: Set<string> = new Set();
-  private requiredEvaluationCache = new WeakMap<T, Map<string, boolean>>();
-  private requiredEvaluationCacheDirty = false;
+  private requiredEvaluationVersion = 0;
+  private readonly requiredEvaluationCache = new Map<
+    string,
+    {
+      version: number;
+      valuesRef: T;
+      result: boolean;
+    }
+  >();
 
   constructor(
     private readonly getFieldConfig: (
@@ -46,7 +53,8 @@ export class BitFieldConditions<T extends object = any> {
       });
     }
 
-    this.requiredEvaluationCacheDirty = true;
+    this.requiredEvaluationVersion += 1;
+    this.requiredEvaluationCache.clear();
     this.evaluateFieldCondition(path, currentValues);
   }
 
@@ -54,7 +62,8 @@ export class BitFieldConditions<T extends object = any> {
     this.hiddenFields.delete(path);
     this.conditionalVisibilityPaths.delete(path);
     this.dependencies.delete(path);
-    this.requiredEvaluationCacheDirty = true;
+    this.requiredEvaluationVersion += 1;
+    this.requiredEvaluationCache.clear();
     this.requiredConditionalPaths.delete(path);
 
     config?.conditional?.dependsOn?.forEach((dep) => {
@@ -90,23 +99,21 @@ export class BitFieldConditions<T extends object = any> {
       return false;
     }
 
-    if (this.requiredEvaluationCacheDirty) {
-      this.requiredEvaluationCache = new WeakMap();
-      this.requiredEvaluationCacheDirty = false;
-    }
-
-    let cache = this.requiredEvaluationCache.get(values);
-    if (!cache) {
-      cache = new Map<string, boolean>();
-      this.requiredEvaluationCache.set(values, cache);
-    }
-
-    if (cache.has(path)) {
-      return cache.get(path)!;
+    const cached = this.requiredEvaluationCache.get(path);
+    if (
+      cached &&
+      cached.version === this.requiredEvaluationVersion &&
+      cached.valuesRef === values
+    ) {
+      return cached.result;
     }
 
     const result = !!config.conditional.requiredIf(values);
-    cache.set(path, result);
+    this.requiredEvaluationCache.set(path, {
+      version: this.requiredEvaluationVersion,
+      valuesRef: values,
+      result,
+    });
     return result;
   }
 

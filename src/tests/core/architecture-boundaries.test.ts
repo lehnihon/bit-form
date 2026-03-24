@@ -78,7 +78,11 @@ describe("architecture boundaries", () => {
         return false;
       }
 
-      if (relative === "public-types.ts" || relative === "bus-types.ts") {
+      if (
+        relative === "index.ts" ||
+        relative === "public-types.ts" ||
+        relative === "bus-types.ts"
+      ) {
         return false;
       }
 

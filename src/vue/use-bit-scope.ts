@@ -7,7 +7,7 @@ export type { ScopeStatus, ValidateScopeResult };
 
 export function useBitScope(scopeName: string) {
   const store = useBitStore();
-  const status = ref<ScopeStatus>(store.getStepStatus(scopeName));
+  const status = ref<ScopeStatus>(store.getScopeStatus(scopeName));
   let unsubscribe: () => void;
 
   onMounted(() => {

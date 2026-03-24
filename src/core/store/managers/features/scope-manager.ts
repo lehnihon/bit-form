@@ -20,7 +20,7 @@ export class BitScopeManager<T extends object = any> {
    * Get validation status of a scope (step).
    * Returns whether the scope has errors, is dirty, and the error details.
    */
-  getStepStatus(scopeName: string) {
+  getScopeStatus(scopeName: string) {
     const fields = this.getScopeFields(scopeName);
     const state = this.getState();
 

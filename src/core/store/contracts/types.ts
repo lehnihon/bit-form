@@ -349,9 +349,21 @@ export interface BitConfig<T extends object = any> {
    * where a global singleton is unsafe (e.g. Next.js Edge Runtime).
    */
   bus?: BitFormGlobal;
+
+  /**
+   * Handler opcional para erros operacionais não tratados internamente.
+   * Se não informado, o runtime usa fallback para `console.error`.
+   */
+  onUnhandledError?: (error: unknown, source: "submit") => void;
 }
 
-/** Return type of BitStore.getStepStatus, used by useBitScope/injectBitScope. */
+export type BitSubmitResult =
+  | { status: "submitted" }
+  | { status: "invalid" }
+  | { status: "failed"; error: unknown }
+  | { status: "blocked"; reason: "isSubmitting" | "validating" };
+
+/** Return type of BitStore.getScopeStatus, used by useBitScope/injectBitScope. */
 export interface ScopeStatus {
   hasErrors: boolean;
   isDirty: boolean;

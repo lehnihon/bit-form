@@ -1,4 +1,5 @@
 import { deepClone, getDeepValue, setDeepValues } from "../../../../utils";
+import type { BitSubmitResult } from "../../../contracts/types";
 import {
   BitPipelineContext,
   BitPipelineRunner,
@@ -43,12 +44,16 @@ export class BitSubmitLifecycleManager<T extends object> {
 
   async submit(
     onSuccess: (values: T, dirtyValues?: Partial<T>) => void | Promise<void>,
-  ) {
+  ): Promise<BitSubmitResult> {
     const currentState = this.store.getState();
 
-    if (currentState.isSubmitting) return;
+    if (currentState.isSubmitting) {
+      return { status: "blocked", reason: "isSubmitting" };
+    }
 
-    if (this.store.hasValidationsInProgress()) return;
+    if (this.store.hasValidationsInProgress()) {
+      return { status: "blocked", reason: "validating" };
+    }
 
     this.store.cancelAllValidations();
 
@@ -61,6 +66,12 @@ export class BitSubmitLifecycleManager<T extends object> {
 
     try {
       await this.submitPipeline.run(context);
+
+      if (context.invalid) {
+        return { status: "invalid" };
+      }
+
+      return { status: "submitted" };
     } catch (error) {
       context.error = error;
 
@@ -77,7 +88,13 @@ export class BitSubmitLifecycleManager<T extends object> {
         error,
       });
 
-      console.error(error);
+      if (this.store.config.onUnhandledError) {
+        this.store.config.onUnhandledError(error, "submit");
+      } else {
+        console.error(error);
+      }
+
+      return { status: "failed", error };
     } finally {
       this.store.dispatch(patchStateOperation({ isSubmitting: false }));
     }

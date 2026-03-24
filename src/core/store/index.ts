@@ -1,5 +1,5 @@
 import { BitMask } from "../mask/types";
-import { getDeepValue } from "../utils";
+import { getDeepValue, setDeepValues, valueEqual } from "../utils";
 import {
   BitArrayItem,
   BitArrayPath,
@@ -11,6 +11,7 @@ import {
   BitPath,
   BitPathValue,
   BitPersistMetadata,
+  BitSubmitResult,
   BitState,
   BitTransformFn,
   DeepPartial,
@@ -18,6 +19,9 @@ import {
 } from "./contracts/types";
 import type {
   BitFormMeta,
+  BitStoreFeatureApi,
+  BitStoreQueryApi,
+  BitStoreWriteApi,
   BitFrameworkConfig,
   BitHistoryMetadata,
   BitSelector,
@@ -73,12 +77,15 @@ export class BitStore<T extends object = any> {
   private readonly runtime: BitStoreRuntimeKernel<T>;
   private readonly maskManager: BitMaskManager;
   private readonly _config: BitFrameworkConfig<T>;
-  private _cachedConfig: BitFrameworkConfig<T>;
   private _initialValues!: T;
+
+  public readonly queryFacade!: BitStoreQueryApi<T>;
+  public readonly writeFacade!: BitStoreWriteApi<T>;
+  public readonly featureFacade!: BitStoreFeatureApi<T>;
 
   public readonly storeId: string;
   get config(): Readonly<BitFrameworkConfig<T>> {
-    return this._cachedConfig ?? this._config;
+    return this._config;
   }
 
   private readonly fieldRegistry: BitFieldRegistry<T>;
@@ -108,6 +115,13 @@ export class BitStore<T extends object = any> {
 
     let runtimeKernel: BitStoreRuntimeKernel<T> | null = null;
 
+    const requireRuntimeKernel = () => {
+      if (!runtimeKernel) {
+        throw new Error("BitStore runtime kernel is not initialized yet.");
+      }
+      return runtimeKernel;
+    };
+
     const runtime = createStoreRuntime<T>({
       rawConfig: config,
       config: this._config,
@@ -120,24 +134,32 @@ export class BitStore<T extends object = any> {
           this._initialValues = values;
         },
       },
-      getState: () => runtimeKernel?.getState() ?? runtime.state,
-      dispatch: (operation) => runtimeKernel?.dispatch(operation),
-      setError: (path, message) => this.setError(path, message),
-      validate: (options) => this.validate(options),
-      getFieldConfig: (path) => this.getFieldConfig(path),
-      getScopeFields: (scopeName) => this.getScopeFields(scopeName),
-      getEffects: () => runtimeKernel!.effects,
-      saveHistorySnapshot: () => runtimeKernel?.saveHistorySnapshot(),
-      runStateBatch: (callback) => runtimeKernel!.runBatch(callback),
-      getTransformEntries: () => this.getTransformEntries(),
-      getHistory: () => runtimeKernel!.capabilities.history,
-      getValidation: () => runtimeKernel!.capabilities.validation,
-      setFieldWithMeta: (path, value, meta) =>
-        this.setFieldWithMeta(path, value, meta),
-      unregisterPrefix: (prefix) => this.unregisterPrefix(prefix),
-      triggerValidation: (scopeFields, options) =>
-        this.triggerValidation(scopeFields, options),
-      getConfig: () => this.getConfig(),
+      stateAccess: {
+        getState: () => runtimeKernel?.getState() ?? runtime.state,
+        dispatch: (operation) => requireRuntimeKernel().dispatch(operation),
+        saveHistorySnapshot: () => requireRuntimeKernel().saveHistorySnapshot(),
+        runStateBatch: (callback) => requireRuntimeKernel().runBatch(callback),
+      },
+      fieldAccess: {
+        getFieldConfig: (path) => this.getFieldConfig(path),
+        getScopeFields: (scopeName) => this.getScopeFields(scopeName),
+        getTransformEntries: () => this.getTransformEntries(),
+      },
+      featureAccess: {
+        getEffects: () => requireRuntimeKernel().effects,
+        getHistory: () => requireRuntimeKernel().capabilities.history,
+        getValidation: () => requireRuntimeKernel().capabilities.validation,
+      },
+      actions: {
+        setError: (path, message) => this.setError(path, message),
+        validate: (options) => this.validate(options),
+        setFieldWithMeta: (path, value, meta) =>
+          this.setFieldWithMeta(path, value, meta),
+        unregisterPrefix: (prefix) => this.unregisterPrefix(prefix),
+        triggerValidation: (scopeFields, options) =>
+          this.triggerValidation(scopeFields, options),
+        getConfig: () => this.getConfig(),
+      },
     });
 
     this.storeId = runtime.storeId;
@@ -159,15 +181,60 @@ export class BitStore<T extends object = any> {
       effects,
       capabilities: runtime.capabilities,
       computedManager: this.computedManager,
+      applyPostBatchValues: (values) => this.applyPostBatchValues(values),
     });
 
     this.runtime = runtimeKernel;
+    this.queryFacade = {
+      getConfig: () => this.getConfig(),
+      getState: () => this.getState(),
+      isHidden: (path) => this.isHidden(path),
+      isRequired: (path) => this.isRequired(path),
+      isFieldDirty: (path) => this.isFieldDirty(path),
+      isFieldValidating: (path) => this.isFieldValidating(path),
+      getDirtyValues: () => this.getDirtyValues(),
+      getPersistMetadata: () => this.getPersistMetadata(),
+      getHistoryMetadata: () => this.getHistoryMetadata(),
+      getScopeStatus: (scopeName) => this.getScopeStatus(scopeName),
+      getStepErrors: (scopeName) => this.getStepErrors(scopeName),
+    };
+
+    this.writeFacade = {
+      setField: (path, value) => this.setField(path, value),
+      blurField: (path) => this.blurField(path),
+      setValues: (values, options) => this.setValues(values, options),
+      setError: (path, message) => this.setError(path, message),
+      setErrors: (errors) => this.setErrors(errors),
+      setServerErrors: (serverErrors) => this.setServerErrors(serverErrors),
+      validate: (options) => this.validate(options),
+      reset: () => this.reset(),
+      transaction: (callback) => this.transaction(callback),
+      submit: (onSuccess) => this.submit(onSuccess),
+    };
+
+    this.featureFacade = {
+      getPersistMetadata: () => this.getPersistMetadata(),
+      restorePersisted: () => this.restorePersisted(),
+      forceSave: () => this.forceSave(),
+      clearPersisted: () => this.clearPersisted(),
+      cleanup: () => this.cleanup(),
+      registerField: (path, config) => this.registerField(path, config),
+      unregisterField: (path) => this.unregisterField(path),
+      pushItem: (path, value) => this.pushItem(path, value),
+      prependItem: (path, value) => this.prependItem(path, value),
+      insertItem: (path, index, value) => this.insertItem(path, index, value),
+      removeItem: (path, index) => this.removeItem(path, index),
+      moveItem: (path, from, to) => this.moveItem(path, from, to),
+      swapItems: (path, indexA, indexB) => this.swapItems(path, indexA, indexB),
+      undo: () => this.undo(),
+      redo: () => this.redo(),
+    };
+
     this.runtime.saveHistorySnapshot();
-    this._cachedConfig = this._config;
   }
 
   getConfig() {
-    return this._cachedConfig ?? this._config;
+    return this._config;
   }
 
   getFieldConfig(path: string): BitFieldDefinition<T> | undefined {
@@ -184,6 +251,30 @@ export class BitStore<T extends object = any> {
 
   private getTransformEntries(): [string, BitTransformFn<T>][] {
     return this.fieldRegistry.getTransformEntries();
+  }
+
+  private applyPostBatchValues(values: T): T {
+    const transforms = this.getTransformEntries();
+    if (transforms.length === 0) {
+      return values;
+    }
+
+    const updates: Array<[string, unknown]> = [];
+
+    for (const [path, transformer] of transforms) {
+      const currentValue = getDeepValue(values, path);
+      const transformedValue = transformer(currentValue, values);
+
+      if (!valueEqual(currentValue, transformedValue)) {
+        updates.push([path, transformedValue]);
+      }
+    }
+
+    if (updates.length === 0) {
+      return values;
+    }
+
+    return setDeepValues(values, updates);
   }
 
   resolveMask(path: string): BitMask | undefined {
@@ -318,7 +409,8 @@ export class BitStore<T extends object = any> {
   ): () => void {
     return subscribeStoreScopeStatus({
       scopeName,
-      readScopeStatus: (targetScopeName) => this.getStepStatus(targetScopeName),
+      readScopeStatus: (targetScopeName) =>
+        this.getScopeStatus(targetScopeName),
       getScopeFields: (targetScopeName) => this.getScopeFields(targetScopeName),
       subscribeSelector: (selector, statusListener, options) =>
         this.subscribeSelector(selector, statusListener, options),
@@ -451,7 +543,7 @@ export class BitStore<T extends object = any> {
 
   async submit(
     onSuccess: (values: T, dirtyValues?: Partial<T>) => void | Promise<void>,
-  ) {
+  ): Promise<BitSubmitResult> {
     return this.runtime.capabilities.lifecycle.submit(onSuccess);
   }
 
@@ -569,8 +661,8 @@ export class BitStore<T extends object = any> {
     this.runtime.capabilities.validation.trigger(scopeFields, options);
   }
 
-  getStepStatus(scopeName: string) {
-    return this.runtime.capabilities.scope.getStepStatus(scopeName);
+  getScopeStatus(scopeName: string) {
+    return this.runtime.capabilities.scope.getScopeStatus(scopeName);
   }
 
   getStepErrors(scopeName: string): Record<string, string> {

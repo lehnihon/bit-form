@@ -93,6 +93,7 @@ export function flushStoreBatchedStateUpdates<T extends object>(args: {
   state: BitState<T>;
   batchState: BitStoreBatchState<T>;
   applyComputedValues: (values: T, changedPaths?: readonly string[]) => T;
+  applyPostBatchValues?: (values: T) => T;
   onStateCommitted: (payload: {
     nextState: BitState<T>;
     changedPaths?: Iterable<string>;
@@ -104,6 +105,7 @@ export function flushStoreBatchedStateUpdates<T extends object>(args: {
     state,
     batchState,
     applyComputedValues,
+    applyPostBatchValues,
     onStateCommitted,
     saveHistory,
   } = args;
@@ -112,6 +114,7 @@ export function flushStoreBatchedStateUpdates<T extends object>(args: {
     state,
     batchState,
     applyComputedValues,
+    applyPostBatchValues,
     onStateCommitted,
   });
 

@@ -14,7 +14,7 @@ export class BitHistoryManager<T extends object = any> {
 
   constructor(
     private enableHistory: boolean,
-    private maxHistory: number = 15,
+    private maxHistory: number,
   ) {}
 
   saveSnapshot(values: T) {

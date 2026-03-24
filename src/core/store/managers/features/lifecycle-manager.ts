@@ -1,4 +1,5 @@
 import { BitFieldChangeMeta, DeepPartial } from "../../contracts/types";
+import type { BitSubmitResult } from "../../contracts/types";
 import type { BitLifecycleStorePort } from "../../contracts/port-types";
 import { BitFieldUpdateManager } from "./lifecycle/field-update-manager";
 import { BitValuesLifecycleManager } from "./lifecycle/values-lifecycle-manager";
@@ -44,7 +45,7 @@ export class BitLifecycleManager<T extends object> {
 
   async submit(
     onSuccess: (values: T, dirtyValues?: Partial<T>) => void | Promise<void>,
-  ) {
+  ): Promise<BitSubmitResult> {
     return this.submitFlow.submit(onSuccess);
   }
 

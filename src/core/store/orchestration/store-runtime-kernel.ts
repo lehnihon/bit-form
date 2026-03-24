@@ -23,6 +23,7 @@ export interface BitStoreRuntimeKernelArgs<T extends object> {
   effects: BitStoreEffectEngine<T>;
   capabilities: BitStoreCapabilities<T>;
   computedManager: BitComputedManager<T>;
+  applyPostBatchValues?: (values: T) => T;
 }
 
 export class BitStoreRuntimeKernel<T extends object> {
@@ -109,6 +110,7 @@ export class BitStoreRuntimeKernel<T extends object> {
           : undefined;
         return this.args.computedManager.apply(values, normalizedPaths);
       },
+      applyPostBatchValues: this.args.applyPostBatchValues,
       onStateCommitted: (payload) => this.onStateCommitted(payload),
       saveHistory: (values) => this.capabilities.history.saveSnapshot(values),
     });
