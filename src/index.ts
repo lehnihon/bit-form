@@ -1,6 +1,5 @@
 export {
   createBitStore,
-  resolveBitStoreForHooks,
   createFrameworkStoreAdapter,
   bitBus,
   createBitBus,
