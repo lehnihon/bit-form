@@ -58,7 +58,6 @@ import {
   subscribeStoreSelector,
   subscribeStoreTracked,
 } from "./orchestration/store-observe-ops";
-import { applyStorePersistedValues } from "./orchestration/store-persist-ops";
 import { composeBitStoreRuntime } from "./orchestration/store-composition-root";
 import { BitStoreRuntimeKernel } from "./orchestration/store-runtime-kernel";
 
@@ -77,10 +76,6 @@ class BitStore<T extends object = any> {
   private readonly fieldRegistry: BitFieldRegistry<T>;
   private readonly maskManager: BitMaskManager;
   private readonly dirtyManager: BitDirtyManager<T>;
-  private readonly initialValuesRef: {
-    get(): T;
-    set(values: T): void;
-  };
 
   constructor(config: BitConfig<T> = {}) {
     const composition = composeBitStoreRuntime<T>({
@@ -94,7 +89,6 @@ class BitStore<T extends object = any> {
     this.fieldRegistry = composition.fieldRegistry;
     this.maskManager = composition.maskManager;
     this.dirtyManager = composition.dirtyManager;
-    this.initialValuesRef = composition.initialValuesRef;
   }
 
   getConfig() {
@@ -252,9 +246,7 @@ class BitStore<T extends object = any> {
       scopeName,
       readScopeStatus: (targetScopeName) =>
         this.getScopeStatus(targetScopeName),
-      getScopeFields: (targetScopeName) => this.getScopeFields(targetScopeName),
-      subscribeSelector: (selector, statusListener, options) =>
-        this.subscribeSelector(selector, statusListener, options),
+      subscribe: (statusListener) => this.subscribe(statusListener),
       listener,
     });
   }
@@ -521,19 +513,6 @@ class BitStore<T extends object = any> {
 
   getStepErrors(scopeName: string): Record<string, string> {
     return this.runtime.capabilities.scope.getStepErrors(scopeName);
-  }
-
-  private applyPersistedValues(values: Partial<T>) {
-    applyStorePersistedValues({
-      values,
-      state: this.getState(),
-      initialValues: this.initialValuesRef.get(),
-      validation: this.runtime.capabilities.validation,
-      fieldRegistry: this.fieldRegistry,
-      dirtyManager: this.dirtyManager,
-      dispatch: (operation) => this.runtime.dispatch(operation),
-      saveHistorySnapshot: () => this.runtime.saveHistorySnapshot(),
-    });
   }
 
   cleanup() {

@@ -3,7 +3,6 @@ import type {
   BitConfig,
   BitFieldChangeMeta,
   BitNormalizeFn,
-  BitTransformFn,
 } from "../contracts/types";
 import type { BitFrameworkConfig } from "../contracts/public-types";
 import type { BitValidationTriggerOptions } from "../contracts/port-types";
@@ -17,11 +16,7 @@ import { unregisterStorePrefix } from "./store-registration-ops";
 import { applyStorePersistedValues } from "./store-persist-ops";
 import { createStoreRuntime } from "./store-runtime";
 import { BitStoreRuntimeKernel } from "./store-runtime-kernel";
-
-export interface BitStoreInitialValuesRef<T extends object> {
-  get(): T;
-  set(values: T): void;
-}
+import { BitBaselineManager } from "../managers/core/baseline-manager";
 
 export interface BitStoreComposition<T extends object> {
   config: BitFrameworkConfig<T>;
@@ -31,7 +26,7 @@ export interface BitStoreComposition<T extends object> {
   computedManager: BitComputedManager<T>;
   dirtyManager: BitDirtyManager<T>;
   maskManager: BitMaskManager;
-  initialValuesRef: BitStoreInitialValuesRef<T>;
+  baselineManager: BitBaselineManager<T>;
 }
 
 function applyNormalizedPostBatchValues<T extends object>(args: {
@@ -69,14 +64,7 @@ export function composeBitStoreRuntime<T extends object>(args: {
 }): BitStoreComposition<T> {
   const { rawConfig, storeInstance } = args;
   const config = normalizeConfig(rawConfig);
-
-  let initialValues = config.initialValues;
-  const initialValuesRef: BitStoreInitialValuesRef<T> = {
-    get: () => initialValues,
-    set: (values) => {
-      initialValues = values;
-    },
-  };
+  const baselineManager = new BitBaselineManager<T>(config.initialValues);
 
   const fieldRegistry = new BitFieldRegistry<T>();
   const computedManager = new BitComputedManager<T>(() =>
@@ -112,7 +100,7 @@ export function composeBitStoreRuntime<T extends object>(args: {
     fieldRegistry,
     computedManager,
     dirtyManager,
-    initialValuesRef,
+    baselineManager,
     stateAccess: {
       getState: () => runtimeKernel?.getState() ?? runtime.state,
       dispatch: (operation) => requireRuntimeKernel().dispatch(operation),
@@ -181,15 +169,11 @@ export function composeBitStoreRuntime<T extends object>(args: {
     return dirtyManager.buildDirtyValues(effectiveState.values);
   };
 
-  const getTransformEntries = (): [string, BitTransformFn<T>][] => {
-    return fieldRegistry.getTransformEntries();
-  };
-
   const applyPersistedValues = (values: Partial<T>) => {
     applyStorePersistedValues({
       values,
       state: requireRuntimeKernel().getState(),
-      initialValues: initialValuesRef.get(),
+      initialValues: baselineManager.getValues(),
       validation: requireRuntimeKernel().capabilities.validation,
       fieldRegistry,
       dirtyManager,
@@ -232,6 +216,6 @@ export function composeBitStoreRuntime<T extends object>(args: {
     computedManager,
     dirtyManager,
     maskManager,
-    initialValuesRef,
+    baselineManager,
   };
 }

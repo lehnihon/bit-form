@@ -205,7 +205,7 @@ export class BitValidationManager<T extends object> {
     );
   }
 
-  handleAsync(path: string, value: any) {
+  handleAsync(path: string, value: unknown) {
     const config = this.store.getFieldConfig(path);
     const asyncValidate = config?.validation?.asyncValidate;
     const asyncValidateOn = config?.validation?.asyncValidateOn ?? "blur";

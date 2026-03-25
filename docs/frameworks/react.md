@@ -2,7 +2,7 @@
 
 Bit-Form provides first-class support for React through custom hooks and a Context Provider. It ensures your components only re-render when absolutely necessary by subscribing directly to the agnostic `BitStore`.
 
-Internally, React bindings are typed against `BitFormBindingApi<T>` (a stable adapter contract), while applications still create stores via `createBitStore()`.
+Internally, React bindings are typed against `BitFrameworkStoreApi<T>` (the stable framework adapter contract), while applications still create stores via `createBitStore()`.
 
 For custom integrations (outside `BitFormProvider`), use `createFrameworkStoreAdapter(store)` to normalize the store input to the stable binding contract.
 

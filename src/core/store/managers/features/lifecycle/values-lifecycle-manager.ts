@@ -32,7 +32,7 @@ export class BitValuesLifecycleManager<T extends object> {
     const previousValues = this.store.getState().values;
     const clonedValues = deepClone(newValues);
 
-    this.store.setInitialValues(deepClone(clonedValues));
+    this.store.setBaselineValues(deepClone(clonedValues));
 
     this.store.cancelAllValidations();
     this.store.evaluateAllDependencies(clonedValues);
@@ -54,7 +54,7 @@ export class BitValuesLifecycleManager<T extends object> {
       ),
     );
 
-    this.store.internalSaveSnapshot();
+    this.store.resetHistory(clonedValues);
     this.store.validateNow();
 
     this.store.emitFieldChange({
@@ -70,7 +70,7 @@ export class BitValuesLifecycleManager<T extends object> {
   applyHistoryState(snapshot: T) {
     const isDirty = this.store.rebuildDirtyState(
       snapshot,
-      this.store.getInitialValues(),
+      this.store.getBaselineValues(),
     );
 
     this.store.dispatch(
@@ -89,7 +89,7 @@ export class BitValuesLifecycleManager<T extends object> {
   reset() {
     this.store.cancelAllValidations();
 
-    const initialCloned = deepClone(this.store.getInitialValues());
+    const initialCloned = deepClone(this.store.getBaselineValues());
 
     this.store.evaluateAllDependencies(initialCloned);
 
@@ -125,7 +125,7 @@ export class BitValuesLifecycleManager<T extends object> {
 
     const isDirty = this.store.rebuildDirtyState(
       clonedValues,
-      this.store.getInitialValues(),
+      this.store.getBaselineValues(),
     );
 
     this.store.dispatch(

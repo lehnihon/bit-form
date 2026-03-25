@@ -64,9 +64,11 @@ describe("BitStore Core", () => {
 
       const frameworkStore = createFrameworkStoreAdapter(store);
 
+      expect(frameworkStore).not.toBe(store);
       expect(typeof frameworkStore.subscribeSelector).toBe("function");
       expect(typeof frameworkStore.setField).toBe("function");
       expect(typeof frameworkStore.submit).toBe("function");
+      expect("cleanup" in frameworkStore).toBe(false);
     });
   });
 
@@ -196,6 +198,32 @@ describe("BitStore Core", () => {
       store.setField("country", "BR");
       expect(listener).toHaveBeenCalledTimes(2);
       expect(listener).toHaveBeenLastCalledWith(false);
+
+      unsubscribe();
+    });
+
+    it("should notify field subscribers when requiredIf changes without visibility change", () => {
+      const store = createBitStore({
+        initialValues: { hasLicense: false, licenseNumber: "" },
+      });
+
+      store.registerField("licenseNumber", {
+        conditional: {
+          dependsOn: ["hasLicense"],
+          requiredIf: (values) => values.hasLicense === true,
+        },
+      });
+
+      const listener = vi.fn();
+      const unsubscribe = store.subscribeFieldState("licenseNumber", listener);
+
+      store.setField("hasLicense", true);
+
+      expect(listener).toHaveBeenCalledTimes(1);
+      expect(listener.mock.calls[0]?.[0]).toMatchObject({
+        isRequired: true,
+        isHidden: false,
+      });
 
       unsubscribe();
     });
@@ -512,7 +540,7 @@ describe("BitStore Core", () => {
             },
           },
         }),
-      ).toThrow(/cyclic computed dependencies/i);
+      ).toThrow(/Circular dependency detected/i);
     });
   });
 
@@ -649,6 +677,29 @@ describe("BitStore Core", () => {
       const status = store.getScopeStatus("step1");
       expect(status.hasErrors).toBe(true);
       expect(status.isDirty).toBe(true);
+    });
+
+    it("should keep scope subscriptions reactive when new fields join the scope", () => {
+      const store = createBitStore({
+        initialValues: { p1: "", p2: "" },
+        fields: {
+          p1: { scope: "step1" },
+        },
+      });
+
+      const listener = vi.fn();
+      const unsubscribe = store.subscribeScopeStatus("step1", listener);
+
+      store.registerField("p2", { scope: "step1" });
+      store.setError("p2", "Dynamic scope error");
+
+      expect(listener).toHaveBeenCalledTimes(1);
+      expect(listener.mock.calls[0]?.[0]).toMatchObject({
+        hasErrors: true,
+        errors: { p2: "Dynamic scope error" },
+      });
+
+      unsubscribe();
     });
 
     it("should map server errors", () => {
@@ -830,6 +881,46 @@ describe("BitStore Core", () => {
       expect(store.getState().values).toEqual({ name: "Leandro", age: 31 });
       expect(store.getConfig().initialValues).toEqual({ name: "Leo", age: 30 });
       expect(store.getState().isDirty).toBe(false);
+    });
+
+    it("should reset history when rebasing values", () => {
+      const store = createBitStore({
+        initialValues: { name: "Leo" },
+        history: { enabled: true },
+      });
+
+      store.setField("name", "Leandro");
+      store.blurField("name");
+
+      expect(store.getHistoryMetadata().canUndo).toBe(true);
+
+      store.setValues({ name: "Ishikawa" }, { rebase: true });
+
+      expect(store.getState().values.name).toBe("Ishikawa");
+      expect(store.getHistoryMetadata()).toMatchObject({
+        canUndo: false,
+        canRedo: false,
+        historyIndex: 0,
+        historySize: 1,
+      });
+    });
+
+    it("should fail fast when computed fields create a cycle", () => {
+      expect(() =>
+        createBitStore({
+          initialValues: { a: 0, b: 0 },
+          fields: {
+            a: {
+              computed: (values) => (values.b as number) + 1,
+              computedDependsOn: ["b"],
+            },
+            b: {
+              computed: (values) => (values.a as number) + 1,
+              computedDependsOn: ["a"],
+            },
+          },
+        }),
+      ).toThrow(/Circular dependency detected/);
     });
 
     it("should remove hidden fields and apply transforms on submit", async () => {

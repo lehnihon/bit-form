@@ -1,5 +1,6 @@
 import { getDeepValue } from "../../utils";
 import type { BitErrors, BitFieldDefinition } from "../contracts/types";
+import type { BitDependencyUpdateDiff } from "../contracts/port-types";
 
 export class BitFieldConditions<T extends object = any> {
   private readonly dependencies: Map<string, Set<string>> = new Map();
@@ -144,8 +145,14 @@ export class BitFieldConditions<T extends object = any> {
     });
   }
 
-  updateDependencies(changedPath: string, newValues: T): string[] {
-    const toggledFields: string[] = [];
+  updateDependencies(
+    changedPath: string,
+    currentValues: T,
+    newValues: T,
+  ): BitDependencyUpdateDiff {
+    const affectedFields = new Set<string>();
+    const visibilityChanged = new Set<string>();
+    const requiredChanged = new Set<string>();
 
     const queue = [changedPath];
     const visited = new Set<string>();
@@ -165,19 +172,31 @@ export class BitFieldConditions<T extends object = any> {
       }
 
       dependents.forEach((depPath) => {
+        affectedFields.add(depPath);
+
         const wasHidden = this.isHidden(depPath);
+        const wasRequired = this.isRequired(depPath, currentValues);
         this.evaluateFieldCondition(depPath, newValues);
         const isHiddenNow = this.isHidden(depPath);
+        const isRequiredNow = this.isRequired(depPath, newValues);
 
         if (wasHidden !== isHiddenNow) {
-          toggledFields.push(depPath);
+          visibilityChanged.add(depPath);
+        }
+
+        if (wasRequired !== isRequiredNow) {
+          requiredChanged.add(depPath);
         }
 
         queue.push(depPath);
       });
     }
 
-    return toggledFields;
+    return {
+      affectedFields: Array.from(affectedFields),
+      visibilityChanged: Array.from(visibilityChanged),
+      requiredChanged: Array.from(requiredChanged),
+    };
   }
 
   private evaluateFieldCondition(path: string, values: T) {

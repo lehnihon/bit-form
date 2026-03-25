@@ -324,7 +324,3 @@ export interface BitStoreHooksApi<T extends object = any>
   resolveMask(path: string): BitMask | undefined;
   createArrayItemId(path: string, index?: number): string;
 }
-
-export interface BitFormBindingApi<
-  T extends object = any,
-> extends BitFrameworkStoreApi<T> {}

@@ -28,7 +28,7 @@ const store = createBitStore<MyFormValues>({
 Direct `BitStore` instantiation is considered internal and is not the recommended consumer path.
 For applications and framework integrations, use `createBitStore` and the official subpath exports.
 
-Framework adapters should prefer the segmented adapter contracts from `@lehnihon/bit-form/core`, such as `BitFormMetaBindingApi`, `BitFieldBindingApi`, `BitArrayBindingApi` and `BitFormBindingApi`.
+Framework adapters should prefer the segmented adapter contracts from `@lehnihon/bit-form/core`, such as `BitFormMetaBindingApi`, `BitFieldBindingApi`, `BitArrayBindingApi` and `BitFrameworkStoreApi`.
 
 - **Type parameter**: `T` — the shape of `values`. Defaults to `any` if omitted.
 - **Parameter**: `config?: BitConfig<T>` — see [Types Reference](./types.md) for all options.
@@ -105,6 +105,7 @@ Subscribes to the full reactive snapshot of a single field (`value`, `error`, `t
 
 - Optimized for framework field bindings.
 - Internally path-scoped and with structural equality to avoid unnecessary re-renders.
+- Reacts to dependency-driven metadata changes too, including `showIf` and `requiredIf` transitions.
 
 ```ts
 const unsubscribe = store.subscribeFieldState("email", (field) => {
@@ -146,6 +147,8 @@ const unsubscribe = store.subscribeHistoryMeta((meta) => {
 
 Subscribes to the aggregated status of a configured scope/step.
 
+- Scope subscriptions stay consistent even when fields are registered into or removed from the scope after the subscription starts.
+
 ```ts
 const unsubscribe = store.subscribeScopeStatus("shipping", (status) => {
   console.log(status.hasErrors, status.isDirty, status.errors);
@@ -174,6 +177,7 @@ Attempts to read saved payload and apply it to current state.
 
 - Returns `true` when a payload existed and was restored.
 - Returns `false` when there is no payload, persist is disabled, or restore fails.
+- Restored payloads are deep-merged with the current baseline, so partial nested drafts do not erase sibling keys.
 
 ```ts
 const restored = await store.restorePersisted();
@@ -249,7 +253,7 @@ Sets multiple values with three modes:
 
 - Default (`setValues(nextValues)`): replace current values, keeping current baseline.
 - Partial (`setValues(partial, { partial: true })`): deep-merge into current values.
-- Rebase (`setValues(nextValues, { rebase: true })`): replace values and reset dirty baseline.
+- Rebase (`setValues(nextValues, { rebase: true })`): replace values, reset dirty baseline and restart history from the new baseline.
 
 ```ts
 store.setValues({ name: "John", email: "john@example.com" });
@@ -482,7 +486,7 @@ store.redo();
 
 ## Framework Binding Contract
 
-Framework adapters (React/Vue/Angular) are typed against `BitFormBindingApi<T>`, a stable contract derived from the store API.
+Framework adapters (React/Vue/Angular) are typed against `BitFrameworkStoreApi<T>`, a stable contract derived from the store API.
 
 - It includes field/form subscriptions (`subscribeFieldState`, `subscribeFormMeta`, `subscribePath`, `subscribeSelector`).
 - It includes field mutations and feature operations used by adapters (arrays/history/persist/scopes).

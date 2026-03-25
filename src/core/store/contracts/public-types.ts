@@ -37,5 +37,4 @@ export type {
   BitStoreFeatureApi,
   BitStoreApi,
   BitStoreHooksApi,
-  BitFormBindingApi,
 } from "./public/store-api-types";

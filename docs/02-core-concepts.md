@@ -41,19 +41,20 @@ Naming convention:
 Bit-Form now centralizes shared UI orchestration into framework-agnostic controllers:
 
 - `form-controller`: submit/onSubmit/reset orchestration and server error normalization.
-- `field-controller`: field subscription and mask parse/format orchestration over `BitFormBindingApi`.
+- `field-controller`: field subscription and mask parse/format orchestration over `BitFieldBindingApi`.
 - `bindings/form-meta`: normalized form meta snapshot/subscription reused by React, Vue and Angular.
 - `bindings/array-controller`: stable array-key orchestration reused by React, Vue and Angular.
 - `adapters/upload-kernel`: shared upload/remove side effects reused by React, Vue and Angular bindings.
 
 Framework adapters (React/Vue/Angular) become thin bindings over these controllers, reducing duplicated behavior and drift across integrations.
+`createFrameworkStoreAdapter()` now returns a real, memoized adapter object with the framework-safe surface, instead of exposing the raw store instance by cast.
 
 ## 🔒 Public vs Internal Boundaries
 
 - `src/core/index.ts` is the public core entrypoint for runtime and adapter contracts.
 - The package root (`@lehnihon/bit-form`) is now a curated application entrypoint and should not be treated as a mirror of the entire core surface.
 - `BitStore` is intentionally internal and exposed to consumers through the `createBitStore()` facade.
-- Devtools and framework bindings should prefer `BitStoreApi` / `BitFormBindingApi` plus stable core helpers exported by `@lehnihon/bit-form/core`, instead of importing concrete store internals.
+- Devtools and framework bindings should prefer `BitStoreApi`, `BitFrameworkStoreApi` and stable core helpers exported by `@lehnihon/bit-form/core`, instead of importing concrete store internals.
 
 This keeps the public API centered on `createBitStore()` while preserving an explicit core subpath for framework and integration code.
 
@@ -78,15 +79,15 @@ Understanding the lifecycle of a field within the `BitStore` will help you predi
 
 ### 1. Initialization
 
-When you instantiate a `BitStore`, you provide the `initialValues`. The store applies any initial `computed` logic and creates the base history baseline for the state.
+When you instantiate a `BitStore`, you provide the `initialValues`. The store validates computed dependency graphs eagerly, applies any initial `computed` logic and creates the base history baseline for the state.
 
 ### 2. Registration
 
-As your UI renders, fields are "registered" into the store (automatically handled by `useBitField` or similar hooks). This is when Bit-Form evaluates if a field should be hidden or required based on its `dependsOn` configuration.
+As your UI renders, fields are "registered" into the store (automatically handled by `useBitField` or similar hooks). This is when Bit-Form evaluates if a field should be hidden or required based on its `dependsOn` configuration. Scope observers also react to fields dynamically entering or leaving a scope.
 
 ### 3. Interaction (Update & Blur)
 
-- **`setField(path, value)`**: When a user types, the store updates the value, applies runtime `normalize` rules, recalculates computed fields, evaluates conditional dependencies (showing/hiding other fields), and triggers validations if configured.
+- **`setField(path, value)`**: When a user types, the store updates the value, applies runtime `normalize` rules, recalculates computed fields, evaluates conditional dependencies (showing/hiding other fields, recalculating `requiredIf` dependents), and triggers validations if configured.
 - **`blurField(path)`**: When an input loses focus, the store marks it as `touched` in the state and usually triggers the validation step for that specific field.
 
 ### 4. Submission
@@ -112,6 +113,8 @@ Bit-Form uses both specialized managers (domain behavior) and runtime engines (o
 - **History Manager**: Tracks incremental patches between states, enabling `undo` / `redo` with lower memory pressure.
 - **Array Manager**: Exposes native methods to securely append, prepend, insert, remove, move, swap, replace and clear items within array fields.
 - **Computed Manager**: Reactively calculates derived field values from explicit `computedDependsOn` declarations.
+
+`rebase` now resets the history baseline instead of appending another undo step over the previous baseline.
 
 `subscription-engine` now uses path-prefix indexing for scoped subscriptions, reducing notification overhead in large forms.
 

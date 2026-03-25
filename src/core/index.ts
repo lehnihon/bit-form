@@ -24,7 +24,6 @@ export type {
   BitPersistBindingApi,
   BitScopeBindingApi,
   BitFrameworkStoreApi,
-  BitFormBindingApi,
   BitFormMetaBindingApi,
   BitFieldBindingApi,
   BitArrayBindingApi,
