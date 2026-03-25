@@ -12,7 +12,7 @@ export function useBitSteps(scopeNames: string[]): UseBitStepsResult {
   const lastStatus = useRef<ScopeStatus | null>(null);
 
   const getStatusSnapshot = useCallback(() => {
-    const nextStatus = store.getStepStatus(scope);
+    const nextStatus = store.getScopeStatus(scope);
 
     if (
       lastStatus.current &&
@@ -36,12 +36,12 @@ export function useBitSteps(scopeNames: string[]): UseBitStepsResult {
 
   const validate = useCallback(async (): Promise<ValidateScopeResult> => {
     const valid = await store.validate({ scope });
-    const errors = store.getStepErrors(scope);
+    const errors = store.getScopeErrors(scope);
     return { valid, errors };
   }, [store, scope]);
 
   const getErrors = useCallback(() => {
-    return store.getStepErrors(scope);
+    return store.getScopeErrors(scope);
   }, [store, scope]);
 
   const next = useCallback(async (): Promise<boolean> => {
@@ -55,7 +55,7 @@ export function useBitSteps(scopeNames: string[]): UseBitStepsResult {
     if (valid) {
       setStepIndex((s) => Math.min(s + 1, scopeNames.length - 1));
     } else {
-      const errors = store.getStepErrors(scope);
+      const errors = store.getScopeErrors(scope);
       const pathsWithErrors = Object.keys(errors);
       if (pathsWithErrors.length > 0) {
         store.markFieldsTouched(pathsWithErrors);

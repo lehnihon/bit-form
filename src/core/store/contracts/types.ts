@@ -400,14 +400,14 @@ export type BitSubmitResult =
   | { status: "failed"; error: unknown }
   | { status: "blocked"; reason: "isSubmitting" | "validating" };
 
-/** Return type of BitStore.getStepStatus, used by useBitScope/injectBitScope. */
+/** Return type of BitStore.getScopeStatus, used by useBitScope/injectBitScope. */
 export interface ScopeStatus {
   hasErrors: boolean;
   isDirty: boolean;
   errors: Record<string, string>;
 }
 
-/** Return type of validateStep, used by useBitScope/injectBitScope. */
+/** Return type of scope validation helpers, used by useBitScope/injectBitScope. */
 export interface ValidateScopeResult {
   valid: boolean;
   errors: Record<string, string>;

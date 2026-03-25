@@ -9,18 +9,18 @@ export function useBitSteps(scopeNames: string[]): UseBitStepsResult {
   const stepIndex = ref(0);
 
   const scope = computed(() => scopeNames[stepIndex.value] ?? "");
-  const status = ref<ScopeStatus>(store.getStepStatus(scope.value));
+  const status = ref<ScopeStatus>(store.getScopeStatus(scope.value));
   let unsubscribe: (() => void) | undefined;
 
   watch(scope, (newScope) => {
-    status.value = store.getStepStatus(newScope);
+    status.value = store.getScopeStatus(newScope);
     unsubscribe?.();
     unsubscribe = store.subscribeScopeStatus(newScope, updateStatus);
   });
 
   const updateStatus = () => {
     const scopeName = scope.value;
-    const newStatus = store.getStepStatus(scopeName);
+    const newStatus = store.getScopeStatus(scopeName);
     if (!isScopeStatusEqual(status.value, newStatus)) {
       status.value = newStatus;
     }
@@ -37,11 +37,11 @@ export function useBitSteps(scopeNames: string[]): UseBitStepsResult {
   const validate = async (): Promise<ValidateScopeResult> => {
     const scopeName = scope.value;
     const valid = await store.validate({ scope: scopeName });
-    const errors = store.getStepErrors(scopeName);
+    const errors = store.getScopeErrors(scopeName);
     return { valid, errors };
   };
 
-  const getErrors = () => store.getStepErrors(scope.value);
+  const getErrors = () => store.getScopeErrors(scope.value);
 
   const next = async (): Promise<boolean> => {
     const scopeName = scope.value;
@@ -55,7 +55,7 @@ export function useBitSteps(scopeNames: string[]): UseBitStepsResult {
     if (valid) {
       stepIndex.value = Math.min(stepIndex.value + 1, scopeNames.length - 1);
     } else {
-      const errors = store.getStepErrors(scopeName);
+      const errors = store.getScopeErrors(scopeName);
       const pathsWithErrors = Object.keys(errors);
       if (pathsWithErrors.length > 0) {
         store.markFieldsTouched(pathsWithErrors);

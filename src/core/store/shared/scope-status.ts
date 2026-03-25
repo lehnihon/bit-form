@@ -1,6 +1,6 @@
 import type { ScopeStatus } from "../contracts/types";
 
-export function areStepErrorsEqual(
+export function areScopeErrorsEqual(
   currentErrors: Record<string, string>,
   nextErrors: Record<string, string>,
 ): boolean {
@@ -14,21 +14,21 @@ export function areStepErrorsEqual(
   return currentKeys.every((key) => currentErrors[key] === nextErrors[key]);
 }
 
-export function isStepStatusEqual(
+export function isScopeStatusEqual(
   currentStatus: ScopeStatus,
   nextStatus: ScopeStatus,
 ): boolean {
   return (
     currentStatus.hasErrors === nextStatus.hasErrors &&
     currentStatus.isDirty === nextStatus.isDirty &&
-    areStepErrorsEqual(currentStatus.errors, nextStatus.errors)
+    areScopeErrorsEqual(currentStatus.errors, nextStatus.errors)
   );
 }
 
-export function getStepSubscriptionPaths(scopeFields: readonly string[]) {
+export function getScopeSubscriptionPaths(scopeFields: readonly string[]) {
   return [...scopeFields, "isDirty"];
 }
 
-export function getStepRegistrySubscriptionPath(scopeName: string) {
+export function getScopeRegistrySubscriptionPath(scopeName: string) {
   return `__scope__.${scopeName}`;
 }

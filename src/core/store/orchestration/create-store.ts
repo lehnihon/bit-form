@@ -118,8 +118,8 @@ function bindFrameworkAdapter<T extends object>(
   const scopeBinding: BitScopeBindingApi<T> = {
     hasValidationsInProgress: delegate("hasValidationsInProgress"),
     getScopeFields: delegate("getScopeFields"),
-    getStepStatus: delegate("getStepStatus"),
-    getStepErrors: delegate("getStepErrors"),
+    getScopeStatus: delegate("getScopeStatus"),
+    getScopeErrors: delegate("getScopeErrors"),
     subscribeScopeStatus: delegate("subscribeScopeStatus"),
   };
 

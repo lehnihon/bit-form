@@ -14,10 +14,10 @@ import type { BitSubscriptionEngine } from "../engines/subscription-engine";
 import type { BitPersistMetadata, ScopeStatus } from "../contracts/types";
 import { isHistoryMetaEqual } from "../../history-status";
 import {
-  getStepRegistrySubscriptionPath,
-  getStepSubscriptionPaths,
-  isStepStatusEqual,
-} from "../shared/step-status";
+  getScopeRegistrySubscriptionPath,
+  getScopeSubscriptionPaths,
+  isScopeStatusEqual,
+} from "../shared/scope-status";
 
 export function subscribeStoreSelector<T extends object, TSlice>(args: {
   subscriptions: Pick<BitSubscriptionEngine<T>, "subscribeSelector">;
@@ -204,8 +204,8 @@ export function subscribeStoreScopeStatus<T extends object>(args: {
   } = args;
 
   const buildScopedPaths = () => [
-    ...getStepSubscriptionPaths(getScopeFields(scopeName)),
-    getStepRegistrySubscriptionPath(scopeName),
+    ...getScopeSubscriptionPaths(getScopeFields(scopeName)),
+    getScopeRegistrySubscriptionPath(scopeName),
   ];
 
   const arePathSetsEqual = (
@@ -233,7 +233,7 @@ export function subscribeStoreScopeStatus<T extends object>(args: {
       (slice) => {
         const nextPaths = buildScopedPaths();
         const shouldRebind = !arePathSetsEqual(activePaths, nextPaths);
-        const hasStatusChange = !isStepStatusEqual(lastStatus, slice.status);
+        const hasStatusChange = !isScopeStatusEqual(lastStatus, slice.status);
 
         if (hasStatusChange) {
           lastStatus = slice.status;
@@ -249,7 +249,7 @@ export function subscribeStoreScopeStatus<T extends object>(args: {
       {
         paths,
         equalityFn: (prev, next) =>
-          isStepStatusEqual(prev.status, next.status) &&
+          isScopeStatusEqual(prev.status, next.status) &&
           prev.scopeSignature === next.scopeSignature,
       },
     );

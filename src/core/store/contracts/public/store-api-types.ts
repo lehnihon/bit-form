@@ -60,8 +60,8 @@ export interface BitFormReadApi<T extends object = Record<string, unknown>> {
   getDirtyValues(): Partial<T>;
   getPersistMetadata(): BitPersistMetadata;
   getHistoryMetadata(): BitHistoryMetadata;
-  getStepStatus(scopeName: string): ScopeStatus;
-  getStepErrors(scopeName: string): Record<string, string>;
+  getScopeStatus(scopeName: string): ScopeStatus;
+  getScopeErrors(scopeName: string): Record<string, string>;
 }
 
 export interface BitFormObserveApi<T extends object = Record<string, unknown>> {
@@ -297,8 +297,8 @@ export interface BitScopeBindingApi<
 > {
   hasValidationsInProgress(scopeFields?: string[]): boolean;
   getScopeFields(scopeName: string): string[];
-  getStepStatus(scopeName: string): ScopeStatus;
-  getStepErrors(scopeName: string): Record<string, string>;
+  getScopeStatus(scopeName: string): ScopeStatus;
+  getScopeErrors(scopeName: string): Record<string, string>;
   subscribeScopeStatus(
     scopeName: string,
     listener: (status: ScopeStatus) => void,

@@ -406,7 +406,7 @@ describe("React Integration (Context + Hooks)", () => {
   });
 
   describe("Scope Validation (useBitScope)", () => {
-    it("deve rastrear status do step com reatividade e expor validateStep", async () => {
+    it("deve rastrear status do scope com reatividade", async () => {
       const store = createBitStore<MyForm>({
         initialValues: {
           salary: 10,

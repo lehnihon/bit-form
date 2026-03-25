@@ -4,7 +4,7 @@ import { getDeepValue, valueEqual } from "../../../utils";
 /**
  * BitScopeManager
  *
- * Manages multi-step forms and scope-based validation.
+ * Manages multi-scope forms and scope-based validation.
  * Scopes are groups of fields that can be validated and tracked independently,
  * useful for wizard-style forms or multi-section forms.
  */
@@ -17,7 +17,7 @@ export class BitScopeManager<T extends object = Record<string, unknown>> {
   ) {}
 
   /**
-   * Get validation status of a scope (step).
+   * Get validation status of a scope.
    * Returns whether the scope has errors, is dirty, and the error details.
    */
   getScopeStatus(scopeName: string) {
@@ -30,7 +30,7 @@ export class BitScopeManager<T extends object = Record<string, unknown>> {
 
     const isDirty = fields.some((f) => this.isPathDirty(f));
 
-    const errors = this.getStepErrors(scopeName);
+    const errors = this.getScopeErrors(scopeName);
 
     return { hasErrors, isDirty, errors };
   }
@@ -38,7 +38,7 @@ export class BitScopeManager<T extends object = Record<string, unknown>> {
   /**
    * Get all errors for fields in a specific scope.
    */
-  getStepErrors(scopeName: string): Record<string, string> {
+  getScopeErrors(scopeName: string): Record<string, string> {
     const fields = this.getScopeFields(scopeName);
     const state = this.getState();
     const result: Record<string, string> = {};

@@ -11,7 +11,7 @@ export function useBitScope(scopeName: string) {
   const lastStatus = useRef<ScopeStatus | null>(null);
 
   const getStatusSnapshot = useCallback(() => {
-    const nextStatus = store.getStepStatus(scopeName);
+    const nextStatus = store.getScopeStatus(scopeName);
 
     if (
       lastStatus.current &&
@@ -40,12 +40,12 @@ export function useBitScope(scopeName: string) {
 
   const validate = useCallback(async (): Promise<ValidateScopeResult> => {
     const valid = await store.validate({ scope: scopeName });
-    const errors = store.getStepErrors(scopeName);
+    const errors = store.getScopeErrors(scopeName);
     return { valid, errors };
   }, [store, scopeName]);
 
   const getErrors = useCallback(() => {
-    return store.getStepErrors(scopeName);
+    return store.getScopeErrors(scopeName);
   }, [store, scopeName]);
 
   return {

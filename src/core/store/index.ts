@@ -246,7 +246,8 @@ class BitStore<T extends object = Record<string, unknown>> {
   ): () => void {
     return subscribeStoreScopeStatus({
       scopeName,
-      readScopeStatus: (targetScopeName) => this.getStepStatus(targetScopeName),
+      readScopeStatus: (targetScopeName) =>
+        this.getScopeStatus(targetScopeName),
       getScopeFields: (targetScopeName) => this.getScopeFields(targetScopeName),
       subscribeSelector: (selector, statusListener, options) =>
         this.subscribeSelector(selector, statusListener, options),
@@ -510,12 +511,12 @@ class BitStore<T extends object = Record<string, unknown>> {
     this.runtime.capabilities.validation.trigger(scopeFields, options);
   }
 
-  getStepStatus(scopeName: string) {
+  getScopeStatus(scopeName: string) {
     return this.runtime.capabilities.scope.getScopeStatus(scopeName);
   }
 
-  getStepErrors(scopeName: string): Record<string, string> {
-    return this.runtime.capabilities.scope.getStepErrors(scopeName);
+  getScopeErrors(scopeName: string): Record<string, string> {
+    return this.runtime.capabilities.scope.getScopeErrors(scopeName);
   }
 
   cleanup() {
