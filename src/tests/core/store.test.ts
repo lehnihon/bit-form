@@ -674,7 +674,7 @@ describe("BitStore Core", () => {
       store.setError("p1", "Error");
       store.setField("p2", "Changed");
 
-      const status = store.getStepStatus("step1");
+      const status = store.getScopeStatus("step1");
       expect(status.hasErrors).toBe(true);
       expect(status.isDirty).toBe(true);
     });

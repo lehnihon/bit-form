@@ -7,7 +7,7 @@ export type { ScopeStatus, ValidateScopeResult };
 
 export function useBitScope(scopeName: string) {
   const store = useBitStore();
-  const status = ref<ScopeStatus>(store.getStepStatus(scopeName));
+  const status = ref<ScopeStatus>(store.getScopeStatus(scopeName));
   let unsubscribe: () => void;
 
   onMounted(() => {
@@ -22,11 +22,11 @@ export function useBitScope(scopeName: string) {
 
   const validate = async (): Promise<ValidateScopeResult> => {
     const valid = await store.validate({ scope: scopeName });
-    const errors = store.getStepErrors(scopeName);
+    const errors = store.getScopeErrors(scopeName);
     return { valid, errors };
   };
 
-  const getErrors = () => store.getStepErrors(scopeName);
+  const getErrors = () => store.getScopeErrors(scopeName);
 
   const isValid = computed(() => !status.value.hasErrors);
   const isDirty = computed(() => status.value.isDirty);

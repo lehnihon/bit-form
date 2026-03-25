@@ -11,11 +11,11 @@ export function injectBitSteps(scopeNames: string[]): InjectBitStepsResult {
   const scope = computed(() => scopeNames[stepIndex()] ?? "");
 
   const getCurrentScope = () => scopeNames[stepIndex()] ?? "";
-  const status = signal<ScopeStatus>(store.getStepStatus(getCurrentScope()));
+  const status = signal<ScopeStatus>(store.getScopeStatus(getCurrentScope()));
 
   const updateStatus = () => {
     const scopeName = getCurrentScope();
-    const newStatus = store.getStepStatus(scopeName);
+    const newStatus = store.getScopeStatus(scopeName);
     const current = status();
     if (!isScopeStatusEqual(current, newStatus)) {
       status.set(newStatus);
@@ -37,11 +37,11 @@ export function injectBitSteps(scopeNames: string[]): InjectBitStepsResult {
   const validate = async (): Promise<ValidateScopeResult> => {
     const scopeName = getCurrentScope();
     const valid = await store.validate({ scope: scopeName });
-    const errors = store.getStepErrors(scopeName);
+    const errors = store.getScopeErrors(scopeName);
     return { valid, errors };
   };
 
-  const getErrors = () => store.getStepErrors(getCurrentScope());
+  const getErrors = () => store.getScopeErrors(getCurrentScope());
 
   const next = async (): Promise<boolean> => {
     const scopeName = getCurrentScope();
@@ -55,10 +55,10 @@ export function injectBitSteps(scopeNames: string[]): InjectBitStepsResult {
     if (valid) {
       const newIndex = Math.min(stepIndex() + 1, scopeNames.length - 1);
       stepIndex.set(newIndex);
-      status.set(store.getStepStatus(scopeNames[newIndex] ?? ""));
+      status.set(store.getScopeStatus(scopeNames[newIndex] ?? ""));
       rebindScopeSubscription();
     } else {
-      const errors = store.getStepErrors(scopeName);
+      const errors = store.getScopeErrors(scopeName);
       const pathsWithErrors = Object.keys(errors);
       if (pathsWithErrors.length > 0) {
         store.markFieldsTouched(pathsWithErrors);
@@ -70,7 +70,7 @@ export function injectBitSteps(scopeNames: string[]): InjectBitStepsResult {
   const prev = () => {
     const newIndex = Math.max(stepIndex() - 1, 0);
     stepIndex.set(newIndex);
-    status.set(store.getStepStatus(scopeNames[newIndex] ?? ""));
+    status.set(store.getScopeStatus(scopeNames[newIndex] ?? ""));
     rebindScopeSubscription();
   };
 
@@ -80,7 +80,7 @@ export function injectBitSteps(scopeNames: string[]): InjectBitStepsResult {
       Math.min(targetStep - 1, scopeNames.length - 1),
     );
     stepIndex.set(newIndex);
-    status.set(store.getStepStatus(scopeNames[newIndex] ?? ""));
+    status.set(store.getScopeStatus(scopeNames[newIndex] ?? ""));
     rebindScopeSubscription();
   };
 

@@ -496,12 +496,12 @@ Framework adapters (React/Vue/Angular) are typed against `BitFrameworkStoreApi<T
 
 ## Multi‑Step Flows & Scopes
 
-### `getStepStatus(scopeName: string): { hasErrors: boolean; isDirty: boolean; errors: Record<string, string> }`
+### `getScopeStatus(scopeName: string): { hasErrors: boolean; isDirty: boolean; errors: Record<string, string> }`
 
 Returns a summary of the state of a scope (typically a wizard step) based on fields mapped with `scope`.
 
 ```ts
-const shippingStatus = store.getStepStatus("shipping");
+const shippingStatus = store.getScopeStatus("shipping");
 
 if (shippingStatus.hasErrors) {
   // show a badge on the step

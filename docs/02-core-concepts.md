@@ -52,6 +52,7 @@ Framework adapters (React/Vue/Angular) become thin bindings over these controlle
 ## 🔒 Public vs Internal Boundaries
 
 - `src/core/index.ts` is the public core entrypoint for runtime and adapter contracts.
+- The core surface is also segmented by intent: `@lehnihon/bit-form/core/store`, `@lehnihon/bit-form/core/bindings`, `@lehnihon/bit-form/core/status`, `@lehnihon/bit-form/core/utils`.
 - The package root (`@lehnihon/bit-form`) is now a curated application entrypoint and should not be treated as a mirror of the entire core surface.
 - `BitStore` is intentionally internal and exposed to consumers through the `createBitStore()` facade.
 - Devtools and framework bindings should prefer `BitStoreApi`, `BitFrameworkStoreApi` and stable core helpers exported by `@lehnihon/bit-form/core`, instead of importing concrete store internals.

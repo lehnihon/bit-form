@@ -45,6 +45,26 @@
       "import": "./dist/core.js",
       "require": "./dist/core.cjs"
     },
+    "./core/store": {
+      "types": "./dist/core/store.d.ts",
+      "import": "./dist/core/store.js",
+      "require": "./dist/core/store.cjs"
+    },
+    "./core/bindings": {
+      "types": "./dist/core/bindings.d.ts",
+      "import": "./dist/core/bindings.js",
+      "require": "./dist/core/bindings.cjs"
+    },
+    "./core/status": {
+      "types": "./dist/core/status.d.ts",
+      "import": "./dist/core/status.js",
+      "require": "./dist/core/status.cjs"
+    },
+    "./core/utils": {
+      "types": "./dist/core/utils.d.ts",
+      "import": "./dist/core/utils.js",
+      "require": "./dist/core/utils.cjs"
+    },
     "./utils": {
       "types": "./dist/utils.d.ts",
       "import": "./dist/utils.js",
