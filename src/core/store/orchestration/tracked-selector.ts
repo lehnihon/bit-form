@@ -1,7 +1,7 @@
 import type {
   BitSelector,
   BitSelectorSubscriptionOptions,
-} from "../contracts/public-types";
+} from "../contracts/public/subscription-types";
 import type { BitState } from "../contracts/types";
 
 export function collectTrackedSelectorPaths<T extends object, TSlice>(

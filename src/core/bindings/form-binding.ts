@@ -1,5 +1,5 @@
 import { createFormController } from "../form-controller";
-import type { BitFrameworkStoreApi } from "../store/contracts/public-types";
+import type { BitFrameworkStoreApi } from "../store/contracts/public/store-api-types";
 import type {
   BitFormControllerOptions,
   BitFormControllerRuntime,

@@ -1,9 +1,19 @@
 import { createInternalBitStore } from "../index";
 import { BitConfig } from "../contracts/types";
 import {
+  BitArrayMutationBindingApi,
+  BitDirtyTrackingBindingApi,
+  BitFieldBindingApi,
+  BitFieldRegistrationBindingApi,
+  BitFormActionBindingApi,
+  BitFormMetaBindingApi,
   BitFrameworkStoreApi,
+  BitHistoryBindingApi,
+  BitPersistBindingApi,
+  BitScopeBindingApi,
+  BitStoreSelectorBindingApi,
   BitStoreHooksApi,
-} from "../contracts/public-types";
+} from "../contracts/public/store-api-types";
 import { BIT_FRAMEWORK_STORE_SYMBOL } from "./framework-store-brand";
 import { BIT_HOOKS_API_SYMBOL } from "./hook-brand";
 
@@ -30,20 +40,31 @@ function bindFrameworkAdapter<T extends object>(
     }) as BitFrameworkStoreApi<T>[TKey];
   };
 
-  const adapter = {
-    [BIT_FRAMEWORK_STORE_SYMBOL]: true,
-    getState: delegate("getState"),
+  const selectorBinding: BitStoreSelectorBindingApi<T> = {
     subscribe: delegate("subscribe"),
     subscribePath: delegate("subscribePath"),
     subscribeSelector: delegate("subscribeSelector"),
     subscribeTracked: delegate("subscribeTracked"),
+  };
+
+  const fieldBinding: BitFieldBindingApi<T> = {
     getFieldState: delegate("getFieldState"),
     subscribeFieldState: delegate("subscribeFieldState"),
     setField: delegate("setField"),
     blurField: delegate("blurField"),
     resolveMask: delegate("resolveMask"),
     unregisterField: delegate("unregisterField"),
+  };
+
+  const formMetaBinding: BitFormMetaBindingApi<T> = {
+    getState: delegate("getState"),
     subscribeFormMeta: delegate("subscribeFormMeta"),
+  };
+
+  const formActionBinding: BitFormActionBindingApi<T> = {
+    getState: delegate("getState"),
+    setField: delegate("setField"),
+    blurField: delegate("blurField"),
     submit: delegate("submit"),
     reset: delegate("reset"),
     validate: delegate("validate"),
@@ -52,10 +73,22 @@ function bindFrameworkAdapter<T extends object>(
     setServerErrors: delegate("setServerErrors"),
     setValues: delegate("setValues"),
     transaction: delegate("transaction"),
+  };
+
+  const fieldRegistrationBinding: BitFieldRegistrationBindingApi<T> = {
     registerField: delegate("registerField"),
+    unregisterField: delegate("unregisterField"),
     unregisterPrefix: delegate("unregisterPrefix"),
     markFieldsTouched: delegate("markFieldsTouched"),
+  };
+
+  const dirtyTrackingBinding: BitDirtyTrackingBindingApi<T> = {
     getDirtyValues: delegate("getDirtyValues"),
+  };
+
+  const arrayBinding: BitArrayMutationBindingApi<T> = {
+    getState: delegate("getState"),
+    setField: delegate("setField"),
     pushItem: delegate("pushItem"),
     prependItem: delegate("prependItem"),
     insertItem: delegate("insertItem"),
@@ -65,26 +98,56 @@ function bindFrameworkAdapter<T extends object>(
     replaceItems: delegate("replaceItems"),
     clearItems: delegate("clearItems"),
     createArrayItemId: delegate("createArrayItemId"),
+  };
+
+  const historyBinding: BitHistoryBindingApi = {
     undo: delegate("undo"),
     redo: delegate("redo"),
     getHistoryMetadata: delegate("getHistoryMetadata"),
     subscribeHistoryMeta: delegate("subscribeHistoryMeta"),
+  };
+
+  const persistBinding: BitPersistBindingApi = {
     getPersistMetadata: delegate("getPersistMetadata"),
     restorePersisted: delegate("restorePersisted"),
     forceSave: delegate("forceSave"),
     clearPersisted: delegate("clearPersisted"),
     subscribePersistMeta: delegate("subscribePersistMeta"),
+  };
+
+  const scopeBinding: BitScopeBindingApi<T> = {
     hasValidationsInProgress: delegate("hasValidationsInProgress"),
     getScopeFields: delegate("getScopeFields"),
-    getScopeStatus: delegate("getScopeStatus"),
+    getStepStatus: delegate("getStepStatus"),
     getStepErrors: delegate("getStepErrors"),
     subscribeScopeStatus: delegate("subscribeScopeStatus"),
-  } as BitFrameworkStoreApi<T>;
+  };
 
-  frameworkAdapterCache.set(cacheKey, adapter);
-  frameworkAdapterCache.set(adapter as unknown as object, adapter);
+  const adapter = {
+    ...selectorBinding,
+    ...fieldBinding,
+    ...formMetaBinding,
+    ...formActionBinding,
+    ...fieldRegistrationBinding,
+    ...dirtyTrackingBinding,
+    ...arrayBinding,
+    ...historyBinding,
+    ...persistBinding,
+    ...scopeBinding,
+  } satisfies BitFrameworkStoreApi<T>;
 
-  return adapter;
+  const brandedAdapter = {
+    [BIT_FRAMEWORK_STORE_SYMBOL]: true as const,
+    ...adapter,
+  };
+
+  frameworkAdapterCache.set(cacheKey, brandedAdapter);
+  frameworkAdapterCache.set(
+    brandedAdapter as unknown as object,
+    brandedAdapter,
+  );
+
+  return brandedAdapter;
 }
 
 function isHookCompatibleStore<T extends object>(
@@ -140,5 +203,5 @@ export function createFrameworkStoreAdapter<T extends object>(
 export function createBitStore<T extends object = Record<string, unknown>>(
   config: BitConfig<T> = {},
 ): BitStoreHooksApi<T> {
-  return createInternalBitStore<T>(config) as unknown as BitStoreHooksApi<T>;
+  return createInternalBitStore<T>(config);
 }

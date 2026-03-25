@@ -17,7 +17,7 @@ import { analyzeCyclicDependencies } from "../managers/core/computed-dependency-
 import type { BitStoreOperation } from "../engines/operation-engine";
 import { deepClone } from "../../utils";
 import type { BitStoreCapabilities } from "./capabilities";
-import type { BitFrameworkConfig } from "../contracts/public-types";
+import type { BitFrameworkConfig } from "../contracts/public/store-api-types";
 import { bitBus, getNoopBitBus } from "../shared/bus";
 import type {
   BitLifecycleStorePort,

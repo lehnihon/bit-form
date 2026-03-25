@@ -1,4 +1,4 @@
-import type { BitValidationOptions } from "../../../contracts/public-types";
+import type { BitValidationOptions } from "../../../contracts/public/meta-types";
 import type { BitValidationTriggerOptions } from "../../../contracts/port-types";
 
 export interface BitValidationDebouncerPort {

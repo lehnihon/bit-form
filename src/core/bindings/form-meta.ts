@@ -1,7 +1,5 @@
-import type {
-  BitFormMeta,
-  BitFormMetaBindingApi,
-} from "../store/contracts/public-types";
+import type { BitFormMeta } from "../store/contracts/public/meta-types";
+import type { BitFormMetaBindingApi } from "../store/contracts/public/store-api-types";
 
 export function readFormMetaSnapshot<T extends object>(
   store: BitFormMetaBindingApi<T>,

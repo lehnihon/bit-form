@@ -7,7 +7,7 @@ export type { ScopeStatus, ValidateScopeResult };
 
 export function injectBitScope(scopeName: string) {
   const store = useBitStore();
-  const initialStatus = store.getScopeStatus(scopeName);
+  const initialStatus = store.getStepStatus(scopeName);
 
   const status = signal<ScopeStatus>(initialStatus);
 

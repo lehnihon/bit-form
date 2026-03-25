@@ -1,5 +1,5 @@
 import { getDeepValue } from "../utils";
-import type { BitArrayBindingApi } from "../store/contracts/public-types";
+import type { BitArrayBindingApi } from "../store/contracts/public/store-api-types";
 import type {
   BitArrayItem,
   BitArrayPath,

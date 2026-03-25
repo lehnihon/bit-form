@@ -3,7 +3,7 @@ import type { BitMask } from "./mask/types";
 import type {
   BitFieldBindingApi,
   BitFrameworkStoreApi,
-} from "./store/contracts/public-types";
+} from "./store/contracts/public/store-api-types";
 import type {
   BitFieldState,
   BitPath,

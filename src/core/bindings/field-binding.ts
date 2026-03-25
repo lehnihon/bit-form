@@ -1,5 +1,5 @@
 import { createMaskedFieldController } from "../field-controller";
-import type { BitFieldBindingApi } from "../store/contracts/public-types";
+import type { BitFieldBindingApi } from "../store/contracts/public/store-api-types";
 import type { BitPath } from "../store/contracts/types";
 
 export function createFrameworkMaskedFieldBinding<

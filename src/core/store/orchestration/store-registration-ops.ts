@@ -2,7 +2,7 @@ import type { BitFieldDefinition, BitState } from "../contracts/types";
 import { BitFieldRegistry } from "../registry/field-registry";
 import { BitSubscriptionEngine } from "../engines/subscription-engine";
 import { buildFieldUnregisterPatch } from "../engines/store-field-cleanup-engine";
-import { getScopeRegistrySubscriptionPath } from "../../scope-status";
+import { getStepRegistrySubscriptionPath } from "../shared/step-status";
 import {
   patchStateOperation,
   type BitStoreOperation,
@@ -30,7 +30,7 @@ export function registerStoreField<T extends object>(args: {
 
   if (config.scope) {
     subscriptions.notify(state, [
-      getScopeRegistrySubscriptionPath(config.scope),
+      getStepRegistrySubscriptionPath(config.scope),
     ]);
   }
 
@@ -71,7 +71,7 @@ export function unregisterStoreField<T extends object>(args: {
 
   if (fieldConfig?.scope) {
     subscriptions.notify(state, [
-      getScopeRegistrySubscriptionPath(fieldConfig.scope),
+      getStepRegistrySubscriptionPath(fieldConfig.scope),
     ]);
   }
 
@@ -117,6 +117,6 @@ export function unregisterStorePrefix<T extends object>(args: {
   );
 
   impactedScopes.forEach((scopeName) => {
-    subscriptions.notify(state, [getScopeRegistrySubscriptionPath(scopeName)]);
+    subscriptions.notify(state, [getStepRegistrySubscriptionPath(scopeName)]);
   });
 }

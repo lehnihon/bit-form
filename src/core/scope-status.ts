@@ -1,41 +1,31 @@
 import type { ScopeStatus } from "./store/contracts/types";
+import {
+  areStepErrorsEqual,
+  getStepSubscriptionPaths,
+  isStepStatusEqual,
+} from "./store/shared/step-status";
 
 export function areScopeErrorsEqual(
   currentErrors: Record<string, string>,
   nextErrors: Record<string, string>,
 ): boolean {
-  const currentKeys = Object.keys(currentErrors);
-  const nextKeys = Object.keys(nextErrors);
-
-  if (currentKeys.length !== nextKeys.length) {
-    return false;
-  }
-
-  return currentKeys.every((key) => currentErrors[key] === nextErrors[key]);
+  return areStepErrorsEqual(currentErrors, nextErrors);
 }
 
 export function isScopeStatusEqual(
   currentStatus: ScopeStatus,
   nextStatus: ScopeStatus,
 ): boolean {
-  return (
-    currentStatus.hasErrors === nextStatus.hasErrors &&
-    currentStatus.isDirty === nextStatus.isDirty &&
-    areScopeErrorsEqual(currentStatus.errors, nextStatus.errors)
-  );
+  return isStepStatusEqual(currentStatus, nextStatus);
 }
 
 export function getScopeSubscriptionPaths(scopeFields: readonly string[]) {
-  return [...scopeFields, "isDirty"];
-}
-
-export function getScopeRegistrySubscriptionPath(scopeName: string) {
-  return `__scope__.${scopeName}`;
+  return getStepSubscriptionPaths(scopeFields);
 }
 
 export function observeScopeStatusSnapshot(
   store: {
-    getScopeStatus(scopeName: string): ScopeStatus;
+    getStepStatus(scopeName: string): ScopeStatus;
     subscribeScopeStatus(
       scopeName: string,
       listener: (status: ScopeStatus) => void,
@@ -44,7 +34,7 @@ export function observeScopeStatusSnapshot(
   scopeName: string,
   listener: (status: ScopeStatus) => void,
 ): () => void {
-  listener(store.getScopeStatus(scopeName));
+  listener(store.getStepStatus(scopeName));
 
   return store.subscribeScopeStatus(scopeName, listener);
 }

@@ -19,7 +19,7 @@ import {
   BitScheduler,
   BitSubmitResult,
 } from "../types";
-import { BitMask, BitMaskName } from "../../../mask/types";
+import { BitMask } from "../../../mask/types";
 import type { BitFormGlobal } from "../bus-types";
 import type {
   BitSelector,
@@ -49,7 +49,7 @@ export interface BitFrameworkConfig<
   bus?: BitFormGlobal;
 }
 
-export interface BitStoreQueryApi<T extends object = Record<string, unknown>> {
+export interface BitFormReadApi<T extends object = Record<string, unknown>> {
   getConfig(): Readonly<BitFrameworkConfig<T>>;
   getState(): Readonly<BitState<T>>;
 
@@ -60,13 +60,11 @@ export interface BitStoreQueryApi<T extends object = Record<string, unknown>> {
   getDirtyValues(): Partial<T>;
   getPersistMetadata(): BitPersistMetadata;
   getHistoryMetadata(): BitHistoryMetadata;
-  getScopeStatus(scopeName: string): ScopeStatus;
+  getStepStatus(scopeName: string): ScopeStatus;
   getStepErrors(scopeName: string): Record<string, string>;
 }
 
-export interface BitStoreObserveApi<
-  T extends object = Record<string, unknown>,
-> {
+export interface BitFormObserveApi<T extends object = Record<string, unknown>> {
   subscribe(listener: () => void): () => void;
   subscribePersistMeta(
     listener: (meta: BitPersistMetadata) => void,
@@ -80,7 +78,7 @@ export interface BitStoreObserveApi<
   ): () => void;
 }
 
-export interface BitStoreWriteApi<T extends object = Record<string, unknown>> {
+export interface BitFormWriteApi<T extends object = Record<string, unknown>> {
   setField<P extends BitPath<T>>(path: P, value: BitPathValue<T, P>): void;
   blurField<P extends BitPath<T>>(path: P): void;
   setValues(
@@ -299,7 +297,7 @@ export interface BitScopeBindingApi<
 > {
   hasValidationsInProgress(scopeFields?: string[]): boolean;
   getScopeFields(scopeName: string): string[];
-  getScopeStatus(scopeName: string): ScopeStatus;
+  getStepStatus(scopeName: string): ScopeStatus;
   getStepErrors(scopeName: string): Record<string, string>;
   subscribeScopeStatus(
     scopeName: string,
@@ -330,12 +328,18 @@ export interface BitStoreFeatureApi<T extends object = Record<string, unknown>>
     BitStoreArrayFeatureApi<T>,
     BitStoreHistoryFeatureApi {}
 
-export interface BitStoreApi<T extends object = Record<string, unknown>>
+export interface BitStoreCapabilityApi<
+  T extends object = Record<string, unknown>,
+>
   extends
-    BitStoreQueryApi<T>,
-    BitStoreObserveApi<T>,
-    BitStoreWriteApi<T>,
+    BitFormReadApi<T>,
+    BitFormObserveApi<T>,
+    BitFormWriteApi<T>,
     BitStoreFeatureApi<T> {}
+
+export interface BitStoreApi<
+  T extends object = Record<string, unknown>,
+> extends BitStoreCapabilityApi<T> {}
 
 export interface BitStoreHooksApi<T extends object = Record<string, unknown>>
   extends

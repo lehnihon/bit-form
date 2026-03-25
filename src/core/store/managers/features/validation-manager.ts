@@ -1,8 +1,6 @@
 import { BitErrors } from "../../contracts/types";
-import {
-  BitFrameworkConfig,
-  BitValidationOptions,
-} from "../../contracts/public-types";
+import { BitFrameworkConfig } from "../../contracts/public/store-api-types";
+import { BitValidationOptions } from "../../contracts/public/meta-types";
 import { BitPipelineContext, BitPipelineRunner } from "../../shared/pipeline";
 import {
   BitStoreOperation,

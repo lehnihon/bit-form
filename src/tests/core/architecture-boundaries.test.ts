@@ -69,20 +69,12 @@ describe("architecture boundaries", () => {
     expect(violations).toEqual([]);
   });
 
-  it("core fora de contracts não deve depender do wrapper public-types", () => {
+  it("core fora de contracts não deve depender de wrappers legados de contratos", () => {
     const coreRoot = path.join(SRC_ROOT, "core");
     const sourceFiles = walkTsFiles(coreRoot).filter((filePath) => {
       const relative = path.relative(coreRoot, filePath);
 
-      if (relative.endsWith("public-types.ts")) {
-        return false;
-      }
-
       if (relative === "index.ts") {
-        return false;
-      }
-
-      if (relative === `store${path.sep}contracts${path.sep}port-types.ts`) {
         return false;
       }
 
@@ -100,6 +92,18 @@ describe("architecture boundaries", () => {
     });
 
     expect(violations).toEqual([]);
+  });
+
+  it("não deve existir wrapper legado public-types", () => {
+    const legacyWrapperPath = path.join(
+      SRC_ROOT,
+      "core",
+      "store",
+      "contracts",
+      "public-types.ts",
+    );
+
+    expect(fs.existsSync(legacyWrapperPath)).toBe(false);
   });
 
   it("testes de framework/integration não devem importar core/store internamente", () => {
