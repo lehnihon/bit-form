@@ -184,7 +184,9 @@ export interface BitStoreSelectorBindingApi<
   ): () => void;
 }
 
-export interface BitFieldBindingApi<T extends object = Record<string, unknown>> {
+export interface BitFieldBindingApi<
+  T extends object = Record<string, unknown>,
+> {
   getFieldState<P extends BitPath<T>>(
     path: P,
   ): Readonly<BitFieldState<T, BitPathValue<T, P>>>;
@@ -268,9 +270,7 @@ export interface BitArrayMutationBindingApi<
   createArrayItemId(path: string, index?: number): string;
 }
 
-export interface BitArrayBindingApi<
-  T extends object = Record<string, unknown>,
->
+export interface BitArrayBindingApi<T extends object = Record<string, unknown>>
   extends
     BitArrayMutationBindingApi<T>,
     Pick<BitStoreSelectorBindingApi<T>, "subscribePath"> {}
@@ -294,7 +294,9 @@ export interface BitPersistBindingApi {
   ): () => void;
 }
 
-export interface BitScopeBindingApi<T extends object = Record<string, unknown>> {
+export interface BitScopeBindingApi<
+  T extends object = Record<string, unknown>,
+> {
   hasValidationsInProgress(scopeFields?: string[]): boolean;
   getScopeFields(scopeName: string): string[];
   getScopeStatus(scopeName: string): ScopeStatus;
@@ -320,9 +322,7 @@ export interface BitFrameworkStoreApi<
     BitPersistBindingApi,
     BitScopeBindingApi<T> {}
 
-export interface BitStoreFeatureApi<
-  T extends object = Record<string, unknown>,
->
+export interface BitStoreFeatureApi<T extends object = Record<string, unknown>>
   extends
     BitStoreLifecycleApi,
     BitStorePersistFeatureApi,

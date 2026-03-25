@@ -117,9 +117,7 @@ export interface BitFieldValidation<
   asyncValidateDelay?: number;
 }
 
-interface BitFieldDefinitionBase<
-  T extends object = Record<string, unknown>,
-> {
+interface BitFieldDefinitionBase<T extends object = Record<string, unknown>> {
   conditional?: BitFieldConditional<T>;
   validation?: BitFieldValidation<T>;
   normalize?: BitNormalizeFn<T>;
@@ -131,9 +129,7 @@ interface BitFieldDefinitionBase<
 }
 
 /** Full field definition: conditional, validation, transform, computed, mask, scope. */
-export type BitFieldDefinition<
-  T extends object = Record<string, unknown>,
-> =
+export type BitFieldDefinition<T extends object = Record<string, unknown>> =
   | (BitFieldDefinitionBase<T> & {
       computed?: undefined;
       computedDependsOn?: never;
@@ -247,17 +243,13 @@ export interface BitPluginErrorEvent<
   state: Readonly<BitState<T>>;
 }
 
-export interface BitPluginContext<
-  T extends object = Record<string, unknown>,
-> {
+export interface BitPluginContext<T extends object = Record<string, unknown>> {
   storeId: string;
   getState: () => Readonly<BitState<T>>;
   getConfig: () => Readonly<BitConfig<T>>;
 }
 
-export interface BitPluginHooks<
-  T extends object = Record<string, unknown>,
-> {
+export interface BitPluginHooks<T extends object = Record<string, unknown>> {
   beforeValidate?: (
     event: BitBeforeValidateEvent<T>,
     context: BitPluginContext<T>,

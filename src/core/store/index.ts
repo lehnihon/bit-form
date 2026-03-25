@@ -522,8 +522,6 @@ class BitStore<T extends object = Record<string, unknown>> {
 
 export function createInternalBitStore<
   T extends object = Record<string, unknown>,
->(
-  config: BitConfig<T> = {},
-) {
+>(config: BitConfig<T> = {}) {
   return new BitStore<T>(config);
 }

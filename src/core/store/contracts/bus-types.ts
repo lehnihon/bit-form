@@ -1,8 +1,6 @@
 import type { BitState } from "./types";
 
-export type BitBusListener<
-  T extends object = object,
-> = (
+export type BitBusListener<T extends object = object> = (
   storeId: string,
   newState: BitState<T>,
 ) => void;

@@ -131,7 +131,8 @@ export class BitFieldConditions<T extends object = Record<string, unknown>> {
         const val = getDeepValue(values, path);
         if (this.isEmpty(val)) {
           errors[path as keyof BitErrors<T>] = (config.conditional
-            ?.requiredMessage ?? "required field") as BitErrors<T>[keyof BitErrors<T>];
+            ?.requiredMessage ??
+            "required field") as BitErrors<T>[keyof BitErrors<T>];
         }
       }
     });
