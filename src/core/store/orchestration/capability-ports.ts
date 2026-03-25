@@ -23,7 +23,7 @@ import type { BitStoreEffectEngine } from "../engines/effect-engine";
 interface BitValidationAccess<T extends object> {
   clear(path: string): void;
   trigger(scopeFields?: string[], options?: BitValidationTriggerOptions): void;
-  handleAsync(path: string, value: any): void;
+  handleAsync(path: string, value: unknown): void;
   cancelAll(): void;
   validate(options?: BitValidationOptions): Promise<boolean>;
   hasValidationsInProgress(scopeFields?: string[]): boolean;
@@ -84,8 +84,8 @@ export interface BitLifecyclePortDeps<T extends object> {
   saveHistorySnapshot(): void;
   runStateBatch<TResult>(callback: () => TResult): TResult;
   getTransformEntries(): [string, BitTransformFn<T>][];
-  getInitialValues(): T;
-  setInitialValues(values: T): void;
+  getBaselineValues(): T;
+  setBaselineValues(values: T): void;
   getValidation(): BitValidationAccess<T>;
   getHistory(): BitHistoryAccess<T>;
   getEffects(): BitStoreEffectEngine<T>;
@@ -102,8 +102,12 @@ export function createLifecyclePort<T extends object>(
     config: deps.config,
     getFieldConfig: (path) => deps.fieldRegistry.getFieldConfig(path),
     getTransformEntries: () => deps.getTransformEntries(),
-    updateDependencies: (changedPath, newValues) =>
-      deps.fieldRegistry.updateDependencies(changedPath, newValues),
+    updateDependencies: (changedPath, currentValues, newValues) =>
+      deps.fieldRegistry.updateDependencies(
+        changedPath,
+        currentValues,
+        newValues,
+      ),
     hasDependentFields: (path) => deps.fieldRegistry.hasDependents(path),
     isFieldHidden: (path) => deps.fieldRegistry.isHidden(path),
     evaluateAllDependencies: (values) => deps.fieldRegistry.evaluateAll(values),
@@ -123,8 +127,8 @@ export function createLifecyclePort<T extends object>(
       deps.dirtyManager.rebuild(nextValues, baselineValues),
     clearDirtyState: () => deps.dirtyManager.clear(),
     buildDirtyValues: (values) => deps.dirtyManager.buildDirtyValues(values),
-    getInitialValues: () => deps.getInitialValues(),
-    setInitialValues: (values) => deps.setInitialValues(values),
+    getBaselineValues: () => deps.getBaselineValues(),
+    setBaselineValues: (values) => deps.setBaselineValues(values),
     resetHistory: (initialValues) => deps.getHistory().reset(initialValues),
     emitFieldChange: (event) => deps.getEffects().onFieldChange(event),
     emitBeforeSubmit: (event) => deps.getEffects().beforeSubmit(event),
@@ -141,7 +145,11 @@ export function createLifecyclePort<T extends object>(
 export interface BitArrayPortDeps<T extends object> {
   getState(): BitState<T>;
   dispatch(operation: BitStoreOperation<T>): void;
-  setFieldWithMeta(path: string, value: any, meta: BitFieldChangeMeta): void;
+  setFieldWithMeta(
+    path: string,
+    value: unknown,
+    meta: BitFieldChangeMeta,
+  ): void;
   unregisterPrefix(prefix: string): void;
   triggerValidation(
     scopeFields?: string[],

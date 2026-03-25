@@ -27,6 +27,7 @@ import type {
 import type { BitFieldRegistry } from "../registry/field-registry";
 import type { BitComputedManager } from "../managers/core/computed-manager";
 import type { BitDirtyManager } from "../managers/core/dirty-manager";
+import type { BitBaselineManager } from "../managers/core/baseline-manager";
 
 export interface BitStoreRuntimeMembers<T extends object> {
   state: BitState<T>;
@@ -61,7 +62,11 @@ export interface BitStoreRuntimeActions<T extends object> {
     scope?: string;
     scopeFields?: string[];
   }): Promise<boolean>;
-  setFieldWithMeta(path: string, value: any, meta?: BitFieldChangeMeta): void;
+  setFieldWithMeta(
+    path: string,
+    value: unknown,
+    meta?: BitFieldChangeMeta,
+  ): void;
   unregisterPrefix(prefix: string): void;
   triggerValidation(
     scopeFields?: string[],
@@ -76,10 +81,7 @@ export interface CreateStoreRuntimeArgs<T extends object> {
   fieldRegistry: BitFieldRegistry<T>;
   computedManager: BitComputedManager<T>;
   dirtyManager: BitDirtyManager<T>;
-  initialValuesRef: {
-    get(): T;
-    set(values: T): void;
-  };
+  baselineManager: BitBaselineManager<T>;
   stateAccess: BitStoreRuntimeStateAccess<T>;
   fieldAccess: BitStoreRuntimeFieldAccess<T>;
   featureAccess: BitStoreRuntimeFeatureAccess<T>;
@@ -89,80 +91,93 @@ export interface CreateStoreRuntimeArgs<T extends object> {
 export function createStoreRuntime<T extends object>(
   args: CreateStoreRuntimeArgs<T>,
 ): BitStoreRuntimeMembers<T> {
+  const {
+    config,
+    fieldRegistry,
+    dirtyManager,
+    computedManager,
+    rawConfig,
+    baselineManager,
+    stateAccess,
+    fieldAccess,
+    featureAccess,
+    actions,
+  } = args;
+
   const validationPort = createValidationPort<T>({
-    config: args.config,
-    fieldRegistry: args.fieldRegistry,
-    getState: () => args.stateAccess.getState(),
-    dispatch: (operation) => args.stateAccess.dispatch(operation),
-    setError: (path, message) => args.actions.setError(path, message),
-    validate: (options) => args.actions.validate(options),
-    getFieldConfig: (path) => args.fieldAccess.getFieldConfig(path),
-    getScopeFields: (scopeName) => args.fieldAccess.getScopeFields(scopeName),
-    getEffects: () => args.featureAccess.getEffects(),
+    config,
+    fieldRegistry,
+    getState: stateAccess.getState,
+    dispatch: stateAccess.dispatch,
+    setError: actions.setError,
+    validate: actions.validate,
+    getFieldConfig: fieldAccess.getFieldConfig,
+    getScopeFields: fieldAccess.getScopeFields,
+    getEffects: featureAccess.getEffects,
   });
 
   const lifecyclePort = createLifecyclePort<T>({
-    config: args.config,
-    fieldRegistry: args.fieldRegistry,
-    dirtyManager: args.dirtyManager,
-    getState: () => args.stateAccess.getState(),
-    dispatch: (operation) => args.stateAccess.dispatch(operation),
-    saveHistorySnapshot: () => args.stateAccess.saveHistorySnapshot(),
-    runStateBatch: (callback) => args.stateAccess.runStateBatch(callback),
-    getTransformEntries: () => args.fieldAccess.getTransformEntries(),
-    getInitialValues: () => args.initialValuesRef.get(),
-    setInitialValues: (values) => args.initialValuesRef.set(values),
-    getValidation: () => args.featureAccess.getValidation(),
-    getHistory: () => args.featureAccess.getHistory(),
-    getEffects: () => args.featureAccess.getEffects(),
+    config,
+    fieldRegistry,
+    dirtyManager,
+    getState: stateAccess.getState,
+    dispatch: stateAccess.dispatch,
+    saveHistorySnapshot: stateAccess.saveHistorySnapshot,
+    runStateBatch: stateAccess.runStateBatch,
+    getTransformEntries: fieldAccess.getTransformEntries,
+    getBaselineValues: () => baselineManager.getValues(),
+    setBaselineValues: (values) => baselineManager.setValues(values),
+    getValidation: featureAccess.getValidation,
+    getHistory: featureAccess.getHistory,
+    getEffects: featureAccess.getEffects,
   });
 
   const arrayPort = createArrayPort<T>({
-    getState: () => args.stateAccess.getState(),
-    dispatch: (operation) => args.stateAccess.dispatch(operation),
+    getState: stateAccess.getState,
+    dispatch: stateAccess.dispatch,
     setFieldWithMeta: (path, value, meta) =>
-      args.actions.setFieldWithMeta(path, value, meta),
-    unregisterPrefix: (prefix) => args.actions.unregisterPrefix(prefix),
+      actions.setFieldWithMeta(path, value, meta),
+    unregisterPrefix: actions.unregisterPrefix,
     triggerValidation: (scopeFields, options) =>
-      args.actions.triggerValidation(scopeFields, options),
-    dirtyManager: args.dirtyManager,
-    getConfig: () => args.actions.getConfig(),
-    getEffects: () => args.featureAccess.getEffects(),
-    saveHistorySnapshot: () => args.stateAccess.saveHistorySnapshot(),
+      actions.triggerValidation(scopeFields, options),
+    dirtyManager,
+    getConfig: actions.getConfig,
+    getEffects: featureAccess.getEffects,
+    saveHistorySnapshot: stateAccess.saveHistorySnapshot,
   });
 
   const capabilities = createStoreCapabilities<T>({
     ports: {
-      config: args.config,
+      config,
       validationPort,
       lifecyclePort,
       arrayPort,
-      getScopeFields: (scopeName) => args.fieldAccess.getScopeFields(scopeName),
-      getState: () => args.stateAccess.getState(),
-      dispatch: (operation) => args.stateAccess.dispatch(operation),
-      getInitialValues: () => args.initialValuesRef.get(),
-      isPathDirty: (path) => args.dirtyManager.isPathDirty(path),
+      getScopeFields: fieldAccess.getScopeFields,
+      getState: stateAccess.getState,
+      dispatch: stateAccess.dispatch,
+      getBaselineValues: () => baselineManager.getValues(),
+      isPathDirty: (path) => dirtyManager.isPathDirty(path),
     },
-    fieldRegistry: args.fieldRegistry,
+    fieldRegistry,
   });
 
   const state = createInitialStoreState<T>({
-    config: args.config,
-    fieldRegistry: args.fieldRegistry,
-    computedManager: args.computedManager,
+    config,
+    fieldRegistry,
+    computedManager,
   });
 
   const subscriptions = new BitSubscriptionEngine<T>(
-    () => args.stateAccess.getState(),
-    args.config.subscriptionCacheSize,
+    stateAccess.getState,
+    config.subscriptionCacheSize,
   );
 
   const storeId =
-    args.rawConfig.storeId ||
-    args.config.name ||
-    args.config.idFactory({
+    rawConfig.storeId ||
+    config.name ||
+    config.idFactory({
       scope: "store",
-      storeName: args.config.name,
+      storeName: config.name,
     });
 
   return {

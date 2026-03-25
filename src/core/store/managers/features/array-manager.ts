@@ -17,7 +17,7 @@ export interface BitArrayStorePort<T extends object> {
   getState: () => BitState<T>;
   setFieldWithMeta: (
     path: string,
-    value: any,
+    value: unknown,
     meta: BitFieldChangeMeta,
   ) => void;
   emitFieldChange: (event: BitFieldChangeEvent<T>) => void;
@@ -33,24 +33,24 @@ export interface BitArrayStorePort<T extends object> {
   getConfig: () => Readonly<{ initialValues: T }>;
 }
 
-export class BitArrayManager<T extends object = any> {
+export class BitArrayManager<T extends object = Record<string, unknown>> {
   constructor(private store: BitArrayStorePort<T>) {}
 
-  pushItem(path: string, value: any) {
+  pushItem(path: string, value: unknown) {
     this.mutateArrayWithSetField(path, (arr) => [...arr, value], {
       origin: "array",
       operation: "push",
     });
   }
 
-  prependItem(path: string, value: any) {
+  prependItem(path: string, value: unknown) {
     this.mutateArrayWithSetField(path, (arr) => [value, ...arr], {
       origin: "array",
       operation: "prepend",
     });
   }
 
-  insertItem(path: string, index: number, value: any) {
+  insertItem(path: string, index: number, value: unknown) {
     this.mutateArrayWithSetField(
       path,
       (arr) => {
@@ -159,7 +159,7 @@ export class BitArrayManager<T extends object = any> {
     });
   }
 
-  replaceItems(path: string, items: any[]) {
+  replaceItems(path: string, items: unknown[]) {
     const state = this.store.getState();
     const current = getDeepValue(state.values, path) || [];
     const previousArray = Array.isArray(current) ? [...current] : [];
@@ -197,7 +197,7 @@ export class BitArrayManager<T extends object = any> {
 
   private mutateArrayWithSetField(
     path: string,
-    mutate: (current: any[]) => any[],
+    mutate: (current: unknown[]) => unknown[],
     meta: BitFieldChangeMeta,
   ) {
     const current = getDeepValue(this.store.getState().values, path) || [];

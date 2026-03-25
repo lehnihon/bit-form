@@ -1,7 +1,8 @@
 import { getDeepValue } from "../../utils";
 import type { BitErrors, BitFieldDefinition } from "../contracts/types";
+import type { BitDependencyUpdateDiff } from "../contracts/port-types";
 
-export class BitFieldConditions<T extends object = any> {
+export class BitFieldConditions<T extends object = Record<string, unknown>> {
   private readonly dependencies: Map<string, Set<string>> = new Map();
   private readonly hiddenFields: Set<string> = new Set();
   private readonly conditionalVisibilityPaths: Set<string> = new Set();
@@ -130,7 +131,8 @@ export class BitFieldConditions<T extends object = any> {
         const val = getDeepValue(values, path);
         if (this.isEmpty(val)) {
           errors[path as keyof BitErrors<T>] = (config.conditional
-            ?.requiredMessage ?? "required field") as any;
+            ?.requiredMessage ??
+            "required field") as BitErrors<T>[keyof BitErrors<T>];
         }
       }
     });
@@ -144,8 +146,14 @@ export class BitFieldConditions<T extends object = any> {
     });
   }
 
-  updateDependencies(changedPath: string, newValues: T): string[] {
-    const toggledFields: string[] = [];
+  updateDependencies(
+    changedPath: string,
+    currentValues: T,
+    newValues: T,
+  ): BitDependencyUpdateDiff {
+    const affectedFields = new Set<string>();
+    const visibilityChanged = new Set<string>();
+    const requiredChanged = new Set<string>();
 
     const queue = [changedPath];
     const visited = new Set<string>();
@@ -165,19 +173,31 @@ export class BitFieldConditions<T extends object = any> {
       }
 
       dependents.forEach((depPath) => {
+        affectedFields.add(depPath);
+
         const wasHidden = this.isHidden(depPath);
+        const wasRequired = this.isRequired(depPath, currentValues);
         this.evaluateFieldCondition(depPath, newValues);
         const isHiddenNow = this.isHidden(depPath);
+        const isRequiredNow = this.isRequired(depPath, newValues);
 
         if (wasHidden !== isHiddenNow) {
-          toggledFields.push(depPath);
+          visibilityChanged.add(depPath);
+        }
+
+        if (wasRequired !== isRequiredNow) {
+          requiredChanged.add(depPath);
         }
 
         queue.push(depPath);
       });
     }
 
-    return toggledFields;
+    return {
+      affectedFields: Array.from(affectedFields),
+      visibilityChanged: Array.from(visibilityChanged),
+      requiredChanged: Array.from(requiredChanged),
+    };
   }
 
   private evaluateFieldCondition(path: string, values: T) {
@@ -192,7 +212,7 @@ export class BitFieldConditions<T extends object = any> {
     }
   }
 
-  private isEmpty(value: any): boolean {
+  private isEmpty(value: unknown): boolean {
     return (
       value === undefined ||
       value === null ||

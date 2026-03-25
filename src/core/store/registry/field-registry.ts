@@ -3,11 +3,12 @@ import type {
   BitNormalizeFn,
   BitTransformFn,
 } from "../contracts/types";
+import type { BitDependencyUpdateDiff } from "../contracts/port-types";
 import type { BitComputedEntry } from "../managers/core/computed-manager";
 import { BitFieldCatalog } from "./field-catalog";
 import { BitFieldConditions } from "./field-conditions";
 
-export class BitFieldRegistry<T extends object = any> {
+export class BitFieldRegistry<T extends object = Record<string, unknown>> {
   private readonly catalog = new BitFieldCatalog<T>();
   private readonly conditions = new BitFieldConditions<T>((path) =>
     this.catalog.get(path),
@@ -75,8 +76,16 @@ export class BitFieldRegistry<T extends object = any> {
     this.conditions.evaluateAll(values);
   }
 
-  updateDependencies(changedPath: string, newValues: T): string[] {
-    return this.conditions.updateDependencies(changedPath, newValues);
+  updateDependencies(
+    changedPath: string,
+    currentValues: T,
+    newValues: T,
+  ): BitDependencyUpdateDiff {
+    return this.conditions.updateDependencies(
+      changedPath,
+      currentValues,
+      newValues,
+    );
   }
 
   getScopeFields(scopeName: string): string[] {

@@ -8,7 +8,7 @@ type BitAsyncValidateFn<T extends object> = NonNullable<
 export function mergeValidationErrors<T extends object>(args: {
   targetFields?: string[];
   currentErrors: BitErrors<T>;
-  allErrors: Record<string, any>;
+  allErrors: Record<string, string | undefined>;
   asyncErrors: ReadonlyMap<string, string>;
 }) {
   const { targetFields, currentErrors, allErrors, asyncErrors } = args;

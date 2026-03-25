@@ -33,9 +33,18 @@ export type BitErrors<T extends object> = Partial<
 export type BitTouched<T extends object> = Partial<
   Record<BitPath<T>, boolean | undefined>
 >;
-export type BitComputedFn<T> = (values: T) => any;
-export type BitNormalizeFn<T> = (value: any, allValues: T) => any;
-export type BitTransformFn<T> = (value: any, allValues: T) => any;
+type BitBivariantFn<TArgs extends unknown[], TResult> = {
+  bivarianceHack(...args: TArgs): TResult;
+}["bivarianceHack"];
+export type BitComputedFn<T> = (values: T) => unknown;
+export type BitNormalizeFn<T> = BitBivariantFn<
+  [value: unknown, allValues: T],
+  unknown
+>;
+export type BitTransformFn<T> = BitBivariantFn<
+  [value: unknown, allValues: T],
+  unknown
+>;
 
 export interface BitPersistMetadata {
   isSaving: boolean;
@@ -63,7 +72,10 @@ export interface BitState<T extends object> {
   isDirty: boolean;
 }
 
-export interface BitFieldState<T extends object = any, TValue = unknown> {
+export interface BitFieldState<
+  T extends object = Record<string, unknown>,
+  TValue = unknown,
+> {
   value: TValue;
   error: string | undefined;
   touched: boolean;
@@ -79,7 +91,9 @@ export type ValidatorFn<T extends object> = (
 ) => Promise<BitErrors<T>> | BitErrors<T>;
 
 /** Conditional logic: visibility and dynamic required. */
-export interface BitFieldConditional<T extends object = any> {
+export interface BitFieldConditional<
+  T extends object = Record<string, unknown>,
+> {
   dependsOn?: string[];
   showIf?: (values: T) => boolean;
   requiredIf?: (values: T) => boolean;
@@ -88,17 +102,22 @@ export interface BitFieldConditional<T extends object = any> {
 }
 
 /** Field-level validation: async validation only. */
-export interface BitFieldValidation<T extends object = any> {
+export interface BitFieldValidation<
+  T extends object = Record<string, unknown>,
+> {
   /**
    * Breaking change: async validation now defaults to `blur` instead of eager `change`.
    * `validate()`/submit still execute async validators for the targeted fields.
    */
   asyncValidateOn?: "change" | "blur";
-  asyncValidate?: (value: any, values: T) => Promise<string | null | undefined>;
+  asyncValidate?: BitBivariantFn<
+    [value: unknown, values: T],
+    Promise<string | null | undefined>
+  >;
   asyncValidateDelay?: number;
 }
 
-interface BitFieldDefinitionBase<T extends object = any> {
+interface BitFieldDefinitionBase<T extends object = Record<string, unknown>> {
   conditional?: BitFieldConditional<T>;
   validation?: BitFieldValidation<T>;
   normalize?: BitNormalizeFn<T>;
@@ -110,7 +129,7 @@ interface BitFieldDefinitionBase<T extends object = any> {
 }
 
 /** Full field definition: conditional, validation, transform, computed, mask, scope. */
-export type BitFieldDefinition<T extends object = any> =
+export type BitFieldDefinition<T extends object = Record<string, unknown>> =
   | (BitFieldDefinitionBase<T> & {
       computed?: undefined;
       computedDependsOn?: never;
@@ -162,7 +181,9 @@ export interface BitFieldChangeMeta {
   to?: number;
 }
 
-export interface BitFieldChangeEvent<T extends object = any> {
+export interface BitFieldChangeEvent<
+  T extends object = Record<string, unknown>,
+> {
   path: string;
   previousValue: unknown;
   nextValue: unknown;
@@ -171,14 +192,18 @@ export interface BitFieldChangeEvent<T extends object = any> {
   meta: BitFieldChangeMeta;
 }
 
-export interface BitBeforeValidateEvent<T extends object = any> {
+export interface BitBeforeValidateEvent<
+  T extends object = Record<string, unknown>,
+> {
   values: Readonly<T>;
   state: Readonly<BitState<T>>;
   scope?: string;
   scopeFields?: string[];
 }
 
-export interface BitAfterValidateEvent<T extends object = any> {
+export interface BitAfterValidateEvent<
+  T extends object = Record<string, unknown>,
+> {
   values: Readonly<T>;
   state: Readonly<BitState<T>>;
   scope?: string;
@@ -188,13 +213,17 @@ export interface BitAfterValidateEvent<T extends object = any> {
   aborted?: boolean;
 }
 
-export interface BitBeforeSubmitEvent<T extends object = any> {
+export interface BitBeforeSubmitEvent<
+  T extends object = Record<string, unknown>,
+> {
   values: Readonly<T>;
   dirtyValues: Readonly<Partial<T>>;
   state: Readonly<BitState<T>>;
 }
 
-export interface BitAfterSubmitEvent<T extends object = any> {
+export interface BitAfterSubmitEvent<
+  T extends object = Record<string, unknown>,
+> {
   values: Readonly<T>;
   dirtyValues: Readonly<Partial<T>>;
   state: Readonly<BitState<T>>;
@@ -203,7 +232,9 @@ export interface BitAfterSubmitEvent<T extends object = any> {
   invalid?: boolean;
 }
 
-export interface BitPluginErrorEvent<T extends object = any> {
+export interface BitPluginErrorEvent<
+  T extends object = Record<string, unknown>,
+> {
   source: BitPluginHookSource;
   pluginName?: string;
   error: unknown;
@@ -212,13 +243,13 @@ export interface BitPluginErrorEvent<T extends object = any> {
   state: Readonly<BitState<T>>;
 }
 
-export interface BitPluginContext<T extends object = any> {
+export interface BitPluginContext<T extends object = Record<string, unknown>> {
   storeId: string;
   getState: () => Readonly<BitState<T>>;
   getConfig: () => Readonly<BitConfig<T>>;
 }
 
-export interface BitPluginHooks<T extends object = any> {
+export interface BitPluginHooks<T extends object = Record<string, unknown>> {
   beforeValidate?: (
     event: BitBeforeValidateEvent<T>,
     context: BitPluginContext<T>,
@@ -245,7 +276,7 @@ export interface BitPluginHooks<T extends object = any> {
   ) => BitMaybePromise<void>;
 }
 
-export interface BitPlugin<T extends object = any> {
+export interface BitPlugin<T extends object = Record<string, unknown>> {
   name: string;
   setup?: (context: BitPluginContext<T>) => void | (() => void);
   hooks?: BitPluginHooks<T>;
@@ -261,7 +292,7 @@ export interface BitPersistStorageAdapter {
 
 export type BitPersistMode = "values" | "dirtyValues";
 
-export interface BitPersistConfig<T extends object = any> {
+export interface BitPersistConfig<T extends object = Record<string, unknown>> {
   enabled?: boolean;
   key?: string;
   storage?: BitPersistStorageAdapter;
@@ -273,7 +304,9 @@ export interface BitPersistConfig<T extends object = any> {
   onError?: (error: unknown) => void;
 }
 
-export interface BitPersistResolvedConfig<T extends object = any> {
+export interface BitPersistResolvedConfig<
+  T extends object = Record<string, unknown>,
+> {
   enabled: boolean;
   key: string;
   storage?: BitPersistStorageAdapter;
@@ -305,7 +338,7 @@ export interface BitHistoryConfig {
  * BitConfig - store configuration.
  * @see CHANGELOG for migration from features to fields in 2.0.
  */
-export interface BitConfig<T extends object = any> {
+export interface BitConfig<T extends object = Record<string, unknown>> {
   /** Core */
   name?: string;
   storeId?: string;
@@ -434,7 +467,7 @@ export type BitPathValue<
 export type BitArrayPath<T> =
   BitPath<T> extends infer P
     ? P extends string
-      ? BitPathValue<T, P> extends readonly any[]
+      ? BitPathValue<T, P> extends readonly unknown[]
         ? P
         : never
       : never

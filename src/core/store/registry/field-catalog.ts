@@ -5,7 +5,7 @@ import type {
 } from "../contracts/types";
 import type { BitComputedEntry } from "../managers/core/computed-manager";
 
-export class BitFieldCatalog<T extends object = any> {
+export class BitFieldCatalog<T extends object = Record<string, unknown>> {
   private readonly fieldConfigs: Map<string, BitFieldDefinition<T>> = new Map();
 
   private scopeFieldsIndex: Map<string, Set<string>> | null = null;

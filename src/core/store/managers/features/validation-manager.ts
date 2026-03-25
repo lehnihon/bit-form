@@ -37,7 +37,7 @@ interface ValidationPipelineContext<
   validationId: number;
   currentState: ReturnType<BitValidationStorePort<T>["getState"]>;
   targetFields?: string[];
-  allErrors: Record<string, any>;
+  allErrors: Record<string, string | undefined>;
   committedErrors: BitErrors<T>;
   isValid: boolean;
   result: boolean;
@@ -205,7 +205,7 @@ export class BitValidationManager<T extends object> {
     );
   }
 
-  handleAsync(path: string, value: any) {
+  handleAsync(path: string, value: unknown) {
     const config = this.store.getFieldConfig(path);
     const asyncValidate = config?.validation?.asyncValidate;
     const asyncValidateOn = config?.validation?.asyncValidateOn ?? "blur";

@@ -12,6 +12,12 @@ import type {
 import type { BitStoreOperation } from "../engines/operation-engine";
 import type { BitFrameworkConfig, BitValidationOptions } from "./public-types";
 
+export interface BitDependencyUpdateDiff {
+  affectedFields: string[];
+  visibilityChanged: string[];
+  requiredChanged: string[];
+}
+
 export interface BitValidationStorePort<T extends object> {
   getState: () => BitState<T>;
   dispatch: (operation: BitStoreOperation<T>) => void;
@@ -42,7 +48,11 @@ export interface BitLifecycleStorePort<T extends object> {
 
   getFieldConfig: (path: string) => BitFieldDefinition<T> | undefined;
   getTransformEntries: () => [string, BitTransformFn<T>][];
-  updateDependencies: (changedPath: string, newValues: T) => string[];
+  updateDependencies: (
+    changedPath: string,
+    currentValues: T,
+    newValues: T,
+  ) => BitDependencyUpdateDiff;
   hasDependentFields: (path: string) => boolean;
   isFieldHidden: (path: string) => boolean;
   evaluateAllDependencies: (values: T) => void;
@@ -53,7 +63,7 @@ export interface BitLifecycleStorePort<T extends object> {
     scopeFields?: string[],
     options?: BitValidationTriggerOptions,
   ) => void;
-  handleFieldAsyncValidation: (path: string, value: any) => void;
+  handleFieldAsyncValidation: (path: string, value: unknown) => void;
   cancelAllValidations: () => void;
   validateNow: (options?: BitValidationOptions) => Promise<boolean>;
   hasValidationsInProgress: (scopeFields?: string[]) => boolean;
@@ -66,8 +76,8 @@ export interface BitLifecycleStorePort<T extends object> {
   rebuildDirtyState: (nextValues: T, baselineValues: T) => boolean;
   clearDirtyState: () => void;
   buildDirtyValues: (values: T) => Partial<T>;
-  getInitialValues: () => T;
-  setInitialValues: (values: T) => void;
+  getBaselineValues: () => T;
+  setBaselineValues: (values: T) => void;
   resetHistory: (initialValues: T) => void;
 
   emitFieldChange: (event: BitFieldChangeEvent<T>) => void;

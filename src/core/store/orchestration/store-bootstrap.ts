@@ -13,6 +13,7 @@ import { BitFieldQueryManager } from "../managers/features/field-query-manager";
 import { BitErrorManager } from "../managers/features/error-manager";
 import { BitFieldRegistry } from "../registry/field-registry";
 import { BitComputedManager } from "../managers/core/computed-manager";
+import { analyzeCyclicDependencies } from "../managers/core/computed-dependency-analyzer";
 import type { BitStoreOperation } from "../engines/operation-engine";
 import { deepClone } from "../../utils";
 import type { BitStoreCapabilities } from "./capabilities";
@@ -48,7 +49,7 @@ export type BitStoreCapabilityPorts<T extends object> = {
   getScopeFields(scopeName: string): string[];
   getState(): BitState<T>;
   dispatch(operation: BitStoreOperation<T>): void;
-  getInitialValues(): T;
+  getBaselineValues(): T;
   isPathDirty(path: string): boolean;
 };
 
@@ -68,7 +69,7 @@ export function createStoreCapabilities<T extends object>(args: {
     arrays: new BitArrayManager<T>(ports.arrayPort),
     scope: new BitScopeManager<T>(
       () => ports.getState(),
-      () => ports.getInitialValues(),
+      () => ports.getBaselineValues(),
       (scopeName) => ports.getScopeFields(scopeName),
       (path) => ports.isPathDirty(path),
     ),
@@ -153,6 +154,14 @@ export function createInitialStoreState<T extends object>(args: {
         initialValues,
       );
     });
+  }
+
+  const computedCycles = analyzeCyclicDependencies(
+    fieldRegistry.getComputedEntries(),
+  );
+
+  if (computedCycles.length > 0) {
+    throw new Error(computedCycles[0].message);
   }
 
   const valuesWithComputeds = computedManager.apply(initialValues);

@@ -11,11 +11,7 @@ import type { BitState } from "../contracts/types";
 import type { BitSubscriptionEngine } from "../engines/subscription-engine";
 import type { BitPersistMetadata, ScopeStatus } from "../contracts/types";
 import { isHistoryMetaEqual } from "../../history-status";
-import {
-  getScopeRegistrySubscriptionPath,
-  getScopeSubscriptionPaths,
-  isScopeStatusEqual,
-} from "../../scope-status";
+import { isScopeStatusEqual } from "../../scope-status";
 
 export function subscribeStoreSelector<T extends object, TSlice>(args: {
   subscriptions: Pick<BitSubscriptionEngine<T>, "subscribeSelector">;
@@ -182,49 +178,20 @@ export function subscribeStoreHistoryMeta<T extends object>(args: {
 export function subscribeStoreScopeStatus<T extends object>(args: {
   scopeName: string;
   readScopeStatus: (scopeName: string) => ScopeStatus;
-  getScopeFields: (scopeName: string) => string[];
-  subscribeSelector: (
-    selector: BitSelector<
-      T,
-      { errors: BitState<T>["errors"]; isDirty: boolean }
-    >,
-    listener: (slice: {
-      errors: BitState<T>["errors"];
-      isDirty: boolean;
-    }) => void,
-    options?: BitSelectorSubscriptionOptions<{
-      errors: BitState<T>["errors"];
-      isDirty: boolean;
-    }>,
-  ) => () => void;
+  subscribe: (listener: () => void) => () => void;
   listener: (status: ScopeStatus) => void;
 }): () => void {
-  const {
-    scopeName,
-    readScopeStatus,
-    getScopeFields,
-    subscribeSelector,
-    listener,
-  } = args;
+  const { scopeName, readScopeStatus, subscribe, listener } = args;
 
   let lastStatus = readScopeStatus(scopeName);
 
-  return subscribeSelector(
-    (state) => ({ errors: state.errors, isDirty: state.isDirty }),
-    () => {
-      const nextStatus = readScopeStatus(scopeName);
-      if (isScopeStatusEqual(lastStatus, nextStatus)) {
-        return;
-      }
+  return subscribe(() => {
+    const nextStatus = readScopeStatus(scopeName);
+    if (isScopeStatusEqual(lastStatus, nextStatus)) {
+      return;
+    }
 
-      lastStatus = nextStatus;
-      listener(nextStatus);
-    },
-    {
-      paths: [
-        ...getScopeSubscriptionPaths(getScopeFields(scopeName)),
-        getScopeRegistrySubscriptionPath(scopeName),
-      ],
-    },
-  );
+    lastStatus = nextStatus;
+    listener(nextStatus);
+  });
 }

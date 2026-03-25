@@ -6,18 +6,19 @@ import {
 } from "../../../shared/pipeline";
 import { patchStateOperation } from "../../../engines/operation-engine";
 import type { BitLifecycleStorePort } from "../../../contracts/port-types";
+import type { BitDependencyUpdateDiff } from "../../../contracts/port-types";
 
 interface FieldUpdatePipelineContext<
   T extends object,
 > extends BitPipelineContext {
   path: string;
-  value: any;
+  value: unknown;
   meta: BitFieldChangeMeta;
   previousValue: unknown;
   nextValues: T;
   nextErrors: BitErrors<T>;
   hasMutatedErrors: boolean;
-  toggledFields: string[];
+  dependencyDiff: BitDependencyUpdateDiff;
   isDirty: boolean;
 }
 
@@ -33,7 +34,11 @@ export class BitFieldUpdateManager<T extends object> {
     nextValues: {} as T,
     nextErrors: {} as BitErrors<T>,
     hasMutatedErrors: false,
-    toggledFields: [],
+    dependencyDiff: {
+      affectedFields: [],
+      visibilityChanged: [],
+      requiredChanged: [],
+    },
     isDirty: false,
   };
   private isReusableContextBusy = false;
@@ -66,7 +71,7 @@ export class BitFieldUpdateManager<T extends object> {
 
   updateField(
     path: string,
-    value: any,
+    value: unknown,
     meta: BitFieldChangeMeta = { origin: "setField" },
   ) {
     const state = this.store.getState();
@@ -79,7 +84,9 @@ export class BitFieldUpdateManager<T extends object> {
     context.nextValues = setDeepValue(state.values, path, value);
     context.nextErrors = state.errors;
     context.hasMutatedErrors = false;
-    context.toggledFields.length = 0;
+    context.dependencyDiff.affectedFields.length = 0;
+    context.dependencyDiff.visibilityChanged.length = 0;
+    context.dependencyDiff.requiredChanged.length = 0;
     context.isDirty = false;
 
     const isReusableContext = context === this.reusableContext;
@@ -109,7 +116,11 @@ export class BitFieldUpdateManager<T extends object> {
       nextValues: {} as T,
       nextErrors: {} as BitErrors<T>,
       hasMutatedErrors: false,
-      toggledFields: [],
+      dependencyDiff: {
+        affectedFields: [],
+        visibilityChanged: [],
+        requiredChanged: [],
+      },
       isDirty: false,
     };
   }
@@ -137,13 +148,24 @@ export class BitFieldUpdateManager<T extends object> {
       typeof this.store.hasDependentFields === "function" &&
       !this.store.hasDependentFields(ctx.path)
     ) {
-      ctx.toggledFields.length = 0;
+      ctx.dependencyDiff.affectedFields.length = 0;
+      ctx.dependencyDiff.visibilityChanged.length = 0;
+      ctx.dependencyDiff.requiredChanged.length = 0;
       return;
     }
 
-    ctx.toggledFields = this.store.updateDependencies(ctx.path, ctx.nextValues);
+    ctx.dependencyDiff = this.store.updateDependencies(
+      ctx.path,
+      this.store.getState().values,
+      ctx.nextValues,
+    );
 
-    ctx.toggledFields.forEach((depPath) => {
+    const fieldsToReset = new Set([
+      ...ctx.dependencyDiff.visibilityChanged,
+      ...ctx.dependencyDiff.requiredChanged,
+    ]);
+
+    fieldsToReset.forEach((depPath) => {
       if (this.store.isFieldHidden(depPath)) {
         const hasDependencyError = Object.prototype.hasOwnProperty.call(
           ctx.nextErrors,
@@ -160,7 +182,24 @@ export class BitFieldUpdateManager<T extends object> {
         }
 
         this.store.clearFieldValidation(depPath);
+        return;
       }
+
+      const hasDependencyError = Object.prototype.hasOwnProperty.call(
+        ctx.nextErrors,
+        depPath,
+      );
+
+      if (hasDependencyError && !ctx.hasMutatedErrors) {
+        ctx.nextErrors = { ...ctx.nextErrors };
+        ctx.hasMutatedErrors = true;
+      }
+
+      if (hasDependencyError) {
+        delete ctx.nextErrors[depPath as keyof BitErrors<T>];
+      }
+
+      this.store.clearFieldValidation(depPath);
     });
   }
 
@@ -168,11 +207,19 @@ export class BitFieldUpdateManager<T extends object> {
     ctx.isDirty = this.store.updateDirtyForPath(
       ctx.path,
       ctx.nextValues,
-      this.store.getInitialValues(),
+      this.store.getBaselineValues(),
     );
   }
 
   private commitFieldState(ctx: FieldUpdatePipelineContext<T>) {
+    const changedPaths = Array.from(
+      new Set([
+        ctx.path,
+        ...ctx.dependencyDiff.visibilityChanged,
+        ...ctx.dependencyDiff.requiredChanged,
+      ]),
+    );
+
     this.store.dispatch(
       patchStateOperation(
         {
@@ -180,7 +227,7 @@ export class BitFieldUpdateManager<T extends object> {
           errors: ctx.nextErrors,
           isDirty: ctx.isDirty,
         },
-        [ctx.path, ...ctx.toggledFields],
+        changedPaths,
       ),
     );
   }
@@ -197,8 +244,20 @@ export class BitFieldUpdateManager<T extends object> {
   }
 
   private triggerResolverValidation(ctx: FieldUpdatePipelineContext<T>) {
-    if (this.store.config.resolver) {
-      this.store.triggerValidation([ctx.path]);
+    const validationTargets = Array.from(
+      new Set([
+        ctx.path,
+        ...ctx.dependencyDiff.visibilityChanged,
+        ...ctx.dependencyDiff.requiredChanged,
+      ]),
+    );
+
+    if (
+      this.store.config.resolver ||
+      ctx.dependencyDiff.visibilityChanged.length > 0 ||
+      ctx.dependencyDiff.requiredChanged.length > 0
+    ) {
+      this.store.triggerValidation(validationTargets);
     }
   }
 

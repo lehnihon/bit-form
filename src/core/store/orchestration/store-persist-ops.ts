@@ -1,4 +1,4 @@
-import { deepClone } from "../../utils";
+import { deepClone, deepMerge } from "../../utils";
 import type { BitState } from "../contracts/types";
 import {
   patchStateOperation,
@@ -100,10 +100,7 @@ export function applyStorePersistedValues<T extends object>(args: {
     saveHistorySnapshot,
   } = args;
 
-  const nextValues = deepClone({
-    ...initialValues,
-    ...values,
-  } as T);
+  const nextValues = deepClone(deepMerge(initialValues, values));
 
   validation.cancelAll();
   fieldRegistry.evaluateAll(nextValues);

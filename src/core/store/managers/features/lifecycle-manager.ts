@@ -18,7 +18,7 @@ export class BitLifecycleManager<T extends object> {
 
   updateField(
     path: string,
-    value: any,
+    value: unknown,
     meta: BitFieldChangeMeta = { origin: "setField" },
   ) {
     this.fieldUpdate.updateField(path, value, meta);

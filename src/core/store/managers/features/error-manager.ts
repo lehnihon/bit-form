@@ -10,7 +10,7 @@ import {
  * Manages error state for fields.
  * Handles setting individual errors, batch errors, and server errors.
  */
-export class BitErrorManager<T extends object = any> {
+export class BitErrorManager<T extends object = Record<string, unknown>> {
   constructor(
     private getState: () => BitState<T>,
     private dispatch: (operation: BitStoreOperation<T>) => void,

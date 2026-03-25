@@ -228,6 +228,35 @@ describe("Persist Feature (BitPersistManager)", () => {
       expect(store.getState().values.age).toBe(30);
       store.cleanup();
     });
+
+    it("should deeply merge nested restored payloads with the baseline", async () => {
+      const storage = createMockStorage();
+      storage._data["nested-form"] = JSON.stringify({
+        profile: { city: "Osaka" },
+      });
+
+      const store = createBitStore({
+        initialValues: {
+          profile: { city: "Tokyo", zip: "100-0001" },
+          preferences: { theme: "dark" },
+        },
+        persist: {
+          enabled: true,
+          key: "nested-form",
+          storage,
+        },
+      });
+
+      const restored = await store.restorePersisted();
+
+      expect(restored).toBe(true);
+      expect(store.getState().values).toEqual({
+        profile: { city: "Osaka", zip: "100-0001" },
+        preferences: { theme: "dark" },
+      });
+
+      store.cleanup();
+    });
   });
 
   describe("clearPersisted", () => {
