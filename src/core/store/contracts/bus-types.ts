@@ -1,6 +1,8 @@
 import type { BitState } from "./types";
 
-export type BitBusListener<T extends object = any> = (
+export type BitBusListener<
+  T extends object = object,
+> = (
   storeId: string,
   newState: BitState<T>,
 ) => void;
@@ -8,7 +10,7 @@ export type BitBusListener<T extends object = any> = (
 export interface BitFormGlobal {
   stores: Record<string, unknown>;
   listeners: Set<BitBusListener>;
-  dispatch: (storeId: string, state: BitState<any>) => void;
+  dispatch: (storeId: string, state: BitState<object>) => void;
   subscribe: (fn: BitBusListener) => () => void;
 }
 

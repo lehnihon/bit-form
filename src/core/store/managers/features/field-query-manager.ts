@@ -7,7 +7,7 @@ import { BitFieldRegistry } from "../../registry/field-registry";
  * Provides query methods for field state without mutating.
  * All methods are read-only and delegate to appropriate managers.
  */
-export class BitFieldQueryManager<T extends object = any> {
+export class BitFieldQueryManager<T extends object = Record<string, unknown>> {
   private requiredValuesRef: T | null = null;
 
   constructor(

@@ -2,7 +2,7 @@ import { getDeepValue } from "../../utils";
 import type { BitErrors, BitFieldDefinition } from "../contracts/types";
 import type { BitDependencyUpdateDiff } from "../contracts/port-types";
 
-export class BitFieldConditions<T extends object = any> {
+export class BitFieldConditions<T extends object = Record<string, unknown>> {
   private readonly dependencies: Map<string, Set<string>> = new Map();
   private readonly hiddenFields: Set<string> = new Set();
   private readonly conditionalVisibilityPaths: Set<string> = new Set();
@@ -131,7 +131,7 @@ export class BitFieldConditions<T extends object = any> {
         const val = getDeepValue(values, path);
         if (this.isEmpty(val)) {
           errors[path as keyof BitErrors<T>] = (config.conditional
-            ?.requiredMessage ?? "required field") as any;
+            ?.requiredMessage ?? "required field") as BitErrors<T>[keyof BitErrors<T>];
         }
       }
     });
@@ -211,7 +211,7 @@ export class BitFieldConditions<T extends object = any> {
     }
   }
 
-  private isEmpty(value: any): boolean {
+  private isEmpty(value: unknown): boolean {
     return (
       value === undefined ||
       value === null ||

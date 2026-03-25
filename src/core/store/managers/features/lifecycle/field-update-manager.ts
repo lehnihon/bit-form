@@ -12,7 +12,7 @@ interface FieldUpdatePipelineContext<
   T extends object,
 > extends BitPipelineContext {
   path: string;
-  value: any;
+  value: unknown;
   meta: BitFieldChangeMeta;
   previousValue: unknown;
   nextValues: T;
@@ -71,7 +71,7 @@ export class BitFieldUpdateManager<T extends object> {
 
   updateField(
     path: string,
-    value: any,
+    value: unknown,
     meta: BitFieldChangeMeta = { origin: "setField" },
   ) {
     const state = this.store.getState();

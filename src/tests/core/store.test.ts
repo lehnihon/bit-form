@@ -927,7 +927,7 @@ describe("BitStore Core", () => {
       const store = createBitStore({
         initialValues: { newsletter: false, email: "test@test.com", price: 10 },
         fields: {
-          price: { transform: (val) => val * 2 },
+          price: { transform: (val: number) => val * 2 },
           email: {
             conditional: {
               dependsOn: ["newsletter"],
@@ -975,7 +975,7 @@ describe("BitStore Core", () => {
       const store = createBitStore({
         initialValues: { price: 10, discount: 0 },
         fields: {
-          price: { transform: (val) => val * 2 },
+          price: { transform: (val: number) => val * 2 },
         },
       });
 

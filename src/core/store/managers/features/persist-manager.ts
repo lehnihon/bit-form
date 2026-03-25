@@ -16,7 +16,7 @@ function getDefaultStorage(): BitPersistStorageAdapter | undefined {
   };
 }
 
-export class BitPersistManager<T extends object = any> {
+export class BitPersistManager<T extends object = Record<string, unknown>> {
   private timer: ReturnType<typeof setTimeout> | undefined;
 
   constructor(

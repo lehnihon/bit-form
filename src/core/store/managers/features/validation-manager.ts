@@ -37,7 +37,7 @@ interface ValidationPipelineContext<
   validationId: number;
   currentState: ReturnType<BitValidationStorePort<T>["getState"]>;
   targetFields?: string[];
-  allErrors: Record<string, any>;
+  allErrors: Record<string, string | undefined>;
   committedErrors: BitErrors<T>;
   isValid: boolean;
   result: boolean;

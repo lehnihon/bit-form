@@ -32,7 +32,7 @@ import type {
 } from "./meta-types";
 
 export interface BitFrameworkConfig<
-  T extends object = any,
+  T extends object = Record<string, unknown>,
 > extends BitConfig<T> {
   initialValues: T;
   resolver?: ValidatorFn<T>;
@@ -49,7 +49,7 @@ export interface BitFrameworkConfig<
   bus?: BitFormGlobal;
 }
 
-export interface BitStoreQueryApi<T extends object = any> {
+export interface BitStoreQueryApi<T extends object = Record<string, unknown>> {
   getConfig(): Readonly<BitFrameworkConfig<T>>;
   getState(): Readonly<BitState<T>>;
 
@@ -64,7 +64,9 @@ export interface BitStoreQueryApi<T extends object = any> {
   getStepErrors(scopeName: string): Record<string, string>;
 }
 
-export interface BitStoreObserveApi<T extends object = any> {
+export interface BitStoreObserveApi<
+  T extends object = Record<string, unknown>,
+> {
   subscribe(listener: () => void): () => void;
   subscribePersistMeta(
     listener: (meta: BitPersistMetadata) => void,
@@ -78,7 +80,7 @@ export interface BitStoreObserveApi<T extends object = any> {
   ): () => void;
 }
 
-export interface BitStoreWriteApi<T extends object = any> {
+export interface BitStoreWriteApi<T extends object = Record<string, unknown>> {
   setField<P extends BitPath<T>>(path: P, value: BitPathValue<T, P>): void;
   blurField<P extends BitPath<T>>(path: P): void;
   setValues(
@@ -112,12 +114,16 @@ export interface BitStorePersistFeatureApi {
   clearPersisted(): Promise<void>;
 }
 
-export interface BitStoreRegistrationFeatureApi<T extends object = any> {
+export interface BitStoreRegistrationFeatureApi<
+  T extends object = Record<string, unknown>,
+> {
   registerField(path: string, config: BitFieldDefinition<T>): void;
   unregisterField(path: string): void;
 }
 
-export interface BitStoreArrayFeatureApi<T extends object = any> {
+export interface BitStoreArrayFeatureApi<
+  T extends object = Record<string, unknown>,
+> {
   pushItem<P extends BitArrayPath<T>>(
     path: P,
     value: BitArrayItem<BitPathValue<T, P>>,
@@ -150,12 +156,16 @@ export interface BitStoreHistoryFeatureApi {
   redo(): void;
 }
 
-export interface BitFormMetaBindingApi<T extends object = any> {
+export interface BitFormMetaBindingApi<
+  T extends object = Record<string, unknown>,
+> {
   getState(): Readonly<BitState<T>>;
   subscribeFormMeta(listener: (meta: BitFormMeta) => void): () => void;
 }
 
-export interface BitStoreSelectorBindingApi<T extends object = any> {
+export interface BitStoreSelectorBindingApi<
+  T extends object = Record<string, unknown>,
+> {
   subscribe(listener: () => void): () => void;
   subscribePath<P extends BitPath<T>>(
     path: P,
@@ -174,7 +184,7 @@ export interface BitStoreSelectorBindingApi<T extends object = any> {
   ): () => void;
 }
 
-export interface BitFieldBindingApi<T extends object = any> {
+export interface BitFieldBindingApi<T extends object = Record<string, unknown>> {
   getFieldState<P extends BitPath<T>>(
     path: P,
   ): Readonly<BitFieldState<T, BitPathValue<T, P>>>;
@@ -189,7 +199,9 @@ export interface BitFieldBindingApi<T extends object = any> {
   unregisterField(path: string): void;
 }
 
-export interface BitFormActionBindingApi<T extends object = any> {
+export interface BitFormActionBindingApi<
+  T extends object = Record<string, unknown>,
+> {
   getState(): Readonly<BitState<T>>;
   setField<P extends BitPath<T>>(path: P, value: BitPathValue<T, P>): void;
   blurField<P extends BitPath<T>>(path: P): void;
@@ -208,18 +220,24 @@ export interface BitFormActionBindingApi<T extends object = any> {
   transaction<TResult>(callback: () => TResult): TResult;
 }
 
-export interface BitFieldRegistrationBindingApi<T extends object = any> {
+export interface BitFieldRegistrationBindingApi<
+  T extends object = Record<string, unknown>,
+> {
   registerField(path: string, config: BitFieldDefinition<T>): void;
   unregisterField(path: string): void;
   unregisterPrefix(prefix: string): void;
   markFieldsTouched(paths: string[]): void;
 }
 
-export interface BitDirtyTrackingBindingApi<T extends object = any> {
+export interface BitDirtyTrackingBindingApi<
+  T extends object = Record<string, unknown>,
+> {
   getDirtyValues(): Partial<T>;
 }
 
-export interface BitArrayMutationBindingApi<T extends object = any> {
+export interface BitArrayMutationBindingApi<
+  T extends object = Record<string, unknown>,
+> {
   getState(): Readonly<BitState<T>>;
   setField<P extends BitPath<T>>(path: P, value: BitPathValue<T, P>): void;
   pushItem<P extends BitArrayPath<T>>(
@@ -250,7 +268,9 @@ export interface BitArrayMutationBindingApi<T extends object = any> {
   createArrayItemId(path: string, index?: number): string;
 }
 
-export interface BitArrayBindingApi<T extends object = any>
+export interface BitArrayBindingApi<
+  T extends object = Record<string, unknown>,
+>
   extends
     BitArrayMutationBindingApi<T>,
     Pick<BitStoreSelectorBindingApi<T>, "subscribePath"> {}
@@ -274,7 +294,7 @@ export interface BitPersistBindingApi {
   ): () => void;
 }
 
-export interface BitScopeBindingApi<T extends object = any> {
+export interface BitScopeBindingApi<T extends object = Record<string, unknown>> {
   hasValidationsInProgress(scopeFields?: string[]): boolean;
   getScopeFields(scopeName: string): string[];
   getScopeStatus(scopeName: string): ScopeStatus;
@@ -285,7 +305,9 @@ export interface BitScopeBindingApi<T extends object = any> {
   ): () => void;
 }
 
-export interface BitFrameworkStoreApi<T extends object = any>
+export interface BitFrameworkStoreApi<
+  T extends object = Record<string, unknown>,
+>
   extends
     BitFieldBindingApi<T>,
     BitFormMetaBindingApi<T>,
@@ -298,7 +320,9 @@ export interface BitFrameworkStoreApi<T extends object = any>
     BitPersistBindingApi,
     BitScopeBindingApi<T> {}
 
-export interface BitStoreFeatureApi<T extends object = any>
+export interface BitStoreFeatureApi<
+  T extends object = Record<string, unknown>,
+>
   extends
     BitStoreLifecycleApi,
     BitStorePersistFeatureApi,
@@ -306,14 +330,14 @@ export interface BitStoreFeatureApi<T extends object = any>
     BitStoreArrayFeatureApi<T>,
     BitStoreHistoryFeatureApi {}
 
-export interface BitStoreApi<T extends object = any>
+export interface BitStoreApi<T extends object = Record<string, unknown>>
   extends
     BitStoreQueryApi<T>,
     BitStoreObserveApi<T>,
     BitStoreWriteApi<T>,
     BitStoreFeatureApi<T> {}
 
-export interface BitStoreHooksApi<T extends object = any>
+export interface BitStoreHooksApi<T extends object = Record<string, unknown>>
   extends
     BitStoreApi<T>,
     BitFieldBindingApi<T>,

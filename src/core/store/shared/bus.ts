@@ -16,7 +16,7 @@ if (!rootGlobal.__BIT_FORM__) {
     stores: {},
     listeners: new Set<BitBusListener>(),
 
-    dispatch(id: string, state: any) {
+    dispatch(id: string, state) {
       this.listeners.forEach((fn: BitBusListener) => fn(id, state));
     },
 

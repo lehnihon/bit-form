@@ -5,7 +5,7 @@ import {
   type BitHistoryPatch,
 } from "../../engines/snapshot-diff-engine";
 
-export class BitHistoryManager<T extends object = any> {
+export class BitHistoryManager<T extends object = Record<string, unknown>> {
   private baseSnapshot: T | null = null;
   private currentSnapshot: T | null = null;
   private patches: BitHistoryPatch<T>[] = [];

@@ -8,7 +8,7 @@ import { getDeepValue, valueEqual } from "../../../utils";
  * Scopes are groups of fields that can be validated and tracked independently,
  * useful for wizard-style forms or multi-section forms.
  */
-export class BitScopeManager<T extends object = any> {
+export class BitScopeManager<T extends object = Record<string, unknown>> {
   constructor(
     private getState: () => BitState<T>,
     private getInitialValues: () => T,

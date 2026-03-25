@@ -18,11 +18,13 @@ function normalizeErrors<T extends object>(errors: BitErrors<T>): BitErrors<T> {
   const normalized: BitErrors<T> = {};
 
   Object.entries(errors).forEach(([path, message]) => {
-    if (message === undefined) {
+    const typedMessage = message as string | undefined;
+
+    if (typedMessage === undefined) {
       return;
     }
 
-    normalized[path as keyof BitErrors<T>] = message as any;
+    normalized[path as keyof BitErrors<T>] = typedMessage;
   });
 
   return normalized;

@@ -8,7 +8,7 @@ import type { BitComputedEntry } from "../managers/core/computed-manager";
 import { BitFieldCatalog } from "./field-catalog";
 import { BitFieldConditions } from "./field-conditions";
 
-export class BitFieldRegistry<T extends object = any> {
+export class BitFieldRegistry<T extends object = Record<string, unknown>> {
   private readonly catalog = new BitFieldCatalog<T>();
   private readonly conditions = new BitFieldConditions<T>((path) =>
     this.catalog.get(path),

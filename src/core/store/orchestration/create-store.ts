@@ -7,7 +7,7 @@ import {
 import { BIT_FRAMEWORK_STORE_SYMBOL } from "./framework-store-brand";
 import { BIT_HOOKS_API_SYMBOL } from "./hook-brand";
 
-const frameworkAdapterCache = new WeakMap<object, BitFrameworkStoreApi<any>>();
+const frameworkAdapterCache = new WeakMap<object, unknown>();
 
 function bindFrameworkAdapter<T extends object>(
   store: BitFrameworkStoreApi<T>,
@@ -137,7 +137,7 @@ export function createFrameworkStoreAdapter<T extends object>(
   );
 }
 
-export function createBitStore<T extends object = any>(
+export function createBitStore<T extends object = Record<string, unknown>>(
   config: BitConfig<T> = {},
 ): BitStoreHooksApi<T> {
   return createInternalBitStore<T>(config) as unknown as BitStoreHooksApi<T>;

@@ -61,7 +61,7 @@ import {
 import { composeBitStoreRuntime } from "./orchestration/store-composition-root";
 import { BitStoreRuntimeKernel } from "./orchestration/store-runtime-kernel";
 
-class BitStore<T extends object = any> {
+class BitStore<T extends object = Record<string, unknown>> {
   public readonly [BIT_HOOKS_API_SYMBOL] = true;
   public readonly [BIT_FRAMEWORK_STORE_SYMBOL] = true;
 
@@ -324,7 +324,7 @@ class BitStore<T extends object = any> {
 
   private setFieldWithMeta(
     path: string,
-    value: any,
+    value: unknown,
     meta: BitFieldChangeMeta = { origin: "setField" },
   ) {
     this.runtime.runBatch(() => {
@@ -520,7 +520,9 @@ class BitStore<T extends object = any> {
   }
 }
 
-export function createInternalBitStore<T extends object = any>(
+export function createInternalBitStore<
+  T extends object = Record<string, unknown>,
+>(
   config: BitConfig<T> = {},
 ) {
   return new BitStore<T>(config);

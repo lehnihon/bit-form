@@ -11,7 +11,7 @@ import {
  * Manages dirty state tracking for form fields.
  * Tracks which fields have been modified from their initial values.
  */
-export class BitDirtyManager<T extends object = any> {
+export class BitDirtyManager<T extends object = Record<string, unknown>> {
   private dirtyPaths: Set<string> = new Set();
   private dirtyPathIndex: Set<string> = new Set();
   private dirtyPrefixRefCount: Map<string, number> = new Map();
@@ -101,7 +101,7 @@ export class BitDirtyManager<T extends object = any> {
   buildDirtyValues<T extends object>(values: T): Partial<T> {
     if (this.dirtyPaths.size === 0) return {};
 
-    let result: any = {};
+    let result: Partial<T> = {};
     const processedArrays = new Set<string>();
 
     for (const path of this.dirtyPaths) {

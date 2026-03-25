@@ -9,7 +9,7 @@ import type {
   BitPluginErrorEvent,
 } from "../../contracts/types";
 
-export class BitPluginManager<T extends object = any> {
+export class BitPluginManager<T extends object = Record<string, unknown>> {
   private teardownFns: Array<() => void> = [];
   private notifyingError = false;
 

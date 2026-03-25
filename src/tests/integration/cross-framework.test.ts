@@ -65,7 +65,7 @@ describe("Cross-Framework Consistency", () => {
   it("should apply transforms consistently before submission", async () => {
     const store = createBitStore({
       initialValues: { count: 10 },
-      fields: { count: { transform: (v) => v * 2 } },
+      fields: { count: { transform: (v: number) => v * 2 } },
     });
 
     let result: any;
