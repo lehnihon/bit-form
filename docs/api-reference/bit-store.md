@@ -496,7 +496,7 @@ Framework adapters (React/Vue/Angular) are typed against `BitFrameworkStoreApi<T
 
 ## Multi‑Step Flows & Scopes
 
-### `getStepStatus(scopeName: string): { hasErrors: boolean; isDirty: boolean }`
+### `getStepStatus(scopeName: string): { hasErrors: boolean; isDirty: boolean; errors: Record<string, string> }`
 
 Returns a summary of the state of a scope (typically a wizard step) based on fields mapped with `scope`.
 
@@ -522,7 +522,7 @@ if (store.isFieldDirty("address.zip")) {
 
 ## Submission Lifecycle
 
-### `submit(onSuccess: (values: T, dirtyValues?: Partial<T>) => void | Promise<void>): Promise<void>`
+### `submit(onSuccess: (values: T, dirtyValues?: Partial<T>) => void | Promise<void>): Promise<BitSubmitResult>`
 
 Runs the full submission lifecycle through the internal `BitLifecycleManager`:
 
@@ -554,6 +554,13 @@ const onSubmit = store.submit(async (values) => {
 ```
 
 In frameworks, the `useBitForm` hook wraps this to automatically prevent the default submit event.
+
+The returned result follows:
+
+- `{"status":"submitted"}`
+- `{"status":"invalid"}`
+- `{"status":"failed","error": unknown}`
+- `{"status":"blocked","reason":"isSubmitting"|"validating"}`
 
 ---
 

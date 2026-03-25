@@ -1,4 +1,4 @@
-import type { BitHistoryMetadata } from "../contracts/public-types";
+import type { BitHistoryMetadata } from "../contracts/public/meta-types";
 import type { BitStoreOperation } from "../engines/operation-engine";
 import type { BitStoreEffectEngine } from "../engines/effect-engine";
 import {

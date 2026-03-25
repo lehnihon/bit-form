@@ -1,5 +1,5 @@
 import type { BitConfig, BitPersistResolvedConfig } from "../contracts/types";
-import type { BitFrameworkConfig } from "../contracts/public-types";
+import type { BitFrameworkConfig } from "../contracts/public/store-api-types";
 import { deepClone } from "../../utils";
 
 function defaultIdFactory() {

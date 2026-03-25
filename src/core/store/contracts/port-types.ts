@@ -10,7 +10,8 @@ import type {
   BitTransformFn,
 } from "./types";
 import type { BitStoreOperation } from "../engines/operation-engine";
-import type { BitFrameworkConfig, BitValidationOptions } from "./public-types";
+import type { BitFrameworkConfig } from "./public/store-api-types";
+import type { BitValidationOptions } from "./public/meta-types";
 
 export interface BitDependencyUpdateDiff {
   affectedFields: string[];

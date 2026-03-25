@@ -12,7 +12,7 @@ import {
 import type { BitStoreCapabilities } from "./capabilities";
 import type { BitStoreOperation } from "../engines/operation-engine";
 import type { BitValidationTriggerOptions } from "../contracts/port-types";
-import type { BitFrameworkConfig } from "../contracts/public-types";
+import type { BitFrameworkConfig } from "../contracts/public/store-api-types";
 import type {
   BitConfig,
   BitFieldChangeMeta,

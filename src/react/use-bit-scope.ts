@@ -7,12 +7,11 @@ export type { ScopeStatus, ValidateScopeResult };
 
 export function useBitScope(scopeName: string) {
   const store = useBitStore();
-  const scopeFields = store.getScopeFields(scopeName);
 
   const lastStatus = useRef<ScopeStatus | null>(null);
 
   const getStatusSnapshot = useCallback(() => {
-    const nextStatus = store.getScopeStatus(scopeName);
+    const nextStatus = store.getStepStatus(scopeName);
 
     if (
       lastStatus.current &&

@@ -16,14 +16,16 @@ import {
   DeepPartial,
   ScopeStatus,
 } from "./contracts/types";
+import type { BitFrameworkConfig } from "./contracts/public/store-api-types";
 import type {
   BitFormMeta,
-  BitFrameworkConfig,
   BitHistoryMetadata,
+  BitValidationOptions,
+} from "./contracts/public/meta-types";
+import type {
   BitSelector,
   BitSelectorSubscriptionOptions,
-  BitValidationOptions,
-} from "./contracts/public-types";
+} from "./contracts/public/subscription-types";
 import type { BitValidationTriggerOptions } from "./contracts/port-types";
 import {
   createFieldStateSnapshot,
@@ -244,9 +246,10 @@ class BitStore<T extends object = Record<string, unknown>> {
   ): () => void {
     return subscribeStoreScopeStatus({
       scopeName,
-      readScopeStatus: (targetScopeName) =>
-        this.getScopeStatus(targetScopeName),
-      subscribe: (statusListener) => this.subscribe(statusListener),
+      readScopeStatus: (targetScopeName) => this.getStepStatus(targetScopeName),
+      getScopeFields: (targetScopeName) => this.getScopeFields(targetScopeName),
+      subscribeSelector: (selector, statusListener, options) =>
+        this.subscribeSelector(selector, statusListener, options),
       listener,
     });
   }
@@ -507,7 +510,7 @@ class BitStore<T extends object = Record<string, unknown>> {
     this.runtime.capabilities.validation.trigger(scopeFields, options);
   }
 
-  getScopeStatus(scopeName: string) {
+  getStepStatus(scopeName: string) {
     return this.runtime.capabilities.scope.getScopeStatus(scopeName);
   }
 
