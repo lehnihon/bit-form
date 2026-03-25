@@ -30,6 +30,14 @@ import type {
   BitHistoryMetadata,
   BitFormMeta,
 } from "./meta-types";
+import type { BitValidationTriggerOptions } from "../port-types";
+
+export interface BitStoreIdentityApi<
+  T extends object = Record<string, unknown>,
+> {
+  readonly storeId: string;
+  readonly config: Readonly<BitFrameworkConfig<T>>;
+}
 
 export interface BitFrameworkConfig<
   T extends object = Record<string, unknown>,
@@ -52,6 +60,10 @@ export interface BitFrameworkConfig<
 export interface BitFormReadApi<T extends object = Record<string, unknown>> {
   getConfig(): Readonly<BitFrameworkConfig<T>>;
   getState(): Readonly<BitState<T>>;
+  getFieldConfig(path: string): BitFieldDefinition<T> | undefined;
+  getFieldState<P extends BitPath<T>>(
+    path: P,
+  ): Readonly<BitFieldState<T, BitPathValue<T, P>>>;
 
   isHidden<P extends BitPath<T>>(path: P): boolean;
   isRequired<P extends BitPath<T>>(path: P): boolean;
@@ -81,6 +93,7 @@ export interface BitFormObserveApi<T extends object = Record<string, unknown>> {
 export interface BitFormWriteApi<T extends object = Record<string, unknown>> {
   setField<P extends BitPath<T>>(path: P, value: BitPathValue<T, P>): void;
   blurField<P extends BitPath<T>>(path: P): void;
+  markFieldsTouched(paths: string[]): void;
   setValues(
     values: T | DeepPartial<T>,
     options?: { partial?: boolean; rebase?: boolean },
@@ -91,6 +104,10 @@ export interface BitFormWriteApi<T extends object = Record<string, unknown>> {
   setServerErrors(serverErrors: Record<string, string[] | string>): void;
 
   validate(options?: BitValidationOptions): Promise<boolean>;
+  triggerValidation(
+    scopeFields?: string[],
+    options?: BitValidationTriggerOptions,
+  ): void;
 
   reset(): void;
 
@@ -117,6 +134,7 @@ export interface BitStoreRegistrationFeatureApi<
 > {
   registerField(path: string, config: BitFieldDefinition<T>): void;
   unregisterField(path: string): void;
+  unregisterPrefix(prefix: string): void;
 }
 
 export interface BitStoreArrayFeatureApi<
@@ -150,8 +168,16 @@ export interface BitStoreArrayFeatureApi<
 }
 
 export interface BitStoreHistoryFeatureApi {
+  readonly canUndo: boolean;
+  readonly canRedo: boolean;
   undo(): void;
   redo(): void;
+}
+
+export interface BitStoreStateFlagsApi {
+  readonly isValid: boolean;
+  readonly isSubmitting: boolean;
+  readonly isDirty: boolean;
 }
 
 export interface BitFormMetaBindingApi<
@@ -332,6 +358,8 @@ export interface BitStoreCapabilityApi<
   T extends object = Record<string, unknown>,
 >
   extends
+    BitStoreIdentityApi<T>,
+    BitStoreStateFlagsApi,
     BitFormReadApi<T>,
     BitFormObserveApi<T>,
     BitFormWriteApi<T>,
