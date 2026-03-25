@@ -134,4 +134,25 @@ describe("architecture boundaries", () => {
     expect(rootEntry).not.toMatch(/BitArrayBindingApi/);
     expect(rootEntry).not.toMatch(/BitStoreQueryApi/);
   });
+
+  it("testes de contrato (core/contract/) não devem importar internals de core/store", () => {
+    const contractDir = path.join(SRC_ROOT, "tests", "core", "contract");
+
+    if (!fs.existsSync(contractDir)) return;
+
+    const sourceFiles = walkTsFiles(contractDir).filter((f) =>
+      /\.test\.ts$/.test(f),
+    );
+
+    const forbiddenImportPattern = /from\s+["'][^"']*core\/store\//g;
+
+    const violations = sourceFiles.flatMap((filePath) => {
+      const source = fs.readFileSync(filePath, "utf8");
+      const hasViolation = forbiddenImportPattern.test(source);
+
+      return hasViolation ? [path.relative(SRC_ROOT, filePath)] : [];
+    });
+
+    expect(violations).toEqual([]);
+  });
 });
