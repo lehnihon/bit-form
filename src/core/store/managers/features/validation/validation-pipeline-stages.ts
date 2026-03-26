@@ -146,7 +146,9 @@ export async function commitValidationStage<T extends object>(args: {
 }) {
   const { ctx, deps } = args;
 
-  deps.store.dispatch(validationCommitOperation(ctx.committedErrors, ctx.isValid));
+  deps.store.dispatch(
+    validationCommitOperation(ctx.committedErrors, ctx.isValid),
+  );
 
   await deps.store.emitAfterValidate({
     values: deps.store.getState().values,

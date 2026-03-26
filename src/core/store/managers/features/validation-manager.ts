@@ -5,12 +5,8 @@ import {
   validationCommitOperation,
 } from "../../engines/operation-engine";
 import { hasAnyError } from "../../shared/error-map";
-import {
-  runImmediateAsyncValidationStage,
-} from "./validation/validation-stages";
-import {
-  BitAsyncValidationScheduler,
-} from "./validation/async-validation-scheduler";
+import { runImmediateAsyncValidationStage } from "./validation/validation-stages";
+import { BitAsyncValidationScheduler } from "./validation/async-validation-scheduler";
 import { BitValidationDebouncer } from "./validation/validation-debouncer";
 import type {
   BitValidationStorePort,
@@ -96,7 +92,8 @@ export class BitValidationManager<T extends object> {
       },
       {
         name: "validate:before-hooks",
-        run: async (ctx) => runBeforeValidateHooksStage({ ctx, deps: stageDeps }),
+        run: async (ctx) =>
+          runBeforeValidateHooksStage({ ctx, deps: stageDeps }),
       },
       {
         name: "validate:sync-track",
@@ -304,5 +301,4 @@ export class BitValidationManager<T extends object> {
       },
     });
   }
-
 }

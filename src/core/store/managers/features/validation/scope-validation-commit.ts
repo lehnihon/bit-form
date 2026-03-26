@@ -36,5 +36,7 @@ export async function commitSynchronousScopeValidation<T extends object>(args: {
     }
   });
 
-  store.dispatch(validationCommitOperation(scopedErrors, !hasAnyError(scopedErrors)));
+  store.dispatch(
+    validationCommitOperation(scopedErrors, !hasAnyError(scopedErrors)),
+  );
 }
