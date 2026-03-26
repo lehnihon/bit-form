@@ -69,7 +69,7 @@ export function flushStoreBatchState<T extends object>(args: {
   currentState: BitState<T>;
   batchState: BitStoreBatchState<T>;
   applyComputedValues: (values: T, changedPaths?: readonly string[]) => T;
-  applyPostBatchValues?: (values: T) => T;
+  applyPostBatchValues?: (values: T, changedPaths?: readonly string[]) => T;
 }): BitStoreBatchFlushResult<T> | null {
   const {
     currentState,
@@ -95,7 +95,10 @@ export function flushStoreBatchState<T extends object>(args: {
     };
 
     if (applyPostBatchValues) {
-      const postBatchValues = applyPostBatchValues(nextState.values);
+      const postBatchValues = applyPostBatchValues(
+        nextState.values,
+        changedPaths ? [...changedPaths] : undefined,
+      );
       if (postBatchValues !== nextState.values) {
         const mergedChangedPaths = changedPaths ?? new Set<string>();
         mergedChangedPaths.add("*");

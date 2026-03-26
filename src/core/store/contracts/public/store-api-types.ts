@@ -246,6 +246,34 @@ export interface BitFormActionBindingApi<
   transaction<TResult>(callback: () => TResult): TResult;
 }
 
+export interface BitFormControllerStoreApi<
+  T extends object = Record<string, unknown>,
+> {
+  getState(): Readonly<BitState<T>>;
+  getDirtyValues(): Partial<T>;
+  submit(
+    onSuccess: (values: T, dirtyValues?: Partial<T>) => void | Promise<void>,
+  ): Promise<BitSubmitResult>;
+  reset(): void;
+  setServerErrors(serverErrors: Record<string, string[] | string>): void;
+}
+
+export interface BitFrameworkFormBindingApi<
+  T extends object = Record<string, unknown>,
+>
+  extends
+    BitFormControllerStoreApi<T>,
+    Pick<
+      BitFormActionBindingApi<T>,
+      | "setField"
+      | "blurField"
+      | "setValues"
+      | "setError"
+      | "setErrors"
+      | "validate"
+      | "transaction"
+    > {}
+
 export interface BitFieldRegistrationBindingApi<
   T extends object = Record<string, unknown>,
 > {
@@ -354,6 +382,33 @@ export interface BitStoreFeatureApi<T extends object = Record<string, unknown>>
     BitStoreArrayFeatureApi<T>,
     BitStoreHistoryFeatureApi {}
 
+export interface BitStoreReadSliceApi<
+  T extends object = Record<string, unknown>,
+>
+  extends BitStoreIdentityApi<T>, BitStoreStateFlagsApi, BitFormReadApi<T> {}
+
+export interface BitStoreObserveSliceApi<
+  T extends object = Record<string, unknown>,
+>
+  extends
+    BitFormObserveApi<T>,
+    BitFormMetaBindingApi<T>,
+    BitStoreSelectorBindingApi<T>,
+    Pick<BitFieldBindingApi<T>, "subscribeFieldState"> {}
+
+export interface BitStoreWriteSliceApi<
+  T extends object = Record<string, unknown>,
+> extends BitFormWriteApi<T> {}
+
+export interface BitStoreSlicesApi<T extends object = Record<string, unknown>> {
+  readonly slices: {
+    read: BitStoreReadSliceApi<T>;
+    observe: BitStoreObserveSliceApi<T>;
+    write: BitStoreWriteSliceApi<T>;
+    feature: BitStoreFeatureApi<T>;
+  };
+}
+
 export interface BitStoreCapabilityApi<
   T extends object = Record<string, unknown>,
 >
@@ -365,9 +420,8 @@ export interface BitStoreCapabilityApi<
     BitFormWriteApi<T>,
     BitStoreFeatureApi<T> {}
 
-export interface BitStoreApi<
-  T extends object = Record<string, unknown>,
-> extends BitStoreCapabilityApi<T> {}
+export interface BitStoreApi<T extends object = Record<string, unknown>>
+  extends BitStoreCapabilityApi<T>, BitStoreSlicesApi<T> {}
 
 export interface BitStoreHooksApi<T extends object = Record<string, unknown>>
   extends

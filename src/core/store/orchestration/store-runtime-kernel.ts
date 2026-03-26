@@ -23,7 +23,7 @@ export interface BitStoreRuntimeKernelArgs<T extends object> {
   effects: BitStoreEffectEngine<T>;
   capabilities: BitStoreCapabilities<T>;
   computedManager: BitComputedManager<T>;
-  applyPostBatchValues?: (values: T) => T;
+  applyPostBatchValues?: (values: T, changedPaths?: readonly string[]) => T;
 }
 
 export class BitStoreRuntimeKernel<T extends object> {

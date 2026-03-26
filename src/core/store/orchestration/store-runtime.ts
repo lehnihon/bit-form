@@ -21,13 +21,13 @@ import type {
   BitPathValue,
   BitState,
   DeepPartial,
-  BitNormalizeFn,
   BitTransformFn,
 } from "../contracts/types";
 import type { BitFieldRegistry } from "../registry/field-registry";
 import type { BitComputedManager } from "../managers/core/computed-manager";
 import type { BitDirtyManager } from "../managers/core/dirty-manager";
 import type { BitBaselineManager } from "../managers/core/baseline-manager";
+import type { BitNormalizerEntry } from "../registry/field-catalog";
 
 export interface BitStoreRuntimeMembers<T extends object> {
   state: BitState<T>;
@@ -46,7 +46,7 @@ export interface BitStoreRuntimeStateAccess<T extends object> {
 export interface BitStoreRuntimeFieldAccess<T extends object> {
   getFieldConfig(path: string): BitFieldDefinition<T> | undefined;
   getScopeFields(scopeName: string): string[];
-  getNormalizerEntries(): [string, BitNormalizeFn<T>][];
+  getNormalizerEntries(): BitNormalizerEntry<T>[];
   getTransformEntries(): [string, BitTransformFn<T>][];
 }
 

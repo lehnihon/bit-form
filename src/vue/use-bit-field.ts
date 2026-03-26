@@ -6,7 +6,6 @@ import {
   cleanupRegisteredField,
   createFrameworkMaskedFieldBinding,
   deriveFieldMeta,
-  subscribeFieldState,
 } from "../core";
 
 export function useBitField<
@@ -19,7 +18,7 @@ export function useBitField<
 
   const state = shallowRef(store.getFieldState(path));
 
-  const unsubscribe = subscribeFieldState(store, path, (nextState) => {
+  const unsubscribe = store.subscribeFieldState(path, (nextState) => {
     state.value = nextState;
   });
 

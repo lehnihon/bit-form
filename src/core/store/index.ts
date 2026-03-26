@@ -4,6 +4,7 @@ import type {
   BitArrayPath,
   BitConfig,
   BitErrors,
+  BitFieldChangeMeta,
   BitFieldDefinition,
   BitFieldState,
   BitPath,
@@ -13,7 +14,14 @@ import type {
   DeepPartial,
   ScopeStatus,
 } from "./contracts/types";
-import type { BitFrameworkConfig } from "./contracts/public/store-api-types";
+import type {
+  BitFrameworkConfig,
+  BitStoreFeatureApi,
+  BitStoreObserveSliceApi,
+  BitStoreReadSliceApi,
+  BitStoreSlicesApi,
+  BitStoreWriteSliceApi,
+} from "./contracts/public/store-api-types";
 import type {
   BitFormMeta,
   BitHistoryMetadata,
@@ -27,12 +35,39 @@ import type { BitValidationTriggerOptions } from "./contracts/port-types";
 import { BIT_FRAMEWORK_STORE_SYMBOL } from "./orchestration/framework-store-brand";
 import { BIT_HOOKS_API_SYMBOL } from "./orchestration/hook-brand";
 import { composeBitStoreRuntime } from "./orchestration/store-composition-root";
-import { BitStoreRuntimeKernel } from "./orchestration/store-runtime-kernel";
-import { BitStoreReadFacade } from "./facades/store-read-facade";
-import { BitStoreObserveFacade } from "./facades/store-observe-facade";
-import { BitStoreWriteFacade } from "./facades/store-write-facade";
-import { BitStoreRegisterFacade } from "./facades/store-register-facade";
-import { BitStoreFeatureFacade } from "./facades/store-feature-facade";
+import type { BitStoreRuntimeKernel } from "./orchestration/store-runtime-kernel";
+import type { BitFieldRegistry } from "./registry/field-registry";
+import type { BitMaskManager } from "./managers/features/mask-manager";
+import type { BitDirtyManager } from "./managers/core/dirty-manager";
+import { getDeepValue } from "../utils";
+import { touchFieldsOperation } from "./engines/operation-engine";
+import {
+  createFieldStateSnapshot,
+  resolveFieldMask,
+} from "./engines/store-field-query-engine";
+import {
+  clearPersistedFeature,
+  forceSavePersistedFeature,
+  readHistoryFeatureMetadata,
+  restorePersistedFeature,
+  runRedoFeature,
+  runUndoFeature,
+} from "./orchestration/store-feature-ops";
+import {
+  registerStoreField,
+  unregisterStoreField,
+  unregisterStorePrefix,
+} from "./orchestration/store-registration-ops";
+import {
+  subscribeStoreFieldState,
+  subscribeStoreFormMeta,
+  subscribeStoreHistoryMeta,
+  subscribeStorePath,
+  subscribeStorePersistMeta,
+  subscribeStoreScopeStatus,
+  subscribeStoreSelector,
+  subscribeStoreTracked,
+} from "./orchestration/store-observe-ops";
 
 class BitStore<T extends object = Record<string, unknown>> {
   public readonly [BIT_HOOKS_API_SYMBOL] = true;
@@ -42,12 +77,11 @@ class BitStore<T extends object = Record<string, unknown>> {
 
   private readonly runtime: BitStoreRuntimeKernel<T>;
   private readonly _config: BitFrameworkConfig<T>;
+  private readonly fieldRegistry: BitFieldRegistry<T>;
+  private readonly maskManager: BitMaskManager;
+  private readonly dirtyManager: BitDirtyManager<T>;
 
-  private readonly read: BitStoreReadFacade<T>;
-  private readonly observe: BitStoreObserveFacade<T>;
-  private readonly write: BitStoreWriteFacade<T>;
-  private readonly register: BitStoreRegisterFacade<T>;
-  private readonly feature: BitStoreFeatureFacade<T>;
+  public readonly slices: BitStoreSlicesApi<T>["slices"];
 
   constructor(config: BitConfig<T> = {}) {
     const composition = composeBitStoreRuntime<T>({
@@ -58,35 +92,114 @@ class BitStore<T extends object = Record<string, unknown>> {
     this._config = composition.config;
     this.storeId = composition.storeId;
     this.runtime = composition.runtime;
+    this.fieldRegistry = composition.fieldRegistry;
+    this.maskManager = composition.maskManager;
+    this.dirtyManager = composition.dirtyManager;
 
-    const fieldRegistry = composition.fieldRegistry;
-    const maskManager = composition.maskManager;
-    const dirtyManager = composition.dirtyManager;
+    this.slices = this.buildSlicesApi();
+  }
 
-    this.read = new BitStoreReadFacade(
-      this.runtime,
-      fieldRegistry,
-      maskManager,
-      dirtyManager,
-      this._config,
-    );
+  private buildSlicesApi(): BitStoreSlicesApi<T>["slices"] {
+    const thisRef = this;
 
-    this.observe = new BitStoreObserveFacade(
-      this.runtime,
-      fieldRegistry,
-      (path) => this.getFieldState(path),
-      (scopeName) => this.getScopeStatus(scopeName),
-      (scopeName) => this.getScopeFields(scopeName),
-      () => this.getHistoryMetadata(),
-    );
+    const read: BitStoreReadSliceApi<T> = {
+      get storeId() {
+        return thisRef.storeId;
+      },
+      get config() {
+        return thisRef.config;
+      },
+      get isValid() {
+        return thisRef.isValid;
+      },
+      get isSubmitting() {
+        return thisRef.isSubmitting;
+      },
+      get isDirty() {
+        return thisRef.isDirty;
+      },
+      getConfig: () => this.getConfig(),
+      getState: () => this.getState(),
+      getFieldConfig: (path) => this.getFieldConfig(path),
+      getFieldState: (path) => this.getFieldState(path),
+      isHidden: (path) => this.isHidden(path),
+      isRequired: (path) => this.isRequired(path),
+      isFieldDirty: (path) => this.isFieldDirty(path),
+      isFieldValidating: (path) => this.isFieldValidating(path),
+      getDirtyValues: () => this.getDirtyValues(),
+      getPersistMetadata: () => this.getPersistMetadata(),
+      getHistoryMetadata: () => this.getHistoryMetadata(),
+      getScopeStatus: (scopeName) => this.getScopeStatus(scopeName),
+      getScopeErrors: (scopeName) => this.getScopeErrors(scopeName),
+    };
 
-    this.write = new BitStoreWriteFacade(this.runtime);
-    this.register = new BitStoreRegisterFacade(
-      this.runtime,
-      fieldRegistry,
-      this._config,
-    );
-    this.feature = new BitStoreFeatureFacade(this.runtime);
+    const observe: BitStoreObserveSliceApi<T> = {
+      getState: () => this.getState(),
+      subscribe: (listener) => this.subscribe(listener),
+      subscribePersistMeta: (listener) => this.subscribePersistMeta(listener),
+      subscribeHistoryMeta: (listener) => this.subscribeHistoryMeta(listener),
+      subscribeScopeStatus: (scopeName, listener) =>
+        this.subscribeScopeStatus(scopeName, listener),
+      subscribeFormMeta: (listener) => this.subscribeFormMeta(listener),
+      subscribeSelector: (selector, listener, options) =>
+        this.subscribeSelector(selector, listener, options),
+      subscribeTracked: (selector, listener, options) =>
+        this.subscribeTracked(selector, listener, options),
+      subscribePath: (path, listener, options) =>
+        this.subscribePath(path, listener, options),
+      subscribeFieldState: (path, listener) =>
+        this.subscribeFieldState(path, listener),
+    };
+
+    const write: BitStoreWriteSliceApi<T> = {
+      setField: (path, value) => this.setField(path, value),
+      blurField: (path) => this.blurField(path),
+      markFieldsTouched: (paths) => this.markFieldsTouched(paths),
+      setValues: (values, options) => this.setValues(values, options),
+      setError: (path, message) => this.setError(path, message),
+      setErrors: (errors) => this.setErrors(errors),
+      setServerErrors: (serverErrors) => this.setServerErrors(serverErrors),
+      validate: (options) => this.validate(options),
+      triggerValidation: (scopeFields, options) =>
+        this.triggerValidation(scopeFields, options),
+      reset: () => this.reset(),
+      transaction: (callback) => this.transaction(callback),
+      submit: (onSuccess) => this.submit(onSuccess),
+    };
+
+    const feature: BitStoreFeatureApi<T> = {
+      cleanup: () => this.cleanup(),
+      getPersistMetadata: () => this.getPersistMetadata(),
+      restorePersisted: () => this.restorePersisted(),
+      forceSave: () => this.forceSave(),
+      clearPersisted: () => this.clearPersisted(),
+      registerField: (path, config) => this.registerField(path, config),
+      unregisterField: (path) => this.unregisterField(path),
+      unregisterPrefix: (prefix) => this.unregisterPrefix(prefix),
+      pushItem: (path, value) => this.pushItem(path, value),
+      prependItem: (path, value) => this.prependItem(path, value),
+      insertItem: (path, index, value) => this.insertItem(path, index, value),
+      removeItem: (path, index) => this.removeItem(path, index),
+      moveItem: (path, from, to) => this.moveItem(path, from, to),
+      swapItems: (path, indexA, indexB) => this.swapItems(path, indexA, indexB),
+      replaceItems: (path, items) => this.replaceItems(path, items),
+      clearItems: (path) => this.clearItems(path),
+      get canUndo() {
+        return thisRef.canUndo;
+      },
+      get canRedo() {
+        return thisRef.canRedo;
+      },
+      undo: () => this.undo(),
+      redo: () => this.redo(),
+    };
+
+    return {
+      read,
+      observe,
+      write,
+      feature,
+    };
   }
 
   // ── Config ───────────────────────────────────────────────────────────────
@@ -96,122 +209,186 @@ class BitStore<T extends object = Record<string, unknown>> {
   }
 
   getConfig() {
-    return this.read.getConfig();
+    return this._config;
   }
 
   getFieldConfig(path: string): BitFieldDefinition<T> | undefined {
-    return this.read.getFieldConfig(path);
+    return this.fieldRegistry.getFieldConfig(path);
   }
 
   getScopeFields(scopeName: string): string[] {
-    return this.read.getScopeFields(scopeName);
+    return this.fieldRegistry.getScopeFields(scopeName);
   }
 
   resolveMask(path: string): BitMask | undefined {
-    return this.read.resolveMask(path);
+    return resolveFieldMask<T>({
+      path,
+      getFieldConfig: (fieldPath) => this.getFieldConfig(fieldPath),
+      masks: this.maskManager.getAllMasks(),
+    });
   }
 
   createArrayItemId(path: string, index?: number): string {
-    return this.read.createArrayItemId(path, index);
+    return this._config.idFactory({ scope: "array", path, index });
   }
 
   // ── State Read ───────────────────────────────────────────────────────────
 
   getState() {
-    return this.read.getState();
+    return this.runtime.getState();
   }
 
   getFieldState<P extends BitPath<T>>(
     path: P,
   ): BitFieldState<T, BitPathValue<T, P>> {
-    return this.read.getFieldState(path);
+    const effectiveState = this.getState();
+    const value = getDeepValue(
+      effectiveState.values,
+      path as string,
+    ) as BitPathValue<T, P>;
+
+    return createFieldStateSnapshot({
+      state: effectiveState,
+      path,
+      value,
+      isHidden: this.isHidden(path),
+      isRequired: this.isRequired(path),
+      isDirty: this.isFieldDirty(path as string),
+      isValidating: this.isFieldValidating(path as string),
+    });
   }
 
   get isValid(): boolean {
-    return this.read.isValid;
+    return this.getState().isValid;
   }
 
   get isSubmitting(): boolean {
-    return this.read.isSubmitting;
+    return this.getState().isSubmitting;
   }
 
   get isDirty(): boolean {
-    return this.read.isDirty;
+    return this.getState().isDirty;
   }
 
   isHidden<P extends BitPath<T>>(path: P): boolean {
-    return this.read.isHidden(path);
+    return this.runtime.capabilities.query.isHidden(path);
   }
 
   isRequired<P extends BitPath<T>>(path: P): boolean {
-    return this.read.isRequired(path);
+    return this.runtime.capabilities.query.isRequired(path);
   }
 
   isFieldDirty(path: string): boolean {
-    return this.read.isFieldDirty(path);
+    return this.runtime.capabilities.query.isFieldDirty(path);
   }
 
   isFieldValidating(path: string): boolean {
-    return this.read.isFieldValidating(path);
+    return this.runtime.capabilities.query.isFieldValidating(path);
   }
 
   getDirtyValues(): Partial<T> {
-    return this.read.getDirtyValues();
+    return this.dirtyManager.buildDirtyValues(this.getState().values);
   }
 
   getPersistMetadata(): BitPersistMetadata {
-    return this.read.getPersistMetadata();
+    return this.getState().persist;
   }
 
   getHistoryMetadata(): BitHistoryMetadata {
-    return this.read.getHistoryMetadata();
+    return readHistoryFeatureMetadata({
+      history: this.runtime.capabilities.history,
+    });
   }
 
   getScopeStatus(scopeName: string): ScopeStatus {
-    return this.read.getScopeStatus(scopeName);
+    return this.runtime.capabilities.scope.getScopeStatus(scopeName);
   }
 
   getScopeErrors(scopeName: string): Record<string, string> {
-    return this.read.getScopeErrors(scopeName);
+    return this.runtime.capabilities.scope.getScopeErrors(scopeName);
   }
 
   // ── Registration ─────────────────────────────────────────────────────────
 
   registerField(path: string, config: BitFieldDefinition<T>): void {
-    this.register.registerField(path, config);
+    registerStoreField({
+      path,
+      config,
+      state: this.runtime.getState(),
+      fieldRegistry: this.fieldRegistry,
+      subscriptions: this.runtime.subscriptions,
+      invalidateFieldIndexes: () => {
+        this.fieldRegistry.invalidateIndexes();
+      },
+    });
   }
 
   unregisterField(path: string): void {
-    this.register.unregisterField(path);
+    unregisterStoreField({
+      path,
+      state: this.runtime.getState(),
+      hasStaticConfig: !!this._config.fields?.[path as string],
+      fieldRegistry: this.fieldRegistry,
+      subscriptions: this.runtime.subscriptions,
+      validationCleanupField: (fieldPath) =>
+        this.runtime.capabilities.validation.cleanupField(fieldPath),
+      invalidateFieldIndexes: () => {
+        this.fieldRegistry.invalidateIndexes();
+      },
+      dispatch: (operation) => this.runtime.dispatch(operation),
+    });
   }
 
   unregisterPrefix(prefix: string): void {
-    this.register.unregisterPrefix(prefix);
+    unregisterStorePrefix({
+      prefix,
+      state: this.runtime.getState(),
+      fieldRegistry: this.fieldRegistry,
+      subscriptions: this.runtime.subscriptions,
+      validationCleanupPrefix: (fieldPrefix) =>
+        this.runtime.capabilities.validation.cleanupPrefix(fieldPrefix),
+      invalidateFieldIndexes: () => {
+        this.fieldRegistry.invalidateIndexes();
+      },
+    });
   }
 
   // ── Subscriptions ────────────────────────────────────────────────────────
 
   subscribe(listener: () => void): () => void {
-    return this.observe.subscribe(listener);
+    return this.runtime.subscriptions.subscribe(listener);
   }
 
   subscribePersistMeta(
     listener: (meta: BitPersistMetadata) => void,
   ): () => void {
-    return this.observe.subscribePersistMeta(listener);
+    return subscribeStorePersistMeta({
+      listener,
+      subscribeSelector: (selector, persistListener, options) =>
+        this.subscribeSelector(selector, persistListener, options),
+    });
   }
 
   subscribeHistoryMeta(
     listener: (meta: BitHistoryMetadata) => void,
   ): () => void {
-    return this.observe.subscribeHistoryMeta(listener);
+    return subscribeStoreHistoryMeta({
+      readHistoryMeta: () => this.getHistoryMetadata(),
+      subscribe: (historyListener) => this.subscribe(historyListener),
+      listener,
+    });
   }
 
   subscribeScopeStatus(
     scopeName: string,
     listener: (status: ScopeStatus) => void,
   ): () => void {
-    return this.observe.subscribeScopeStatus(scopeName, listener);
+    return subscribeStoreScopeStatus({
+      scopeName,
+      readScopeStatus: (name) => this.getScopeStatus(name),
+      subscribe: (scopeListener) => this.subscribe(scopeListener),
+      listener,
+    });
   }
 
   subscribeSelector<TSlice>(
@@ -219,7 +396,12 @@ class BitStore<T extends object = Record<string, unknown>> {
     listener: (slice: TSlice) => void,
     options?: BitSelectorSubscriptionOptions<TSlice>,
   ): () => void {
-    return this.observe.subscribeSelector(selector, listener, options);
+    return subscribeStoreSelector({
+      subscriptions: this.runtime.subscriptions,
+      selector,
+      listener,
+      options,
+    });
   }
 
   subscribeTracked<TSlice>(
@@ -227,7 +409,18 @@ class BitStore<T extends object = Record<string, unknown>> {
     listener: (slice: TSlice) => void,
     options?: Omit<BitSelectorSubscriptionOptions<TSlice>, "paths">,
   ): () => void {
-    return this.observe.subscribeTracked(selector, listener, options);
+    return subscribeStoreTracked({
+      getState: () => this.getState(),
+      subscribeSelector: (trackedSelector, trackedListener, trackedOptions) =>
+        this.subscribeSelector(
+          trackedSelector,
+          trackedListener,
+          trackedOptions,
+        ),
+      selector,
+      listener,
+      options,
+    });
   }
 
   subscribePath<P extends BitPath<T>>(
@@ -235,65 +428,102 @@ class BitStore<T extends object = Record<string, unknown>> {
     listener: (value: BitPathValue<T, P>) => void,
     options?: BitSelectorSubscriptionOptions<BitPathValue<T, P>>,
   ): () => void {
-    return this.observe.subscribePath(path, listener, options);
+    return subscribeStorePath({
+      path,
+      listener,
+      options,
+      subscribeSelector: (selector, pathListener, selectorOptions) =>
+        this.subscribeSelector(selector, pathListener, selectorOptions),
+    });
   }
 
   subscribeFieldState<P extends BitPath<T>>(
     path: P,
     listener: (state: Readonly<BitFieldState<T, BitPathValue<T, P>>>) => void,
   ): () => void {
-    return this.observe.subscribeFieldState(path, listener);
+    return subscribeStoreFieldState({
+      path,
+      listener,
+      getFieldState: (fieldPath) => this.getFieldState(fieldPath),
+      subscribeSelector: (selector, fieldListener, options) =>
+        this.subscribeSelector(selector, fieldListener, options),
+    });
   }
 
   subscribeFormMeta(listener: (meta: BitFormMeta) => void): () => void {
-    return this.observe.subscribeFormMeta(listener);
+    return subscribeStoreFormMeta({
+      listener,
+      subscribeSelector: (selector, metaListener, options) =>
+        this.subscribeSelector(selector, metaListener, options),
+    });
   }
 
   // ── Mutations ────────────────────────────────────────────────────────────
 
   setField<P extends BitPath<T>>(path: P, value: BitPathValue<T, P>): void {
-    this.write.setField(path, value);
+    this.setFieldWithMeta(path as string, value, { origin: "setField" });
+  }
+
+  private setFieldWithMeta(
+    path: string,
+    value: unknown,
+    meta: BitFieldChangeMeta = { origin: "setField" },
+  ): void {
+    this.runtime.runBatch(() => {
+      this.runtime.capabilities.lifecycle.updateField(path, value, meta);
+    });
   }
 
   blurField<P extends BitPath<T>>(path: P): void {
-    this.write.blurField(path);
+    this.runtime.saveHistorySnapshot();
+
+    if (!this.runtime.capabilities.query.isTouched(path as string)) {
+      this.runtime.runBatch(() => {
+        this.runtime.dispatch(touchFieldsOperation([path as string]));
+      });
+    }
+
+    this.runtime.capabilities.validation.trigger([path]);
   }
 
   markFieldsTouched(paths: string[]): void {
-    this.write.markFieldsTouched(paths);
+    if (paths.length === 0) return;
+    this.runtime.dispatch(touchFieldsOperation(paths));
   }
 
   setValues(
     values: T | DeepPartial<T>,
     options?: { partial?: boolean; rebase?: boolean },
   ): void {
-    this.write.setValues(values, options);
+    this.runtime.capabilities.lifecycle.setValues(values, options);
   }
 
   setError(path: string, message: string | undefined): void {
-    this.write.setError(path, message);
+    this.runtime.capabilities.error.setError(path, message);
   }
 
   setErrors(errors: BitErrors<T>): void {
-    this.write.setErrors(errors);
+    this.runtime.capabilities.error.setErrors(errors);
   }
 
   setServerErrors(serverErrors: Record<string, string[] | string>): void {
-    this.write.setServerErrors(serverErrors);
+    this.runtime.capabilities.error.setServerErrors(serverErrors);
   }
 
   reset(): void {
-    this.write.reset();
+    this.runtime.runBatch(() => {
+      this.runtime.capabilities.lifecycle.reset();
+    });
   }
 
   transaction<TResult>(callback: () => TResult): TResult {
-    return this.write.transaction(callback);
+    return this.runtime.runBatch(callback);
   }
 
   async submit(
     onSuccess: (values: T, dirtyValues?: Partial<T>) => void | Promise<void>,
   ): Promise<BitSubmitResult> {
-    return this.write.submit(onSuccess);
+    return this.runtime.capabilities.lifecycle.submit(onSuccess);
   }
 
   // ── Arrays ───────────────────────────────────────────────────────────────
@@ -302,14 +532,14 @@ class BitStore<T extends object = Record<string, unknown>> {
     path: P,
     value: BitArrayItem<BitPathValue<T, P>>,
   ): void {
-    this.feature.pushItem(path, value);
+    this.runtime.capabilities.arrays.pushItem(path, value);
   }
 
   prependItem<P extends BitArrayPath<T>>(
     path: P,
     value: BitArrayItem<BitPathValue<T, P>>,
   ): void {
-    this.feature.prependItem(path, value);
+    this.runtime.capabilities.arrays.prependItem(path, value);
   }
 
   insertItem<P extends BitArrayPath<T>>(
@@ -317,11 +547,11 @@ class BitStore<T extends object = Record<string, unknown>> {
     index: number,
     value: BitArrayItem<BitPathValue<T, P>>,
   ): void {
-    this.feature.insertItem(path, index, value);
+    this.runtime.capabilities.arrays.insertItem(path, index, value);
   }
 
   removeItem<P extends BitArrayPath<T>>(path: P, index: number): void {
-    this.feature.removeItem(path, index);
+    this.runtime.capabilities.arrays.removeItem(path, index);
   }
 
   swapItems<P extends BitArrayPath<T>>(
@@ -329,77 +559,96 @@ class BitStore<T extends object = Record<string, unknown>> {
     indexA: number,
     indexB: number,
   ): void {
-    this.feature.swapItems(path, indexA, indexB);
+    this.runtime.capabilities.arrays.swapItems(path, indexA, indexB);
   }
 
   moveItem<P extends BitArrayPath<T>>(path: P, from: number, to: number): void {
-    this.feature.moveItem(path, from, to);
+    this.runtime.capabilities.arrays.moveItem(path, from, to);
   }
 
   replaceItems<P extends BitArrayPath<T>>(
     path: P,
     items: BitArrayItem<BitPathValue<T, P>>[],
   ): void {
-    this.feature.replaceItems(path, items);
+    this.runtime.capabilities.arrays.replaceItems(path, items);
   }
 
   clearItems<P extends BitArrayPath<T>>(path: P): void {
-    this.feature.clearItems(path);
+    this.runtime.capabilities.arrays.clearItems(path);
   }
 
   // ── History ──────────────────────────────────────────────────────────────
 
   get canUndo(): boolean {
-    return this.feature.canUndo;
+    return this.runtime.capabilities.history.canUndo;
   }
 
   get canRedo(): boolean {
-    return this.feature.canRedo;
+    return this.runtime.capabilities.history.canRedo;
   }
 
   undo(): void {
-    this.feature.undo();
+    runUndoFeature({
+      history: this.runtime.capabilities.history,
+      applyHistoryState: (values) =>
+        this.runtime.capabilities.lifecycle.applyHistoryState(values),
+    });
   }
 
   redo(): void {
-    this.feature.redo();
+    runRedoFeature({
+      history: this.runtime.capabilities.history,
+      applyHistoryState: (values) =>
+        this.runtime.capabilities.lifecycle.applyHistoryState(values),
+    });
   }
 
   // ── Validation ───────────────────────────────────────────────────────────
 
   validate(options?: BitValidationOptions): Promise<boolean> {
-    return this.feature.validate(options);
+    return this.runtime.capabilities.validation.validate(options);
   }
 
   hasValidationsInProgress(scopeFields?: string[]): boolean {
-    return this.feature.hasValidationsInProgress(scopeFields);
+    return this.runtime.capabilities.validation.hasValidationsInProgress(
+      scopeFields,
+    );
   }
 
   triggerValidation(
     scopeFields?: string[],
     options?: BitValidationTriggerOptions,
   ): void {
-    this.feature.triggerValidation(scopeFields, options);
+    this.runtime.capabilities.validation.trigger(scopeFields, options);
   }
 
   // ── Persist ──────────────────────────────────────────────────────────────
 
   async restorePersisted(): Promise<boolean> {
-    return this.feature.restorePersisted();
+    return restorePersistedFeature({
+      dispatch: (operation) => this.runtime.dispatch(operation),
+      effects: this.runtime.effects,
+    });
   }
 
   async forceSave(): Promise<void> {
-    return this.feature.forceSave();
+    return forceSavePersistedFeature({
+      dispatch: (operation) => this.runtime.dispatch(operation),
+      effects: this.runtime.effects,
+    });
   }
 
   async clearPersisted(): Promise<void> {
-    return this.feature.clearPersisted();
+    return clearPersistedFeature({
+      dispatch: (operation) => this.runtime.dispatch(operation),
+      effects: this.runtime.effects,
+    });
   }
 
   // ── Lifecycle ────────────────────────────────────────────────────────────
 
   cleanup(): void {
-    this.feature.cleanup();
+    this.runtime.cleanup();
   }
 }
 

@@ -13,11 +13,7 @@ import type { BitState } from "../contracts/types";
 import type { BitSubscriptionEngine } from "../engines/subscription-engine";
 import type { BitPersistMetadata, ScopeStatus } from "../contracts/types";
 import { isHistoryMetaEqual } from "../../history-status";
-import {
-  getScopeRegistrySubscriptionPath,
-  getScopeSubscriptionPaths,
-  isScopeStatusEqual,
-} from "../shared/scope-status";
+import { isScopeStatusEqual } from "../shared/scope-status";
 
 export function subscribeStoreSelector<T extends object, TSlice>(args: {
   subscriptions: Pick<BitSubscriptionEngine<T>, "subscribeSelector">;
@@ -184,81 +180,19 @@ export function subscribeStoreHistoryMeta<T extends object>(args: {
 export function subscribeStoreScopeStatus<T extends object>(args: {
   scopeName: string;
   readScopeStatus: (scopeName: string) => ScopeStatus;
-  getScopeFields: (scopeName: string) => string[];
-  subscribeSelector: (
-    selector: BitSelector<T, { status: ScopeStatus; scopeSignature: string }>,
-    listener: (slice: { status: ScopeStatus; scopeSignature: string }) => void,
-    options?: BitSelectorSubscriptionOptions<{
-      status: ScopeStatus;
-      scopeSignature: string;
-    }>,
-  ) => () => void;
+  subscribe: (listener: () => void) => () => void;
   listener: (status: ScopeStatus) => void;
 }): () => void {
-  const {
-    scopeName,
-    readScopeStatus,
-    getScopeFields,
-    subscribeSelector,
-    listener,
-  } = args;
-
-  const buildScopedPaths = () => [
-    ...getScopeSubscriptionPaths(getScopeFields(scopeName)),
-    getScopeRegistrySubscriptionPath(scopeName),
-  ];
-
-  const arePathSetsEqual = (
-    currentPaths: readonly string[],
-    nextPaths: readonly string[],
-  ) => {
-    if (currentPaths.length !== nextPaths.length) {
-      return false;
-    }
-
-    const nextSet = new Set(nextPaths);
-    return currentPaths.every((path) => nextSet.has(path));
-  };
-
-  let activePaths = buildScopedPaths();
-  let activeUnsubscribe: (() => void) | null = null;
+  const { scopeName, readScopeStatus, subscribe, listener } = args;
   let lastStatus = readScopeStatus(scopeName);
 
-  const subscribeWithPaths = (paths: string[]) => {
-    activeUnsubscribe = subscribeSelector(
-      () => ({
-        status: readScopeStatus(scopeName),
-        scopeSignature: getScopeFields(scopeName).join("|"),
-      }),
-      (slice) => {
-        const nextPaths = buildScopedPaths();
-        const shouldRebind = !arePathSetsEqual(activePaths, nextPaths);
-        const hasStatusChange = !isScopeStatusEqual(lastStatus, slice.status);
+  return subscribe(() => {
+    const nextStatus = readScopeStatus(scopeName);
+    if (isScopeStatusEqual(lastStatus, nextStatus)) {
+      return;
+    }
 
-        if (hasStatusChange) {
-          lastStatus = slice.status;
-          listener(slice.status);
-        }
-
-        if (shouldRebind) {
-          activePaths = nextPaths;
-          activeUnsubscribe?.();
-          subscribeWithPaths(activePaths);
-        }
-      },
-      {
-        paths,
-        equalityFn: (prev, next) =>
-          isScopeStatusEqual(prev.status, next.status) &&
-          prev.scopeSignature === next.scopeSignature,
-      },
-    );
-  };
-
-  subscribeWithPaths(activePaths);
-
-  return () => {
-    activeUnsubscribe?.();
-    activeUnsubscribe = null;
-  };
+    lastStatus = nextStatus;
+    listener(nextStatus);
+  });
 }
