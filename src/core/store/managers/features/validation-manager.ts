@@ -1,46 +1,33 @@
-import { BitErrors } from "../../contracts/types";
-import { BitFrameworkConfig } from "../../contracts/public/store-api-types";
 import { BitValidationOptions } from "../../contracts/public/meta-types";
-import { BitPipelineContext, BitPipelineRunner } from "../../shared/pipeline";
+import { BitPipelineRunner } from "../../shared/pipeline";
 import {
-  BitStoreOperation,
   patchStateOperation,
   validationCommitOperation,
 } from "../../engines/operation-engine";
 import { hasAnyError } from "../../shared/error-map";
 import {
-  mergeValidationErrors,
-  resolveAsyncValidationPaths,
   runImmediateAsyncValidationStage,
 } from "./validation/validation-stages";
 import {
   BitAsyncValidationScheduler,
-  type BitAsyncValidateFn,
 } from "./validation/async-validation-scheduler";
 import { BitValidationDebouncer } from "./validation/validation-debouncer";
-import type {
-  BitAfterValidateEvent,
-  BitBeforeValidateEvent,
-  BitFieldDefinition,
-} from "../../contracts/types";
 import type {
   BitValidationStorePort,
   BitValidationTriggerOptions,
 } from "../../contracts/port-types";
-
-interface ValidationPipelineContext<
-  T extends object,
-> extends BitPipelineContext {
-  options?: BitValidationOptions;
-  validationId: number;
-  currentState: ReturnType<BitValidationStorePort<T>["getState"]>;
-  targetFields?: string[];
-  allErrors: Record<string, string | undefined>;
-  committedErrors: BitErrors<T>;
-  isValid: boolean;
-  result: boolean;
-  aborted: boolean;
-}
+import type { ValidationPipelineContext } from "./validation/validation-pipeline-context";
+import {
+  abortIfOutdatedStage,
+  commitValidationStage,
+  mergeAsyncTrackStage,
+  resolveTargetFieldsStage,
+  runAsyncTrackStage,
+  runBeforeValidateHooksStage,
+  runSynchronousTrackStage,
+  type BitValidationPipelineStageDeps,
+} from "./validation/validation-pipeline-stages";
+import { commitSynchronousScopeValidation } from "./validation/scope-validation-commit";
 
 export class BitValidationManager<T extends object> {
   private currentValidationId: number = 0;
@@ -84,40 +71,52 @@ export class BitValidationManager<T extends object> {
         this.asyncErrors.delete(path);
       },
       onValidationPassed: async (path) => {
-        await this.commitSynchronousScopeValidation([path]);
+        await commitSynchronousScopeValidation({
+          scopeFields: [path],
+          store: this.store,
+          asyncErrors: this.asyncErrors,
+        });
       },
     });
+
+    const stageDeps: BitValidationPipelineStageDeps<T> = {
+      store: this.store,
+      asyncErrors: this.asyncErrors,
+      getCurrentValidationId: () => this.currentValidationId,
+      runImmediateAsyncValidation: (path, values, validationId) =>
+        this.runImmediateAsyncValidation(path, values, validationId),
+    };
 
     this.validationPipeline = new BitPipelineRunner<
       ValidationPipelineContext<T>
     >([
       {
         name: "validate:resolve-target-fields",
-        run: (ctx) => this.resolveTargetFields(ctx),
+        run: (ctx) => resolveTargetFieldsStage({ ctx, deps: stageDeps }),
       },
       {
         name: "validate:before-hooks",
-        run: async (ctx) => this.runBeforeValidateHooks(ctx),
+        run: async (ctx) => runBeforeValidateHooksStage({ ctx, deps: stageDeps }),
       },
       {
         name: "validate:sync-track",
-        run: async (ctx) => this.runSynchronousTrack(ctx),
+        run: async (ctx) => runSynchronousTrackStage({ ctx, deps: stageDeps }),
       },
       {
         name: "validate:async-track",
-        run: async (ctx) => this.runAsyncTrack(ctx),
+        run: async (ctx) => runAsyncTrackStage({ ctx, deps: stageDeps }),
       },
       {
         name: "validate:abort-check",
-        run: async (ctx) => this.abortIfOutdated(ctx),
+        run: async (ctx) => abortIfOutdatedStage({ ctx, deps: stageDeps }),
       },
       {
         name: "validate:async-track-merge",
-        run: (ctx) => this.mergeAsyncTrack(ctx),
+        run: (ctx) => mergeAsyncTrackStage({ ctx, deps: stageDeps }),
       },
       {
         name: "validate:commit",
-        run: async (ctx) => this.commitValidation(ctx),
+        run: async (ctx) => commitValidationStage({ ctx, deps: stageDeps }),
       },
     ]);
   }
@@ -276,117 +275,6 @@ export class BitValidationManager<T extends object> {
     this.store.dispatch(patchStateOperation({ isValidating: {} }));
   }
 
-  private resolveTargetFields(ctx: ValidationPipelineContext<T>) {
-    if (ctx.options?.scope) {
-      const scopeFields = this.store.getScopeFields(ctx.options.scope);
-      if (scopeFields.length > 0) {
-        ctx.targetFields = scopeFields;
-      }
-    }
-  }
-
-  private async runBeforeValidateHooks(ctx: ValidationPipelineContext<T>) {
-    await this.store.emitBeforeValidate({
-      values: ctx.currentState.values,
-      state: ctx.currentState,
-      scope: ctx.options?.scope,
-      scopeFields: ctx.targetFields,
-    });
-  }
-
-  private async runSynchronousTrack(ctx: ValidationPipelineContext<T>) {
-    const resolverErrors = this.store.config.resolver
-      ? await this.store.config.resolver(ctx.currentState.values, {
-          scopeFields: ctx.targetFields,
-        })
-      : {};
-
-    const dynamicRequiredErrors = this.store.getRequiredErrors(
-      ctx.currentState.values,
-    );
-
-    ctx.allErrors = { ...resolverErrors, ...dynamicRequiredErrors };
-
-    this.store.getHiddenFields().forEach((hiddenPath) => {
-      delete ctx.allErrors[hiddenPath];
-      this.asyncErrors.delete(hiddenPath);
-    });
-  }
-
-  private async runAsyncTrack(ctx: ValidationPipelineContext<T>) {
-    const targetPaths = resolveAsyncValidationPaths<T>({
-      targetFields: ctx.targetFields,
-      hiddenFields: this.store.getHiddenFields(),
-      getFieldConfig: (path) => this.store.getFieldConfig(path),
-      forEachFieldConfig: this.store.forEachFieldConfig,
-    });
-
-    if (targetPaths.length === 0) {
-      return;
-    }
-
-    await Promise.all(
-      targetPaths.map((path) =>
-        this.runImmediateAsyncValidation(
-          path,
-          ctx.currentState.values,
-          ctx.validationId,
-        ),
-      ),
-    );
-  }
-
-  private mergeAsyncTrack(ctx: ValidationPipelineContext<T>) {
-    const merged = mergeValidationErrors<T>({
-      targetFields: ctx.targetFields,
-      currentErrors: ctx.currentState.errors,
-      allErrors: ctx.allErrors,
-      asyncErrors: this.asyncErrors,
-    });
-
-    ctx.committedErrors = merged.committedErrors;
-    ctx.isValid = !hasAnyError(merged.committedErrors);
-    ctx.result = merged.mode === "scoped" ? merged.result : ctx.isValid;
-  }
-
-  private async abortIfOutdated(ctx: ValidationPipelineContext<T>) {
-    if (ctx.validationId === this.currentValidationId) {
-      return;
-    }
-
-    ctx.aborted = true;
-    ctx.result = ctx.currentState.isValid;
-
-    await this.store.emitAfterValidate({
-      values: this.store.getState().values,
-      state: this.store.getState(),
-      scope: ctx.options?.scope,
-      scopeFields: ctx.targetFields,
-      errors: this.store.getState().errors,
-      result: ctx.currentState.isValid,
-      aborted: true,
-    });
-
-    ctx.halted = true;
-  }
-
-  private async commitValidation(ctx: ValidationPipelineContext<T>) {
-    this.store.dispatch(
-      validationCommitOperation(ctx.committedErrors, ctx.isValid),
-    );
-
-    await this.store.emitAfterValidate({
-      values: this.store.getState().values,
-      state: this.store.getState(),
-      scope: ctx.options?.scope,
-      scopeFields: ctx.targetFields,
-      errors: ctx.committedErrors,
-      result: ctx.result,
-    });
-
-    ctx.halted = true;
-  }
-
   private async runImmediateAsyncValidation(
     path: string,
     values: T,
@@ -417,39 +305,4 @@ export class BitValidationManager<T extends object> {
     });
   }
 
-  private async commitSynchronousScopeValidation(scopeFields: string[]) {
-    const currentState = this.store.getState();
-    const resolverErrors = this.store.config.resolver
-      ? await this.store.config.resolver(currentState.values, {
-          scopeFields,
-        })
-      : {};
-
-    const dynamicRequiredErrors = this.store.getRequiredErrors(
-      currentState.values,
-    );
-    const allErrors = { ...resolverErrors, ...dynamicRequiredErrors };
-
-    this.store.getHiddenFields().forEach((hiddenPath) => {
-      delete allErrors[hiddenPath];
-      this.asyncErrors.delete(hiddenPath);
-    });
-
-    const scopedErrors = { ...currentState.errors } as BitErrors<T>;
-
-    scopeFields.forEach((field) => {
-      if (allErrors[field]) {
-        scopedErrors[field as keyof BitErrors<T>] = allErrors[field];
-      } else if (this.asyncErrors.has(field)) {
-        scopedErrors[field as keyof BitErrors<T>] =
-          this.asyncErrors.get(field)!;
-      } else {
-        delete scopedErrors[field as keyof BitErrors<T>];
-      }
-    });
-
-    this.store.dispatch(
-      validationCommitOperation(scopedErrors, !hasAnyError(scopedErrors)),
-    );
-  }
 }

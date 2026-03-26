@@ -157,7 +157,7 @@ describe("architecture boundaries", () => {
     expect(violations).toEqual([]);
   });
 
-  it("BitStore deve expor slices com os vier objetos de capability", () => {
+  it("BitStore deve expor contrato namespaced e slices com os quatro objetos de capability", () => {
     // Este teste verifica em tempo de execução que a propriedade `slices`
     // existe e contém os quatro sub-objetos de capability definidos pelo plano
     // arquitetural. Ele é intencional como boundary/smoke test — se alguém
@@ -165,7 +165,13 @@ describe("architecture boundaries", () => {
 
     const store = createBitStore({ initialValues: { name: "" } }) as any;
 
-    // slices deve existir na instância
+    // namespaces primários devem existir na instância
+    expect(store.read).toBeDefined();
+    expect(store.observe).toBeDefined();
+    expect(store.write).toBeDefined();
+    expect(store.feature).toBeDefined();
+
+    // slices deve existir na instância (alias de compat)
     expect(store.slices).toBeDefined();
 
     // quatro capability objects obrigatórios

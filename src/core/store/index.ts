@@ -82,6 +82,10 @@ class BitStore<T extends object = Record<string, unknown>> {
   private readonly maskManager: BitMaskManager;
   private readonly dirtyManager: BitDirtyManager<T>;
 
+  public readonly read: BitStoreReadSliceApi<T>;
+  public readonly observe: BitStoreObserveSliceApi<T>;
+  public readonly write: BitStoreWriteSliceApi<T>;
+  public readonly feature: BitStoreFeatureApi<T>;
   public readonly slices: BitStoreSlicesApi<T>["slices"];
 
   constructor(config: BitConfig<T> = {}) {
@@ -97,7 +101,7 @@ class BitStore<T extends object = Record<string, unknown>> {
     this.maskManager = composition.maskManager;
     this.dirtyManager = composition.dirtyManager;
 
-    this.slices = buildStoreSlicesApi<T>({
+    const slices = buildStoreSlicesApi<T>({
       getStoreId: () => this.storeId,
       getConfig: () => this.config,
       getIsValid: () => this.isValid,
@@ -162,6 +166,12 @@ class BitStore<T extends object = Record<string, unknown>> {
       undo: () => this.undo(),
       redo: () => this.redo(),
     });
+
+    this.read = slices.read;
+    this.observe = slices.observe;
+    this.write = slices.write;
+    this.feature = slices.feature;
+    this.slices = slices;
   }
 
   // ── Config ───────────────────────────────────────────────────────────────
@@ -336,7 +346,8 @@ class BitStore<T extends object = Record<string, unknown>> {
   ): () => void {
     return subscribeStoreHistoryMeta({
       readHistoryMeta: () => this.getHistoryMetadata(),
-      subscribe: (historyListener) => this.subscribe(historyListener),
+      subscribeSelector: (selector, historyListener, options) =>
+        this.subscribeSelector(selector, historyListener, options),
       listener,
     });
   }
@@ -347,8 +358,10 @@ class BitStore<T extends object = Record<string, unknown>> {
   ): () => void {
     return subscribeStoreScopeStatus({
       scopeName,
+      getScopeFields: (name) => this.getScopeFields(name),
       readScopeStatus: (name) => this.getScopeStatus(name),
-      subscribe: (scopeListener) => this.subscribe(scopeListener),
+      subscribeSelector: (selector, scopeListener, options) =>
+        this.subscribeSelector(selector, scopeListener, options),
       listener,
     });
   }
