@@ -6,6 +6,12 @@ function defaultIdFactory() {
   return `bit-form-${Math.random().toString(36).slice(2, 9)}`;
 }
 
+function defaultUnhandledErrorReporter(error: unknown) {
+  if (typeof console !== "undefined" && typeof console.error === "function") {
+    console.error(error);
+  }
+}
+
 export function normalizeConfig<T extends object>(
   config: BitConfig<T> = {},
 ): BitFrameworkConfig<T> {
@@ -49,6 +55,6 @@ export function normalizeConfig<T extends object>(
     scheduler: config.scheduler,
     subscriptionCacheSize: config.subscriptionCacheSize,
     bus: config.bus,
-    onUnhandledError: config.onUnhandledError,
+    onUnhandledError: config.onUnhandledError ?? defaultUnhandledErrorReporter,
   } as BitFrameworkConfig<T>;
 }

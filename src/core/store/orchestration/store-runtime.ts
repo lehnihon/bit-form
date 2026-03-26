@@ -72,7 +72,6 @@ export interface BitStoreRuntimeActions<T extends object> {
     scopeFields?: string[],
     options?: BitValidationTriggerOptions,
   ): void;
-  getConfig(): Readonly<BitFrameworkConfig<T>>;
 }
 
 export interface CreateStoreRuntimeArgs<T extends object> {
@@ -141,7 +140,7 @@ export function createStoreRuntime<T extends object>(
     triggerValidation: (scopeFields, options) =>
       actions.triggerValidation(scopeFields, options),
     dirtyManager,
-    getConfig: actions.getConfig,
+    getBaselineValues: () => baselineManager.getValues(),
     getEffects: featureAccess.getEffects,
     saveHistorySnapshot: stateAccess.saveHistorySnapshot,
   });

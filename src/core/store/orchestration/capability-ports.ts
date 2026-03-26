@@ -154,7 +154,7 @@ export interface BitArrayPortDeps<T extends object> {
     options?: BitValidationTriggerOptions,
   ): void;
   dirtyManager: BitDirtyManager<T>;
-  getConfig(): Readonly<BitFrameworkConfig<T>>;
+  getBaselineValues(): T;
   getEffects(): BitStoreEffectEngine<T>;
   saveHistorySnapshot(): void;
 }
@@ -173,6 +173,6 @@ export function createArrayPort<T extends object>(
     triggerValidation: (scopeFields) => deps.triggerValidation(scopeFields),
     updateDirtyForPath: (path, nextValues, baselineValues) =>
       deps.dirtyManager.updateForPath(path, nextValues, baselineValues),
-    getConfig: () => deps.getConfig(),
+    getBaselineValues: () => deps.getBaselineValues(),
   };
 }

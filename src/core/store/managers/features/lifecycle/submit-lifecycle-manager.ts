@@ -88,11 +88,7 @@ export class BitSubmitLifecycleManager<T extends object> {
         error,
       });
 
-      if (this.store.config.onUnhandledError) {
-        this.store.config.onUnhandledError(error, "submit");
-      } else {
-        console.error(error);
-      }
+      this.store.config.onUnhandledError(error, "submit");
 
       return { status: "failed", error };
     } finally {
