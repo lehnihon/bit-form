@@ -1,9 +1,5 @@
 import { getDeepValue, setDeepValues, valueEqual } from "../../utils";
-import type {
-  BitConfig,
-  BitFieldChangeMeta,
-  BitNormalizeFn,
-} from "../contracts/types";
+import type { BitConfig, BitFieldChangeMeta } from "../contracts/types";
 import type { BitFrameworkConfig } from "../contracts/public/store-api-types";
 import type { BitValidationTriggerOptions } from "../contracts/port-types";
 import { BitComputedManager } from "../managers/core/computed-manager";
@@ -17,6 +13,7 @@ import { applyStorePersistedValues } from "./store-persist-ops";
 import { createStoreRuntime } from "./store-runtime";
 import { BitStoreRuntimeKernel } from "./store-runtime-kernel";
 import { BitBaselineManager } from "../managers/core/baseline-manager";
+import type { BitNormalizerEntry } from "../registry/field-catalog";
 
 export interface BitStoreComposition<T extends object> {
   config: BitFrameworkConfig<T>;
@@ -31,23 +28,52 @@ export interface BitStoreComposition<T extends object> {
 
 function applyNormalizedPostBatchValues<T extends object>(args: {
   values: T;
-  getNormalizerEntries(): [string, BitNormalizeFn<T>][];
+  changedPaths?: readonly string[];
+  getNormalizerEntries(): BitNormalizerEntry<T>[];
 }): T {
-  const { values, getNormalizerEntries } = args;
+  const { values, changedPaths, getNormalizerEntries } = args;
   const normalizers = getNormalizerEntries();
 
   if (normalizers.length === 0) {
     return values;
   }
 
+  const hasWildcardChange = changedPaths?.includes("*") ?? false;
+
+  const isDependencyImpacted = (dependencyPath: string) => {
+    if (!changedPaths || changedPaths.length === 0 || hasWildcardChange) {
+      return true;
+    }
+
+    return changedPaths.some(
+      (changedPath) =>
+        dependencyPath === changedPath ||
+        dependencyPath.startsWith(`${changedPath}.`) ||
+        changedPath.startsWith(`${dependencyPath}.`),
+    );
+  };
+
+  const targetedNormalizers =
+    !changedPaths || changedPaths.length === 0 || hasWildcardChange
+      ? normalizers
+      : normalizers.filter((entry) =>
+          entry.dependsOn.some((dependencyPath) =>
+            isDependencyImpacted(dependencyPath),
+          ),
+        );
+
+  if (targetedNormalizers.length === 0) {
+    return values;
+  }
+
   const updates: Array<[string, unknown]> = [];
 
-  for (const [path, normalize] of normalizers) {
-    const currentValue = getDeepValue(values, path);
-    const normalizedValue = normalize(currentValue, values);
+  for (const entry of targetedNormalizers) {
+    const currentValue = getDeepValue(values, entry.path);
+    const normalizedValue = entry.normalize(currentValue, values);
 
     if (!valueEqual(currentValue, normalizedValue)) {
-      updates.push([path, normalizedValue]);
+      updates.push([entry.path, normalizedValue]);
     }
   }
 
@@ -84,9 +110,9 @@ export function composeBitStoreRuntime<T extends object>(args: {
     computedManager.invalidateReverseDeps();
   };
 
-  let runtimeKernel: BitStoreRuntimeKernel<T> | null = null;
+  let runtimeKernel: BitStoreRuntimeKernel<T> | undefined;
 
-  const requireRuntimeKernel = () => {
+  const getRuntimeKernel = () => {
     if (!runtimeKernel) {
       throw new Error("BitStore runtime kernel is not initialized yet.");
     }
@@ -103,9 +129,9 @@ export function composeBitStoreRuntime<T extends object>(args: {
     baselineManager,
     stateAccess: {
       getState: () => runtimeKernel?.getState() ?? runtime.state,
-      dispatch: (operation) => requireRuntimeKernel().dispatch(operation),
-      saveHistorySnapshot: () => requireRuntimeKernel().saveHistorySnapshot(),
-      runStateBatch: (callback) => requireRuntimeKernel().runBatch(callback),
+      dispatch: (operation) => getRuntimeKernel().dispatch(operation),
+      saveHistorySnapshot: () => getRuntimeKernel().saveHistorySnapshot(),
+      runStateBatch: (callback) => getRuntimeKernel().runBatch(callback),
     },
     fieldAccess: {
       getFieldConfig: (path) => fieldRegistry.getFieldConfig(path),
@@ -114,24 +140,24 @@ export function composeBitStoreRuntime<T extends object>(args: {
       getTransformEntries: () => fieldRegistry.getTransformEntries(),
     },
     featureAccess: {
-      getEffects: () => requireRuntimeKernel().effects,
-      getHistory: () => requireRuntimeKernel().capabilities.history,
-      getValidation: () => requireRuntimeKernel().capabilities.validation,
+      getEffects: () => getRuntimeKernel().effects,
+      getHistory: () => getRuntimeKernel().capabilities.history,
+      getValidation: () => getRuntimeKernel().capabilities.validation,
     },
     actions: {
       setError: (path, message) => {
-        requireRuntimeKernel().capabilities.error.setError(path, message);
+        getRuntimeKernel().capabilities.error.setError(path, message);
       },
       validate: (options) => {
-        return requireRuntimeKernel().capabilities.validation.validate(options);
+        return getRuntimeKernel().capabilities.validation.validate(options);
       },
       setFieldWithMeta: (
         path,
         value,
         meta: BitFieldChangeMeta = { origin: "setField" },
       ) => {
-        requireRuntimeKernel().runBatch(() => {
-          requireRuntimeKernel().capabilities.lifecycle.updateField(
+        getRuntimeKernel().runBatch(() => {
+          getRuntimeKernel().capabilities.lifecycle.updateField(
             path,
             value,
             meta,
@@ -141,11 +167,11 @@ export function composeBitStoreRuntime<T extends object>(args: {
       unregisterPrefix: (prefix) => {
         unregisterStorePrefix({
           prefix,
-          state: requireRuntimeKernel().getState(),
+          state: getRuntimeKernel().getState(),
           fieldRegistry,
-          subscriptions: requireRuntimeKernel().subscriptions,
+          subscriptions: getRuntimeKernel().subscriptions,
           validationCleanupPrefix: (fieldPrefix) =>
-            requireRuntimeKernel().capabilities.validation.cleanupPrefix(
+            getRuntimeKernel().capabilities.validation.cleanupPrefix(
               fieldPrefix,
             ),
           invalidateFieldIndexes,
@@ -155,7 +181,7 @@ export function composeBitStoreRuntime<T extends object>(args: {
         scopeFields?: string[],
         options?: BitValidationTriggerOptions,
       ) => {
-        requireRuntimeKernel().capabilities.validation.trigger(
+        getRuntimeKernel().capabilities.validation.trigger(
           scopeFields,
           options,
         );
@@ -172,13 +198,13 @@ export function composeBitStoreRuntime<T extends object>(args: {
   const applyPersistedValues = (values: Partial<T>) => {
     applyStorePersistedValues({
       values,
-      state: requireRuntimeKernel().getState(),
+      state: getRuntimeKernel().getState(),
       initialValues: baselineManager.getValues(),
-      validation: requireRuntimeKernel().capabilities.validation,
+      validation: getRuntimeKernel().capabilities.validation,
       fieldRegistry,
       dirtyManager,
-      dispatch: (operation) => requireRuntimeKernel().dispatch(operation),
-      saveHistorySnapshot: () => requireRuntimeKernel().saveHistorySnapshot(),
+      dispatch: (operation) => getRuntimeKernel().dispatch(operation),
+      saveHistorySnapshot: () => getRuntimeKernel().saveHistorySnapshot(),
     });
   };
 
@@ -199,9 +225,10 @@ export function composeBitStoreRuntime<T extends object>(args: {
     effects,
     capabilities: runtime.capabilities,
     computedManager,
-    applyPostBatchValues: (values) =>
+    applyPostBatchValues: (values, changedPaths) =>
       applyNormalizedPostBatchValues({
         values,
+        changedPaths,
         getNormalizerEntries: () => fieldRegistry.getNormalizerEntries(),
       }),
   });

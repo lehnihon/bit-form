@@ -1,29 +1,7 @@
 import { formatMaskedValue, parseMaskedInput } from "./mask/field-binding";
 import type { BitMask } from "./mask/types";
-import type {
-  BitFieldBindingApi,
-  BitFrameworkStoreApi,
-} from "./store/contracts/public/store-api-types";
-import type {
-  BitFieldState,
-  BitPath,
-  BitPathValue,
-} from "./store/contracts/types";
-
-export function subscribeFieldState<
-  TForm extends object,
-  P extends BitPath<TForm>,
->(
-  store: BitFrameworkStoreApi<TForm>,
-  path: P,
-  listener: (
-    value: Readonly<BitFieldState<TForm, BitPathValue<TForm, P>>>,
-  ) => void,
-) {
-  // Delegates to the native store method, which encapsulates the
-  // path-scoping and structural equality check for single-field subscriptions.
-  return store.subscribeFieldState(path, listener);
-}
+import type { BitFieldBindingApi } from "./store/contracts/public/store-api-types";
+import type { BitPath, BitPathValue } from "./store/contracts/types";
 
 export function createMaskedFieldController<
   TForm extends object,

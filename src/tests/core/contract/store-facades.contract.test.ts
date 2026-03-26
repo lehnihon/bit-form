@@ -1,16 +1,16 @@
 /**
  * @group contract
- * Testes de contrato para os facades do BitStore.
- * Garante que a divisão em facades (read/write/observe/register/feature) não
+ * Testes de contrato para as capabilities públicas do BitStore.
+ * Garante que a divisão por capabilities (read/write/observe/register/feature) não
  * quebrou nenhum método público. Importa APENAS via entrypoint público.
  */
 import { describe, it, expect, vi } from "vitest";
 import { createBitStore } from "../../../core";
 
-describe("Store Facades Contract", () => {
+describe("Store Capabilities Contract", () => {
   // ── Read Facade ──────────────────────────────────────────────────────────
 
-  describe("ReadFacade (getState / getFieldState / query)", () => {
+  describe("Read Capability (getState / getFieldState / query)", () => {
     it("getState retorna o estado atual", () => {
       const store = createBitStore({ initialValues: { x: 1 } });
       const state = store.getState();
@@ -81,9 +81,9 @@ describe("Store Facades Contract", () => {
     });
   });
 
-  // ── Write Facade ─────────────────────────────────────────────────────────
+  // ── Write Capability ─────────────────────────────────────────────────────
 
-  describe("WriteFacade (setField / setValues / errors / reset / submit)", () => {
+  describe("Write Capability (setField / setValues / errors / reset / submit)", () => {
     it("setField atualiza valor no estado", () => {
       const store = createBitStore({ initialValues: { x: 0 } });
       store.setField("x" as any, 42 as any);
@@ -162,9 +162,9 @@ describe("Store Facades Contract", () => {
     });
   });
 
-  // ── Feature Facade (arrays) ──────────────────────────────────────────────
+  // ── Feature Capability (arrays) ──────────────────────────────────────────
 
-  describe("FeatureFacade - Arrays", () => {
+  describe("Feature Capability - Arrays", () => {
     it("pushItem adiciona item ao fim do array", () => {
       const store = createBitStore({
         initialValues: { items: [] as string[] },
@@ -202,9 +202,9 @@ describe("Store Facades Contract", () => {
     });
   });
 
-  // ── Feature Facade (history) ─────────────────────────────────────────────
+  // ── Feature Capability (history) ─────────────────────────────────────────
 
-  describe("FeatureFacade - History (undo/redo)", () => {
+  describe("Feature Capability - History (undo/redo)", () => {
     it("canUndo e canRedo são getters booleanos", () => {
       const store = createBitStore({ initialValues: { x: 0 } });
       expect(typeof store.canUndo).toBe("boolean");
@@ -225,9 +225,9 @@ describe("Store Facades Contract", () => {
     });
   });
 
-  // ── Feature Facade (validation) ──────────────────────────────────────────
+  // ── Feature Capability (validation) ──────────────────────────────────────
 
-  describe("FeatureFacade - Validation", () => {
+  describe("Feature Capability - Validation", () => {
     it("validate retorna true quando não há erros de schema", async () => {
       const store = createBitStore({ initialValues: { name: "Leo" } });
       const result = await store.validate();

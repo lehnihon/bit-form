@@ -6,7 +6,6 @@ import {
   BitPathValue,
   cleanupRegisteredField,
   createFieldStateSnapshot,
-  subscribeFieldState,
 } from "../core";
 
 export function useBitFieldBase<
@@ -31,7 +30,7 @@ export function useBitFieldBase<
   }, [store, path]);
 
   const subscribe = useCallback(
-    (cb: () => void) => subscribeFieldState(store, path, () => cb()),
+    (cb: () => void) => store.subscribeFieldState(path, () => cb()),
     [store, path],
   );
 

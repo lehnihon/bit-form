@@ -121,6 +121,11 @@ interface BitFieldDefinitionBase<T extends object = Record<string, unknown>> {
   conditional?: BitFieldConditional<T>;
   validation?: BitFieldValidation<T>;
   normalize?: BitNormalizeFn<T>;
+  /**
+   * Optional explicit dependencies for normalize re-evaluation.
+   * Defaults to the field own path when omitted.
+   */
+  normalizeDependsOn?: string[];
   transform?: BitTransformFn<T>;
   /** Mask name (built-in or custom registry key) or BitMask instance. */
   mask?: BitMask | BitMaskName;

@@ -114,6 +114,7 @@ Bit-Form uses both specialized managers (domain behavior) and runtime engines (o
 - **History Manager**: Tracks incremental patches between states, enabling `undo` / `redo` with lower memory pressure.
 - **Array Manager**: Exposes native methods to securely append, prepend, insert, remove, move, swap, replace and clear items within array fields.
 - **Computed Manager**: Reactively calculates derived field values from explicit `computedDependsOn` declarations.
+- **Normalization pipeline**: Post-batch normalization is now path-driven. Use `normalizeDependsOn` when a field normalizer depends on other paths.
 
 `rebase` now resets the history baseline instead of appending another undo step over the previous baseline.
 

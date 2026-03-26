@@ -24,8 +24,6 @@ export type {
   BitArrayBindingField,
 } from "./bindings/array-controller";
 
-export { subscribeFieldState } from "./field-controller";
-
 export {
   isBitFieldInputEventObject,
   formatMaskedValue,

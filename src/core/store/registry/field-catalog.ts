@@ -5,12 +5,20 @@ import type {
 } from "../contracts/types";
 import type { BitComputedEntry } from "../managers/core/computed-manager";
 
+export interface BitNormalizerEntry<
+  T extends object = Record<string, unknown>,
+> {
+  path: string;
+  normalize: BitNormalizeFn<T>;
+  dependsOn: readonly string[];
+}
+
 export class BitFieldCatalog<T extends object = Record<string, unknown>> {
   private readonly fieldConfigs: Map<string, BitFieldDefinition<T>> = new Map();
 
   private scopeFieldsIndex: Map<string, Set<string>> | null = null;
   private computedEntriesCache: BitComputedEntry<T>[] | null = null;
-  private normalizerEntriesCache: [string, BitNormalizeFn<T>][] | null = null;
+  private normalizerEntriesCache: BitNormalizerEntry<T>[] | null = null;
   private transformEntriesCache: [string, BitTransformFn<T>][] | null = null;
 
   get(path: string): BitFieldDefinition<T> | undefined {
@@ -90,12 +98,18 @@ export class BitFieldCatalog<T extends object = Record<string, unknown>> {
     return this.transformEntriesCache;
   }
 
-  getNormalizerEntries(): [string, BitNormalizeFn<T>][] {
+  getNormalizerEntries(): BitNormalizerEntry<T>[] {
     if (!this.normalizerEntriesCache) {
-      const result: [string, BitNormalizeFn<T>][] = [];
+      const result: BitNormalizerEntry<T>[] = [];
       this.forEach((cfg, path) => {
         if (cfg.normalize) {
-          result.push([path, cfg.normalize]);
+          result.push({
+            path,
+            normalize: cfg.normalize,
+            dependsOn: cfg.normalizeDependsOn?.length
+              ? cfg.normalizeDependsOn
+              : [path],
+          });
         }
       });
       this.normalizerEntriesCache = result;
@@ -128,7 +142,13 @@ export class BitFieldCatalog<T extends object = Record<string, unknown>> {
     }
 
     if (this.normalizerEntriesCache && config.normalize) {
-      this.normalizerEntriesCache.push([path, config.normalize]);
+      this.normalizerEntriesCache.push({
+        path,
+        normalize: config.normalize,
+        dependsOn: config.normalizeDependsOn?.length
+          ? config.normalizeDependsOn
+          : [path],
+      });
     }
 
     if (this.transformEntriesCache && config.transform) {
@@ -166,7 +186,7 @@ export class BitFieldCatalog<T extends object = Record<string, unknown>> {
 
     if (this.normalizerEntriesCache && config.normalize) {
       this.normalizerEntriesCache = this.normalizerEntriesCache.filter(
-        ([entryPath]) => entryPath !== path,
+        (entry) => entry.path !== path,
       );
     }
 

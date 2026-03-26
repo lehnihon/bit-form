@@ -7,7 +7,6 @@ import {
   createFrameworkMaskedFieldBinding,
   deriveFieldMeta,
   isBitFieldInputEventObject,
-  subscribeFieldState,
 } from "../core";
 import type {
   BitFieldInputEvent,
@@ -24,7 +23,7 @@ export function injectBitField<
 
   const stateSignal = signal(store.getFieldState(path));
 
-  const unsubscribe = subscribeFieldState(store, path, (nextState) => {
+  const unsubscribe = store.subscribeFieldState(path, (nextState) => {
     stateSignal.set(nextState);
   });
 

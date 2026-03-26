@@ -1,11 +1,7 @@
-import type {
-  BitFieldDefinition,
-  BitNormalizeFn,
-  BitTransformFn,
-} from "../contracts/types";
+import type { BitFieldDefinition, BitTransformFn } from "../contracts/types";
 import type { BitDependencyUpdateDiff } from "../contracts/port-types";
 import type { BitComputedEntry } from "../managers/core/computed-manager";
-import { BitFieldCatalog } from "./field-catalog";
+import { BitFieldCatalog, type BitNormalizerEntry } from "./field-catalog";
 import { BitFieldConditions } from "./field-conditions";
 
 export class BitFieldRegistry<T extends object = Record<string, unknown>> {
@@ -100,7 +96,7 @@ export class BitFieldRegistry<T extends object = Record<string, unknown>> {
     return this.catalog.getTransformEntries();
   }
 
-  getNormalizerEntries(): [string, BitNormalizeFn<T>][] {
+  getNormalizerEntries(): BitNormalizerEntry<T>[] {
     return this.catalog.getNormalizerEntries();
   }
 
