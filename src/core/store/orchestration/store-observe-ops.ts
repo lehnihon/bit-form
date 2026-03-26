@@ -13,7 +13,12 @@ import type { BitState } from "../contracts/types";
 import type { BitSubscriptionEngine } from "../engines/subscription-engine";
 import type { BitPersistMetadata, ScopeStatus } from "../contracts/types";
 import { isHistoryMetaEqual } from "../../history-status";
-import { isScopeStatusEqual } from "../shared/scope-status";
+import {
+  getScopeRegistrySubscriptionPath,
+  getScopeSubscriptionPaths,
+  isScopeStatusEqual,
+} from "../shared/scope-status";
+import { getHistorySubscriptionPath } from "../../history-status";
 
 export function subscribeStoreSelector<T extends object, TSlice>(args: {
   subscriptions: Pick<BitSubscriptionEngine<T>, "subscribeSelector">;
@@ -159,40 +164,85 @@ export function subscribeStorePersistMeta<T extends object>(args: {
 
 export function subscribeStoreHistoryMeta<T extends object>(args: {
   readHistoryMeta: () => BitHistoryMetadata;
-  subscribe: (listener: () => void) => () => void;
+  subscribeSelector: (
+    selector: BitSelector<T, BitHistoryMetadata>,
+    listener: (meta: BitHistoryMetadata) => void,
+    options?: BitSelectorSubscriptionOptions<BitHistoryMetadata>,
+  ) => () => void;
   listener: (meta: BitHistoryMetadata) => void;
 }): () => void {
-  const { readHistoryMeta, subscribe, listener } = args;
-  let lastMeta = readHistoryMeta();
+  const { readHistoryMeta, subscribeSelector, listener } = args;
 
-  return subscribe(() => {
-    const nextMeta = readHistoryMeta();
-
-    if (isHistoryMetaEqual(lastMeta, nextMeta)) {
-      return;
-    }
-
-    lastMeta = nextMeta;
-    listener(nextMeta);
+  return subscribeSelector(() => readHistoryMeta(), listener, {
+    paths: [getHistorySubscriptionPath()],
+    equalityFn: (prev, next) => isHistoryMetaEqual(prev, next),
   });
 }
 
 export function subscribeStoreScopeStatus<T extends object>(args: {
   scopeName: string;
+  getScopeFields: (scopeName: string) => string[];
   readScopeStatus: (scopeName: string) => ScopeStatus;
-  subscribe: (listener: () => void) => () => void;
+  subscribeSelector: <TSlice>(
+    selector: BitSelector<T, TSlice>,
+    listener: (slice: TSlice) => void,
+    options?: BitSelectorSubscriptionOptions<TSlice>,
+  ) => () => void;
   listener: (status: ScopeStatus) => void;
 }): () => void {
-  const { scopeName, readScopeStatus, subscribe, listener } = args;
+  const {
+    scopeName,
+    getScopeFields,
+    readScopeStatus,
+    subscribeSelector,
+    listener,
+  } = args;
+  const registryPath = getScopeRegistrySubscriptionPath(scopeName);
+
   let lastStatus = readScopeStatus(scopeName);
+  let unsubscribeScoped = () => {};
 
-  return subscribe(() => {
-    const nextStatus = readScopeStatus(scopeName);
-    if (isScopeStatusEqual(lastStatus, nextStatus)) {
-      return;
-    }
+  const subscribeScoped = () => {
+    unsubscribeScoped();
+    const scopePaths = getScopeSubscriptionPaths(getScopeFields(scopeName));
 
-    lastStatus = nextStatus;
-    listener(nextStatus);
-  });
+    unsubscribeScoped = subscribeSelector(
+      () => readScopeStatus(scopeName),
+      (status) => {
+        if (isScopeStatusEqual(lastStatus, status)) {
+          return;
+        }
+
+        lastStatus = status;
+        listener(status);
+      },
+      {
+        paths: [...scopePaths, registryPath],
+      },
+    );
+  };
+
+  subscribeScoped();
+
+  const unsubscribeRegistry = subscribeSelector(
+    () => getScopeFields(scopeName).length,
+    () => {
+      subscribeScoped();
+      const nextStatus = readScopeStatus(scopeName);
+      if (isScopeStatusEqual(lastStatus, nextStatus)) {
+        return;
+      }
+
+      lastStatus = nextStatus;
+      listener(nextStatus);
+    },
+    {
+      paths: [registryPath],
+    },
+  );
+
+  return () => {
+    unsubscribeScoped();
+    unsubscribeRegistry();
+  };
 }

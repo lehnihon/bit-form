@@ -28,6 +28,8 @@ During the V5 development cycle, the core introduces two architectural shifts:
 - **Dynamic baseline as single source of truth**: dirty tracking now always derives from runtime baseline state (the same source used by rebase/reset lifecycle). Array mutations no longer compare against static `config.initialValues`.
 - **Framework adapter by capabilities/slices**: framework adapters are now assembled from `store.slices` capabilities (`read/observe/write/feature`) instead of a hardcoded method map.
 
+`read` / `observe` / `write` / `feature` are now treated as the primary public contract. `store.slices` remains as a compatibility alias while migration is in progress.
+
 This improves consistency after `rebase`, reduces adapter drift risk, and makes API evolution less error-prone.
 
 Current internal folder layout in `src/core/store`:

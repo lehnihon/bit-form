@@ -81,10 +81,12 @@ export interface CreateStoreRuntimeArgs<T extends object> {
   computedManager: BitComputedManager<T>;
   dirtyManager: BitDirtyManager<T>;
   baselineManager: BitBaselineManager<T>;
-  stateAccess: BitStoreRuntimeStateAccess<T>;
-  fieldAccess: BitStoreRuntimeFieldAccess<T>;
-  featureAccess: BitStoreRuntimeFeatureAccess<T>;
-  actions: BitStoreRuntimeActions<T>;
+  runtimeContext: {
+    stateAccess: BitStoreRuntimeStateAccess<T>;
+    fieldAccess: BitStoreRuntimeFieldAccess<T>;
+    featureAccess: BitStoreRuntimeFeatureAccess<T>;
+    actions: BitStoreRuntimeActions<T>;
+  };
 }
 
 export function createStoreRuntime<T extends object>(
@@ -97,11 +99,9 @@ export function createStoreRuntime<T extends object>(
     computedManager,
     rawConfig,
     baselineManager,
-    stateAccess,
-    fieldAccess,
-    featureAccess,
-    actions,
+    runtimeContext,
   } = args;
+  const { stateAccess, fieldAccess, featureAccess, actions } = runtimeContext;
 
   const validationPort = createValidationPort<T>({
     config,

@@ -51,3 +51,7 @@ export function observeHistoryMetaSnapshot<T extends object>(
     listener(readHistoryMetaSnapshot(store));
   });
 }
+
+export function getHistorySubscriptionPath() {
+  return "__history__";
+}

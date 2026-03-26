@@ -410,6 +410,15 @@ export interface BitStoreSlicesApi<T extends object = Record<string, unknown>> {
   };
 }
 
+export interface BitStoreNamespacesApi<
+  T extends object = Record<string, unknown>,
+> {
+  readonly read: BitStoreReadSliceApi<T>;
+  readonly observe: BitStoreObserveSliceApi<T>;
+  readonly write: BitStoreWriteSliceApi<T>;
+  readonly feature: BitStoreFeatureApi<T>;
+}
+
 export interface BitStoreCapabilityApi<
   T extends object = Record<string, unknown>,
 >
@@ -422,7 +431,10 @@ export interface BitStoreCapabilityApi<
     BitStoreFeatureApi<T> {}
 
 export interface BitStoreApi<T extends object = Record<string, unknown>>
-  extends BitStoreCapabilityApi<T>, BitStoreSlicesApi<T> {}
+  extends
+    BitStoreCapabilityApi<T>,
+    BitStoreNamespacesApi<T>,
+    BitStoreSlicesApi<T> {}
 
 export interface BitStoreHooksApi<T extends object = Record<string, unknown>>
   extends

@@ -8,6 +8,22 @@ import { describe, it, expect, vi } from "vitest";
 import { createBitStore } from "../../../core";
 
 describe("Store Capabilities Contract", () => {
+  describe("Namespaced API (read/observe/write/feature)", () => {
+    it("deve expor os quatro namespaces principais", () => {
+      const store = createBitStore({ initialValues: { x: 1 } }) as any;
+
+      expect(store.read).toBeDefined();
+      expect(store.observe).toBeDefined();
+      expect(store.write).toBeDefined();
+      expect(store.feature).toBeDefined();
+
+      expect(typeof store.read.getState).toBe("function");
+      expect(typeof store.observe.subscribeSelector).toBe("function");
+      expect(typeof store.write.setField).toBe("function");
+      expect(typeof store.feature.undo).toBe("function");
+    });
+  });
+
   // ── Read Facade ──────────────────────────────────────────────────────────
 
   describe("Read Capability (getState / getFieldState / query)", () => {

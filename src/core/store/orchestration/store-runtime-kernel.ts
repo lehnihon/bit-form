@@ -16,6 +16,7 @@ import {
   runStoreStateBatch,
   saveStoreHistorySnapshot,
 } from "./store-state-ops";
+import { getHistorySubscriptionPath } from "../../history-status";
 
 export interface BitStoreRuntimeKernelArgs<T extends object> {
   state: BitState<T>;
@@ -70,11 +71,25 @@ export class BitStoreRuntimeKernel<T extends object> {
   }
 
   saveHistorySnapshot(): void {
+    const before = this.capabilities.history.getMetadata();
+
     saveStoreHistorySnapshot({
       batchState: this.batchState,
       values: this.state.values,
       saveHistory: (values) => this.capabilities.history.saveSnapshot(values),
     });
+
+    const after = this.capabilities.history.getMetadata();
+    if (
+      before.canUndo !== after.canUndo ||
+      before.canRedo !== after.canRedo ||
+      before.historyIndex !== after.historyIndex ||
+      before.historySize !== after.historySize
+    ) {
+      this.subscriptions.notify(this.getState(), [
+        getHistorySubscriptionPath(),
+      ]);
+    }
   }
 
   cleanup(): void {

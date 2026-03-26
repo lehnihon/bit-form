@@ -20,7 +20,7 @@ Every time a user finishes interacting with a field (specifically, when `blurFie
 ```tsx
 const store = createBitStore({
   initialValues: { documentText: "" },
-  history: { enabled: true, limit: 30 }, // Default limit is 15
+  history: { enabled: true, limit: 30 }, // Default limit is 50
 });
 ```
 

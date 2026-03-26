@@ -127,64 +127,66 @@ export function composeBitStoreRuntime<T extends object>(args: {
     computedManager,
     dirtyManager,
     baselineManager,
-    stateAccess: {
-      getState: () => runtimeKernel?.getState() ?? runtime.state,
-      dispatch: (operation) => getRuntimeKernel().dispatch(operation),
-      saveHistorySnapshot: () => getRuntimeKernel().saveHistorySnapshot(),
-      runStateBatch: (callback) => getRuntimeKernel().runBatch(callback),
-    },
-    fieldAccess: {
-      getFieldConfig: (path) => fieldRegistry.getFieldConfig(path),
-      getScopeFields: (scopeName) => fieldRegistry.getScopeFields(scopeName),
-      getNormalizerEntries: () => fieldRegistry.getNormalizerEntries(),
-      getTransformEntries: () => fieldRegistry.getTransformEntries(),
-    },
-    featureAccess: {
-      getEffects: () => getRuntimeKernel().effects,
-      getHistory: () => getRuntimeKernel().capabilities.history,
-      getValidation: () => getRuntimeKernel().capabilities.validation,
-    },
-    actions: {
-      setError: (path, message) => {
-        getRuntimeKernel().capabilities.error.setError(path, message);
+    runtimeContext: {
+      stateAccess: {
+        getState: () => runtimeKernel?.getState() ?? runtime.state,
+        dispatch: (operation) => getRuntimeKernel().dispatch(operation),
+        saveHistorySnapshot: () => getRuntimeKernel().saveHistorySnapshot(),
+        runStateBatch: (callback) => getRuntimeKernel().runBatch(callback),
       },
-      validate: (options) => {
-        return getRuntimeKernel().capabilities.validation.validate(options);
+      fieldAccess: {
+        getFieldConfig: (path) => fieldRegistry.getFieldConfig(path),
+        getScopeFields: (scopeName) => fieldRegistry.getScopeFields(scopeName),
+        getNormalizerEntries: () => fieldRegistry.getNormalizerEntries(),
+        getTransformEntries: () => fieldRegistry.getTransformEntries(),
       },
-      setFieldWithMeta: (
-        path,
-        value,
-        meta: BitFieldChangeMeta = { origin: "setField" },
-      ) => {
-        getRuntimeKernel().runBatch(() => {
-          getRuntimeKernel().capabilities.lifecycle.updateField(
-            path,
-            value,
-            meta,
+      featureAccess: {
+        getEffects: () => getRuntimeKernel().effects,
+        getHistory: () => getRuntimeKernel().capabilities.history,
+        getValidation: () => getRuntimeKernel().capabilities.validation,
+      },
+      actions: {
+        setError: (path, message) => {
+          getRuntimeKernel().capabilities.error.setError(path, message);
+        },
+        validate: (options) => {
+          return getRuntimeKernel().capabilities.validation.validate(options);
+        },
+        setFieldWithMeta: (
+          path,
+          value,
+          meta: BitFieldChangeMeta = { origin: "setField" },
+        ) => {
+          getRuntimeKernel().runBatch(() => {
+            getRuntimeKernel().capabilities.lifecycle.updateField(
+              path,
+              value,
+              meta,
+            );
+          });
+        },
+        unregisterPrefix: (prefix) => {
+          unregisterStorePrefix({
+            prefix,
+            state: getRuntimeKernel().getState(),
+            fieldRegistry,
+            subscriptions: getRuntimeKernel().subscriptions,
+            validationCleanupPrefix: (fieldPrefix) =>
+              getRuntimeKernel().capabilities.validation.cleanupPrefix(
+                fieldPrefix,
+              ),
+            invalidateFieldIndexes,
+          });
+        },
+        triggerValidation: (
+          scopeFields?: string[],
+          options?: BitValidationTriggerOptions,
+        ) => {
+          getRuntimeKernel().capabilities.validation.trigger(
+            scopeFields,
+            options,
           );
-        });
-      },
-      unregisterPrefix: (prefix) => {
-        unregisterStorePrefix({
-          prefix,
-          state: getRuntimeKernel().getState(),
-          fieldRegistry,
-          subscriptions: getRuntimeKernel().subscriptions,
-          validationCleanupPrefix: (fieldPrefix) =>
-            getRuntimeKernel().capabilities.validation.cleanupPrefix(
-              fieldPrefix,
-            ),
-          invalidateFieldIndexes,
-        });
-      },
-      triggerValidation: (
-        scopeFields?: string[],
-        options?: BitValidationTriggerOptions,
-      ) => {
-        getRuntimeKernel().capabilities.validation.trigger(
-          scopeFields,
-          options,
-        );
+        },
       },
     },
   });

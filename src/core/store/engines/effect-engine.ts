@@ -9,64 +9,73 @@ import type {
 import type { BitFormGlobal } from "../contracts/bus-types";
 import { BitPersistManager } from "../managers/features/persist-manager";
 import { BitPluginManager } from "../managers/features/plugin-manager";
+import { BitPersistEffects } from "./effects/persist-effects";
+import { BitPluginEffects } from "./effects/plugin-effects";
+import { BitBusEffects } from "./effects/bus-effects";
 
 export class BitStoreEffectEngine<T extends object> {
+  private readonly persistEffects: BitPersistEffects<T>;
+  private readonly pluginEffects: BitPluginEffects<T>;
+  private readonly busEffects: BitBusEffects<T>;
+
   constructor(
-    private readonly storeId: string,
-    private readonly storeInstance: unknown,
-    private readonly bus: BitFormGlobal,
-    private readonly persistManager: BitPersistManager<T>,
-    private readonly pluginManager: BitPluginManager<T>,
-    private readonly enableBusDispatch = true,
-  ) {}
+    storeId: string,
+    storeInstance: unknown,
+    bus: BitFormGlobal,
+    persistManager: BitPersistManager<T>,
+    pluginManager: BitPluginManager<T>,
+    enableBusDispatch = true,
+  ) {
+    this.persistEffects = new BitPersistEffects<T>(persistManager);
+    this.pluginEffects = new BitPluginEffects<T>(pluginManager);
+    this.busEffects = new BitBusEffects<T>(
+      storeId,
+      storeInstance,
+      bus,
+      enableBusDispatch,
+    );
+  }
 
   initialize(): void {
-    this.pluginManager.setupAll();
-    if (this.enableBusDispatch) {
-      this.bus.stores[this.storeId] = this.storeInstance;
-    }
+    this.pluginEffects.initialize();
+    this.busEffects.initialize();
   }
 
   onStateUpdated(nextState: BitState<T>, valuesChanged: boolean): void {
-    if (valuesChanged) {
-      this.persistManager.queueSave();
-    }
-
-    if (this.enableBusDispatch) {
-      this.bus.dispatch(this.storeId, nextState);
-    }
+    this.persistEffects.onStateUpdated(nextState, valuesChanged);
+    this.busEffects.onStateUpdated(nextState);
   }
 
   restorePersisted(): Promise<boolean> {
-    return this.persistManager.restore();
+    return this.persistEffects.restorePersisted();
   }
 
   savePersistedNow(): Promise<void> {
-    return this.persistManager.saveNow();
+    return this.persistEffects.savePersistedNow();
   }
 
   clearPersisted(): Promise<void> {
-    return this.persistManager.clear();
+    return this.persistEffects.clearPersisted();
   }
 
   beforeValidate(event: BitBeforeValidateEvent<T>): Promise<void> {
-    return this.pluginManager.beforeValidate(event);
+    return this.pluginEffects.beforeValidate(event);
   }
 
   afterValidate(event: BitAfterValidateEvent<T>): Promise<void> {
-    return this.pluginManager.afterValidate(event);
+    return this.pluginEffects.afterValidate(event);
   }
 
   beforeSubmit(event: BitBeforeSubmitEvent<T>): Promise<void> {
-    return this.pluginManager.beforeSubmit(event);
+    return this.pluginEffects.beforeSubmit(event);
   }
 
   afterSubmit(event: BitAfterSubmitEvent<T>): Promise<void> {
-    return this.pluginManager.afterSubmit(event);
+    return this.pluginEffects.afterSubmit(event);
   }
 
   onFieldChange(event: BitFieldChangeEvent<T>): void {
-    this.pluginManager.onFieldChange(event);
+    this.pluginEffects.onFieldChange(event);
   }
 
   reportOperationalError(event: {
@@ -74,18 +83,12 @@ export class BitStoreEffectEngine<T extends object> {
     error: unknown;
     payload?: unknown;
   }): Promise<void> {
-    return this.pluginManager.reportError(
-      event.source,
-      event.error,
-      event.payload,
-    );
+    return this.pluginEffects.reportOperationalError(event);
   }
 
   destroy(): void {
-    this.persistManager.destroy();
-    this.pluginManager.destroy();
-    if (this.enableBusDispatch) {
-      delete this.bus.stores[this.storeId];
-    }
+    this.persistEffects.destroy();
+    this.pluginEffects.destroy();
+    this.busEffects.destroy();
   }
 }

@@ -23,7 +23,10 @@ const frameworkAdapterCache = new WeakMap<object, unknown>();
 function createFrameworkStoreFromSlices<T extends object>(
   store: BitStoreHooksApi<T>,
 ): BitFrameworkStoreApi<T> {
-  const { read, observe, write, feature } = store.slices;
+  const read = store.read ?? store.slices.read;
+  const observe = store.observe ?? store.slices.observe;
+  const write = store.write ?? store.slices.write;
+  const feature = store.feature ?? store.slices.feature;
 
   return {
     getState: read.getState,
@@ -89,9 +92,15 @@ function bindFrameworkAdapter<T extends object>(
   const hooksLikeStore = store as unknown as BitStoreHooksApi<T> &
     Partial<BitStoreApi<T>>;
 
-  const adapter = hooksLikeStore.slices
-    ? createFrameworkStoreFromSlices(hooksLikeStore)
-    : store;
+  const adapter =
+    hooksLikeStore.read &&
+    hooksLikeStore.observe &&
+    hooksLikeStore.write &&
+    hooksLikeStore.feature
+      ? createFrameworkStoreFromSlices(hooksLikeStore)
+      : hooksLikeStore.slices
+        ? createFrameworkStoreFromSlices(hooksLikeStore)
+        : store;
 
   const brandedAdapter = {
     [BIT_FRAMEWORK_STORE_SYMBOL]: true as const,

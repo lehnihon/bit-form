@@ -236,6 +236,7 @@ This branch currently allows breaking changes while architecture/performance wor
 - **Framework bindings now share internal binding-core helpers** for form meta and field-array orchestration, reducing adapter drift across React, Vue and Angular.
 - **New dedicated metadata subscriptions**: `subscribePersistMeta`, `subscribeHistoryMeta` and `subscribeScopeStatus` reduce adapter reliance on generic selectors/tracked subscriptions.
 - **React Native is now treated as a thin derivative of the React binding layer**, keeping only native-specific field adaptation.
+- **Store capabilities are now first-class namespaces**: `read`, `observe`, `write`, `feature` are the primary contract; `slices` is kept as compatibility alias during migration.
 
 ### Migration quick notes
 
