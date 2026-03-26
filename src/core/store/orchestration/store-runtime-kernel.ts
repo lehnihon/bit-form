@@ -9,6 +9,7 @@ import type { BitSubscriptionEngine } from "../engines/subscription-engine";
 import type { BitState } from "../contracts/types";
 import type { BitComputedManager } from "../managers/core/computed-manager";
 import type { BitStoreCapabilities } from "./capabilities";
+import { applyComputedDerivations } from "../shared/value-derivation-pipeline";
 import {
   commitStoreStateUpdate,
   dispatchStoreStateOperation,
@@ -60,12 +61,13 @@ export class BitStoreRuntimeKernel<T extends object> {
       state: this.state,
       batchState: this.batchState,
       operation,
-      applyComputedValues: (values, changedPaths) => {
-        const normalizedPaths = changedPaths
-          ? Array.from(changedPaths)
-          : undefined;
-        return this.args.computedManager.apply(values, normalizedPaths);
-      },
+      applyComputedValues: (values, changedPaths) =>
+        applyComputedDerivations({
+          values,
+          changedPaths,
+          applyComputed: (nextValues, nextChangedPaths) =>
+            this.args.computedManager.apply(nextValues, nextChangedPaths),
+        }),
       onStateCommitted: (payload) => this.onStateCommitted(payload),
     });
   }
@@ -121,12 +123,13 @@ export class BitStoreRuntimeKernel<T extends object> {
     this.state = flushStoreBatchedStateUpdates({
       state: this.state,
       batchState: this.batchState,
-      applyComputedValues: (values, changedPaths) => {
-        const normalizedPaths = changedPaths
-          ? Array.from(changedPaths)
-          : undefined;
-        return this.args.computedManager.apply(values, normalizedPaths);
-      },
+      applyComputedValues: (values, changedPaths) =>
+        applyComputedDerivations({
+          values,
+          changedPaths,
+          applyComputed: (nextValues, nextChangedPaths) =>
+            this.args.computedManager.apply(nextValues, nextChangedPaths),
+        }),
       applyPostBatchValues: this.args.applyPostBatchValues,
       onStateCommitted: (payload) => this.onStateCommitted(payload),
       saveHistory: (values) => this.capabilities.history.saveSnapshot(values),

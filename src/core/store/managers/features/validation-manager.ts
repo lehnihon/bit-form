@@ -254,6 +254,18 @@ export class BitValidationManager<T extends object> {
 
     await this.validationPipeline.run(context);
 
+    if (context.aborted) {
+      await this.store.emitAfterValidate({
+        values: this.store.getState().values,
+        state: this.store.getState(),
+        scope: context.options?.scope,
+        scopeFields: context.targetFields,
+        errors: this.store.getState().errors,
+        result: context.currentState.isValid,
+        aborted: true,
+      });
+    }
+
     return context.result;
   }
 
