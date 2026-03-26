@@ -68,7 +68,7 @@ export class BitSubscriptionEngine<T extends object> {
 
     this.pathScopedSubscriptions.set(subscription, scopedPaths);
     scopedPaths.forEach((pathKey) => {
-      this.expandPathForIndexing(pathKey).forEach((indexPath) => {
+      this.forEachIndexPath(pathKey, (indexPath) => {
         const listeners = this.pathSelectorIndex.get(indexPath) ?? new Set();
         listeners.add(subscription);
         this.pathSelectorIndex.set(indexPath, listeners);
@@ -86,7 +86,7 @@ export class BitSubscriptionEngine<T extends object> {
       if (!paths) return;
 
       paths.forEach((pathKey) => {
-        this.expandPathForIndexing(pathKey).forEach((indexPath) => {
+        this.forEachIndexPath(pathKey, (indexPath) => {
           const listeners = this.pathSelectorIndex.get(indexPath);
           if (!listeners) return;
 
@@ -183,7 +183,7 @@ export class BitSubscriptionEngine<T extends object> {
     };
 
     changedPaths.forEach((changedPath) => {
-      this.expandChangedPathForLookup(changedPath).forEach(addByPath);
+      this.forEachLookupPath(changedPath, addByPath);
     });
 
     return scopedSubscribers;
@@ -197,6 +197,48 @@ export class BitSubscriptionEngine<T extends object> {
   private expandPathForIndexing(path: string): string[] {
     // Use unified expansion cache
     return this.expandPathGeneric(path);
+  }
+
+  private forEachIndexPath(
+    path: string,
+    visitor: (path: string) => void,
+  ): void {
+    if (!this.isSimplePath(path)) {
+      this.expandPathForIndexing(path).forEach(visitor);
+      return;
+    }
+
+    const segments = path.split(".");
+    let currentPath = "";
+
+    for (let index = 0; index < segments.length; index += 1) {
+      currentPath = currentPath
+        ? `${currentPath}.${segments[index]}`
+        : segments[index];
+      visitor(currentPath);
+    }
+  }
+
+  private forEachLookupPath(
+    path: string,
+    visitor: (path: string) => void,
+  ): void {
+    if (!this.isSimplePath(path)) {
+      this.expandChangedPathForLookup(path).forEach(visitor);
+      return;
+    }
+
+    visitor(path);
+
+    let separatorIndex = path.lastIndexOf(".");
+    while (separatorIndex > -1) {
+      visitor(path.slice(0, separatorIndex));
+      separatorIndex = path.lastIndexOf(".", separatorIndex - 1);
+    }
+  }
+
+  private isSimplePath(path: string): boolean {
+    return !path.includes("*") && !path.includes("[") && !path.includes("]");
   }
 
   private expandPathGeneric(path: string): string[] {

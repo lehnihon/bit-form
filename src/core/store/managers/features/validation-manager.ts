@@ -101,6 +101,10 @@ export class BitValidationManager<T extends object> {
         run: async (ctx) => runSynchronousTrackStage({ ctx, deps: stageDeps }),
       },
       {
+        name: "validate:abort-check-pre-async",
+        run: async (ctx) => abortIfOutdatedStage({ ctx, deps: stageDeps }),
+      },
+      {
         name: "validate:async-track",
         run: async (ctx) => runAsyncTrackStage({ ctx, deps: stageDeps }),
       },
