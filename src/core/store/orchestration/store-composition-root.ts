@@ -186,7 +186,6 @@ export function composeBitStoreRuntime<T extends object>(args: {
           options,
         );
       },
-      getConfig: () => config,
     },
   });
 

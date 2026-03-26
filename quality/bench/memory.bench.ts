@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { createBitStore } from "../../src/core/store/orchestration/create-store";
+import { createBitStore } from "../../src";
 
 /**
  * Memory Profiling Benchmarks

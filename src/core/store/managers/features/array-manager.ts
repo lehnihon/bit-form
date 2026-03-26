@@ -30,7 +30,7 @@ export interface BitArrayStorePort<T extends object> {
     nextValues: T,
     baselineValues: T,
   ) => boolean;
-  getConfig: () => Readonly<{ initialValues: T }>;
+  getBaselineValues: () => T;
 }
 
 export class BitArrayManager<T extends object = Record<string, unknown>> {
@@ -219,7 +219,7 @@ export class BitArrayManager<T extends object = Record<string, unknown>> {
     const isDirty = this.store.updateDirtyForPath(
       path,
       newValues,
-      this.store.getConfig().initialValues,
+      this.store.getBaselineValues(),
     );
 
     const reindexedMeta = reindexFieldArrayMeta(state, path, reindex);

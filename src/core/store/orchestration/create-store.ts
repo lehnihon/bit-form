@@ -1,6 +1,7 @@
 import { createInternalBitStore } from "../index";
 import { BitConfig } from "../contracts/types";
 import {
+  BitStoreApi,
   BitArrayMutationBindingApi,
   BitDirtyTrackingBindingApi,
   BitFieldBindingApi,
@@ -19,61 +20,61 @@ import { BIT_HOOKS_API_SYMBOL } from "./hook-brand";
 
 const frameworkAdapterCache = new WeakMap<object, unknown>();
 
-const frameworkStoreMethodMap: {
-  [K in keyof BitFrameworkStoreApi<any>]: true;
-} = {
-  subscribe: true,
-  subscribePath: true,
-  subscribeSelector: true,
-  subscribeTracked: true,
-  getFieldState: true,
-  subscribeFieldState: true,
-  setField: true,
-  blurField: true,
-  resolveMask: true,
-  unregisterField: true,
-  getState: true,
-  subscribeFormMeta: true,
-  submit: true,
-  reset: true,
-  validate: true,
-  setError: true,
-  setErrors: true,
-  setServerErrors: true,
-  setValues: true,
-  transaction: true,
-  registerField: true,
-  unregisterPrefix: true,
-  markFieldsTouched: true,
-  getDirtyValues: true,
-  pushItem: true,
-  prependItem: true,
-  insertItem: true,
-  removeItem: true,
-  moveItem: true,
-  swapItems: true,
-  replaceItems: true,
-  clearItems: true,
-  createArrayItemId: true,
-  undo: true,
-  redo: true,
-  getHistoryMetadata: true,
-  subscribeHistoryMeta: true,
-  getPersistMetadata: true,
-  restorePersisted: true,
-  forceSave: true,
-  clearPersisted: true,
-  subscribePersistMeta: true,
-  hasValidationsInProgress: true,
-  getScopeFields: true,
-  getScopeStatus: true,
-  getScopeErrors: true,
-  subscribeScopeStatus: true,
-};
+function createFrameworkStoreFromSlices<T extends object>(
+  store: BitStoreHooksApi<T>,
+): BitFrameworkStoreApi<T> {
+  const { read, observe, write, feature } = store.slices;
 
-const frameworkStoreMethodKeys = Object.keys(frameworkStoreMethodMap) as Array<
-  keyof BitFrameworkStoreApi<any>
->;
+  return {
+    getState: read.getState,
+    subscribe: observe.subscribe,
+    subscribePath: observe.subscribePath,
+    subscribeSelector: observe.subscribeSelector,
+    subscribeTracked: observe.subscribeTracked,
+    getFieldState: read.getFieldState,
+    subscribeFieldState: observe.subscribeFieldState,
+    setField: write.setField,
+    blurField: write.blurField,
+    resolveMask: store.resolveMask.bind(store),
+    unregisterField: feature.unregisterField,
+    subscribeFormMeta: observe.subscribeFormMeta,
+    submit: write.submit,
+    reset: write.reset,
+    validate: write.validate,
+    setError: write.setError,
+    setErrors: write.setErrors,
+    setServerErrors: write.setServerErrors,
+    setValues: write.setValues,
+    transaction: write.transaction,
+    registerField: feature.registerField,
+    unregisterPrefix: feature.unregisterPrefix,
+    markFieldsTouched: write.markFieldsTouched,
+    getDirtyValues: read.getDirtyValues,
+    pushItem: feature.pushItem,
+    prependItem: feature.prependItem,
+    insertItem: feature.insertItem,
+    removeItem: feature.removeItem,
+    moveItem: feature.moveItem,
+    swapItems: feature.swapItems,
+    replaceItems: feature.replaceItems,
+    clearItems: feature.clearItems,
+    createArrayItemId: store.createArrayItemId.bind(store),
+    undo: feature.undo,
+    redo: feature.redo,
+    getHistoryMetadata: read.getHistoryMetadata,
+    subscribeHistoryMeta: observe.subscribeHistoryMeta,
+    getPersistMetadata: read.getPersistMetadata,
+    restorePersisted: feature.restorePersisted,
+    forceSave: feature.forceSave,
+    clearPersisted: feature.clearPersisted,
+    subscribePersistMeta: observe.subscribePersistMeta,
+    hasValidationsInProgress: store.hasValidationsInProgress.bind(store),
+    getScopeFields: store.getScopeFields.bind(store),
+    getScopeStatus: read.getScopeStatus,
+    getScopeErrors: read.getScopeErrors,
+    subscribeScopeStatus: observe.subscribeScopeStatus,
+  };
+}
 
 function bindFrameworkAdapter<T extends object>(
   store: BitFrameworkStoreApi<T>,
@@ -85,20 +86,12 @@ function bindFrameworkAdapter<T extends object>(
     return cached as BitFrameworkStoreApi<T>;
   }
 
-  const adapter = {} as BitFrameworkStoreApi<T>;
+  const hooksLikeStore = store as unknown as BitStoreHooksApi<T> &
+    Partial<BitStoreApi<T>>;
 
-  const assignDelegate = <TKey extends keyof BitFrameworkStoreApi<T>>(
-    key: TKey,
-  ): void => {
-    adapter[key] = ((...args: unknown[]) => {
-      const method = store[key] as unknown as (...args: unknown[]) => unknown;
-      return method.call(store, ...args);
-    }) as BitFrameworkStoreApi<T>[TKey];
-  };
-
-  for (const key of frameworkStoreMethodKeys) {
-    assignDelegate(key as keyof BitFrameworkStoreApi<T>);
-  }
+  const adapter = hooksLikeStore.slices
+    ? createFrameworkStoreFromSlices(hooksLikeStore)
+    : store;
 
   const brandedAdapter = {
     [BIT_FRAMEWORK_STORE_SYMBOL]: true as const,

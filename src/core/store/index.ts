@@ -68,6 +68,7 @@ import {
   subscribeStoreSelector,
   subscribeStoreTracked,
 } from "./orchestration/store-observe-ops";
+import { buildStoreSlicesApi } from "./orchestration/store-slices-factory";
 
 class BitStore<T extends object = Record<string, unknown>> {
   public readonly [BIT_HOOKS_API_SYMBOL] = true;
@@ -96,29 +97,12 @@ class BitStore<T extends object = Record<string, unknown>> {
     this.maskManager = composition.maskManager;
     this.dirtyManager = composition.dirtyManager;
 
-    this.slices = this.buildSlicesApi();
-  }
-
-  private buildSlicesApi(): BitStoreSlicesApi<T>["slices"] {
-    const thisRef = this;
-
-    const read: BitStoreReadSliceApi<T> = {
-      get storeId() {
-        return thisRef.storeId;
-      },
-      get config() {
-        return thisRef.config;
-      },
-      get isValid() {
-        return thisRef.isValid;
-      },
-      get isSubmitting() {
-        return thisRef.isSubmitting;
-      },
-      get isDirty() {
-        return thisRef.isDirty;
-      },
-      getConfig: () => this.getConfig(),
+    this.slices = buildStoreSlicesApi<T>({
+      getStoreId: () => this.storeId,
+      getConfig: () => this.config,
+      getIsValid: () => this.isValid,
+      getIsSubmitting: () => this.isSubmitting,
+      getIsDirty: () => this.isDirty,
       getState: () => this.getState(),
       getFieldConfig: (path) => this.getFieldConfig(path),
       getFieldState: (path) => this.getFieldState(path),
@@ -131,10 +115,6 @@ class BitStore<T extends object = Record<string, unknown>> {
       getHistoryMetadata: () => this.getHistoryMetadata(),
       getScopeStatus: (scopeName) => this.getScopeStatus(scopeName),
       getScopeErrors: (scopeName) => this.getScopeErrors(scopeName),
-    };
-
-    const observe: BitStoreObserveSliceApi<T> = {
-      getState: () => this.getState(),
       subscribe: (listener) => this.subscribe(listener),
       subscribePersistMeta: (listener) => this.subscribePersistMeta(listener),
       subscribeHistoryMeta: (listener) => this.subscribeHistoryMeta(listener),
@@ -149,9 +129,6 @@ class BitStore<T extends object = Record<string, unknown>> {
         this.subscribePath(path, listener, options),
       subscribeFieldState: (path, listener) =>
         this.subscribeFieldState(path, listener),
-    };
-
-    const write: BitStoreWriteSliceApi<T> = {
       setField: (path, value) => this.setField(path, value),
       blurField: (path) => this.blurField(path),
       markFieldsTouched: (paths) => this.markFieldsTouched(paths),
@@ -165,11 +142,7 @@ class BitStore<T extends object = Record<string, unknown>> {
       reset: () => this.reset(),
       transaction: (callback) => this.transaction(callback),
       submit: (onSuccess) => this.submit(onSuccess),
-    };
-
-    const feature: BitStoreFeatureApi<T> = {
       cleanup: () => this.cleanup(),
-      getPersistMetadata: () => this.getPersistMetadata(),
       restorePersisted: () => this.restorePersisted(),
       forceSave: () => this.forceSave(),
       clearPersisted: () => this.clearPersisted(),
@@ -184,22 +157,11 @@ class BitStore<T extends object = Record<string, unknown>> {
       swapItems: (path, indexA, indexB) => this.swapItems(path, indexA, indexB),
       replaceItems: (path, items) => this.replaceItems(path, items),
       clearItems: (path) => this.clearItems(path),
-      get canUndo() {
-        return thisRef.canUndo;
-      },
-      get canRedo() {
-        return thisRef.canRedo;
-      },
+      getCanUndo: () => this.canUndo,
+      getCanRedo: () => this.canRedo,
       undo: () => this.undo(),
       redo: () => this.redo(),
-    };
-
-    return {
-      read,
-      observe,
-      write,
-      feature,
-    };
+    });
   }
 
   // ── Config ───────────────────────────────────────────────────────────────

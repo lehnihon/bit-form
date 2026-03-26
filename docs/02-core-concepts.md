@@ -21,6 +21,15 @@ In the current V4 runtime, `BitStore` is intentionally a thin facade over a dedi
 
 This separation reduces coupling inside `BitStore`, keeps the public store facade smaller and makes behavior easier to test in isolated units.
 
+### V5 Big-Bang (dev)
+
+During the V5 development cycle, the core introduces two architectural shifts:
+
+- **Dynamic baseline as single source of truth**: dirty tracking now always derives from runtime baseline state (the same source used by rebase/reset lifecycle). Array mutations no longer compare against static `config.initialValues`.
+- **Framework adapter by capabilities/slices**: framework adapters are now assembled from `store.slices` capabilities (`read/observe/write/feature`) instead of a hardcoded method map.
+
+This improves consistency after `rebase`, reduces adapter drift risk, and makes API evolution less error-prone.
+
 Current internal folder layout in `src/core/store`:
 
 - `contracts/`: shared type contracts (`types`, `public-types`, `bus-types`).

@@ -70,6 +70,67 @@ describe("BitStore Core", () => {
       expect(typeof frameworkStore.submit).toBe("function");
       expect("cleanup" in frameworkStore).toBe(false);
     });
+
+    it("should expose complete framework contract from adapter", () => {
+      const store = createBitStore({
+        initialValues: { name: "Leo", items: [] as string[] },
+      }) as any;
+      const frameworkStore = createFrameworkStoreAdapter(store) as any;
+
+      const expectedMethods = [
+        "getState",
+        "subscribe",
+        "subscribePath",
+        "subscribeSelector",
+        "subscribeTracked",
+        "getFieldState",
+        "subscribeFieldState",
+        "setField",
+        "blurField",
+        "resolveMask",
+        "unregisterField",
+        "subscribeFormMeta",
+        "submit",
+        "reset",
+        "validate",
+        "setError",
+        "setErrors",
+        "setServerErrors",
+        "setValues",
+        "transaction",
+        "registerField",
+        "unregisterPrefix",
+        "markFieldsTouched",
+        "getDirtyValues",
+        "pushItem",
+        "prependItem",
+        "insertItem",
+        "removeItem",
+        "moveItem",
+        "swapItems",
+        "replaceItems",
+        "clearItems",
+        "createArrayItemId",
+        "undo",
+        "redo",
+        "getHistoryMetadata",
+        "subscribeHistoryMeta",
+        "getPersistMetadata",
+        "restorePersisted",
+        "forceSave",
+        "clearPersisted",
+        "subscribePersistMeta",
+        "hasValidationsInProgress",
+        "getScopeFields",
+        "getScopeStatus",
+        "getScopeErrors",
+        "subscribeScopeStatus",
+      ] as const;
+
+      expectedMethods.forEach((methodName) => {
+        expect(typeof frameworkStore[methodName]).toBe("function");
+      });
+    });
   });
 
   describe("Basic State and Getters", () => {
@@ -880,6 +941,21 @@ describe("BitStore Core", () => {
 
       expect(store.getState().values).toEqual({ name: "Leandro", age: 31 });
       expect(store.getConfig().initialValues).toEqual({ name: "Leo", age: 30 });
+      expect(store.getState().isDirty).toBe(false);
+    });
+
+    it("should keep array dirty tracking consistent after rebase", () => {
+      const store = createBitStore({
+        initialValues: { items: ["A"] },
+      });
+
+      store.setValues({ items: ["X"] }, { rebase: true });
+      expect(store.getState().isDirty).toBe(false);
+
+      store.pushItem("items", "Y");
+      expect(store.getState().isDirty).toBe(true);
+
+      store.removeItem("items", 1);
       expect(store.getState().isDirty).toBe(false);
     });
 

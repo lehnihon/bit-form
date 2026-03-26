@@ -255,6 +255,8 @@ Sets multiple values with three modes:
 - Partial (`setValues(partial, { partial: true })`): deep-merge into current values.
 - Rebase (`setValues(nextValues, { rebase: true })`): replace values, reset dirty baseline and restart history from the new baseline.
 
+After `rebase`, all dirty calculations (including array operations like `pushItem`, `removeItem`, `swapItems`) are evaluated against the new runtime baseline.
+
 ```ts
 store.setValues({ name: "John", email: "john@example.com" });
 
