@@ -1,4 +1,5 @@
 import { BitValidationOptions } from "../../contracts/public/meta-types";
+import type { BitErrors } from "../../contracts/types";
 import { BitPipelineRunner } from "../../shared/pipeline";
 import {
   patchStateOperation,

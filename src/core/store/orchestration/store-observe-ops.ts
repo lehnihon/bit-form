@@ -183,10 +183,10 @@ export function subscribeStoreScopeStatus<T extends object>(args: {
   scopeName: string;
   getScopeFields: (scopeName: string) => string[];
   readScopeStatus: (scopeName: string) => ScopeStatus;
-  subscribeSelector: (
-    selector: BitSelector<T, ScopeStatus>,
-    listener: (status: ScopeStatus) => void,
-    options?: BitSelectorSubscriptionOptions<ScopeStatus>,
+  subscribeSelector: <TSlice>(
+    selector: BitSelector<T, TSlice>,
+    listener: (slice: TSlice) => void,
+    options?: BitSelectorSubscriptionOptions<TSlice>,
   ) => () => void;
   listener: (status: ScopeStatus) => void;
 }): () => void {
