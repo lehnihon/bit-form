@@ -579,3 +579,77 @@ Call this when a store is no longer needed (e.g. when unmounting a long-lived cu
 ```ts
 store.cleanup();
 ```
+
+---
+
+## Capability Slices API
+
+`store.slices` groups all store methods into four **capability sub-objects**. Use them when you need to pass a narrowly scoped handle to a component, service, or adapter instead of handing over the entire store.
+
+```ts
+const { read, observe, write, feature } = store.slices;
+```
+
+| Slice     | Purpose                                                                                |
+| --------- | -------------------------------------------------------------------------------------- |
+| `read`    | Synchronous reads — `getState`, `getFieldState`, `isValid`, `getDirtyValues`, etc.     |
+| `observe` | Reactive subscriptions — `subscribe`, `subscribeFieldState`, `subscribeSelector`, etc. |
+| `write`   | Mutations — `setField`, `setValues`, `validate`, `submit`, `reset`, etc.               |
+| `feature` | Advanced capabilities — array ops, history (`undo`/`redo`), persist, `cleanup`.        |
+
+### `slices.read`
+
+Implements `BitStoreReadSliceApi<T>`. Includes all synchronous read operations and derived flags (`isValid`, `isSubmitting`, `isDirty`).
+
+```ts
+// Pass only read access to a analytics reporter
+function trackErrors(read: BitStoreReadSliceApi<MyForm>) {
+  return read.getScopeErrors("checkout");
+}
+
+trackErrors(store.slices.read);
+```
+
+### `slices.observe`
+
+Implements `BitStoreObserveSliceApi<T>`. Includes all subscription methods and `getState` for snapshot reads inside listeners.
+
+```ts
+// Pass only observe access to a debug panel
+function mountDebugPanel(observe: BitStoreObserveSliceApi<MyForm>) {
+  return observe.subscribe(() => {
+    console.log(observe.getState().values);
+  });
+}
+
+mountDebugPanel(store.slices.observe);
+```
+
+### `slices.write`
+
+Implements `BitStoreWriteSliceApi<T>`. Includes all mutation methods for field updates, validation, and form submission.
+
+```ts
+// Encapsulate write access in an action creator
+function createFormActions(write: BitStoreWriteSliceApi<MyForm>) {
+  return {
+    setName: (name: string) => write.setField("name", name),
+    submit: (handler: (v: MyForm) => Promise<void>) => write.submit(handler),
+  };
+}
+```
+
+### `slices.feature`
+
+Implements `BitStoreFeatureApi<T>`. Exposes array operations, history (`undo` / `redo`), persist helpers, field registration, and `cleanup`.
+
+```ts
+// Array operations
+store.slices.feature.pushItem("items", { id: uuid(), label: "" });
+store.slices.feature.undo();
+
+// Lifecycle
+store.slices.feature.cleanup();
+```
+
+> **Tip:** TypeScript narrows the type of each slice to its exact interface. Prefer passing slices over the full store when the consumer only needs a subset of capabilities.

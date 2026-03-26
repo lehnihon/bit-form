@@ -114,7 +114,7 @@ describe("BitFieldRegistry", () => {
     expect(registry.getTransformEntries().map(([path]) => path)).toEqual([
       "name",
     ]);
-    expect(registry.getNormalizerEntries().map(([path]) => path)).toEqual([
+    expect(registry.getNormalizerEntries().map((entry) => entry.path)).toEqual([
       "name",
     ]);
 

@@ -145,6 +145,7 @@ interface BitFieldDefinition<T> {
   conditional?: BitFieldConditional<T>;
   validation?: BitFieldValidation<T>;
   normalize?: (value: any, allValues: T) => any;
+  normalizeDependsOn?: string[];
   transform?: (value: any, allValues: T) => any;
   computed?: (values: T) => any;
   mask?: BitMask | string;
@@ -155,10 +156,37 @@ interface BitFieldDefinition<T> {
 - **`conditional`** — visibility and dynamic required logic (`dependsOn`, `showIf`, `requiredIf`, `requiredMessage`).
 - **`validation`** — async validation only. `asyncValidateOn` defaults to `"blur"`; use `"change"` for live validation while typing.
 - **`normalize`** — applied to runtime state after writes/batches.
+- **`normalizeDependsOn`** — list of paths that, when changed, trigger this normalizer. Defaults to `[path]` (the field's own path). Use this to run a normalizer only when a specific dependency changes instead of on every write. This enables **incremental normalization**: only affected normalizers run per batch, reducing overhead in large forms.
 - **`transform`** — applied only when preparing the submit payload.
 - **`computed`** — derives value from other fields.
 - **`mask`** — mask name or instance.
 - **`scope`** — scope name (e.g. wizard step).
+
+#### `normalizeDependsOn` examples
+
+```ts
+// Default: normalizer runs when "email" changes (own path)
+fields: {
+  email: { normalize: (v) => String(v).trim() }
+}
+
+// Runs when "firstName" or "lastName" changes:
+fields: {
+  fullName: {
+    computed: (v) => `${v.firstName} ${v.lastName}`,
+    normalize: (v) => String(v).trim(),
+    normalizeDependsOn: ["firstName", "lastName"],
+  }
+}
+
+// Prefix match: runs when any sub-field of "address" changes:
+fields: {
+  "address.display": {
+    normalize: (v, all: any) => `${all.address.street}, ${all.address.city}`,
+    normalizeDependsOn: ["address"],
+  }
+}
+```
 
 ---
 

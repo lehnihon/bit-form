@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { describe, it, expect } from "vitest";
+import { createBitStore } from "../../core";
 
 const SRC_ROOT = path.resolve(__dirname, "..", "..");
 
@@ -154,5 +155,45 @@ describe("architecture boundaries", () => {
     });
 
     expect(violations).toEqual([]);
+  });
+
+  it("BitStore deve expor slices com os vier objetos de capability", () => {
+    // Este teste verifica em tempo de execução que a propriedade `slices`
+    // existe e contém os quatro sub-objetos de capability definidos pelo plano
+    // arquitetural. Ele é intencional como boundary/smoke test — se alguém
+    // remover ou renomear os slices, o test quebra imediatamente.
+
+    const store = createBitStore({ initialValues: { name: "" } }) as any;
+
+    // slices deve existir na instância
+    expect(store.slices).toBeDefined();
+
+    // quatro capability objects obrigatórios
+    const { read, observe, write, feature } = store.slices;
+    expect(read).toBeDefined();
+    expect(observe).toBeDefined();
+    expect(write).toBeDefined();
+    expect(feature).toBeDefined();
+
+    // read: getState, getFieldState, storeId, isValid
+    expect(typeof read.getState).toBe("function");
+    expect(typeof read.getFieldState).toBe("function");
+    expect(typeof read.storeId).toBe("string");
+    expect(typeof read.isValid).toBe("boolean");
+
+    // observe: subscribe, subscribeFieldState, subscribeSelector
+    expect(typeof observe.subscribe).toBe("function");
+    expect(typeof observe.subscribeFieldState).toBe("function");
+    expect(typeof observe.subscribeSelector).toBe("function");
+
+    // write: setField, reset, submit
+    expect(typeof write.setField).toBe("function");
+    expect(typeof write.reset).toBe("function");
+    expect(typeof write.submit).toBe("function");
+
+    // feature: cleanup, pushItem, undo
+    expect(typeof feature.cleanup).toBe("function");
+    expect(typeof feature.pushItem).toBe("function");
+    expect(typeof feature.undo).toBe("function");
   });
 });
