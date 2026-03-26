@@ -1,6 +1,6 @@
 import type {
   BitSelector,
-  BitSelectorSubscriptionOptions,
+  BitScopedSelectorSubscriptionOptions,
 } from "../contracts/public/subscription-types";
 import type { BitState } from "../contracts/types";
 
@@ -45,7 +45,7 @@ export class BitSubscriptionEngine<T extends object> {
   subscribeSelector<TSlice>(
     selector: BitSelector<T, TSlice>,
     listener: (slice: TSlice) => void,
-    options: BitSelectorSubscriptionOptions<TSlice> | undefined,
+    options: BitScopedSelectorSubscriptionOptions<TSlice> | undefined,
     equalityFn: (previous: TSlice, next: TSlice) => boolean,
   ): () => void {
     let lastSlice = selector(this.getState());

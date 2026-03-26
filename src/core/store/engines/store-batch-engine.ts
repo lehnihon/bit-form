@@ -57,6 +57,9 @@ export function trackBatchedStoreUpdate<T extends object>(
 ): void {
   batchState.pendingState = updateResult.nextState;
   batchState.valuesChanged ||= updateResult.valuesChanged;
+  if (updateResult.valuesChanged) {
+    batchState.pendingHistorySnapshot = true;
+  }
 
   if (updateResult.changedPaths && updateResult.changedPaths.length > 0) {
     const pathSet = batchState.changedPathSet ?? new Set<string>();

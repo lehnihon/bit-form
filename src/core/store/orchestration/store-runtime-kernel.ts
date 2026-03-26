@@ -116,6 +116,8 @@ export class BitStoreRuntimeKernel<T extends object> {
   }
 
   private flushBatchedStateUpdates(): void {
+    const historyBeforeFlush = this.capabilities.history.getMetadata();
+
     this.state = flushStoreBatchedStateUpdates({
       state: this.state,
       batchState: this.batchState,
@@ -129,5 +131,17 @@ export class BitStoreRuntimeKernel<T extends object> {
       onStateCommitted: (payload) => this.onStateCommitted(payload),
       saveHistory: (values) => this.capabilities.history.saveSnapshot(values),
     });
+
+    const historyAfterFlush = this.capabilities.history.getMetadata();
+    if (
+      historyBeforeFlush.canUndo !== historyAfterFlush.canUndo ||
+      historyBeforeFlush.canRedo !== historyAfterFlush.canRedo ||
+      historyBeforeFlush.historyIndex !== historyAfterFlush.historyIndex ||
+      historyBeforeFlush.historySize !== historyAfterFlush.historySize
+    ) {
+      this.subscriptions.notify(this.getState(), [
+        getHistorySubscriptionPath(),
+      ]);
+    }
   }
 }

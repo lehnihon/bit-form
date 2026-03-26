@@ -18,6 +18,7 @@ import type {
 } from "../contracts/public/meta-types";
 import type {
   BitSelector,
+  BitScopedSelectorSubscriptionOptions,
   BitSelectorSubscriptionOptions,
 } from "../contracts/public/subscription-types";
 import type {
@@ -26,7 +27,7 @@ import type {
   BitStoreObserveSliceApi,
   BitStoreWriteSliceApi,
   BitStoreFeatureApi,
-  BitStoreSlicesApi,
+  BitStoreNamespacesApi,
 } from "../contracts/public/store-api-types";
 import type { BitValidationTriggerOptions } from "../contracts/port-types";
 
@@ -71,15 +72,10 @@ export interface BitStoreSlicesFactoryDeps<
     listener: (slice: TSlice) => void,
     options?: BitSelectorSubscriptionOptions<TSlice>,
   ): () => void;
-  subscribeTracked<TSlice>(
-    selector: BitSelector<T, TSlice>,
-    listener: (slice: TSlice) => void,
-    options?: Omit<BitSelectorSubscriptionOptions<TSlice>, "paths">,
-  ): () => void;
   subscribePath<P extends BitPath<T>>(
     path: P,
     listener: (value: BitPathValue<T, P>) => void,
-    options?: BitSelectorSubscriptionOptions<BitPathValue<T, P>>,
+    options?: BitScopedSelectorSubscriptionOptions<BitPathValue<T, P>>,
   ): () => void;
   subscribeFieldState<P extends BitPath<T>>(
     path: P,
@@ -147,7 +143,7 @@ export interface BitStoreSlicesFactoryDeps<
 
 export function buildStoreSlicesApi<T extends object>(
   deps: BitStoreSlicesFactoryDeps<T>,
-): BitStoreSlicesApi<T>["slices"] {
+): BitStoreNamespacesApi<T> {
   const read: BitStoreReadSliceApi<T> = {
     get storeId() {
       return deps.getStoreId();
@@ -189,8 +185,6 @@ export function buildStoreSlicesApi<T extends object>(
     subscribeFormMeta: (listener) => deps.subscribeFormMeta(listener),
     subscribeSelector: (selector, listener, options) =>
       deps.subscribeSelector(selector, listener, options),
-    subscribeTracked: (selector, listener, options) =>
-      deps.subscribeTracked(selector, listener, options),
     subscribePath: (path, listener, options) =>
       deps.subscribePath(path, listener, options),
     subscribeFieldState: (path, listener) =>

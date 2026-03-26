@@ -6,8 +6,19 @@ export type BitSelector<T extends object, TSlice> = (
 
 export type BitEqualityFn<TValue> = (previous: TValue, next: TValue) => boolean;
 
-export interface BitSelectorSubscriptionOptions<TValue> {
+export interface BitScopedSelectorSubscriptionOptions<TValue> {
+  mode?: "scoped";
+  paths: string[];
   equalityFn?: BitEqualityFn<TValue>;
   emitImmediately?: boolean;
-  paths?: string[];
 }
+
+export interface BitTrackedSelectorSubscriptionOptions<TValue> {
+  mode: "tracked";
+  equalityFn?: BitEqualityFn<TValue>;
+  emitImmediately?: boolean;
+}
+
+export type BitSelectorSubscriptionOptions<TValue> =
+  | BitScopedSelectorSubscriptionOptions<TValue>
+  | BitTrackedSelectorSubscriptionOptions<TValue>;

@@ -2,6 +2,7 @@ import { getDeepValue, valueEqual } from "../../utils";
 import { createTrackedSubscription } from "./tracked-selector";
 import type {
   BitSelector,
+  BitScopedSelectorSubscriptionOptions,
   BitSelectorSubscriptionOptions,
 } from "../contracts/public/subscription-types";
 import type {
@@ -21,13 +22,30 @@ import {
 import { getHistorySubscriptionPath } from "../../history-status";
 
 export function subscribeStoreSelector<T extends object, TSlice>(args: {
+  getState: () => Readonly<BitState<T>>;
   subscriptions: Pick<BitSubscriptionEngine<T>, "subscribeSelector">;
   selector: BitSelector<T, TSlice>;
   listener: (slice: TSlice) => void;
   options?: BitSelectorSubscriptionOptions<TSlice>;
 }): () => void {
-  const { subscriptions, selector, listener, options } = args;
+  const { getState, subscriptions, selector, listener, options } = args;
   const equalityFn = options?.equalityFn ?? valueEqual;
+
+  if (options?.mode === "tracked") {
+    return createTrackedSubscription({
+      getState,
+      subscribeSelector: (trackedSelector, trackedListener, trackedOptions) =>
+        subscriptions.subscribeSelector(
+          trackedSelector,
+          trackedListener,
+          trackedOptions,
+          equalityFn,
+        ),
+      selector,
+      listener,
+      options,
+    });
+  }
 
   return subscriptions.subscribeSelector(
     selector,
@@ -37,36 +55,13 @@ export function subscribeStoreSelector<T extends object, TSlice>(args: {
   );
 }
 
-export function subscribeStoreTracked<T extends object, TSlice>(args: {
-  getState: () => Readonly<BitState<T>>;
-  subscribeSelector: (
-    selector: BitSelector<T, TSlice>,
-    listener: (slice: TSlice) => void,
-    options?: BitSelectorSubscriptionOptions<TSlice>,
-  ) => () => void;
-  selector: BitSelector<T, TSlice>;
-  listener: (slice: TSlice) => void;
-  options?: Omit<BitSelectorSubscriptionOptions<TSlice>, "paths">;
-}): () => void {
-  const { getState, subscribeSelector, selector, listener, options } = args;
-
-  return createTrackedSubscription({
-    getState,
-    subscribeSelector: (trackedSelector, trackedListener, trackedOptions) =>
-      subscribeSelector(trackedSelector, trackedListener, trackedOptions),
-    selector,
-    listener,
-    options,
-  });
-}
-
 export function subscribeStorePath<
   T extends object,
   P extends BitPath<T>,
 >(args: {
   path: P;
   listener: (value: BitPathValue<T, P>) => void;
-  options?: BitSelectorSubscriptionOptions<BitPathValue<T, P>>;
+  options?: BitScopedSelectorSubscriptionOptions<BitPathValue<T, P>>;
   subscribeSelector: (
     selector: BitSelector<T, BitPathValue<T, P>>,
     listener: (slice: BitPathValue<T, P>) => void,

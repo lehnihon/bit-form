@@ -155,7 +155,26 @@ const unsubscribe = store.subscribeScopeStatus("shipping", (status) => {
 });
 ```
 
-> Note: `subscribeSelector` is an advanced API used mostly by framework adapters. It requires explicit `paths`.
+> Note: `subscribeSelector` supports two explicit modes:
+>
+> - `mode: "scoped"` (default): requires `paths` and is optimized for performance.
+> - `mode: "tracked"`: tracks accessed paths automatically.
+>
+> Example:
+>
+> ```ts
+> store.subscribeSelector((state) => state.values.user.name, listener, {
+>   mode: "scoped",
+>   paths: ["user.name"],
+> });
+>
+> store.subscribeSelector(
+>   (state) =>
+>     state.values.mode === "name" ? state.values.user.name : state.values.city,
+>   listener,
+>   { mode: "tracked" },
+> );
+> ```
 
 ---
 
@@ -275,7 +294,6 @@ store.setValues({ name: "John", email: "john@example.com" }, { rebase: true });
 Signals that a field has been blurred (lost focus).
 
 - Marks the field as `touched`.
-- Saves a history point (if history is enabled).
 - Triggers validation for that field.
 
 ```ts
@@ -457,7 +475,7 @@ store.moveItem("items", 0, 1);
 
 ## History & Time‑Travel
 
-History is enabled by setting `history: { enabled: true }` in the `BitConfig`. The store will save snapshots at key points (such as `blurField` and other lifecycle events).
+History is enabled by setting `history: { enabled: true }` in the `BitConfig`. Snapshots are now transaction/batch-aware by default: value mutations in the same batch are consolidated into one history entry.
 
 When using `transaction(...)`, history snapshots are batch-aware: multiple mutations inside the same transaction produce a single history entry.
 
@@ -584,22 +602,22 @@ store.cleanup();
 
 ---
 
-## Capability Slices API
+## Capability Namespaces API
 
-`store.slices` groups all store methods into four **capability sub-objects**. Use them when you need to pass a narrowly scoped handle to a component, service, or adapter instead of handing over the entire store.
+`store` expõe quatro **capability namespaces** de primeira classe. Use-os quando você quiser passar um handle restrito para um componente, serviço ou adapter, sem entregar o store completo.
 
 ```ts
-const { read, observe, write, feature } = store.slices;
+const { read, observe, write, feature } = store;
 ```
 
-| Slice     | Purpose                                                                                |
+| Namespace | Purpose                                                                                |
 | --------- | -------------------------------------------------------------------------------------- |
 | `read`    | Synchronous reads — `getState`, `getFieldState`, `isValid`, `getDirtyValues`, etc.     |
 | `observe` | Reactive subscriptions — `subscribe`, `subscribeFieldState`, `subscribeSelector`, etc. |
 | `write`   | Mutations — `setField`, `setValues`, `validate`, `submit`, `reset`, etc.               |
 | `feature` | Advanced capabilities — array ops, history (`undo`/`redo`), persist, `cleanup`.        |
 
-### `slices.read`
+### `read`
 
 Implements `BitStoreReadSliceApi<T>`. Includes all synchronous read operations and derived flags (`isValid`, `isSubmitting`, `isDirty`).
 
@@ -609,10 +627,10 @@ function trackErrors(read: BitStoreReadSliceApi<MyForm>) {
   return read.getScopeErrors("checkout");
 }
 
-trackErrors(store.slices.read);
+trackErrors(store.read);
 ```
 
-### `slices.observe`
+### `observe`
 
 Implements `BitStoreObserveSliceApi<T>`. Includes all subscription methods and `getState` for snapshot reads inside listeners.
 
@@ -624,10 +642,10 @@ function mountDebugPanel(observe: BitStoreObserveSliceApi<MyForm>) {
   });
 }
 
-mountDebugPanel(store.slices.observe);
+mountDebugPanel(store.observe);
 ```
 
-### `slices.write`
+### `write`
 
 Implements `BitStoreWriteSliceApi<T>`. Includes all mutation methods for field updates, validation, and form submission.
 
@@ -641,17 +659,17 @@ function createFormActions(write: BitStoreWriteSliceApi<MyForm>) {
 }
 ```
 
-### `slices.feature`
+### `feature`
 
 Implements `BitStoreFeatureApi<T>`. Exposes array operations, history (`undo` / `redo`), persist helpers, field registration, and `cleanup`.
 
 ```ts
 // Array operations
-store.slices.feature.pushItem("items", { id: uuid(), label: "" });
-store.slices.feature.undo();
+store.feature.pushItem("items", { id: uuid(), label: "" });
+store.feature.undo();
 
 // Lifecycle
-store.slices.feature.cleanup();
+store.feature.cleanup();
 ```
 
-> **Tip:** TypeScript narrows the type of each slice to its exact interface. Prefer passing slices over the full store when the consumer only needs a subset of capabilities.
+> **Tip:** TypeScript narrows the type of each namespace to its exact interface. Prefer passing namespaces over the full store when the consumer only needs a subset of capabilities.

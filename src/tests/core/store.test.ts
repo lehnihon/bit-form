@@ -82,7 +82,6 @@ describe("BitStore Core", () => {
         "subscribe",
         "subscribePath",
         "subscribeSelector",
-        "subscribeTracked",
         "getFieldState",
         "subscribeFieldState",
         "setField",
@@ -326,9 +325,10 @@ describe("BitStore Core", () => {
 
       const listener = vi.fn();
 
-      const unsubscribe = store.subscribeTracked(
+      const unsubscribe = store.subscribeSelector(
         (state) => state.values.user.name,
         listener,
+        { mode: "tracked" },
       );
 
       store.setField("age", 31);
@@ -352,12 +352,13 @@ describe("BitStore Core", () => {
 
       const listener = vi.fn();
 
-      const unsubscribe = store.subscribeTracked(
+      const unsubscribe = store.subscribeSelector(
         (state) =>
           state.values.mode === "name"
             ? state.values.user.name
             : state.values.city,
         listener,
+        { mode: "tracked" },
       );
 
       store.setField("city", "Osaka");

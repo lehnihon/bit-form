@@ -1,6 +1,8 @@
 import type {
   BitSelector,
+  BitScopedSelectorSubscriptionOptions,
   BitSelectorSubscriptionOptions,
+  BitTrackedSelectorSubscriptionOptions,
 } from "../contracts/public/subscription-types";
 import type { BitState } from "../contracts/types";
 
@@ -105,17 +107,21 @@ export function areTrackedPathSetsEqual(
 
 export function withTrackedSelectorPaths<TValue>(
   paths: string[],
-  options?: Omit<BitSelectorSubscriptionOptions<TValue>, "paths">,
-): BitSelectorSubscriptionOptions<TValue> {
+  options?: BitTrackedSelectorSubscriptionOptions<TValue>,
+): BitScopedSelectorSubscriptionOptions<TValue> {
   if (paths.length === 0) {
     return {
-      ...options,
+      emitImmediately: options?.emitImmediately,
+      equalityFn: options?.equalityFn,
+      mode: "scoped",
       paths: ["*"],
     };
   }
 
   return {
-    ...options,
+    emitImmediately: options?.emitImmediately,
+    equalityFn: options?.equalityFn,
+    mode: "scoped",
     paths,
   };
 }
@@ -125,11 +131,11 @@ export function createTrackedSubscription<T extends object, TSlice>(args: {
   subscribeSelector: (
     selector: BitSelector<T, TSlice>,
     listener: (slice: TSlice) => void,
-    options?: BitSelectorSubscriptionOptions<TSlice>,
+    options?: BitScopedSelectorSubscriptionOptions<TSlice>,
   ) => () => void;
   selector: BitSelector<T, TSlice>;
   listener: (slice: TSlice) => void;
-  options?: Omit<BitSelectorSubscriptionOptions<TSlice>, "paths">;
+  options?: BitTrackedSelectorSubscriptionOptions<TSlice>;
 }): () => void {
   const { getState, subscribeSelector, selector, listener, options } = args;
 

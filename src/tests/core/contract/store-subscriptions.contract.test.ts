@@ -118,16 +118,17 @@ describe("Store Subscriptions Contract", () => {
     });
   });
 
-  describe("subscribeTracked", () => {
+  describe("subscribeSelector (mode: tracked)", () => {
     it("deve rastrear paths acessados automaticamente", () => {
       const store = createBitStore({
         initialValues: { user: { name: "Leo", age: 30 }, title: "Dr" },
       });
       const listener = vi.fn();
 
-      store.subscribeTracked(
+      store.subscribeSelector(
         (state) => ({ name: (state.values as any).user.name }),
         listener,
+        { mode: "tracked" },
       );
 
       // mudança em campo não acessado - não deve notificar

@@ -19,7 +19,6 @@ import type {
   BitStoreFeatureApi,
   BitStoreObserveSliceApi,
   BitStoreReadSliceApi,
-  BitStoreSlicesApi,
   BitStoreWriteSliceApi,
 } from "./contracts/public/store-api-types";
 import type {
@@ -29,6 +28,7 @@ import type {
 } from "./contracts/public/meta-types";
 import type {
   BitSelector,
+  BitScopedSelectorSubscriptionOptions,
   BitSelectorSubscriptionOptions,
 } from "./contracts/public/subscription-types";
 import type { BitValidationTriggerOptions } from "./contracts/port-types";
@@ -66,7 +66,6 @@ import {
   subscribeStorePersistMeta,
   subscribeStoreScopeStatus,
   subscribeStoreSelector,
-  subscribeStoreTracked,
 } from "./orchestration/store-observe-ops";
 import { buildStoreSlicesApi } from "./orchestration/store-slices-factory";
 
@@ -86,7 +85,6 @@ class BitStore<T extends object = Record<string, unknown>> {
   public readonly observe: BitStoreObserveSliceApi<T>;
   public readonly write: BitStoreWriteSliceApi<T>;
   public readonly feature: BitStoreFeatureApi<T>;
-  public readonly slices: BitStoreSlicesApi<T>["slices"];
 
   constructor(config: BitConfig<T> = {}) {
     const composition = composeBitStoreRuntime<T>({
@@ -127,8 +125,6 @@ class BitStore<T extends object = Record<string, unknown>> {
       subscribeFormMeta: (listener) => this.subscribeFormMeta(listener),
       subscribeSelector: (selector, listener, options) =>
         this.subscribeSelector(selector, listener, options),
-      subscribeTracked: (selector, listener, options) =>
-        this.subscribeTracked(selector, listener, options),
       subscribePath: (path, listener, options) =>
         this.subscribePath(path, listener, options),
       subscribeFieldState: (path, listener) =>
@@ -171,7 +167,6 @@ class BitStore<T extends object = Record<string, unknown>> {
     this.observe = slices.observe;
     this.write = slices.write;
     this.feature = slices.feature;
-    this.slices = slices;
   }
 
   // ── Config ───────────────────────────────────────────────────────────────
@@ -372,26 +367,8 @@ class BitStore<T extends object = Record<string, unknown>> {
     options?: BitSelectorSubscriptionOptions<TSlice>,
   ): () => void {
     return subscribeStoreSelector({
-      subscriptions: this.runtime.subscriptions,
-      selector,
-      listener,
-      options,
-    });
-  }
-
-  subscribeTracked<TSlice>(
-    selector: BitSelector<T, TSlice>,
-    listener: (slice: TSlice) => void,
-    options?: Omit<BitSelectorSubscriptionOptions<TSlice>, "paths">,
-  ): () => void {
-    return subscribeStoreTracked({
       getState: () => this.getState(),
-      subscribeSelector: (trackedSelector, trackedListener, trackedOptions) =>
-        this.subscribeSelector(
-          trackedSelector,
-          trackedListener,
-          trackedOptions,
-        ),
+      subscriptions: this.runtime.subscriptions,
       selector,
       listener,
       options,
@@ -401,7 +378,7 @@ class BitStore<T extends object = Record<string, unknown>> {
   subscribePath<P extends BitPath<T>>(
     path: P,
     listener: (value: BitPathValue<T, P>) => void,
-    options?: BitSelectorSubscriptionOptions<BitPathValue<T, P>>,
+    options?: BitScopedSelectorSubscriptionOptions<BitPathValue<T, P>>,
   ): () => void {
     return subscribeStorePath({
       path,
@@ -450,8 +427,6 @@ class BitStore<T extends object = Record<string, unknown>> {
   }
 
   blurField<P extends BitPath<T>>(path: P): void {
-    this.runtime.saveHistorySnapshot();
-
     if (!this.runtime.capabilities.query.isTouched(path as string)) {
       this.runtime.runBatch(() => {
         this.runtime.dispatch(touchFieldsOperation([path as string]));

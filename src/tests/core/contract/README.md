@@ -25,5 +25,5 @@ import { BitSubscriptionEngine } from "../../core/store/engines/..."; // ❌ pro
 | Arquivo                                 | O que cobre                                                           |
 | --------------------------------------- | --------------------------------------------------------------------- |
 | `store-initialization.contract.test.ts` | Criação do store, valores iniciais, computed, conditional             |
-| `store-subscriptions.contract.test.ts`  | subscribe, subscribePath, subscribeSelector, subscribeTracked         |
+| `store-subscriptions.contract.test.ts`  | subscribe, subscribePath, subscribeSelector (scoped/tracked)          |
 | `store-facades.contract.test.ts`        | Métodos públicos por capability (read/write/register/feature/observe) |
