@@ -14,27 +14,24 @@ export class BitSubscriptionEngine<T extends object> {
     new Map();
   private pathSelectorIndex: Map<string, Set<SelectorListenerEntry<T>>> =
     new Map();
-  private readonly expandedPathCache = new Map<string, string[]>();
-  private readonly changedPathLookupCache = new Map<string, string[]>();
+  private readonly pathExpansionCache = new Map<string, string[]>();
   private readonly subscriptionSeenVersion = new Map<
     SelectorListenerEntry<T>,
     number
   >();
   private notifyVersion = 0;
-  private readonly MAX_EXPANDED_CACHE_SIZE: number;
-  private readonly MAX_CHANGED_LOOKUP_CACHE_SIZE: number;
+  private readonly MAX_PATH_EXPANSION_CACHE_SIZE: number;
 
   constructor(
     private readonly getState: () => Readonly<BitState<T>>,
     /**
-     * Maximum number of entries for each internal LRU path cache.
+     * Maximum number of entries for path expansion cache.
      * Lower = less memory; higher = fewer cache evictions in large dynamic forms.
      * @default 500
      */
     maxCacheSize = 500,
   ) {
-    this.MAX_EXPANDED_CACHE_SIZE = maxCacheSize;
-    this.MAX_CHANGED_LOOKUP_CACHE_SIZE = maxCacheSize;
+    this.MAX_PATH_EXPANSION_CACHE_SIZE = maxCacheSize;
   }
 
   subscribe(listener: () => void): () => void {
@@ -141,8 +138,7 @@ export class BitSubscriptionEngine<T extends object> {
     this.listeners.clear();
     this.pathScopedSubscriptions.clear();
     this.pathSelectorIndex.clear();
-    this.expandedPathCache.clear();
-    this.changedPathLookupCache.clear();
+    this.pathExpansionCache.clear();
     this.subscriptionSeenVersion.clear();
   }
 
@@ -194,30 +190,17 @@ export class BitSubscriptionEngine<T extends object> {
   }
 
   private expandChangedPathForLookup(path: string): string[] {
-    const cached = this.changedPathLookupCache.get(path);
-    if (cached) {
-      return cached;
-    }
-
-    const parts = path.split(".");
-    const lookupPaths: string[] = [path];
-
-    while (parts.length > 1) {
-      parts.pop();
-      lookupPaths.push(parts.join("."));
-    }
-
-    this.setBoundedCacheEntry(
-      this.changedPathLookupCache,
-      path,
-      lookupPaths,
-      this.MAX_CHANGED_LOOKUP_CACHE_SIZE,
-    );
-    return lookupPaths;
+    // Use unified expansion cache
+    return this.expandPathGeneric(path);
   }
 
   private expandPathForIndexing(path: string): string[] {
-    const cached = this.expandedPathCache.get(path);
+    // Use unified expansion cache
+    return this.expandPathGeneric(path);
+  }
+
+  private expandPathGeneric(path: string): string[] {
+    const cached = this.pathExpansionCache.get(path);
     if (cached) {
       return cached;
     }
@@ -228,10 +211,10 @@ export class BitSubscriptionEngine<T extends object> {
       keys.push(segments.slice(0, i).join("."));
     }
     this.setBoundedCacheEntry(
-      this.expandedPathCache,
+      this.pathExpansionCache,
       path,
       keys,
-      this.MAX_EXPANDED_CACHE_SIZE,
+      this.MAX_PATH_EXPANSION_CACHE_SIZE,
     );
     return keys;
   }

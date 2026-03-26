@@ -1,5 +1,6 @@
 import type { BitErrors, BitFieldChangeMeta } from "../../../contracts/types";
 import { getDeepValue, setDeepValue } from "../../../../utils";
+import { clearErrorPath } from "../../../../utils/error-utils";
 import {
   BitPipelineContext,
   BitSyncPipelineRunner,
@@ -126,19 +127,11 @@ export class BitFieldUpdateManager<T extends object> {
   }
 
   private clearCurrentError(ctx: FieldUpdatePipelineContext<T>) {
-    const hasCurrentError = Object.prototype.hasOwnProperty.call(
+    [ctx.nextErrors, ctx.hasMutatedErrors] = clearErrorPath(
       ctx.nextErrors,
       ctx.path,
+      ctx.hasMutatedErrors,
     );
-
-    if (hasCurrentError && !ctx.hasMutatedErrors) {
-      ctx.nextErrors = { ...ctx.nextErrors };
-      ctx.hasMutatedErrors = true;
-    }
-
-    if (hasCurrentError) {
-      delete ctx.nextErrors[ctx.path as keyof BitErrors<T>];
-    }
 
     this.store.clearFieldValidation(ctx.path);
   }
@@ -166,39 +159,11 @@ export class BitFieldUpdateManager<T extends object> {
     ]);
 
     fieldsToReset.forEach((depPath) => {
-      if (this.store.isFieldHidden(depPath)) {
-        const hasDependencyError = Object.prototype.hasOwnProperty.call(
-          ctx.nextErrors,
-          depPath,
-        );
-
-        if (hasDependencyError && !ctx.hasMutatedErrors) {
-          ctx.nextErrors = { ...ctx.nextErrors };
-          ctx.hasMutatedErrors = true;
-        }
-
-        if (hasDependencyError) {
-          delete ctx.nextErrors[depPath as keyof BitErrors<T>];
-        }
-
-        this.store.clearFieldValidation(depPath);
-        return;
-      }
-
-      const hasDependencyError = Object.prototype.hasOwnProperty.call(
+      [ctx.nextErrors, ctx.hasMutatedErrors] = clearErrorPath(
         ctx.nextErrors,
         depPath,
+        ctx.hasMutatedErrors,
       );
-
-      if (hasDependencyError && !ctx.hasMutatedErrors) {
-        ctx.nextErrors = { ...ctx.nextErrors };
-        ctx.hasMutatedErrors = true;
-      }
-
-      if (hasDependencyError) {
-        delete ctx.nextErrors[depPath as keyof BitErrors<T>];
-      }
-
       this.store.clearFieldValidation(depPath);
     });
   }

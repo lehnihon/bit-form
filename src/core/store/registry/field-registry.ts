@@ -3,8 +3,11 @@ import type { BitDependencyUpdateDiff } from "../contracts/port-types";
 import type { BitComputedEntry } from "../managers/core/computed-manager";
 import { BitFieldCatalog, type BitNormalizerEntry } from "./field-catalog";
 import { BitFieldConditions } from "./field-conditions";
+import type { BitFieldMetadataProvider } from "./field-metadata-provider";
 
-export class BitFieldRegistry<T extends object = Record<string, unknown>> {
+export class BitFieldRegistry<
+  T extends object = Record<string, unknown>,
+> implements BitFieldMetadataProvider<T> {
   private readonly catalog = new BitFieldCatalog<T>();
   private readonly conditions = new BitFieldConditions<T>((path) =>
     this.catalog.get(path),

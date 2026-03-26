@@ -51,23 +51,23 @@ export function createFieldStateSnapshot<TValue = any>(
   },
   lastSnapshot: BitFieldSnapshot<TValue> | null,
 ): BitFieldSnapshot<TValue> {
-  // Check if any field changed
-  if (
-    lastSnapshot &&
-    lastSnapshot.value === nextState.value &&
-    lastSnapshot.error === nextState.error &&
-    lastSnapshot.touched === nextState.touched &&
-    lastSnapshot.isHidden === nextState.isHidden &&
-    lastSnapshot.isRequired === nextState.isRequired &&
-    lastSnapshot.isDirty === nextState.isDirty &&
-    lastSnapshot.isValidating === nextState.isValidating
-  ) {
-    // All fields equal, return cached snapshot
-    return lastSnapshot;
+  // Use shallow equality: return cached if all fields are equal by reference
+  if (lastSnapshot) {
+    const shallowEqual =
+      lastSnapshot.value === nextState.value &&
+      lastSnapshot.error === nextState.error &&
+      lastSnapshot.touched === nextState.touched &&
+      lastSnapshot.isHidden === nextState.isHidden &&
+      lastSnapshot.isRequired === nextState.isRequired &&
+      lastSnapshot.isDirty === nextState.isDirty &&
+      lastSnapshot.isValidating === nextState.isValidating;
+
+    if (shallowEqual) {
+      return lastSnapshot;
+    }
   }
 
-  // Create new snapshot object
-  const newSnapshot: BitFieldSnapshot<TValue> = {
+  return {
     value: nextState.value,
     error: nextState.error,
     touched: nextState.touched,
@@ -76,8 +76,6 @@ export function createFieldStateSnapshot<TValue = any>(
     isDirty: nextState.isDirty,
     isValidating: nextState.isValidating,
   };
-
-  return newSnapshot;
 }
 
 /**
