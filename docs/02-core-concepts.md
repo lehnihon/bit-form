@@ -12,7 +12,7 @@ When you use framework-specific wrappers like `useBitForm` (React/Vue) or `injec
 
 In the current V4 runtime, `BitStore` is intentionally a thin facade over a dedicated runtime kernel and specialized modules:
 
-- `subscription-engine`: handles `subscribe`, selector subscriptions and scoped path subscriptions with explicit paths.
+- `subscription-engine`: handles `subscribe`, scoped selector subscriptions and path subscriptions.
 - `state-update-engine`: normalizes state updates (`changedPaths`, `valuesChanged`, computed apply).
 - `store-commit-engine`: centralizes operation routing + patch commit + batch flush semantics.
 - `store-runtime-kernel`: owns effective state access, batching, commit flushing, effect notification and history snapshot persistence.
@@ -26,9 +26,9 @@ This separation reduces coupling inside `BitStore`, keeps the public store facad
 During the V5 development cycle, the core introduces two architectural shifts:
 
 - **Dynamic baseline as single source of truth**: dirty tracking now always derives from runtime baseline state (the same source used by rebase/reset lifecycle). Array mutations no longer compare against static `config.initialValues`.
-- **Framework adapter by capabilities/slices**: framework adapters are now assembled from `store.slices` capabilities (`read/observe/write/feature`) instead of a hardcoded method map.
+- **Framework adapter by capability namespaces**: framework adapters are now assembled from `store.read/store.observe/store.write/store.feature` instead of a hardcoded method map.
 
-`read` / `observe` / `write` / `feature` are now treated as the primary public contract. `store.slices` remains as a compatibility alias while migration is in progress.
+`read` / `observe` / `write` / `feature` are now the only public capability contract (major sem alias `store.slices`).
 
 This improves consistency after `rebase`, reduces adapter drift risk, and makes API evolution less error-prone.
 

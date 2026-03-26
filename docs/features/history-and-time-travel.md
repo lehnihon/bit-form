@@ -15,7 +15,7 @@ const store = createBitStore({
 
 ## How it works
 
-Every time a user finishes interacting with a field (specifically, when `blurField` is triggered), Bit-Form computes an incremental patch from the previous history point and stores only that delta. You can configure the limit:
+Bit-Form registra histórico por checkpoint transacional: quando há mutação de `values`, o runtime consolida as mudanças do batch/transaction atual em um único patch incremental. Isso reduz ruído no stack e melhora custo em fluxos com múltiplas mutações encadeadas. Você pode configurar o limite:
 
 ```tsx
 const store = createBitStore({

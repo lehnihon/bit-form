@@ -23,6 +23,7 @@ import { BitMask } from "../../../mask/types";
 import type { BitFormGlobal } from "../bus-types";
 import type {
   BitSelector,
+  BitScopedSelectorSubscriptionOptions,
   BitSelectorSubscriptionOptions,
 } from "./subscription-types";
 import type {
@@ -195,17 +196,12 @@ export interface BitStoreSelectorBindingApi<
   subscribePath<P extends BitPath<T>>(
     path: P,
     listener: (value: BitPathValue<T, P>) => void,
-    options?: BitSelectorSubscriptionOptions<BitPathValue<T, P>>,
+    options?: BitScopedSelectorSubscriptionOptions<BitPathValue<T, P>>,
   ): () => void;
   subscribeSelector<TSlice>(
     selector: BitSelector<T, TSlice>,
     listener: (slice: TSlice) => void,
     options?: BitSelectorSubscriptionOptions<TSlice>,
-  ): () => void;
-  subscribeTracked<TSlice>(
-    selector: BitSelector<T, TSlice>,
-    listener: (slice: TSlice) => void,
-    options?: Omit<BitSelectorSubscriptionOptions<TSlice>, "paths">,
   ): () => void;
 }
 
@@ -401,15 +397,6 @@ export interface BitStoreWriteSliceApi<
   T extends object = Record<string, unknown>,
 > extends BitFormWriteApi<T> {}
 
-export interface BitStoreSlicesApi<T extends object = Record<string, unknown>> {
-  readonly slices: {
-    read: BitStoreReadSliceApi<T>;
-    observe: BitStoreObserveSliceApi<T>;
-    write: BitStoreWriteSliceApi<T>;
-    feature: BitStoreFeatureApi<T>;
-  };
-}
-
 export interface BitStoreNamespacesApi<
   T extends object = Record<string, unknown>,
 > {
@@ -431,10 +418,7 @@ export interface BitStoreCapabilityApi<
     BitStoreFeatureApi<T> {}
 
 export interface BitStoreApi<T extends object = Record<string, unknown>>
-  extends
-    BitStoreCapabilityApi<T>,
-    BitStoreNamespacesApi<T>,
-    BitStoreSlicesApi<T> {}
+  extends BitStoreCapabilityApi<T>, BitStoreNamespacesApi<T> {}
 
 export interface BitStoreHooksApi<T extends object = Record<string, unknown>>
   extends

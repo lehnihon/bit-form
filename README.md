@@ -229,18 +229,18 @@ This branch currently allows breaking changes while architecture/performance wor
 - **New explicit `@lehnihon/bit-form/core` subpath** for store/runtime contracts. The package root is now curated for app usage and no longer mirrors every core helper/export.
 - **History default limit changed** from `15` to `50` (`history.limit`).
 - **Selector subscriptions no longer rely on deep value diff inference** when no `paths` are provided internally; updates are now path-driven for predictable performance.
-- **New `subscribeTracked`** was added to auto-track selector dependencies and re-track when selector branches change.
+- **`subscribeSelector` now supports explicit modes**: `mode: "scoped"` (default, path-driven) and `mode: "tracked"` (auto-track with re-track on branch changes).
 - **`resolveBitStoreForHooks` now uses symbol branding** instead of duck-typing checks.
 - **SSR/Edge support improved** with injectable bus instances (`createBitBus`, `config.bus`, `initDevTools({ bus })`).
 - **Field `asyncValidate` now defaults to `blur` trigger**. To keep validation while typing, set `validation.asyncValidateOn: "change"` explicitly.
 - **Framework bindings now share internal binding-core helpers** for form meta and field-array orchestration, reducing adapter drift across React, Vue and Angular.
 - **New dedicated metadata subscriptions**: `subscribePersistMeta`, `subscribeHistoryMeta` and `subscribeScopeStatus` reduce adapter reliance on generic selectors/tracked subscriptions.
 - **React Native is now treated as a thin derivative of the React binding layer**, keeping only native-specific field adaptation.
-- **Store capabilities are now first-class namespaces**: `read`, `observe`, `write`, `feature` are the primary contract; `slices` is kept as compatibility alias during migration.
+- **Store capabilities are now first-class namespaces**: `read`, `observe`, `write`, `feature` are the primary contract and `slices` was removed in this major.
 
 ### Migration quick notes
 
-- If you relied on implicit broad selector notifications, prefer explicit `paths` or use `subscribeTracked`.
+- If you relied on broad selector notifications, migrate to `subscribeSelector` with `mode: "scoped"` + `paths`, or `mode: "tracked"` when auto-tracking is needed.
 - If you built internal adapters over generic metadata selectors, migrate to `subscribePersistMeta`, `subscribeHistoryMeta` and `subscribeScopeStatus`.
 - If you need old history density, set `history: { limit: 15 }` explicitly.
 - In SSR/Edge runtimes, create one bus per request scope and inject it into the store and DevTools.
