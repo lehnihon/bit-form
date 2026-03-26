@@ -55,8 +55,12 @@ export interface BitStoreSlicesFactoryDeps<
   getScopeErrors(scopeName: string): Record<string, string>;
 
   subscribe(listener: () => void): () => void;
-  subscribePersistMeta(listener: (meta: BitPersistMetadata) => void): () => void;
-  subscribeHistoryMeta(listener: (meta: BitHistoryMetadata) => void): () => void;
+  subscribePersistMeta(
+    listener: (meta: BitPersistMetadata) => void,
+  ): () => void;
+  subscribeHistoryMeta(
+    listener: (meta: BitHistoryMetadata) => void,
+  ): () => void;
   subscribeScopeStatus(
     scopeName: string,
     listener: (status: ScopeStatus) => void,
