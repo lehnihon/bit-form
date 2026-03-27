@@ -10,7 +10,7 @@ import { runImmediateAsyncValidationStage } from "./validation/validation-stages
 import { BitAsyncValidationScheduler } from "./validation/async-validation-scheduler";
 import { BitValidationDebouncer } from "./validation/validation-debouncer";
 import type {
-  BitValidationStorePort,
+  BitValidationManagerPort,
   BitValidationTriggerOptions,
 } from "../../contracts/port-types";
 import type { ValidationPipelineContext } from "./validation/validation-pipeline-context";
@@ -41,7 +41,7 @@ export class BitValidationManager<T extends object> {
   private readonly asyncScheduler: BitAsyncValidationScheduler<T>;
   private readonly debouncer: BitValidationDebouncer;
 
-  constructor(private store: BitValidationStorePort<T>) {
+  constructor(private store: BitValidationManagerPort<T>) {
     this.schedule =
       store.config.scheduler?.schedule ??
       ((fn, delayMs) => {

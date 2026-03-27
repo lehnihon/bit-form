@@ -19,36 +19,51 @@ export interface BitDependencyUpdateDiff {
   requiredChanged: string[];
 }
 
-export interface BitValidationStorePort<T extends object> {
+export interface BitValidationStatePort<T extends object> {
   getState: () => BitState<T>;
   dispatch: (operation: BitStoreOperation<T>) => void;
-  setError: (path: string, message: string | undefined) => void;
-  validate: (opts: BitValidationOptions) => Promise<boolean>;
+  config: BitFrameworkConfig<T>;
+}
+
+export interface BitValidationFieldPort<T extends object> {
   getFieldConfig: (path: string) => BitFieldDefinition<T> | undefined;
   forEachFieldConfig: (
     callback: (config: BitFieldDefinition<T>, path: string) => void,
   ) => void;
   getScopeFields: (scopeName: string) => string[];
-  config: BitFrameworkConfig<T>;
   getRequiredErrors: (values: T) => BitErrors<T>;
   getHiddenFields: () => ReadonlySet<string>;
+}
+
+export interface BitValidationEffectsPort<T extends object> {
+  setError: (path: string, message: string | undefined) => void;
+  validate: (opts: BitValidationOptions) => Promise<boolean>;
   emitBeforeValidate: (event: BitBeforeValidateEvent<T>) => Promise<void>;
   emitAfterValidate: (event: BitAfterValidateEvent<T>) => Promise<void>;
 }
+
+export type BitValidationPipelinePort<T extends object> =
+  BitValidationStatePort<T> &
+    BitValidationFieldPort<T> &
+    Pick<
+      BitValidationEffectsPort<T>,
+      "emitBeforeValidate" | "emitAfterValidate"
+    >;
+
+export type BitValidationManagerPort<T extends object> =
+  BitValidationStatePort<T> &
+    BitValidationFieldPort<T> &
+    BitValidationEffectsPort<T>;
 
 export interface BitValidationTriggerOptions {
   forceDebounce?: boolean;
 }
 
-export interface BitLifecycleStorePort<T extends object> {
+export interface BitLifecycleFieldUpdatePort<T extends object> {
   getState: () => BitState<T>;
   dispatch: (operation: BitStoreOperation<T>) => void;
-  internalSaveSnapshot: () => void;
-  batchStateUpdates<TResult>(callback: () => TResult): TResult;
   config: BitFrameworkConfig<T>;
-
   getFieldConfig: (path: string) => BitFieldDefinition<T> | undefined;
-  getTransformEntries: () => [string, BitTransformFn<T>][];
   updateDependencies: (
     changedPath: string,
     currentValues: T,
@@ -56,32 +71,51 @@ export interface BitLifecycleStorePort<T extends object> {
   ) => BitDependencyUpdateDiff;
   hasDependentFields: (path: string) => boolean;
   isFieldHidden: (path: string) => boolean;
-  evaluateAllDependencies: (values: T) => void;
-  getHiddenFields: () => ReadonlySet<string>;
-
   clearFieldValidation: (path: string) => void;
   triggerValidation: (
     scopeFields?: string[],
     options?: BitValidationTriggerOptions,
   ) => void;
   handleFieldAsyncValidation: (path: string, value: unknown) => void;
-  cancelAllValidations: () => void;
-  validateNow: (options?: BitValidationOptions) => Promise<boolean>;
-  hasValidationsInProgress: (scopeFields?: string[]) => boolean;
-
   updateDirtyForPath: (
     path: string,
     nextValues: T,
     baselineValues: T,
   ) => boolean;
+  getBaselineValues: () => T;
+  emitFieldChange: (event: BitFieldChangeEvent<T>) => void;
+}
+
+export interface BitLifecycleValuesPort<T extends object> {
+  getState: () => BitState<T>;
+  dispatch: (operation: BitStoreOperation<T>) => void;
+  internalSaveSnapshot: () => void;
+  evaluateAllDependencies: (values: T) => void;
+  cancelAllValidations: () => void;
+  validateNow: (options?: BitValidationOptions) => Promise<boolean>;
   rebuildDirtyState: (nextValues: T, baselineValues: T) => boolean;
   clearDirtyState: () => void;
-  buildDirtyValues: (values: T) => Partial<T>;
   getBaselineValues: () => T;
   setBaselineValues: (values: T) => void;
   resetHistory: (initialValues: T) => void;
-
   emitFieldChange: (event: BitFieldChangeEvent<T>) => void;
+  triggerValidation: (
+    scopeFields?: string[],
+    options?: BitValidationTriggerOptions,
+  ) => void;
+}
+
+export interface BitLifecycleSubmitPort<T extends object> {
+  getState: () => BitState<T>;
+  dispatch: (operation: BitStoreOperation<T>) => void;
+  batchStateUpdates<TResult>(callback: () => TResult): TResult;
+  config: BitFrameworkConfig<T>;
+  getTransformEntries: () => [string, BitTransformFn<T>][];
+  getHiddenFields: () => ReadonlySet<string>;
+  cancelAllValidations: () => void;
+  validateNow: (options?: BitValidationOptions) => Promise<boolean>;
+  hasValidationsInProgress: (scopeFields?: string[]) => boolean;
+  buildDirtyValues: (values: T) => Partial<T>;
   emitBeforeSubmit: (event: BitBeforeSubmitEvent<T>) => Promise<void>;
   emitAfterSubmit: (event: BitAfterSubmitEvent<T>) => Promise<void>;
   emitOperationalError: (event: {
@@ -91,4 +125,10 @@ export interface BitLifecycleStorePort<T extends object> {
   }) => Promise<void>;
 
   onUnhandledError?: (error: unknown, source: "submit") => void;
+}
+
+export interface BitLifecyclePorts<T extends object> {
+  fieldUpdate: BitLifecycleFieldUpdatePort<T>;
+  values: BitLifecycleValuesPort<T>;
+  submit: BitLifecycleSubmitPort<T>;
 }

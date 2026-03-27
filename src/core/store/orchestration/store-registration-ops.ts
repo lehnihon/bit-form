@@ -7,6 +7,7 @@ import {
   patchStateOperation,
   type BitStoreOperation,
 } from "../engines/operation-engine";
+import type { BitStoreStateReader } from "../shared/store-state-reader";
 
 export function registerStoreField<T extends object>(args: {
   path: string;
@@ -14,6 +15,7 @@ export function registerStoreField<T extends object>(args: {
   state: BitState<T>;
   fieldRegistry: BitFieldRegistry<T>;
   subscriptions: BitSubscriptionEngine<T>;
+  stateReader: BitStoreStateReader<T>;
   invalidateFieldIndexes: () => void;
 }): void {
   const {
@@ -22,11 +24,14 @@ export function registerStoreField<T extends object>(args: {
     state,
     fieldRegistry,
     subscriptions,
+    stateReader,
     invalidateFieldIndexes,
   } = args;
 
   fieldRegistry.register(path, config, state.values);
   invalidateFieldIndexes();
+  subscriptions.invalidatePathExpansionCache(path);
+  stateReader.invalidatePath(path);
 
   if (config.scope) {
     subscriptions.notify(state, [
@@ -68,6 +73,7 @@ export function unregisterStoreField<T extends object>(args: {
   validationCleanupField(path);
   fieldRegistry.unregister(path);
   invalidateFieldIndexes();
+  subscriptions.invalidatePathExpansionCache(path);
 
   if (fieldConfig?.scope) {
     subscriptions.notify(state, [
@@ -109,6 +115,7 @@ export function unregisterStorePrefix<T extends object>(args: {
   validationCleanupPrefix(prefix);
   const removedEntries = fieldRegistry.unregisterPrefix(prefix);
   invalidateFieldIndexes();
+  subscriptions.invalidatePathExpansionCache(prefix);
 
   const impactedScopes = new Set(
     removedEntries

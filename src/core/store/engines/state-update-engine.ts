@@ -40,16 +40,26 @@ export function applyStateUpdate<T extends object>(args: {
   currentState: BitState<T>;
   partialState: Partial<BitState<T>>;
   changedPaths?: string[];
-  applyComputedValues: (values: T) => T;
+  applyValueDerivations?: (values: T, changedPaths?: readonly string[]) => T;
+  applyComputedValues?: (values: T) => T;
 }): BitStateUpdateResult<T> {
-  const { currentState, partialState, changedPaths, applyComputedValues } =
-    args;
+  const {
+    currentState,
+    partialState,
+    changedPaths,
+    applyValueDerivations,
+    applyComputedValues,
+  } = args;
+  const deriveValues =
+    applyValueDerivations ??
+    ((values: T) =>
+      applyComputedValues ? applyComputedValues(values) : values);
 
   const nextState: BitState<T> = { ...currentState, ...partialState };
   const valuesChanged = !!partialState.values;
 
   if (partialState.values) {
-    nextState.values = applyComputedValues(partialState.values);
+    nextState.values = deriveValues(partialState.values, changedPaths);
   }
 
   if (partialState.errors) {

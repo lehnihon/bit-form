@@ -50,7 +50,7 @@ export function dispatchStoreStateOperation<T extends object>(args: {
   state: BitState<T>;
   batchState: BitStoreBatchState<T>;
   operation: BitStoreOperation<T>;
-  applyComputedValues: (values: T, changedPaths?: readonly string[]) => T;
+  applyValueDerivations: (values: T, changedPaths?: readonly string[]) => T;
   onStateCommitted: (payload: {
     nextState: BitState<T>;
     changedPaths?: Iterable<string>;
@@ -61,7 +61,7 @@ export function dispatchStoreStateOperation<T extends object>(args: {
     state,
     batchState,
     operation,
-    applyComputedValues,
+    applyValueDerivations,
     onStateCommitted,
   } = args;
 
@@ -69,7 +69,7 @@ export function dispatchStoreStateOperation<T extends object>(args: {
     state,
     batchState,
     operation,
-    applyComputedValues,
+    applyValueDerivations,
     onStateCommitted,
   });
 }
@@ -92,8 +92,7 @@ export function saveStoreHistorySnapshot<T extends object>(args: {
 export function flushStoreBatchedStateUpdates<T extends object>(args: {
   state: BitState<T>;
   batchState: BitStoreBatchState<T>;
-  applyComputedValues: (values: T, changedPaths?: readonly string[]) => T;
-  applyPostBatchValues?: (values: T, changedPaths?: readonly string[]) => T;
+  applyValueDerivations: (values: T, changedPaths?: readonly string[]) => T;
   onStateCommitted: (payload: {
     nextState: BitState<T>;
     changedPaths?: Iterable<string>;
@@ -104,8 +103,7 @@ export function flushStoreBatchedStateUpdates<T extends object>(args: {
   const {
     state,
     batchState,
-    applyComputedValues,
-    applyPostBatchValues,
+    applyValueDerivations,
     onStateCommitted,
     saveHistory,
   } = args;
@@ -113,8 +111,7 @@ export function flushStoreBatchedStateUpdates<T extends object>(args: {
   const nextState = flushStoreKernelBatch({
     state,
     batchState,
-    applyComputedValues,
-    applyPostBatchValues,
+    applyValueDerivations,
     onStateCommitted,
   });
 

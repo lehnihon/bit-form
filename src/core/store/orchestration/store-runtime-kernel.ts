@@ -7,9 +7,7 @@ import type { BitStoreEffectEngine } from "../engines/effect-engine";
 import type { BitStoreOperation } from "../engines/operation-engine";
 import type { BitSubscriptionEngine } from "../engines/subscription-engine";
 import type { BitState } from "../contracts/types";
-import type { BitComputedManager } from "../managers/core/computed-manager";
 import type { BitStoreCapabilities } from "./capabilities";
-import { applyComputedDerivations } from "../shared/value-derivation-pipeline";
 import {
   commitStoreStateUpdate,
   dispatchStoreStateOperation,
@@ -24,8 +22,7 @@ export interface BitStoreRuntimeKernelArgs<T extends object> {
   subscriptions: BitSubscriptionEngine<T>;
   effects: BitStoreEffectEngine<T>;
   capabilities: BitStoreCapabilities<T>;
-  computedManager: BitComputedManager<T>;
-  applyPostBatchValues?: (values: T, changedPaths?: readonly string[]) => T;
+  applyValueDerivations?: (values: T, changedPaths?: readonly string[]) => T;
 }
 
 export class BitStoreRuntimeKernel<T extends object> {
@@ -61,13 +58,8 @@ export class BitStoreRuntimeKernel<T extends object> {
       state: this.state,
       batchState: this.batchState,
       operation,
-      applyComputedValues: (values, changedPaths) =>
-        applyComputedDerivations({
-          values,
-          changedPaths,
-          applyComputed: (nextValues, nextChangedPaths) =>
-            this.args.computedManager.apply(nextValues, nextChangedPaths),
-        }),
+      applyValueDerivations: (values, changedPaths) =>
+        this.applyValueDerivations(values, changedPaths),
       onStateCommitted: (payload) => this.onStateCommitted(payload),
     });
   }
@@ -123,14 +115,8 @@ export class BitStoreRuntimeKernel<T extends object> {
     this.state = flushStoreBatchedStateUpdates({
       state: this.state,
       batchState: this.batchState,
-      applyComputedValues: (values, changedPaths) =>
-        applyComputedDerivations({
-          values,
-          changedPaths,
-          applyComputed: (nextValues, nextChangedPaths) =>
-            this.args.computedManager.apply(nextValues, nextChangedPaths),
-        }),
-      applyPostBatchValues: this.args.applyPostBatchValues,
+      applyValueDerivations: (values, changedPaths) =>
+        this.applyValueDerivations(values, changedPaths),
       onStateCommitted: (payload) => this.onStateCommitted(payload),
       saveHistory: (values) => this.capabilities.history.saveSnapshot(values),
     });
@@ -146,5 +132,14 @@ export class BitStoreRuntimeKernel<T extends object> {
         getHistorySubscriptionPath(),
       ]);
     }
+  }
+
+  private applyValueDerivations(
+    values: T,
+    changedPaths?: readonly string[],
+  ): T {
+    return this.args.applyValueDerivations
+      ? this.args.applyValueDerivations(values, changedPaths)
+      : values;
   }
 }

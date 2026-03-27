@@ -16,13 +16,14 @@ import { BitComputedManager } from "../managers/core/computed-manager";
 import { analyzeCyclicDependencies } from "../managers/core/computed-dependency-analyzer";
 import type { BitStoreOperation } from "../engines/operation-engine";
 import { deepClone } from "../../utils";
+import { applyValueDerivations } from "../shared/value-derivation-pipeline";
 import type { BitStoreCapabilities } from "./capabilities";
 import type { BitFrameworkConfig } from "../contracts/public/store-api-types";
 import { bitBus, getNoopBitBus } from "../shared/bus";
 import type { BitBusStorePort } from "../contracts/bus-types";
 import type {
-  BitLifecycleStorePort,
-  BitValidationStorePort,
+  BitLifecyclePorts,
+  BitValidationManagerPort,
 } from "../contracts/port-types";
 import type { BitFieldDefinition, BitState } from "../contracts/types";
 
@@ -43,8 +44,8 @@ function shouldEnableStoreBus<T extends object>(config: BitFrameworkConfig<T>) {
 }
 
 export type BitStoreCapabilityPorts<T extends object> = {
-  validationPort: BitValidationStorePort<T>;
-  lifecyclePort: BitLifecycleStorePort<T>;
+  validationPort: BitValidationManagerPort<T>;
+  lifecyclePorts: BitLifecyclePorts<T>;
   arrayPort: BitArrayStorePort<T>;
   config: BitFrameworkConfig<T>;
   getScopeFields(scopeName: string): string[];
@@ -62,7 +63,7 @@ export function createStoreCapabilities<T extends object>(args: {
 
   return {
     validation: new BitValidationManager<T>(ports.validationPort),
-    lifecycle: new BitLifecycleManager<T>(ports.lifecyclePort),
+    lifecycle: new BitLifecycleManager<T>(ports.lifecyclePorts),
     history: new BitHistoryManager<T>(
       !!ports.config.history.enabled,
       ports.config.history.limit ?? 50,
@@ -165,10 +166,15 @@ export function createInitialStoreState<T extends object>(args: {
     throw new Error(computedCycles[0].message);
   }
 
-  const valuesWithComputeds = computedManager.apply(initialValues);
+  const initialDerivedValues = applyValueDerivations({
+    values: initialValues,
+    normalizerEntries: fieldRegistry.getNormalizerEntries(),
+    applyComputed: (values, changedPaths) =>
+      computedManager.apply(values, changedPaths),
+  });
 
   return {
-    values: valuesWithComputeds,
+    values: initialDerivedValues,
     errors: {},
     touched: {},
     isValidating: {},

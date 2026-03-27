@@ -6,8 +6,10 @@ import {
   BitSyncPipelineRunner,
 } from "../../../shared/pipeline";
 import { patchStateOperation } from "../../../engines/operation-engine";
-import type { BitLifecycleStorePort } from "../../../contracts/port-types";
-import type { BitDependencyUpdateDiff } from "../../../contracts/port-types";
+import type {
+  BitDependencyUpdateDiff,
+  BitLifecycleFieldUpdatePort,
+} from "../../../contracts/port-types";
 
 interface FieldUpdatePipelineContext<
   T extends object,
@@ -27,24 +29,8 @@ export class BitFieldUpdateManager<T extends object> {
   private readonly fieldUpdatePipeline: BitSyncPipelineRunner<
     FieldUpdatePipelineContext<T>
   >;
-  private readonly reusableContext: FieldUpdatePipelineContext<T> = {
-    path: "",
-    value: undefined,
-    meta: { origin: "setField" },
-    previousValue: undefined,
-    nextValues: {} as T,
-    nextErrors: {} as BitErrors<T>,
-    hasMutatedErrors: false,
-    dependencyDiff: {
-      affectedFields: [],
-      visibilityChanged: [],
-      requiredChanged: [],
-    },
-    isDirty: false,
-  };
-  private isReusableContextBusy = false;
 
-  constructor(private readonly store: BitLifecycleStorePort<T>) {
+  constructor(private readonly store: BitLifecycleFieldUpdatePort<T>) {
     this.fieldUpdatePipeline = new BitSyncPipelineRunner<
       FieldUpdatePipelineContext<T>
     >([
@@ -76,46 +62,13 @@ export class BitFieldUpdateManager<T extends object> {
     meta: BitFieldChangeMeta = { origin: "setField" },
   ) {
     const state = this.store.getState();
-    const context = this.acquireContext();
-
-    context.path = path;
-    context.value = value;
-    context.meta = meta;
-    context.previousValue = getDeepValue(state.values, path);
-    context.nextValues = setDeepValue(state.values, path, value);
-    context.nextErrors = state.errors;
-    context.hasMutatedErrors = false;
-    context.dependencyDiff.affectedFields.length = 0;
-    context.dependencyDiff.visibilityChanged.length = 0;
-    context.dependencyDiff.requiredChanged.length = 0;
-    context.isDirty = false;
-
-    const isReusableContext = context === this.reusableContext;
-    if (isReusableContext) {
-      this.isReusableContextBusy = true;
-    }
-
-    try {
-      this.fieldUpdatePipeline.run(context);
-    } finally {
-      if (isReusableContext) {
-        this.isReusableContextBusy = false;
-      }
-    }
-  }
-
-  private acquireContext(): FieldUpdatePipelineContext<T> {
-    if (!this.isReusableContextBusy) {
-      return this.reusableContext;
-    }
-
-    return {
-      path: "",
-      value: undefined,
-      meta: { origin: "setField" },
-      previousValue: undefined,
-      nextValues: {} as T,
-      nextErrors: {} as BitErrors<T>,
+    const context: FieldUpdatePipelineContext<T> = {
+      path,
+      value,
+      meta,
+      previousValue: getDeepValue(state.values, path),
+      nextValues: setDeepValue(state.values, path, value),
+      nextErrors: state.errors,
       hasMutatedErrors: false,
       dependencyDiff: {
         affectedFields: [],
@@ -124,6 +77,8 @@ export class BitFieldUpdateManager<T extends object> {
       },
       isDirty: false,
     };
+
+    this.fieldUpdatePipeline.run(context);
   }
 
   private clearCurrentError(ctx: FieldUpdatePipelineContext<T>) {

@@ -1,4 +1,5 @@
 import type {
+  BitState,
   BitArrayItem,
   BitArrayPath,
   BitErrors,
@@ -36,11 +37,7 @@ export interface BitStoreSlicesFactoryDeps<
 > {
   getStoreId(): string;
   getConfig(): Readonly<BitFrameworkConfig<T>>;
-  getIsValid(): boolean;
-  getIsSubmitting(): boolean;
-  getIsDirty(): boolean;
-
-  getState(): Readonly<any>;
+  getState(): Readonly<BitState<T>>;
   getFieldConfig(path: string): BitFieldDefinition<T> | undefined;
   getFieldState<P extends BitPath<T>>(
     path: P,
@@ -144,6 +141,8 @@ export interface BitStoreSlicesFactoryDeps<
 export function buildStoreSlicesApi<T extends object>(
   deps: BitStoreSlicesFactoryDeps<T>,
 ): BitStoreNamespacesApi<T> {
+  const readState = () => deps.getState();
+
   const read: BitStoreReadSliceApi<T> = {
     get storeId() {
       return deps.getStoreId();
@@ -152,16 +151,16 @@ export function buildStoreSlicesApi<T extends object>(
       return deps.getConfig();
     },
     get isValid() {
-      return deps.getIsValid();
+      return readState().isValid;
     },
     get isSubmitting() {
-      return deps.getIsSubmitting();
+      return readState().isSubmitting;
     },
     get isDirty() {
-      return deps.getIsDirty();
+      return readState().isDirty;
     },
     getConfig: () => deps.getConfig(),
-    getState: () => deps.getState(),
+    getState: readState,
     getFieldConfig: (path) => deps.getFieldConfig(path),
     getFieldState: (path) => deps.getFieldState(path),
     isHidden: (path) => deps.isHidden(path),
@@ -176,7 +175,7 @@ export function buildStoreSlicesApi<T extends object>(
   };
 
   const observe: BitStoreObserveSliceApi<T> = {
-    getState: () => deps.getState(),
+    getState: readState,
     subscribe: (listener) => deps.subscribe(listener),
     subscribePersistMeta: (listener) => deps.subscribePersistMeta(listener),
     subscribeHistoryMeta: (listener) => deps.subscribeHistoryMeta(listener),

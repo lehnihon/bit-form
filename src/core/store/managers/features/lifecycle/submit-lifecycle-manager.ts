@@ -6,7 +6,7 @@ import {
   BitPipelineRunner,
 } from "../../../shared/pipeline";
 import { patchStateOperation } from "../../../engines/operation-engine";
-import type { BitLifecycleStorePort } from "../../../contracts/port-types";
+import type { BitLifecycleSubmitPort } from "../../../contracts/port-types";
 
 interface SubmitPipelineContext<T extends object> extends BitPipelineContext {
   onSuccess: (values: T, dirtyValues?: Partial<T>) => void | Promise<void>;
@@ -20,7 +20,7 @@ interface SubmitPipelineContext<T extends object> extends BitPipelineContext {
 export class BitSubmitLifecycleManager<T extends object> {
   private readonly submitPipeline: BitPipelineRunner<SubmitPipelineContext<T>>;
 
-  constructor(private readonly store: BitLifecycleStorePort<T>) {
+  constructor(private readonly store: BitLifecycleSubmitPort<T>) {
     this.submitPipeline = new BitPipelineRunner<SubmitPipelineContext<T>>([
       { name: "submit:start", run: async (ctx) => this.startSubmit(ctx) },
       {

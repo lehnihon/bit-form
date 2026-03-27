@@ -181,4 +181,26 @@ describe("BitSubscriptionEngine", () => {
     expect(internals.expandedPathCache.size).toBeLessThanOrEqual(2000);
     expect(internals.changedPathLookupCache.size).toBeLessThanOrEqual(2000);
   });
+
+  it("invalida entradas relacionadas ao prefixo informado", () => {
+    const engine = new BitSubscriptionEngine<Values>(() =>
+      createState({ user: { name: "Leo", age: 30 } }),
+    );
+
+    const internals = engine as unknown as {
+      expandedPathCache: Map<string, string[]>;
+      expandPathForIndexing(path: string): string[];
+      invalidatePathExpansionCache(prefix?: string): void;
+    };
+
+    internals.expandPathForIndexing("user.name");
+    internals.expandPathForIndexing("user.age");
+    internals.expandPathForIndexing("account.name");
+
+    internals.invalidatePathExpansionCache("user");
+
+    expect(internals.expandedPathCache.has("user.name")).toBe(false);
+    expect(internals.expandedPathCache.has("user.age")).toBe(false);
+    expect(internals.expandedPathCache.has("account.name")).toBe(true);
+  });
 });

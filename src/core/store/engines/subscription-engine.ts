@@ -144,6 +144,23 @@ export class BitSubscriptionEngine<T extends object> {
     this.subscriptionSeenVersion.clear();
   }
 
+  invalidatePathExpansionCache(prefix?: string): void {
+    if (!prefix) {
+      this.pathExpansionCache.clear();
+      return;
+    }
+
+    for (const key of this.pathExpansionCache.keys()) {
+      if (
+        key === prefix ||
+        key.startsWith(`${prefix}.`) ||
+        prefix.startsWith(`${key}.`)
+      ) {
+        this.pathExpansionCache.delete(key);
+      }
+    }
+  }
+
   private normalizeSubscriptionPaths(paths?: string[]): string[] {
     if (!paths || paths.length === 0) return [];
 

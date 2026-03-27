@@ -145,4 +145,42 @@ describe("Incremental Normalization (normalizeDependsOn)", () => {
 
     expect(normalizeChild).toHaveBeenCalledTimes(0);
   });
+
+  it("aplica normalizers antes de computeds no estado inicial", () => {
+    const store = createBitStore({
+      initialValues: { name: "  Leandro  ", greeting: "" },
+      fields: {
+        name: {
+          normalize: (value) => String(value).trim(),
+        },
+        greeting: {
+          computed: (values) => `Olá, ${values.name}`,
+          computedDependsOn: ["name"],
+        },
+      },
+    });
+
+    expect(store.getState().values.name).toBe("Leandro");
+    expect(store.getState().values.greeting).toBe("Olá, Leandro");
+  });
+
+  it("recalcula computeds quando normalizer altera um path dependido", () => {
+    const store = createBitStore({
+      initialValues: { name: "", greeting: "" },
+      fields: {
+        name: {
+          normalize: (value) => String(value).trim(),
+        },
+        greeting: {
+          computed: (values) => `Olá, ${values.name}`,
+          computedDependsOn: ["name"],
+        },
+      },
+    });
+
+    store.setField("name", "  Ana  ");
+
+    expect(store.getState().values.name).toBe("Ana");
+    expect(store.getState().values.greeting).toBe("Olá, Ana");
+  });
 });

@@ -115,7 +115,7 @@ export function createStoreRuntime<T extends object>(
     getEffects: featureAccess.getEffects,
   });
 
-  const lifecyclePort = createLifecyclePort<T>({
+  const lifecyclePorts = createLifecyclePort<T>({
     config,
     fieldRegistry,
     dirtyManager,
@@ -148,7 +148,7 @@ export function createStoreRuntime<T extends object>(
   const capabilities = createStoreCapabilities<T>({
     ports: {
       validationPort,
-      lifecyclePort,
+      lifecyclePorts,
       arrayPort,
       config,
       getScopeFields: fieldAccess.getScopeFields,
