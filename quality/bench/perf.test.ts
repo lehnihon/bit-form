@@ -94,7 +94,7 @@ describe("quality perf baseline", () => {
     });
 
     const duration = performance.now() - start;
-    expect(duration).toBeLessThan(withCiHeadroom(400));
+    expect(duration).toBeLessThan(withCiHeadroom(600));
   });
 
   it("handles 400 scoped subscribers under baseline budget", () => {

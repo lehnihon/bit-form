@@ -51,14 +51,14 @@ export function createBitFormBulkHarness(
   return {
     run: async () => {
       for (let index = 0; index < totalFields; index++) {
-        store.setField(
+        store.write.setField(
           `field_${index}` as keyof CompareFormValues & string,
           `value-${index}`,
         );
       }
 
-      await store.validate({ touch: false });
-      store.reset();
+      await store.write.validate({ touch: false });
+      store.write.reset();
     },
   };
 }
@@ -126,11 +126,14 @@ export function createBitFormAsyncBurstHarness(
   return {
     run: async () => {
       for (let index = 0; index < iterations; index++) {
-        store.setField("username", index % 2 === 0 ? "taken" : `user-${index}`);
+        store.write.setField(
+          "username",
+          index % 2 === 0 ? "taken" : `user-${index}`,
+        );
       }
 
-      await store.validate({ touch: false });
-      store.reset();
+      await store.write.validate({ touch: false });
+      store.write.reset();
     },
   };
 }
@@ -359,13 +362,13 @@ export async function runBitFormBulkUpdate(totalFields: number) {
   });
 
   for (let index = 0; index < totalFields; index++) {
-    store.setField(
+    store.write.setField(
       `field_${index}` as keyof CompareFormValues & string,
       `value-${index}`,
     );
   }
 
-  await store.validate();
+  await store.write.validate();
 }
 
 export async function runRhfBulkUpdate(totalFields: number) {
@@ -421,10 +424,13 @@ export async function runBitFormAsyncBurst(iterations: number) {
   });
 
   for (let index = 0; index < iterations; index++) {
-    store.setField("username", index % 2 === 0 ? "taken" : `user-${index}`);
+    store.write.setField(
+      "username",
+      index % 2 === 0 ? "taken" : `user-${index}`,
+    );
   }
 
-  await store.validate();
+  await store.write.validate();
 }
 
 export async function runRhfAsyncBurst(iterations: number) {

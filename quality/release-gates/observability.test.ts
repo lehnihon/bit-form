@@ -20,9 +20,9 @@ describe("release-gate observability", () => {
       },
     });
 
-    await store.forceSave();
+    await store.feature.forceSave();
     expect(onError).toHaveBeenCalledTimes(1);
-    expect(store.getPersistMetadata().isSaving).toBe(false);
-    expect(store.getPersistMetadata().isRestoring).toBe(false);
+    expect(store.read.getPersistMetadata().isSaving).toBe(false);
+    expect(store.read.getPersistMetadata().isRestoring).toBe(false);
   });
 });

@@ -40,13 +40,13 @@ describe("Memory Profiling", () => {
     // Create and destroy 1000 fields
     for (let i = 0; i < 1000; i++) {
       const fieldPath = `field_${i}`;
-      store.registerField(fieldPath, {});
-      store.setField(fieldPath, `value_${i}`);
-      store.unregisterField(fieldPath);
+      store.feature.registerField(fieldPath, {});
+      store.write.setField(fieldPath, `value_${i}`);
+      store.feature.unregisterField(fieldPath);
     }
 
     // Cleanup
-    store.cleanup();
+    store.feature.cleanup();
 
     runGCIfAvailable();
     const afterHeap = (process.memoryUsage().heapUsed || 0) / 1024 / 1024;
@@ -70,16 +70,16 @@ describe("Memory Profiling", () => {
 
     // Perform many changes (triggers snapshots)
     for (let i = 0; i < 100; i++) {
-      store.setField("count", i);
+      store.write.setField("count", i);
     }
 
     // Undo and redo
     for (let i = 0; i < 20; i++) {
-      if (store.getHistoryMetadata().canUndo) {
-        store.undo();
+      if (store.read.getHistoryMetadata().canUndo) {
+        store.feature.undo();
       }
-      if (store.getHistoryMetadata().canRedo) {
-        store.redo();
+      if (store.read.getHistoryMetadata().canRedo) {
+        store.feature.redo();
       }
     }
 
@@ -104,7 +104,7 @@ describe("Memory Profiling", () => {
 
     // Create 500 subscriptions
     for (let i = 0; i < 500; i++) {
-      const unsub = store.subscribe(() => {
+      const unsub = store.observe.subscribe(() => {
         // noop
       });
       unsubscribers.push(unsub);
@@ -143,7 +143,7 @@ describe("Memory Profiling", () => {
 
     // Register many fields with async validators
     for (let i = 0; i < 100; i++) {
-      store.registerField(`field_${i}`, {
+      store.feature.registerField(`field_${i}`, {
         validation: {
           asyncValidate: async (value: any) => {
             // Simulate async validation
@@ -160,14 +160,14 @@ describe("Memory Profiling", () => {
 
     // Trigger validations
     for (let i = 0; i < 100; i++) {
-      store.setField(`field_${i}`, `test_${i}`);
+      store.write.setField(`field_${i}`, `test_${i}`);
     }
 
     // Wait for validations to settle (approximate)
     await new Promise((resolve) => setTimeout(resolve, 200));
 
     // Reset to cancel remaining validations
-    store.reset();
+    store.write.reset();
 
     runGCIfAvailable();
     const afterHeap = (process.memoryUsage().heapUsed || 0) / 1024 / 1024;
@@ -190,15 +190,15 @@ describe("Memory Profiling", () => {
     for (let batch = 0; batch < 10; batch++) {
       for (let i = 0; i < 100; i++) {
         const fieldIndex = batch * 100 + i;
-        store.registerField(`field_${fieldIndex}`, {});
-        store.setField(`field_${fieldIndex}`, `value_${fieldIndex}`);
+        store.feature.registerField(`field_${fieldIndex}`, {});
+        store.write.setField(`field_${fieldIndex}`, `value_${fieldIndex}`);
       }
 
       // Periodic cleanup of old fields
       if (batch > 0) {
         for (let i = 0; i < 50; i++) {
           const fieldIndex = (batch - 1) * 100 + i;
-          store.unregisterField(`field_${fieldIndex}`);
+          store.feature.unregisterField(`field_${fieldIndex}`);
         }
       }
     }
