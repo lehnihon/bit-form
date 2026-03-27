@@ -40,7 +40,7 @@ export interface BitStoreSlicesFactoryDeps<
   getIsSubmitting(): boolean;
   getIsDirty(): boolean;
 
-  getState(): Readonly<any>;
+  getState(): Readonly<BitState<T>>;
   getFieldConfig(path: string): BitFieldDefinition<T> | undefined;
   getFieldState<P extends BitPath<T>>(
     path: P,

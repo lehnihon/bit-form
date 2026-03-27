@@ -171,8 +171,11 @@ export class BitComputedManager<T extends object> {
       return [];
     }
 
-    return this.orderEntries(
-      entries.filter((entry) => affectedPaths.has(entry.path)),
+    // Optimization: Use pre-computed global order instead of recalculating
+    // This keeps entries in their proper topological order without O(n²) recalculation
+    const orderedAllEntries = this.getOrderedAllEntries(entries);
+    return orderedAllEntries.filter((entry) =>
+      affectedPaths.has(entry.path),
     );
   }
 

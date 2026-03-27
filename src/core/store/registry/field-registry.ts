@@ -50,7 +50,12 @@ export class BitFieldRegistry<
       }
     });
 
-    removedEntries.forEach(([path]) => this.unregister(path));
+    // Batch unregister all at once instead of calling unregister N times
+    // This avoids N separate invalidations
+    removedEntries.forEach(([path, config]) => {
+      this.catalog.delete(path);
+      this.conditions.onUnregister(path, config);
+    });
 
     return removedEntries;
   }
