@@ -27,6 +27,7 @@ export function registerStoreField<T extends object>(args: {
 
   fieldRegistry.register(path, config, state.values);
   invalidateFieldIndexes();
+  subscriptions.invalidatePathExpansionCache(path);
 
   if (config.scope) {
     subscriptions.notify(state, [
@@ -68,6 +69,7 @@ export function unregisterStoreField<T extends object>(args: {
   validationCleanupField(path);
   fieldRegistry.unregister(path);
   invalidateFieldIndexes();
+  subscriptions.invalidatePathExpansionCache(path);
 
   if (fieldConfig?.scope) {
     subscriptions.notify(state, [
@@ -109,6 +111,7 @@ export function unregisterStorePrefix<T extends object>(args: {
   validationCleanupPrefix(prefix);
   const removedEntries = fieldRegistry.unregisterPrefix(prefix);
   invalidateFieldIndexes();
+  subscriptions.invalidatePathExpansionCache(prefix);
 
   const impactedScopes = new Set(
     removedEntries

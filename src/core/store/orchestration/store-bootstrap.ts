@@ -16,6 +16,7 @@ import { BitComputedManager } from "../managers/core/computed-manager";
 import { analyzeCyclicDependencies } from "../managers/core/computed-dependency-analyzer";
 import type { BitStoreOperation } from "../engines/operation-engine";
 import { deepClone } from "../../utils";
+import { applyValueDerivations } from "../shared/value-derivation-pipeline";
 import type { BitStoreCapabilities } from "./capabilities";
 import type { BitFrameworkConfig } from "../contracts/public/store-api-types";
 import { bitBus, getNoopBitBus } from "../shared/bus";
@@ -165,10 +166,15 @@ export function createInitialStoreState<T extends object>(args: {
     throw new Error(computedCycles[0].message);
   }
 
-  const valuesWithComputeds = computedManager.apply(initialValues);
+  const initialDerivedValues = applyValueDerivations({
+    values: initialValues,
+    normalizerEntries: fieldRegistry.getNormalizerEntries(),
+    applyComputed: (values, changedPaths) =>
+      computedManager.apply(values, changedPaths),
+  });
 
   return {
-    values: valuesWithComputeds,
+    values: initialDerivedValues,
     errors: {},
     touched: {},
     isValidating: {},

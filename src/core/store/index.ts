@@ -39,12 +39,8 @@ import type { BitStoreRuntimeKernel } from "./orchestration/store-runtime-kernel
 import type { BitFieldRegistry } from "./registry/field-registry";
 import type { BitMaskManager } from "./managers/features/mask-manager";
 import type { BitDirtyManager } from "./managers/core/dirty-manager";
-import { getDeepValue } from "../utils";
 import { touchFieldsOperation } from "./engines/operation-engine";
-import {
-  createFieldStateSnapshot,
-  resolveFieldMask,
-} from "./engines/store-field-query-engine";
+import { resolveFieldMask } from "./engines/store-field-query-engine";
 import {
   clearPersistedFeature,
   forceSavePersistedFeature,
@@ -68,6 +64,7 @@ import {
   subscribeStoreSelector,
 } from "./orchestration/store-observe-ops";
 import { createStoreNamespacesFromFacadeHost } from "./orchestration/store-facade";
+import { BitStoreStateReader } from "./shared/store-state-reader";
 
 class BitStore<T extends object = Record<string, unknown>> {
   public readonly [BIT_HOOKS_API_SYMBOL] = true;
@@ -80,6 +77,7 @@ class BitStore<T extends object = Record<string, unknown>> {
   private readonly fieldRegistry: BitFieldRegistry<T>;
   private readonly maskManager: BitMaskManager;
   private readonly dirtyManager: BitDirtyManager<T>;
+  private readonly stateReader: BitStoreStateReader<T>;
 
   public readonly read: BitStoreReadSliceApi<T>;
   public readonly observe: BitStoreObserveSliceApi<T>;
@@ -106,6 +104,14 @@ class BitStore<T extends object = Record<string, unknown>> {
     this.fieldRegistry = composition.fieldRegistry;
     this.maskManager = composition.maskManager;
     this.dirtyManager = composition.dirtyManager;
+    this.stateReader = new BitStoreStateReader<T>({
+      getState: () => this.runtime.getState(),
+      isHidden: (path) => this.runtime.capabilities.query.isHidden(path),
+      isRequired: (path) => this.runtime.capabilities.query.isRequired(path),
+      isFieldDirty: (path) => this.runtime.capabilities.query.isFieldDirty(path),
+      isFieldValidating: (path) =>
+        this.runtime.capabilities.query.isFieldValidating(path),
+    });
 
     const slices = createStoreNamespacesFromFacadeHost(this);
 
@@ -148,39 +154,25 @@ class BitStore<T extends object = Record<string, unknown>> {
   // ── State Read ───────────────────────────────────────────────────────────
 
   getState() {
-    return this.runtime.getState();
+    return this.stateReader.getState();
   }
 
   getFieldState<P extends BitPath<T>>(
     path: P,
   ): BitFieldState<T, BitPathValue<T, P>> {
-    const effectiveState = this.getState();
-    const value = getDeepValue(
-      effectiveState.values,
-      path as string,
-    ) as BitPathValue<T, P>;
-
-    return createFieldStateSnapshot({
-      state: effectiveState,
-      path,
-      value,
-      isHidden: this.isHidden(path),
-      isRequired: this.isRequired(path),
-      isDirty: this.isFieldDirty(path as string),
-      isValidating: this.isFieldValidating(path as string),
-    });
+    return this.stateReader.getFieldState(path);
   }
 
   get isValid(): boolean {
-    return this.getState().isValid;
+    return this.stateReader.getFlag("isValid");
   }
 
   get isSubmitting(): boolean {
-    return this.getState().isSubmitting;
+    return this.stateReader.getFlag("isSubmitting");
   }
 
   get isDirty(): boolean {
-    return this.getState().isDirty;
+    return this.stateReader.getFlag("isDirty");
   }
 
   isHidden<P extends BitPath<T>>(path: P): boolean {
@@ -204,7 +196,7 @@ class BitStore<T extends object = Record<string, unknown>> {
   }
 
   getPersistMetadata(): BitPersistMetadata {
-    return this.getState().persist;
+    return this.stateReader.getPersistMetadata();
   }
 
   getHistoryMetadata(): BitHistoryMetadata {

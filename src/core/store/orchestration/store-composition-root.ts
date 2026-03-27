@@ -1,4 +1,4 @@
-import { applyNormalizerDerivations } from "../shared/value-derivation-pipeline";
+import { applyValueDerivations } from "../shared/value-derivation-pipeline";
 import type { BitConfig, BitFieldChangeMeta } from "../contracts/types";
 import type { BitFrameworkConfig } from "../contracts/public/store-api-types";
 import type { BitValidationTriggerOptions } from "../contracts/port-types";
@@ -13,7 +13,6 @@ import { applyStorePersistedValues } from "./store-persist-ops";
 import { createStoreRuntime } from "./store-runtime";
 import { BitStoreRuntimeKernel } from "./store-runtime-kernel";
 import { BitBaselineManager } from "../managers/core/baseline-manager";
-import type { BitNormalizerEntry } from "../registry/field-catalog";
 import type { BitBusStorePort } from "../contracts/bus-types";
 
 export interface BitStoreComposition<T extends object> {
@@ -25,19 +24,6 @@ export interface BitStoreComposition<T extends object> {
   dirtyManager: BitDirtyManager<T>;
   maskManager: BitMaskManager;
   baselineManager: BitBaselineManager<T>;
-}
-
-function applyNormalizedPostBatchValues<T extends object>(args: {
-  values: T;
-  changedPaths?: readonly string[];
-  getNormalizerEntries(): BitNormalizerEntry<T>[];
-}): T {
-  const { values, changedPaths, getNormalizerEntries } = args;
-  return applyNormalizerDerivations({
-    values,
-    changedPaths,
-    normalizerEntries: getNormalizerEntries(),
-  });
 }
 
 export function composeBitStoreRuntime<T extends object>(args: {
@@ -181,12 +167,13 @@ export function composeBitStoreRuntime<T extends object>(args: {
     subscriptions: runtime.subscriptions,
     effects,
     capabilities: runtime.capabilities,
-    computedManager,
-    applyPostBatchValues: (values, changedPaths) =>
-      applyNormalizedPostBatchValues({
+    applyValueDerivations: (values, changedPaths) =>
+      applyValueDerivations({
         values,
         changedPaths,
-        getNormalizerEntries: () => fieldRegistry.getNormalizerEntries(),
+        normalizerEntries: fieldRegistry.getNormalizerEntries(),
+        applyComputed: (nextValues, nextChangedPaths) =>
+          computedManager.apply(nextValues, nextChangedPaths),
       }),
   });
 

@@ -13,9 +13,6 @@ import { buildStoreSlicesApi } from "./store-slices-factory";
 type BitStoreFacadeHost<T extends object> = BitStoreHooksApi<T> & {
   readonly storeId: string;
   readonly config: Readonly<BitFrameworkConfig<T>>;
-  readonly isValid: boolean;
-  readonly isSubmitting: boolean;
-  readonly isDirty: boolean;
   readonly canUndo: boolean;
   readonly canRedo: boolean;
   getFieldConfig(path: string): BitFieldDefinition<T> | undefined;
@@ -30,9 +27,6 @@ export function createStoreNamespacesFromFacadeHost<T extends object>(
   return buildStoreSlicesApi<T>({
     getStoreId: () => host.storeId,
     getConfig: () => host.config,
-    getIsValid: () => host.isValid,
-    getIsSubmitting: () => host.isSubmitting,
-    getIsDirty: () => host.isDirty,
     getState: () => host.getState(),
     getFieldConfig: (path) => host.getFieldConfig(path),
     getFieldState: (path) => host.getFieldState(path),

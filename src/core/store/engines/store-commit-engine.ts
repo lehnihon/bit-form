@@ -61,9 +61,9 @@ function routeStoreOperation<T extends object>(
 function executeStatePatchOperation<T extends object>(args: {
   currentState: BitState<T>;
   operation: BitStatePatchOperation<T>;
-  applyComputedValues: (values: T, changedPaths?: string[]) => T;
+  applyValueDerivations: (values: T, changedPaths?: string[]) => T;
 }) {
-  const { currentState, operation, applyComputedValues } = args;
+  const { currentState, operation, applyValueDerivations } = args;
 
   const hasValuesPatch = Object.prototype.hasOwnProperty.call(
     operation.partialState,
@@ -76,17 +76,16 @@ function executeStatePatchOperation<T extends object>(args: {
     currentState,
     partialState: operation.partialState,
     changedPaths: effectiveChangedPaths,
-    applyComputedValues: (values) =>
-      applyComputedValues(values, effectiveChangedPaths),
+    applyValueDerivations,
   });
 }
 
 function executeStoreOperation<T extends object>(args: {
   currentState: BitState<T>;
   operation: BitStoreOperation<T>;
-  applyComputedValues: (values: T, changedPaths?: string[]) => T;
+  applyValueDerivations: (values: T, changedPaths?: string[]) => T;
 }) {
-  const { currentState, operation, applyComputedValues } = args;
+  const { currentState, operation, applyValueDerivations } = args;
   const patchOperation = routeStoreOperation(currentState, operation);
 
   if (!patchOperation) {
@@ -96,10 +95,10 @@ function executeStoreOperation<T extends object>(args: {
   return executeStatePatchOperation({
     currentState,
     operation: patchOperation,
-    applyComputedValues: (values, changedPaths) =>
+    applyValueDerivations: (values, changedPaths) =>
       patchOperation.skipComputed
         ? values
-        : applyComputedValues(values, changedPaths),
+        : applyValueDerivations(values, changedPaths),
   });
 }
 
@@ -107,7 +106,7 @@ export function dispatchStoreKernelOperation<T extends object>(args: {
   state: BitState<T>;
   batchState: BitStoreBatchState<T>;
   operation: BitStoreOperation<T>;
-  applyComputedValues: (values: T, changedPaths?: readonly string[]) => T;
+  applyValueDerivations: (values: T, changedPaths?: readonly string[]) => T;
   onStateCommitted: (payload: {
     nextState: BitState<T>;
     changedPaths?: Iterable<string>;
@@ -118,7 +117,7 @@ export function dispatchStoreKernelOperation<T extends object>(args: {
     state,
     batchState,
     operation,
-    applyComputedValues,
+    applyValueDerivations,
     onStateCommitted,
   } = args;
 
@@ -128,7 +127,7 @@ export function dispatchStoreKernelOperation<T extends object>(args: {
     const updateResult = executeStoreOperation({
       currentState,
       operation,
-      applyComputedValues: (values) => values,
+      applyValueDerivations: (values) => values,
     });
 
     if (!updateResult) {
@@ -142,7 +141,7 @@ export function dispatchStoreKernelOperation<T extends object>(args: {
   const updateResult = executeStoreOperation({
     currentState: state,
     operation,
-    applyComputedValues,
+    applyValueDerivations,
   });
 
   if (!updateResult) {
@@ -161,8 +160,7 @@ export function dispatchStoreKernelOperation<T extends object>(args: {
 export function flushStoreKernelBatch<T extends object>(args: {
   state: BitState<T>;
   batchState: BitStoreBatchState<T>;
-  applyComputedValues: (values: T, changedPaths?: readonly string[]) => T;
-  applyPostBatchValues?: (values: T, changedPaths?: readonly string[]) => T;
+  applyValueDerivations: (values: T, changedPaths?: readonly string[]) => T;
   onStateCommitted: (payload: {
     nextState: BitState<T>;
     changedPaths?: Iterable<string>;
@@ -172,16 +170,14 @@ export function flushStoreKernelBatch<T extends object>(args: {
   const {
     state,
     batchState,
-    applyComputedValues,
-    applyPostBatchValues,
+    applyValueDerivations,
     onStateCommitted,
   } = args;
 
   const flushResult = flushStoreBatchState({
     currentState: state,
     batchState,
-    applyComputedValues,
-    applyPostBatchValues,
+    applyValueDerivations,
   });
 
   if (!flushResult) {

@@ -151,7 +151,11 @@ export class BitSubscriptionEngine<T extends object> {
     }
 
     for (const key of this.pathExpansionCache.keys()) {
-      if (key === prefix || key.startsWith(`${prefix}.`) || prefix.startsWith(`${key}.`)) {
+      if (
+        key === prefix ||
+        key.startsWith(`${prefix}.`) ||
+        prefix.startsWith(`${key}.`)
+      ) {
         this.pathExpansionCache.delete(key);
       }
     }

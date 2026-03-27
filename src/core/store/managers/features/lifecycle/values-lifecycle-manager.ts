@@ -6,6 +6,30 @@ import type { BitLifecycleStorePort } from "../../../contracts/port-types";
 export class BitValuesLifecycleManager<T extends object> {
   constructor(private readonly store: BitLifecycleStorePort<T>) {}
 
+  private collectChangedPaths(values: DeepPartial<T>, prefix = ""): string[] {
+    const changedPaths: string[] = [];
+
+    Object.entries(values as Record<string, unknown>).forEach(([key, value]) => {
+      const nextPath = prefix ? `${prefix}.${key}` : key;
+
+      if (
+        value &&
+        typeof value === "object" &&
+        !Array.isArray(value) &&
+        Object.keys(value as Record<string, unknown>).length > 0
+      ) {
+        changedPaths.push(
+          ...this.collectChangedPaths(value as DeepPartial<T>, nextPath),
+        );
+        return;
+      }
+
+      changedPaths.push(nextPath);
+    });
+
+    return changedPaths;
+  }
+
   setValues(
     newValues: T | DeepPartial<T>,
     options?: { partial?: boolean; rebase?: boolean },
@@ -25,7 +49,12 @@ export class BitValuesLifecycleManager<T extends object> {
 
   hydrateValues(values: DeepPartial<T>) {
     const mergedValues = deepMerge(this.store.getState().values, values);
-    this.replaceValuesInternal(mergedValues, "hydrate");
+    const changedPaths = this.collectChangedPaths(values);
+    this.replaceValuesInternal(
+      mergedValues,
+      "hydrate",
+      changedPaths.length > 0 ? changedPaths : ["*"],
+    );
   }
 
   rebaseValues(newValues: T) {
@@ -116,6 +145,7 @@ export class BitValuesLifecycleManager<T extends object> {
   private replaceValuesInternal(
     newValues: T,
     origin: "replaceValues" | "hydrate" = "replaceValues",
+    changedPaths: string[] = ["*"],
   ) {
     const previousValues = this.store.getState().values;
     const clonedValues = deepClone(newValues);
@@ -138,7 +168,7 @@ export class BitValuesLifecycleManager<T extends object> {
           isDirty,
           isSubmitting: false,
         },
-        ["*"],
+        changedPaths,
       ),
     );
 
