@@ -5,7 +5,16 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { renderHook, act, waitFor } from "@testing-library/react";
 import { useBitUpload, BitFormProvider } from "bit-form/react";
 import type { BitUploadFn } from "../../../core/types/upload";
-import { createBitStore } from "../../../core";
+import {
+  createBitStore as createBitStoreRuntime,
+  createFrameworkStoreAdapter,
+} from "../../../core";
+
+function createBitStore<T extends object = Record<string, unknown>>(
+  config?: any,
+) {
+  return createFrameworkStoreAdapter(createBitStoreRuntime<T>(config)) as any;
+}
 
 describe("useBitUpload (React)", () => {
   let mockUpload: ReturnType<typeof vi.fn> & BitUploadFn;

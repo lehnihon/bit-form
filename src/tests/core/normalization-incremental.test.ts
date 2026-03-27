@@ -1,5 +1,11 @@
 import { describe, it, expect, vi } from "vitest";
-import { createBitStore } from "../../core";
+import {
+  createBitStore as createBitStoreRuntime,
+  createFrameworkStoreAdapter,
+} from "../../core";
+
+const createBitStore = ((config?: any) =>
+  createFrameworkStoreAdapter(createBitStoreRuntime(config))) as any;
 
 /**
  * Testes de normalização incremental path-driven.

@@ -3,7 +3,10 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { TestBed } from "@angular/core/testing";
 import { Component, DestroyRef } from "@angular/core";
-import { createBitStore } from "../../../core";
+import {
+  createBitStore as createBitStoreRuntime,
+  createFrameworkStoreAdapter,
+} from "../../../core";
 import { maskBRL } from "../../../mask";
 import {
   injectBitField,
@@ -22,6 +25,12 @@ interface MyForm {
   items: string[];
   hasBonus: boolean;
   bonusValue: number;
+}
+
+function createBitStore<T extends object = Record<string, unknown>>(
+  config?: any,
+) {
+  return createFrameworkStoreAdapter(createBitStoreRuntime<T>(config)) as any;
 }
 
 @Component({ standalone: true, template: "" })
@@ -400,7 +409,6 @@ describe("Angular Integration (Signals)", () => {
       expect(app.persist.meta.isSaving()).toBe(false);
       expect(app.persist.meta.isRestoring()).toBe(false);
       expect(app.persist.meta.error()).toBeNull();
-      persistStore.cleanup();
     });
 
     it("deve salvar e restaurar valores", async () => {
@@ -432,7 +440,6 @@ describe("Angular Integration (Signals)", () => {
       const ok = await app.persist.restore();
       expect(ok).toBe(true);
       expect(persistStore.getState().values.user.name).toBe("Leo");
-      persistStore.cleanup();
     });
   });
 });

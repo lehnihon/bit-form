@@ -25,15 +25,12 @@ import {
   type BitValidationPipelineStageDeps,
 } from "./validation/validation-pipeline-stages";
 import { commitSynchronousScopeValidation } from "./validation/scope-validation-commit";
+import { BitValidationCoordinator } from "./validation/validation-coordinator";
 
 export class BitValidationManager<T extends object> {
-  private currentValidationId: number = 0;
   private validatingCount = 0;
   private readonly asyncErrors = new Map<string, string>();
-  private readonly immediateAbortControllers = new Map<
-    string,
-    AbortController
-  >();
+  private readonly coordinator = new BitValidationCoordinator();
   private readonly validationPipeline: BitPipelineRunner<
     ValidationPipelineContext<T>
   >;
@@ -79,7 +76,7 @@ export class BitValidationManager<T extends object> {
     const stageDeps: BitValidationPipelineStageDeps<T> = {
       store: this.store,
       asyncErrors: this.asyncErrors,
-      getCurrentValidationId: () => this.currentValidationId,
+      getCurrentValidationId: () => this.coordinator.getCurrentValidationId(),
       runImmediateAsyncValidation: (path, values, validationId) =>
         this.runImmediateAsyncValidation(path, values, validationId),
     };
@@ -150,12 +147,7 @@ export class BitValidationManager<T extends object> {
 
   private cancelFieldAsync(path: string) {
     this.asyncScheduler.cancel(path);
-
-    const abortController = this.immediateAbortControllers.get(path);
-    if (abortController) {
-      abortController.abort();
-      this.immediateAbortControllers.delete(path);
-    }
+    this.coordinator.cancelImmediate(path);
   }
 
   cleanupField(path: string) {
@@ -167,11 +159,10 @@ export class BitValidationManager<T extends object> {
   cleanupPrefix(prefix: string) {
     this.asyncScheduler.cleanupPrefix(prefix);
 
-    for (const path of this.immediateAbortControllers.keys()) {
-      if (path === prefix || path.startsWith(`${prefix}.`)) {
-        this.cleanupField(path);
-      }
-    }
+    this.coordinator.cancelImmediatePrefix(prefix, (path) => {
+      this.asyncErrors.delete(path);
+      this.updateFieldValidating(path, false);
+    });
   }
 
   beginExternalValidation(path: string) {
@@ -242,7 +233,7 @@ export class BitValidationManager<T extends object> {
 
     const context: ValidationPipelineContext<T> = {
       options,
-      validationId: ++this.currentValidationId,
+      validationId: this.coordinator.beginValidation(),
       currentState: this.store.getState(),
       targetFields: options?.scopeFields,
       allErrors: {},
@@ -280,11 +271,7 @@ export class BitValidationManager<T extends object> {
     this.debouncer.cancelPending();
     this.asyncScheduler.cancelAll();
     this.asyncErrors.clear();
-
-    this.immediateAbortControllers.forEach((controller) => {
-      controller.abort();
-    });
-    this.immediateAbortControllers.clear();
+    this.coordinator.cancelAllImmediate();
 
     this.store.dispatch(patchStateOperation({ isValidating: {} }));
   }
@@ -298,15 +285,15 @@ export class BitValidationManager<T extends object> {
       path,
       values,
       validationId,
-      currentValidationId: this.currentValidationId,
+      currentValidationId: this.coordinator.getCurrentValidationId(),
       getFieldConfig: (fieldPath) => this.store.getFieldConfig(fieldPath),
       cancelFieldAsync: (fieldPath) => this.cancelFieldAsync(fieldPath),
       createAbortController: () => new AbortController(),
       setAbortController: (fieldPath, controller) => {
-        this.immediateAbortControllers.set(fieldPath, controller);
+        this.coordinator.setImmediateController(fieldPath, controller);
       },
       clearAbortController: (fieldPath) => {
-        this.immediateAbortControllers.delete(fieldPath);
+        this.coordinator.clearImmediateController(fieldPath);
       },
       setFieldValidating: (fieldPath, isValidating) =>
         this.updateFieldValidating(fieldPath, isValidating),

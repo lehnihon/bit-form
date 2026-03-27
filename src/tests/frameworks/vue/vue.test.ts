@@ -3,7 +3,10 @@
 import { describe, it, expect, vi } from "vitest";
 import { mount } from "@vue/test-utils";
 import { defineComponent, nextTick } from "vue";
-import { createBitStore, BitStoreApi } from "../../../core";
+import {
+  createBitStore as createBitStoreRuntime,
+  createFrameworkStoreAdapter,
+} from "../../../core";
 import { maskBRL } from "../../../mask";
 import {
   useBitField,
@@ -16,8 +19,14 @@ import {
 } from "bit-form/vue";
 import { BIT_STORE_KEY } from "../../../vue/context";
 
+function createBitStore<T extends object = Record<string, unknown>>(
+  config?: any,
+) {
+  return createFrameworkStoreAdapter(createBitStoreRuntime<T>(config)) as any;
+}
+
 describe("Vue Integration", () => {
-  const createWrapper = (store: BitStoreApi<any>, setupFn: () => any) => {
+  const createWrapper = (store: any, setupFn: () => any) => {
     const TestComponent = defineComponent({
       setup() {
         return setupFn();
@@ -357,7 +366,6 @@ describe("Vue Integration", () => {
       expect(wrapper.vm.persist.meta.isSaving.value).toBe(false);
       expect(wrapper.vm.persist.meta.isRestoring.value).toBe(false);
       expect(wrapper.vm.persist.meta.error.value).toBeNull();
-      store.cleanup();
     });
 
     it("deve salvar e restaurar valores", async () => {
@@ -378,7 +386,6 @@ describe("Vue Integration", () => {
       const ok = await wrapper.vm.persist.restore();
       expect(ok).toBe(true);
       expect(store.getState().values.name).toBe("Leo");
-      store.cleanup();
     });
   });
 });

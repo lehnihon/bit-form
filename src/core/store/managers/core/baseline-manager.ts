@@ -1,11 +1,17 @@
+import { deepClone } from "../../../utils";
+
 export class BitBaselineManager<T extends object> {
-  constructor(private baselineValues: T) {}
+  constructor(baselineValues: T) {
+    this.baselineValues = deepClone(baselineValues);
+  }
+
+  private baselineValues: T;
 
   getValues(): T {
-    return this.baselineValues;
+    return deepClone(this.baselineValues);
   }
 
   setValues(values: T): void {
-    this.baselineValues = values;
+    this.baselineValues = deepClone(values);
   }
 }

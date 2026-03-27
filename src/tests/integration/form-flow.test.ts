@@ -1,6 +1,15 @@
 import { describe, it, expect, vi } from "vitest";
 import { createPatternMask, unmaskCurrency } from "../../core/mask/creators";
-import { createBitStore } from "../../core";
+import {
+  createBitStore as createBitStoreRuntime,
+  createFrameworkStoreAdapter,
+} from "../../core";
+
+function createBitStore<T extends object = Record<string, unknown>>(
+  config?: any,
+) {
+  return createFrameworkStoreAdapter(createBitStoreRuntime<T>(config)) as any;
+}
 
 describe("Form Lifecycle Flow", () => {
   it("should process the full complex lifecycle including dependencies and array remapping", async () => {

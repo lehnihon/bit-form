@@ -5,8 +5,17 @@ import { defineComponent, nextTick } from "vue";
 import { mount } from "@vue/test-utils";
 import { useBitUpload, type UseBitUploadResult } from "bit-form/vue";
 import type { BitUploadFn } from "../../../core/types/upload";
-import { createBitStore } from "../../../core";
+import {
+  createBitStore as createBitStoreRuntime,
+  createFrameworkStoreAdapter,
+} from "../../../core";
 import { BIT_STORE_KEY } from "../../../vue/context";
+
+function createBitStore<T extends object = Record<string, unknown>>(
+  config?: any,
+) {
+  return createFrameworkStoreAdapter(createBitStoreRuntime<T>(config)) as any;
+}
 
 describe("useBitUpload (Vue)", () => {
   let mockUpload: ReturnType<typeof vi.fn> & BitUploadFn;

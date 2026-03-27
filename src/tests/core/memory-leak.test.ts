@@ -1,5 +1,14 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import { createBitStore } from "../../core";
+import {
+  createBitStore as createBitStoreRuntime,
+  createFrameworkStoreAdapter,
+} from "../../core";
+
+function createBitStore<T extends object = Record<string, unknown>>(
+  config?: any,
+) {
+  return createFrameworkStoreAdapter(createBitStoreRuntime<T>(config)) as any;
+}
 
 /**
  * Memory Leak Detection Tests

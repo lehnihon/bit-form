@@ -2,8 +2,17 @@
 
 import { describe, it, expect, vi } from "vitest";
 import { renderHook, act } from "@testing-library/react";
-import { createBitStore } from "../../../core";
+import {
+  createBitStore as createBitStoreRuntime,
+  createFrameworkStoreAdapter,
+} from "../../../core";
 import { BitFormProvider, useBitField } from "../../../react-native";
+
+function createBitStore<T extends object = Record<string, unknown>>(
+  config?: any,
+) {
+  return createFrameworkStoreAdapter(createBitStoreRuntime<T>(config)) as any;
+}
 
 describe("React Native Integration (bit-form/react-native)", () => {
   const createTestStore = (initialValues: any) =>

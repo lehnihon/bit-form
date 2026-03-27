@@ -5,12 +5,18 @@
  * quebrou nenhum método público. Importa APENAS via entrypoint público.
  */
 import { describe, it, expect, vi } from "vitest";
-import { createBitStore } from "../../../core";
+import {
+  createBitStore as createBitStoreRuntime,
+  createFrameworkStoreAdapter,
+} from "../../../core";
+
+const createBitStore = ((config?: any) =>
+  createFrameworkStoreAdapter(createBitStoreRuntime(config))) as any;
 
 describe("Store Capabilities Contract", () => {
   describe("Namespaced API (read/observe/write/feature)", () => {
     it("deve expor os quatro namespaces principais", () => {
-      const store = createBitStore({ initialValues: { x: 1 } }) as any;
+      const store = createBitStoreRuntime({ initialValues: { x: 1 } }) as any;
 
       expect(store.read).toBeDefined();
       expect(store.observe).toBeDefined();
@@ -264,9 +270,9 @@ describe("Store Capabilities Contract", () => {
   // ── Lifecycle ────────────────────────────────────────────────────────────
 
   describe("Lifecycle - cleanup", () => {
-    it("cleanup não lança exceção", () => {
+    it("cleanup não é exposto no adapter flat", () => {
       const store = createBitStore({ initialValues: { x: 1 } });
-      expect(() => store.cleanup()).not.toThrow();
+      expect((store as any).cleanup).toBeUndefined();
     });
   });
 });

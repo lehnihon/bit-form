@@ -1,5 +1,5 @@
 import { inject, InjectionToken, Provider } from "@angular/core";
-import type { BitFrameworkStoreApi, BitStoreHooksApi } from "../core";
+import type { BitFrameworkStoreApi, BitStoreApi } from "../core";
 import { createFrameworkStoreAdapter } from "../core";
 
 export const BIT_STORE_TOKEN = new InjectionToken<BitFrameworkStoreApi<any>>(
@@ -7,7 +7,7 @@ export const BIT_STORE_TOKEN = new InjectionToken<BitFrameworkStoreApi<any>>(
 );
 
 export function provideBitStore<T extends object>(
-  store: BitFrameworkStoreApi<T> | BitStoreHooksApi<T>,
+  store: BitFrameworkStoreApi<T> | BitStoreApi<T>,
 ): Provider {
   return {
     provide: BIT_STORE_TOKEN,

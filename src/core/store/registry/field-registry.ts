@@ -4,6 +4,7 @@ import type { BitComputedEntry } from "../managers/core/computed-manager";
 import { BitFieldCatalog, type BitNormalizerEntry } from "./field-catalog";
 import { BitFieldConditions } from "./field-conditions";
 import type { BitFieldMetadataProvider } from "./field-metadata-provider";
+import { isPathWithinPrefix, normalizePathPrefix } from "../shared/path-prefix";
 
 export class BitFieldRegistry<
   T extends object = Record<string, unknown>,
@@ -43,9 +44,14 @@ export class BitFieldRegistry<
 
   unregisterPrefix(prefix: string) {
     const removedEntries: [string, BitFieldDefinition<T>][] = [];
+    const normalizedPrefix = normalizePathPrefix(prefix);
+
+    if (normalizedPrefix.length === 0) {
+      return removedEntries;
+    }
 
     this.catalog.forEach((config, path) => {
-      if (path.startsWith(prefix)) {
+      if (isPathWithinPrefix(path, normalizedPrefix)) {
         removedEntries.push([path, config]);
       }
     });

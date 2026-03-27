@@ -1,9 +1,16 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import {
-  createBitStore,
+  createBitStore as createBitStoreRuntime,
   createFrameworkStoreAdapter,
   resolveBitStoreForHooks,
 } from "../../core";
+
+const createBitStore = ((config?: any) => {
+  const runtimeStore = createBitStoreRuntime(config) as any;
+  const adapter = createFrameworkStoreAdapter(runtimeStore) as any;
+  adapter.feature = runtimeStore.feature;
+  return adapter;
+}) as any;
 
 describe("BitStore Core", () => {
   beforeEach(() => {
@@ -48,19 +55,23 @@ describe("BitStore Core", () => {
     });
 
     it("should resolve hook API from store instance", () => {
-      const store = createBitStore({ initialValues: { name: "Leo" } }) as any;
+      const store = createBitStoreRuntime({
+        initialValues: { name: "Leo" },
+      }) as any;
 
-      expect(typeof store.subscribeSelector).toBe("function");
+      expect(typeof store.observe.subscribeSelector).toBe("function");
 
       const hooksStore = resolveBitStoreForHooks(store);
 
-      expect(typeof hooksStore.subscribeSelector).toBe("function");
-      expect(typeof hooksStore.subscribePath).toBe("function");
-      expect(typeof hooksStore.getFieldState).toBe("function");
+      expect(typeof hooksStore.observe.subscribeSelector).toBe("function");
+      expect(typeof hooksStore.observe.subscribePath).toBe("function");
+      expect(typeof hooksStore.read.getFieldState).toBe("function");
     });
 
     it("should build framework adapter from store instance", () => {
-      const store = createBitStore({ initialValues: { name: "Leo" } }) as any;
+      const store = createBitStoreRuntime({
+        initialValues: { name: "Leo" },
+      }) as any;
 
       const frameworkStore = createFrameworkStoreAdapter(store);
 
@@ -1462,7 +1473,7 @@ describe("BitStore Core", () => {
       });
 
       expect(setup).toHaveBeenCalledTimes(1);
-      store.cleanup();
+      store.feature.cleanup();
       expect(teardown).toHaveBeenCalledTimes(1);
     });
 
@@ -1494,7 +1505,7 @@ describe("BitStore Core", () => {
       await store.validate();
 
       expect(calls).toEqual(["beforeValidate", "afterValidate"]);
-      store.cleanup();
+      store.feature.cleanup();
     });
 
     it("should trigger beforeSubmit and afterSubmit around successful submit", async () => {
@@ -1527,7 +1538,7 @@ describe("BitStore Core", () => {
       });
 
       expect(calls).toEqual(["beforeSubmit", "onSuccess", "afterSubmit"]);
-      store.cleanup();
+      store.feature.cleanup();
     });
 
     it("should emit onFieldChange for setField, rebase and array operations", async () => {
@@ -1567,7 +1578,7 @@ describe("BitStore Core", () => {
         ),
       ).toBe(true);
 
-      store.cleanup();
+      store.feature.cleanup();
     });
 
     it("should be fail-open when plugin throws and report via onError", async () => {
@@ -1608,7 +1619,7 @@ describe("BitStore Core", () => {
         expect.any(Object),
       );
 
-      store.cleanup();
+      store.feature.cleanup();
     });
 
     it("should report submit callback errors through onError and afterSubmit", async () => {
@@ -1649,7 +1660,7 @@ describe("BitStore Core", () => {
       );
 
       consoleErrorSpy.mockRestore();
-      store.cleanup();
+      store.feature.cleanup();
     });
   });
 });

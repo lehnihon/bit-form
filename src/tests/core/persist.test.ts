@@ -1,5 +1,17 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { createBitStore } from "../../core";
+import {
+  createBitStore as createBitStoreRuntime,
+  createFrameworkStoreAdapter,
+} from "../../core";
+
+function createBitStore<T extends object = Record<string, unknown>>(
+  config?: any,
+) {
+  const runtimeStore = createBitStoreRuntime<T>(config) as any;
+  const adapter = createFrameworkStoreAdapter(runtimeStore) as any;
+  adapter.cleanup = runtimeStore.feature.cleanup.bind(runtimeStore.feature);
+  return adapter;
+}
 
 interface TestForm {
   name: string;
