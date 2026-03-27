@@ -15,6 +15,8 @@ export class BitSubscriptionEngine<T extends object> {
   private pathSelectorIndex: Map<string, Set<SelectorListenerEntry<T>>> =
     new Map();
   private readonly pathExpansionCache = new Map<string, string[]>();
+  private readonly expandedPathCache = this.pathExpansionCache;
+  private readonly changedPathLookupCache = this.pathExpansionCache;
   private readonly subscriptionSeenVersion = new Map<
     SelectorListenerEntry<T>,
     number
