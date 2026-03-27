@@ -7,9 +7,12 @@ import type {
 import type { BitFrameworkConfig } from "../contracts/public/store-api-types";
 import type { BitValidationOptions } from "../contracts/public/meta-types";
 import type {
-  BitValidationStorePort,
   BitValidationTriggerOptions,
-  BitLifecycleStorePort,
+  BitLifecycleFieldUpdatePort,
+  BitLifecyclePorts,
+  BitLifecycleSubmitPort,
+  BitLifecycleValuesPort,
+  BitValidationManagerPort,
 } from "../contracts/port-types";
 import type { BitArrayStorePort } from "../managers/features/array-manager";
 import type { BitStoreOperation } from "../engines/operation-engine";
@@ -49,7 +52,7 @@ export interface BitValidationPortDeps<T extends object> {
 
 export function createValidationPort<T extends object>(
   deps: BitValidationPortDeps<T>,
-): BitValidationStorePort<T> {
+): BitValidationManagerPort<T> {
   return {
     getState: deps.getState,
     dispatch: deps.dispatch,
@@ -91,15 +94,12 @@ export interface BitLifecyclePortDeps<T extends object> {
 
 export function createLifecyclePort<T extends object>(
   deps: BitLifecyclePortDeps<T>,
-): BitLifecycleStorePort<T> {
-  return {
+): BitLifecyclePorts<T> {
+  const fieldUpdate: BitLifecycleFieldUpdatePort<T> = {
     getState: deps.getState,
     dispatch: deps.dispatch,
-    internalSaveSnapshot: deps.saveHistorySnapshot,
-    batchStateUpdates: deps.runStateBatch,
     config: deps.config,
     getFieldConfig: (path) => deps.fieldRegistry.getFieldConfig(path),
-    getTransformEntries: deps.getTransformEntries,
     updateDependencies: (changedPath, currentValues, newValues) =>
       deps.fieldRegistry.updateDependencies(
         changedPath,
@@ -108,31 +108,57 @@ export function createLifecyclePort<T extends object>(
       ),
     hasDependentFields: (path) => deps.fieldRegistry.hasDependents(path),
     isFieldHidden: (path) => deps.fieldRegistry.isHidden(path),
-    evaluateAllDependencies: (values) => deps.fieldRegistry.evaluateAll(values),
-    getHiddenFields: () => deps.fieldRegistry.getHiddenFields(),
     clearFieldValidation: (path) => deps.getValidation().clear(path),
     triggerValidation: (scopeFields, options) =>
       deps.getValidation().trigger(scopeFields, options),
     handleFieldAsyncValidation: (path, value) =>
       deps.getValidation().handleAsync(path, value),
-    cancelAllValidations: () => deps.getValidation().cancelAll(),
-    validateNow: (options) => deps.getValidation().validate(options),
-    hasValidationsInProgress: (scopeFields) =>
-      deps.getValidation().hasValidationsInProgress(scopeFields),
     updateDirtyForPath: (path, nextValues, baselineValues) =>
       deps.dirtyManager.updateForPath(path, nextValues, baselineValues),
+    getBaselineValues: deps.getBaselineValues,
+    emitFieldChange: (event) => deps.getEffects().onFieldChange(event),
+  };
+
+  const values: BitLifecycleValuesPort<T> = {
+    getState: deps.getState,
+    dispatch: deps.dispatch,
+    internalSaveSnapshot: deps.saveHistorySnapshot,
+    evaluateAllDependencies: (newValues) => deps.fieldRegistry.evaluateAll(newValues),
+    cancelAllValidations: () => deps.getValidation().cancelAll(),
+    validateNow: (options) => deps.getValidation().validate(options),
     rebuildDirtyState: (nextValues, baselineValues) =>
       deps.dirtyManager.rebuild(nextValues, baselineValues),
     clearDirtyState: deps.dirtyManager.clear.bind(deps.dirtyManager),
-    buildDirtyValues: (values) => deps.dirtyManager.buildDirtyValues(values),
     getBaselineValues: deps.getBaselineValues,
     setBaselineValues: deps.setBaselineValues,
     resetHistory: (initialValues) => deps.getHistory().reset(initialValues),
     emitFieldChange: (event) => deps.getEffects().onFieldChange(event),
+    triggerValidation: (scopeFields, options) =>
+      deps.getValidation().trigger(scopeFields, options),
+  };
+
+  const submit: BitLifecycleSubmitPort<T> = {
+    getState: deps.getState,
+    dispatch: deps.dispatch,
+    batchStateUpdates: deps.runStateBatch,
+    config: deps.config,
+    getTransformEntries: deps.getTransformEntries,
+    getHiddenFields: () => deps.fieldRegistry.getHiddenFields(),
+    cancelAllValidations: () => deps.getValidation().cancelAll(),
+    validateNow: (options) => deps.getValidation().validate(options),
+    hasValidationsInProgress: (scopeFields) =>
+      deps.getValidation().hasValidationsInProgress(scopeFields),
+    buildDirtyValues: (values) => deps.dirtyManager.buildDirtyValues(values),
     emitBeforeSubmit: (event) => deps.getEffects().beforeSubmit(event),
     emitAfterSubmit: (event) => deps.getEffects().afterSubmit(event),
     emitOperationalError: (event) =>
       deps.getEffects().reportOperationalError(event),
+  };
+
+  return {
+    fieldUpdate,
+    values,
+    submit,
   };
 }
 

@@ -1,6 +1,6 @@
 import { BitFieldChangeMeta, DeepPartial } from "../../contracts/types";
 import type { BitSubmitResult } from "../../contracts/types";
-import type { BitLifecycleStorePort } from "../../contracts/port-types";
+import type { BitLifecyclePorts } from "../../contracts/port-types";
 import { BitFieldUpdateManager } from "./lifecycle/field-update-manager";
 import { BitValuesLifecycleManager } from "./lifecycle/values-lifecycle-manager";
 import { BitSubmitLifecycleManager } from "./lifecycle/submit-lifecycle-manager";
@@ -10,10 +10,10 @@ export class BitLifecycleManager<T extends object> {
   private readonly values: BitValuesLifecycleManager<T>;
   private readonly submitFlow: BitSubmitLifecycleManager<T>;
 
-  constructor(private readonly store: BitLifecycleStorePort<T>) {
-    this.fieldUpdate = new BitFieldUpdateManager<T>(store);
-    this.values = new BitValuesLifecycleManager<T>(store);
-    this.submitFlow = new BitSubmitLifecycleManager<T>(store);
+  constructor(private readonly ports: BitLifecyclePorts<T>) {
+    this.fieldUpdate = new BitFieldUpdateManager<T>(ports.fieldUpdate);
+    this.values = new BitValuesLifecycleManager<T>(ports.values);
+    this.submitFlow = new BitSubmitLifecycleManager<T>(ports.submit);
   }
 
   updateField(

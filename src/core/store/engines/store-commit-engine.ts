@@ -167,12 +167,7 @@ export function flushStoreKernelBatch<T extends object>(args: {
     valuesChanged: boolean;
   }) => void;
 }): BitState<T> {
-  const {
-    state,
-    batchState,
-    applyValueDerivations,
-    onStateCommitted,
-  } = args;
+  const { state, batchState, applyValueDerivations, onStateCommitted } = args;
 
   const flushResult = flushStoreBatchState({
     currentState: state,

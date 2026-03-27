@@ -108,7 +108,8 @@ class BitStore<T extends object = Record<string, unknown>> {
       getState: () => this.runtime.getState(),
       isHidden: (path) => this.runtime.capabilities.query.isHidden(path),
       isRequired: (path) => this.runtime.capabilities.query.isRequired(path),
-      isFieldDirty: (path) => this.runtime.capabilities.query.isFieldDirty(path),
+      isFieldDirty: (path) =>
+        this.runtime.capabilities.query.isFieldDirty(path),
       isFieldValidating: (path) =>
         this.runtime.capabilities.query.isFieldValidating(path),
     });

@@ -1,11 +1,11 @@
 import type { BitErrors } from "../../../contracts/types";
-import type { BitValidationStorePort } from "../../../contracts/port-types";
+import type { BitValidationPipelinePort } from "../../../contracts/port-types";
 import { validationCommitOperation } from "../../../engines/operation-engine";
 import { hasAnyError } from "../../../shared/error-map";
 
 export async function commitSynchronousScopeValidation<T extends object>(args: {
   scopeFields: string[];
-  store: BitValidationStorePort<T>;
+  store: BitValidationPipelinePort<T>;
   asyncErrors: Map<string, string>;
 }) {
   const { scopeFields, store, asyncErrors } = args;

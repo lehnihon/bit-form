@@ -43,7 +43,9 @@ function collectChangedValueUpdates<
   return updates;
 }
 
-export function createDependencyImpactChecker(changedPaths?: readonly string[]) {
+export function createDependencyImpactChecker(
+  changedPaths?: readonly string[],
+) {
   const hasWildcardChange = changedPaths?.includes("*") ?? false;
 
   return (dependencyPath: string) => {
@@ -64,13 +66,19 @@ export function filterDependencyEntries<TEntry extends BitDependencyAwareEntry>(
   entries: readonly TEntry[],
   changedPaths?: readonly string[],
 ): readonly TEntry[] {
-  if (!changedPaths || changedPaths.length === 0 || changedPaths.includes("*")) {
+  if (
+    !changedPaths ||
+    changedPaths.length === 0 ||
+    changedPaths.includes("*")
+  ) {
     return entries;
   }
 
   const isDependencyImpacted = createDependencyImpactChecker(changedPaths);
   return entries.filter((entry) =>
-    entry.dependsOn.some((dependencyPath) => isDependencyImpacted(dependencyPath)),
+    entry.dependsOn.some((dependencyPath) =>
+      isDependencyImpacted(dependencyPath),
+    ),
   );
 }
 
@@ -98,7 +106,9 @@ export function applyValueDerivations<T extends object>(args: {
   });
 
   const normalizedValues =
-    normalizerUpdates.length > 0 ? setDeepValues(values, normalizerUpdates) : values;
+    normalizerUpdates.length > 0
+      ? setDeepValues(values, normalizerUpdates)
+      : values;
   const nextChangedPaths = mergeChangedPaths(
     changedPaths,
     normalizerUpdates.map(([path]) => path),

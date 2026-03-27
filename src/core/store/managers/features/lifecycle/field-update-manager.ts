@@ -6,8 +6,10 @@ import {
   BitSyncPipelineRunner,
 } from "../../../shared/pipeline";
 import { patchStateOperation } from "../../../engines/operation-engine";
-import type { BitLifecycleStorePort } from "../../../contracts/port-types";
-import type { BitDependencyUpdateDiff } from "../../../contracts/port-types";
+import type {
+  BitDependencyUpdateDiff,
+  BitLifecycleFieldUpdatePort,
+} from "../../../contracts/port-types";
 
 interface FieldUpdatePipelineContext<
   T extends object,
@@ -28,7 +30,7 @@ export class BitFieldUpdateManager<T extends object> {
     FieldUpdatePipelineContext<T>
   >;
 
-  constructor(private readonly store: BitLifecycleStorePort<T>) {
+  constructor(private readonly store: BitLifecycleFieldUpdatePort<T>) {
     this.fieldUpdatePipeline = new BitSyncPipelineRunner<
       FieldUpdatePipelineContext<T>
     >([

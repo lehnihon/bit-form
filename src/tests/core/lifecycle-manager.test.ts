@@ -19,12 +19,10 @@ describe("BitLifecycleManager", () => {
     });
 
     const manager = new BitLifecycleManager<any>({
+      fieldUpdate: {
       getState: () => state,
       dispatch,
-      internalSaveSnapshot: () => {},
-      batchStateUpdates: (cb) => cb(),
       config: { initialValues: { name: "A" }, resolver: undefined } as any,
-      getTransformEntries: () => [],
       getFieldConfig: () => undefined,
       hasDependentFields: () => false,
       updateDependencies: () => ({
@@ -33,25 +31,43 @@ describe("BitLifecycleManager", () => {
         requiredChanged: [],
       }),
       isFieldHidden: () => false,
-      evaluateAllDependencies: () => {},
-      getHiddenFields: () => new Set<string>(),
       clearFieldValidation: () => {},
       triggerValidation: () => {},
       handleFieldAsyncValidation: () => {},
-      cancelAllValidations: () => {},
-      validateNow: async () => true,
-      hasValidationsInProgress: () => false,
       updateDirtyForPath: () => false,
+      getBaselineValues: () => ({ name: "A" }),
+      emitFieldChange: () => {},
+      },
+      values: {
+        getState: () => state,
+        dispatch,
+        internalSaveSnapshot: () => {},
+        evaluateAllDependencies: () => {},
+        cancelAllValidations: () => {},
+        validateNow: async () => true,
       rebuildDirtyState: () => false,
       clearDirtyState: () => {},
-      buildDirtyValues: () => ({}),
       getBaselineValues: () => ({ name: "A" }),
       setBaselineValues: () => {},
       resetHistory: () => {},
       emitFieldChange: () => {},
-      emitBeforeSubmit: async () => {},
-      emitAfterSubmit: async () => {},
-      emitOperationalError: async () => {},
+        triggerValidation: () => {},
+      },
+      submit: {
+        getState: () => state,
+        dispatch,
+        batchStateUpdates: (cb) => cb(),
+        config: { initialValues: { name: "A" }, resolver: undefined } as any,
+        getTransformEntries: () => [],
+        getHiddenFields: () => new Set<string>(),
+        cancelAllValidations: () => {},
+        validateNow: async () => true,
+        hasValidationsInProgress: () => false,
+        buildDirtyValues: () => ({}),
+        emitBeforeSubmit: async () => {},
+        emitAfterSubmit: async () => {},
+        emitOperationalError: async () => {},
+      },
     });
 
     manager.updateField("name", "B");
@@ -80,45 +96,66 @@ describe("BitLifecycleManager", () => {
 
     const onSuccess = vi.fn();
 
+    const dispatch = (operation: any) => {
+      Object.assign(state, operation.partialState);
+    };
+
     const manager = new BitLifecycleManager<any>({
-      getState: () => state,
-      dispatch: (operation: any) => {
-        Object.assign(state, operation.partialState);
+      fieldUpdate: {
+        getState: () => state,
+        dispatch,
+        config: {
+          initialValues: { hidden: "secret", amount: 10 },
+          resolver: undefined,
+        } as any,
+        getFieldConfig: () => undefined,
+        hasDependentFields: () => false,
+        updateDependencies: () => ({
+          affectedFields: [],
+          visibilityChanged: [],
+          requiredChanged: [],
+        }),
+        isFieldHidden: () => false,
+        clearFieldValidation: () => {},
+        triggerValidation: () => {},
+        handleFieldAsyncValidation: () => {},
+        updateDirtyForPath: () => true,
+        getBaselineValues: () => ({ hidden: "secret", amount: 10 }),
+        emitFieldChange: () => {},
       },
-      internalSaveSnapshot: () => {},
-      batchStateUpdates: (cb) => cb(),
-      config: {
-        initialValues: { hidden: "secret", amount: 10 },
-        resolver: undefined,
-      } as any,
-      getTransformEntries: () => [["amount", (val: number) => val * 2]],
-      getFieldConfig: () => undefined,
-      hasDependentFields: () => false,
-      updateDependencies: () => ({
-        affectedFields: [],
-        visibilityChanged: [],
-        requiredChanged: [],
-      }),
-      isFieldHidden: () => false,
-      evaluateAllDependencies: () => {},
-      getHiddenFields: () => new Set<string>(["hidden"]),
-      clearFieldValidation: () => {},
-      triggerValidation: () => {},
-      handleFieldAsyncValidation: () => {},
-      cancelAllValidations: () => {},
-      validateNow: async () => true,
-      hasValidationsInProgress: () => false,
-      updateDirtyForPath: () => true,
-      rebuildDirtyState: () => true,
-      clearDirtyState: () => {},
-      buildDirtyValues: (values: any) => values,
-      getBaselineValues: () => ({ hidden: "secret", amount: 10 }),
-      setBaselineValues: () => {},
-      resetHistory: () => {},
-      emitFieldChange: () => {},
-      emitBeforeSubmit: async () => {},
-      emitAfterSubmit: async () => {},
-      emitOperationalError: async () => {},
+      values: {
+        getState: () => state,
+        dispatch,
+        internalSaveSnapshot: () => {},
+        evaluateAllDependencies: () => {},
+        cancelAllValidations: () => {},
+        validateNow: async () => true,
+        rebuildDirtyState: () => true,
+        clearDirtyState: () => {},
+        getBaselineValues: () => ({ hidden: "secret", amount: 10 }),
+        setBaselineValues: () => {},
+        resetHistory: () => {},
+        emitFieldChange: () => {},
+        triggerValidation: () => {},
+      },
+      submit: {
+        getState: () => state,
+        dispatch,
+        batchStateUpdates: (cb) => cb(),
+        config: {
+          initialValues: { hidden: "secret", amount: 10 },
+          resolver: undefined,
+        } as any,
+        getTransformEntries: () => [["amount", (val: number) => val * 2]],
+        getHiddenFields: () => new Set<string>(["hidden"]),
+        cancelAllValidations: () => {},
+        validateNow: async () => true,
+        hasValidationsInProgress: () => false,
+        buildDirtyValues: (values: any) => values,
+        emitBeforeSubmit: async () => {},
+        emitAfterSubmit: async () => {},
+        emitOperationalError: async () => {},
+      },
     });
 
     await manager.submit(onSuccess);

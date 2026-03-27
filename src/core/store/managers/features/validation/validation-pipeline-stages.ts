@@ -1,4 +1,4 @@
-import type { BitValidationStorePort } from "../../../contracts/port-types";
+import type { BitValidationPipelinePort } from "../../../contracts/port-types";
 import type { ValidationPipelineContext } from "./validation-pipeline-context";
 import { hasAnyError } from "../../../shared/error-map";
 import { validationCommitOperation } from "../../../engines/operation-engine";
@@ -8,7 +8,7 @@ import {
 } from "./validation-stages";
 
 export interface BitValidationPipelineStageDeps<T extends object> {
-  store: BitValidationStorePort<T>;
+  store: BitValidationPipelinePort<T>;
   asyncErrors: Map<string, string>;
   getCurrentValidationId: () => number;
   runImmediateAsyncValidation: (
