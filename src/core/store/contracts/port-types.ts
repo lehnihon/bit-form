@@ -44,13 +44,16 @@ export interface BitValidationEffectsPort<T extends object> {
 
 export type BitValidationPipelinePort<T extends object> =
   BitValidationStatePort<T> &
-  BitValidationFieldPort<T> &
-  Pick<BitValidationEffectsPort<T>, "emitBeforeValidate" | "emitAfterValidate">;
+    BitValidationFieldPort<T> &
+    Pick<
+      BitValidationEffectsPort<T>,
+      "emitBeforeValidate" | "emitAfterValidate"
+    >;
 
 export type BitValidationManagerPort<T extends object> =
   BitValidationStatePort<T> &
-  BitValidationFieldPort<T> &
-  BitValidationEffectsPort<T>;
+    BitValidationFieldPort<T> &
+    BitValidationEffectsPort<T>;
 
 export interface BitValidationTriggerOptions {
   forceDebounce?: boolean;

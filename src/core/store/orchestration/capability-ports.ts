@@ -123,7 +123,8 @@ export function createLifecyclePort<T extends object>(
     getState: deps.getState,
     dispatch: deps.dispatch,
     internalSaveSnapshot: deps.saveHistorySnapshot,
-    evaluateAllDependencies: (newValues) => deps.fieldRegistry.evaluateAll(newValues),
+    evaluateAllDependencies: (newValues) =>
+      deps.fieldRegistry.evaluateAll(newValues),
     cancelAllValidations: () => deps.getValidation().cancelAll(),
     validateNow: (options) => deps.getValidation().validate(options),
     rebuildDirtyState: (nextValues, baselineValues) =>
