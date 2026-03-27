@@ -30,6 +30,8 @@ For applications and framework integrations, use `createBitStore` and the offici
 
 Framework adapters should prefer the segmented adapter contracts from `@lehnihon/bit-form/core`, such as `BitFormMetaBindingApi`, `BitFieldBindingApi`, `BitArrayBindingApi` and `BitFrameworkStoreApi`.
 
+> Dev note (V5 cycle): `BitStoreApi` now models the namespaced surface (`read`, `observe`, `write`, `feature`) as the canonical contract. The flat method surface remains available on `BitStoreHooksApi` returned by `createBitStore` during migration.
+
 - **Type parameter**: `T` — the shape of `values`. Defaults to `any` if omitted.
 - **Parameter**: `config?: BitConfig<T>` — see [Types Reference](./types.md) for all options.
 

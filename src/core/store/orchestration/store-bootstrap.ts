@@ -13,13 +13,13 @@ import { BitFieldQueryManager } from "../managers/features/field-query-manager";
 import { BitErrorManager } from "../managers/features/error-manager";
 import { BitFieldRegistry } from "../registry/field-registry";
 import { BitComputedManager } from "../managers/core/computed-manager";
-import { BitCapabilityRegistry } from "./capability-registry";
 import { analyzeCyclicDependencies } from "../managers/core/computed-dependency-analyzer";
 import type { BitStoreOperation } from "../engines/operation-engine";
 import { deepClone } from "../../utils";
 import type { BitStoreCapabilities } from "./capabilities";
 import type { BitFrameworkConfig } from "../contracts/public/store-api-types";
 import { bitBus, getNoopBitBus } from "../shared/bus";
+import type { BitBusStorePort } from "../contracts/bus-types";
 import type {
   BitLifecycleStorePort,
   BitValidationStorePort,
@@ -43,7 +43,9 @@ function shouldEnableStoreBus<T extends object>(config: BitFrameworkConfig<T>) {
 }
 
 export type BitStoreCapabilityPorts<T extends object> = {
-  capabilityRegistry: BitCapabilityRegistry;
+  validationPort: BitValidationStorePort<T>;
+  lifecyclePort: BitLifecycleStorePort<T>;
+  arrayPort: BitArrayStorePort<T>;
   config: BitFrameworkConfig<T>;
   getScopeFields(scopeName: string): string[];
   getState(): BitState<T>;
@@ -57,27 +59,15 @@ export function createStoreCapabilities<T extends object>(args: {
   fieldRegistry: BitFieldRegistry<T>;
 }): BitStoreCapabilities<T> {
   const { ports, fieldRegistry } = args;
-  const validationPort = ports.capabilityRegistry.getPort<
-    "validation",
-    BitValidationStorePort<T>
-  >("validation");
-  const lifecyclePort = ports.capabilityRegistry.getPort<
-    "lifecycle",
-    BitLifecycleStorePort<T>
-  >("lifecycle");
-  const arrayPort = ports.capabilityRegistry.getPort<
-    "array",
-    BitArrayStorePort<T>
-  >("array");
 
   return {
-    validation: new BitValidationManager<T>(validationPort),
-    lifecycle: new BitLifecycleManager<T>(lifecyclePort),
+    validation: new BitValidationManager<T>(ports.validationPort),
+    lifecycle: new BitLifecycleManager<T>(ports.lifecyclePort),
     history: new BitHistoryManager<T>(
       !!ports.config.history.enabled,
       ports.config.history.limit ?? 50,
     ),
-    arrays: new BitArrayManager<T>(arrayPort),
+    arrays: new BitArrayManager<T>(ports.arrayPort),
     scope: new BitScopeManager<T>(
       () => ports.getState(),
       () => ports.getBaselineValues(),
@@ -98,7 +88,7 @@ export function createStoreCapabilities<T extends object>(args: {
 
 export function createStoreEffects<T extends object>(args: {
   storeId: string;
-  storeInstance: unknown;
+  storeBusPort: BitBusStorePort<T>;
   config: BitFrameworkConfig<T>;
   getState: () => BitState<T>;
   getConfig: () => BitFrameworkConfig<T>;
@@ -108,7 +98,7 @@ export function createStoreEffects<T extends object>(args: {
 }): BitStoreEffectEngine<T> {
   const {
     storeId,
-    storeInstance,
+    storeBusPort,
     config,
     getState,
     getConfig,
@@ -137,7 +127,7 @@ export function createStoreEffects<T extends object>(args: {
 
   const effects = new BitStoreEffectEngine<T>(
     storeId,
-    storeInstance,
+    storeBusPort,
     resolvedBus,
     persistManager,
     pluginManager,

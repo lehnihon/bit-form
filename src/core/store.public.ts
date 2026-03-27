@@ -67,6 +67,7 @@ export type {
 export { bitBus, createBitBus } from "./store/shared/bus";
 
 export type {
+  BitBusStorePort,
   BitFormGlobal,
   BitBus,
   BitBusListener,

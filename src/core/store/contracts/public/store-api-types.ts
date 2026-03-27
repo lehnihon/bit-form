@@ -406,9 +406,7 @@ export interface BitStoreNamespacesApi<
   readonly feature: BitStoreFeatureApi<T>;
 }
 
-export interface BitStoreCapabilityApi<
-  T extends object = Record<string, unknown>,
->
+export interface BitStoreFlatApi<T extends object = Record<string, unknown>>
   extends
     BitStoreIdentityApi<T>,
     BitStoreStateFlagsApi,
@@ -417,12 +415,14 @@ export interface BitStoreCapabilityApi<
     BitFormWriteApi<T>,
     BitStoreFeatureApi<T> {}
 
-export interface BitStoreApi<T extends object = Record<string, unknown>>
-  extends BitStoreCapabilityApi<T>, BitStoreNamespacesApi<T> {}
+export interface BitStoreApi<
+  T extends object = Record<string, unknown>,
+> extends BitStoreNamespacesApi<T> {}
 
 export interface BitStoreHooksApi<T extends object = Record<string, unknown>>
   extends
     BitStoreApi<T>,
+    BitStoreFlatApi<T>,
     BitFieldBindingApi<T>,
     BitFormMetaBindingApi<T>,
     BitStoreSelectorBindingApi<T>,

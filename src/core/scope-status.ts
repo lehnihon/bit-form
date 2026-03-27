@@ -1,27 +1,9 @@
 import type { ScopeStatus } from "./store/contracts/types";
-import {
-  areScopeErrorsEqual as areSharedScopeErrorsEqual,
-  getScopeSubscriptionPaths as getSharedScopeSubscriptionPaths,
-  isScopeStatusEqual as isSharedScopeStatusEqual,
+export {
+  areScopeErrorsEqual,
+  isScopeStatusEqual,
+  getScopeSubscriptionPaths,
 } from "./store/shared/scope-status";
-
-export function areScopeErrorsEqual(
-  currentErrors: Record<string, string>,
-  nextErrors: Record<string, string>,
-): boolean {
-  return areSharedScopeErrorsEqual(currentErrors, nextErrors);
-}
-
-export function isScopeStatusEqual(
-  currentStatus: ScopeStatus,
-  nextStatus: ScopeStatus,
-): boolean {
-  return isSharedScopeStatusEqual(currentStatus, nextStatus);
-}
-
-export function getScopeSubscriptionPaths(scopeFields: readonly string[]) {
-  return getSharedScopeSubscriptionPaths(scopeFields);
-}
 
 export function observeScopeStatusSnapshot(
   store: {
