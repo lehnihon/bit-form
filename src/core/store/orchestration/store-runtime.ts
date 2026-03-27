@@ -5,7 +5,6 @@ import {
   createLifecyclePort,
   createValidationPort,
 } from "./capability-ports";
-import { BitCapabilityRegistry } from "./capability-registry";
 import {
   createInitialStoreState,
   createStoreCapabilities,
@@ -104,59 +103,53 @@ export function createStoreRuntime<T extends object>(
   } = args;
   const { stateAccess, fieldAccess, featureAccess, actions } = runtimeContext;
 
-  const capabilityRegistry = new BitCapabilityRegistry();
+  const validationPort = createValidationPort<T>({
+    config,
+    fieldRegistry,
+    getState: stateAccess.getState,
+    dispatch: stateAccess.dispatch,
+    setError: actions.setError,
+    validate: actions.validate,
+    getFieldConfig: fieldAccess.getFieldConfig,
+    getScopeFields: fieldAccess.getScopeFields,
+    getEffects: featureAccess.getEffects,
+  });
 
-  capabilityRegistry.registerPort("validation", () =>
-    createValidationPort<T>({
-      config,
-      fieldRegistry,
-      getState: stateAccess.getState,
-      dispatch: stateAccess.dispatch,
-      setError: actions.setError,
-      validate: actions.validate,
-      getFieldConfig: fieldAccess.getFieldConfig,
-      getScopeFields: fieldAccess.getScopeFields,
-      getEffects: featureAccess.getEffects,
-    }),
-  );
+  const lifecyclePort = createLifecyclePort<T>({
+    config,
+    fieldRegistry,
+    dirtyManager,
+    getState: stateAccess.getState,
+    dispatch: stateAccess.dispatch,
+    saveHistorySnapshot: stateAccess.saveHistorySnapshot,
+    runStateBatch: stateAccess.runStateBatch,
+    getTransformEntries: fieldAccess.getTransformEntries,
+    getBaselineValues: () => baselineManager.getValues(),
+    setBaselineValues: (values) => baselineManager.setValues(values),
+    getValidation: featureAccess.getValidation,
+    getHistory: featureAccess.getHistory,
+    getEffects: featureAccess.getEffects,
+  });
 
-  capabilityRegistry.registerPort("lifecycle", () =>
-    createLifecyclePort<T>({
-      config,
-      fieldRegistry,
-      dirtyManager,
-      getState: stateAccess.getState,
-      dispatch: stateAccess.dispatch,
-      saveHistorySnapshot: stateAccess.saveHistorySnapshot,
-      runStateBatch: stateAccess.runStateBatch,
-      getTransformEntries: fieldAccess.getTransformEntries,
-      getBaselineValues: () => baselineManager.getValues(),
-      setBaselineValues: (values) => baselineManager.setValues(values),
-      getValidation: featureAccess.getValidation,
-      getHistory: featureAccess.getHistory,
-      getEffects: featureAccess.getEffects,
-    }),
-  );
-
-  capabilityRegistry.registerPort("array", () =>
-    createArrayPort<T>({
-      getState: stateAccess.getState,
-      dispatch: stateAccess.dispatch,
-      setFieldWithMeta: (path, value, meta) =>
-        actions.setFieldWithMeta(path, value, meta),
-      unregisterPrefix: actions.unregisterPrefix,
-      triggerValidation: (scopeFields, options) =>
-        actions.triggerValidation(scopeFields, options),
-      dirtyManager,
-      getBaselineValues: () => baselineManager.getValues(),
-      getEffects: featureAccess.getEffects,
-      saveHistorySnapshot: stateAccess.saveHistorySnapshot,
-    }),
-  );
+  const arrayPort = createArrayPort<T>({
+    getState: stateAccess.getState,
+    dispatch: stateAccess.dispatch,
+    setFieldWithMeta: (path, value, meta) =>
+      actions.setFieldWithMeta(path, value, meta),
+    unregisterPrefix: actions.unregisterPrefix,
+    triggerValidation: (scopeFields, options) =>
+      actions.triggerValidation(scopeFields, options),
+    dirtyManager,
+    getBaselineValues: () => baselineManager.getValues(),
+    getEffects: featureAccess.getEffects,
+    saveHistorySnapshot: stateAccess.saveHistorySnapshot,
+  });
 
   const capabilities = createStoreCapabilities<T>({
     ports: {
-      capabilityRegistry,
+      validationPort,
+      lifecyclePort,
+      arrayPort,
       config,
       getScopeFields: fieldAccess.getScopeFields,
       getState: stateAccess.getState,

@@ -1,6 +1,5 @@
-import type { BitState } from "../core";
+import type { BitBusStorePort, BitState } from "../core";
 import type { DevToolsStoreSnapshot, DevToolsStoreSnapshots } from "./protocol";
-import { isDevToolsReadableStore } from "./store-port";
 
 function normalizeStoreState<T extends object>(
   state: Readonly<BitState<T>>,
@@ -40,15 +39,11 @@ export function createDevToolsStoreSnapshot<T extends object>(store: {
 }
 
 export function createDevToolsSnapshotMap(
-  stores: Record<string, unknown>,
+  stores: Record<string, BitBusStorePort<object>>,
 ): DevToolsStoreSnapshots {
   const snapshots: DevToolsStoreSnapshots = {};
 
   for (const [storeId, instance] of Object.entries(stores)) {
-    if (!isDevToolsReadableStore(instance)) {
-      continue;
-    }
-
     snapshots[storeId] = createDevToolsStoreSnapshot(instance);
   }
 

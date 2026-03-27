@@ -6,7 +6,7 @@ import type {
   BitFieldChangeEvent,
   BitState,
 } from "../contracts/types";
-import type { BitFormGlobal } from "../contracts/bus-types";
+import type { BitBusStorePort, BitFormGlobal } from "../contracts/bus-types";
 import { BitPersistManager } from "../managers/features/persist-manager";
 import { BitPluginManager } from "../managers/features/plugin-manager";
 import { BitPersistEffects } from "./effects/persist-effects";
@@ -20,7 +20,7 @@ export class BitStoreEffectEngine<T extends object> {
 
   constructor(
     storeId: string,
-    storeInstance: unknown,
+    storeBusPort: BitBusStorePort<T>,
     bus: BitFormGlobal,
     persistManager: BitPersistManager<T>,
     pluginManager: BitPluginManager<T>,
@@ -30,7 +30,7 @@ export class BitStoreEffectEngine<T extends object> {
     this.pluginEffects = new BitPluginEffects<T>(pluginManager);
     this.busEffects = new BitBusEffects<T>(
       storeId,
-      storeInstance,
+      storeBusPort,
       bus,
       enableBusDispatch,
     );

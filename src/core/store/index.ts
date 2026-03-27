@@ -67,7 +67,7 @@ import {
   subscribeStoreScopeStatus,
   subscribeStoreSelector,
 } from "./orchestration/store-observe-ops";
-import { buildStoreSlicesApi } from "./orchestration/store-slices-factory";
+import { createStoreNamespacesFromFacadeHost } from "./orchestration/store-facade";
 
 class BitStore<T extends object = Record<string, unknown>> {
   public readonly [BIT_HOOKS_API_SYMBOL] = true;
@@ -87,9 +87,17 @@ class BitStore<T extends object = Record<string, unknown>> {
   public readonly feature: BitStoreFeatureApi<T>;
 
   constructor(config: BitConfig<T> = {}) {
+    const storeBusPort = {
+      getState: () => this.getState(),
+      getHistoryMetadata: () => this.getHistoryMetadata(),
+      undo: () => this.undo(),
+      redo: () => this.redo(),
+      reset: () => this.reset(),
+    };
+
     const composition = composeBitStoreRuntime<T>({
       rawConfig: config,
-      storeInstance: this,
+      storeBusPort,
     });
 
     this._config = composition.config;
@@ -99,69 +107,7 @@ class BitStore<T extends object = Record<string, unknown>> {
     this.maskManager = composition.maskManager;
     this.dirtyManager = composition.dirtyManager;
 
-    const slices = buildStoreSlicesApi<T>({
-      getStoreId: () => this.storeId,
-      getConfig: () => this.config,
-      getIsValid: () => this.isValid,
-      getIsSubmitting: () => this.isSubmitting,
-      getIsDirty: () => this.isDirty,
-      getState: () => this.getState(),
-      getFieldConfig: (path) => this.getFieldConfig(path),
-      getFieldState: (path) => this.getFieldState(path),
-      isHidden: (path) => this.isHidden(path),
-      isRequired: (path) => this.isRequired(path),
-      isFieldDirty: (path) => this.isFieldDirty(path),
-      isFieldValidating: (path) => this.isFieldValidating(path),
-      getDirtyValues: () => this.getDirtyValues(),
-      getPersistMetadata: () => this.getPersistMetadata(),
-      getHistoryMetadata: () => this.getHistoryMetadata(),
-      getScopeStatus: (scopeName) => this.getScopeStatus(scopeName),
-      getScopeErrors: (scopeName) => this.getScopeErrors(scopeName),
-      subscribe: (listener) => this.subscribe(listener),
-      subscribePersistMeta: (listener) => this.subscribePersistMeta(listener),
-      subscribeHistoryMeta: (listener) => this.subscribeHistoryMeta(listener),
-      subscribeScopeStatus: (scopeName, listener) =>
-        this.subscribeScopeStatus(scopeName, listener),
-      subscribeFormMeta: (listener) => this.subscribeFormMeta(listener),
-      subscribeSelector: (selector, listener, options) =>
-        this.subscribeSelector(selector, listener, options),
-      subscribePath: (path, listener, options) =>
-        this.subscribePath(path, listener, options),
-      subscribeFieldState: (path, listener) =>
-        this.subscribeFieldState(path, listener),
-      setField: (path, value) => this.setField(path, value),
-      blurField: (path) => this.blurField(path),
-      markFieldsTouched: (paths) => this.markFieldsTouched(paths),
-      setValues: (values, options) => this.setValues(values, options),
-      setError: (path, message) => this.setError(path, message),
-      setErrors: (errors) => this.setErrors(errors),
-      setServerErrors: (serverErrors) => this.setServerErrors(serverErrors),
-      validate: (options) => this.validate(options),
-      triggerValidation: (scopeFields, options) =>
-        this.triggerValidation(scopeFields, options),
-      reset: () => this.reset(),
-      transaction: (callback) => this.transaction(callback),
-      submit: (onSuccess) => this.submit(onSuccess),
-      cleanup: () => this.cleanup(),
-      restorePersisted: () => this.restorePersisted(),
-      forceSave: () => this.forceSave(),
-      clearPersisted: () => this.clearPersisted(),
-      registerField: (path, config) => this.registerField(path, config),
-      unregisterField: (path) => this.unregisterField(path),
-      unregisterPrefix: (prefix) => this.unregisterPrefix(prefix),
-      pushItem: (path, value) => this.pushItem(path, value),
-      prependItem: (path, value) => this.prependItem(path, value),
-      insertItem: (path, index, value) => this.insertItem(path, index, value),
-      removeItem: (path, index) => this.removeItem(path, index),
-      moveItem: (path, from, to) => this.moveItem(path, from, to),
-      swapItems: (path, indexA, indexB) => this.swapItems(path, indexA, indexB),
-      replaceItems: (path, items) => this.replaceItems(path, items),
-      clearItems: (path) => this.clearItems(path),
-      getCanUndo: () => this.canUndo,
-      getCanRedo: () => this.canRedo,
-      undo: () => this.undo(),
-      redo: () => this.redo(),
-    });
+    const slices = createStoreNamespacesFromFacadeHost(this);
 
     this.read = slices.read;
     this.observe = slices.observe;

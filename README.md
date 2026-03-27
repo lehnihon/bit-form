@@ -237,6 +237,9 @@ This branch currently allows breaking changes while architecture/performance wor
 - **New dedicated metadata subscriptions**: `subscribePersistMeta`, `subscribeHistoryMeta` and `subscribeScopeStatus` reduce adapter reliance on generic selectors/tracked subscriptions.
 - **React Native is now treated as a thin derivative of the React binding layer**, keeping only native-specific field adaptation.
 - **Store capabilities are now first-class namespaces**: `read`, `observe`, `write`, `feature` are the primary contract and `slices` was removed in this major.
+- **`BitStoreApi` now represents the namespaced contract only** (`read/observe/write/feature`). During dev migration, flat methods remain available in `BitStoreHooksApi` returned by `createBitStore` for internal/framework compatibility.
+- **Capability registry indirection removed from runtime composition**: ports are wired directly in store runtime creation.
+- **Devtools bus now stores a typed store port** (state/history/actions) instead of arbitrary store instance references.
 
 ### Migration quick notes
 

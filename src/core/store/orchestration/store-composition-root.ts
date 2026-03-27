@@ -14,6 +14,7 @@ import { createStoreRuntime } from "./store-runtime";
 import { BitStoreRuntimeKernel } from "./store-runtime-kernel";
 import { BitBaselineManager } from "../managers/core/baseline-manager";
 import type { BitNormalizerEntry } from "../registry/field-catalog";
+import type { BitBusStorePort } from "../contracts/bus-types";
 
 export interface BitStoreComposition<T extends object> {
   config: BitFrameworkConfig<T>;
@@ -41,9 +42,9 @@ function applyNormalizedPostBatchValues<T extends object>(args: {
 
 export function composeBitStoreRuntime<T extends object>(args: {
   rawConfig: BitConfig<T>;
-  storeInstance: unknown;
+  storeBusPort: BitBusStorePort<T>;
 }): BitStoreComposition<T> {
-  const { rawConfig, storeInstance } = args;
+  const { rawConfig, storeBusPort } = args;
   const config = normalizeConfig(rawConfig);
   const baselineManager = new BitBaselineManager<T>(config.initialValues);
 
@@ -166,7 +167,7 @@ export function composeBitStoreRuntime<T extends object>(args: {
 
   const effects = createStoreEffects<T>({
     storeId: runtime.storeId,
-    storeInstance,
+    storeBusPort,
     config,
     getState: () => runtimeKernel?.getState() ?? runtime.state,
     getConfig: () => config,

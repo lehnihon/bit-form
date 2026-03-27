@@ -27,6 +27,7 @@ During the V5 development cycle, the core introduces two architectural shifts:
 
 - **Dynamic baseline as single source of truth**: dirty tracking now always derives from runtime baseline state (the same source used by rebase/reset lifecycle). Array mutations no longer compare against static `config.initialValues`.
 - **Framework adapter by capability namespaces**: framework adapters are now assembled from `store.read/store.observe/store.write/store.feature` instead of a hardcoded method map.
+- **Typed devtools bus port**: runtime bus keeps a minimal typed store port (state/history/actions) instead of opaque store instance references.
 
 `read` / `observe` / `write` / `feature` are now the only public capability contract (major sem alias `store.slices`).
 

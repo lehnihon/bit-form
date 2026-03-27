@@ -1,5 +1,6 @@
 import { bitBus } from "../core";
 import type { BitBus } from "../core";
+import type { BitBusStorePort } from "../core";
 import { DEVTOOLS_PROTOCOL_VERSION, isDevToolsActionMessage } from "./protocol";
 import { createDevToolsSnapshotMap } from "./store-snapshot";
 import { getDevToolsActionableStore } from "./store-port";
@@ -36,16 +37,15 @@ export function setupRemoteBridge(url: string, bus: BitBus = bitBus) {
     }
 
     const payload = createDevToolsSnapshotMap(
-      Array.from(pendingStoreIds).reduce<Record<string, unknown>>(
-        (acc, storeId) => {
-          const storeInstance = bus.stores[storeId];
-          if (storeInstance) {
-            acc[storeId] = storeInstance;
-          }
-          return acc;
-        },
-        {},
-      ),
+      Array.from(pendingStoreIds).reduce<
+        Record<string, BitBusStorePort<object>>
+      >((acc, storeId) => {
+        const storeInstance = bus.stores[storeId];
+        if (storeInstance) {
+          acc[storeId] = storeInstance;
+        }
+        return acc;
+      }, {}),
     );
 
     pendingStoreIds.clear();

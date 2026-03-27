@@ -1,17 +1,10 @@
-import type { BitHistoryMetadata, BitState } from "../core";
+import type { BitBusStorePort } from "../core";
 
-export interface BitDevToolsReadableStore<T extends object = object> {
-  getState: () => Readonly<BitState<T>>;
-  getHistoryMetadata: () => BitHistoryMetadata;
-}
+export type BitDevToolsReadableStore<T extends object = object> =
+  BitBusStorePort<T>;
 
-export interface BitDevToolsActionableStore<
-  T extends object = object,
-> extends BitDevToolsReadableStore<T> {
-  undo: () => void;
-  redo: () => void;
-  reset: () => void;
-}
+export type BitDevToolsActionableStore<T extends object = object> =
+  BitBusStorePort<T>;
 
 export function isDevToolsReadableStore(
   value: unknown,
@@ -48,6 +41,6 @@ export function getDevToolsActionableStore(
   stores: Record<string, unknown>,
   storeId: string,
 ): BitDevToolsActionableStore<object> | null {
-  const store = stores[storeId];
-  return isDevToolsActionableStore(store) ? store : null;
+  const candidate = stores[storeId];
+  return isDevToolsActionableStore(candidate) ? candidate : null;
 }

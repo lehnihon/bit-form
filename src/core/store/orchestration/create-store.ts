@@ -1,7 +1,6 @@
 import { createInternalBitStore } from "../index";
 import { BitConfig } from "../contracts/types";
 import {
-  BitStoreApi,
   BitArrayMutationBindingApi,
   BitDirtyTrackingBindingApi,
   BitFieldBindingApi,
@@ -18,40 +17,19 @@ import {
 import { BIT_FRAMEWORK_STORE_SYMBOL } from "./framework-store-brand";
 import { BIT_HOOKS_API_SYMBOL } from "./hook-brand";
 
-const frameworkAdapterCache = new WeakMap<object, unknown>();
+const frameworkAdapterCache = new WeakMap<object, BitFrameworkStoreApi<any>>();
 
 function createFrameworkStoreFromSlices<T extends object>(
   store: BitStoreHooksApi<T>,
 ): BitFrameworkStoreApi<T> {
-  const read = store.read;
-  const observe = store.observe;
-  const write = store.write;
-  const feature = store.feature;
-
-  return {
-    getState: read.getState,
-    subscribe: observe.subscribe,
-    subscribePath: observe.subscribePath,
-    subscribeSelector: observe.subscribeSelector,
-    getFieldState: read.getFieldState,
-    subscribeFieldState: observe.subscribeFieldState,
-    setField: write.setField,
-    blurField: write.blurField,
-    resolveMask: store.resolveMask.bind(store),
-    unregisterField: feature.unregisterField,
-    subscribeFormMeta: observe.subscribeFormMeta,
-    submit: write.submit,
-    reset: write.reset,
-    validate: write.validate,
-    setError: write.setError,
-    setErrors: write.setErrors,
-    setServerErrors: write.setServerErrors,
-    setValues: write.setValues,
-    transaction: write.transaction,
+  const { read, observe, write, feature } = store;
+  const featureBindings = {
     registerField: feature.registerField,
+    unregisterField: feature.unregisterField,
     unregisterPrefix: feature.unregisterPrefix,
-    markFieldsTouched: write.markFieldsTouched,
-    getDirtyValues: read.getDirtyValues,
+    restorePersisted: feature.restorePersisted,
+    forceSave: feature.forceSave,
+    clearPersisted: feature.clearPersisted,
     pushItem: feature.pushItem,
     prependItem: feature.prependItem,
     insertItem: feature.insertItem,
@@ -60,36 +38,33 @@ function createFrameworkStoreFromSlices<T extends object>(
     swapItems: feature.swapItems,
     replaceItems: feature.replaceItems,
     clearItems: feature.clearItems,
-    createArrayItemId: store.createArrayItemId.bind(store),
     undo: feature.undo,
     redo: feature.redo,
-    getHistoryMetadata: read.getHistoryMetadata,
-    subscribeHistoryMeta: observe.subscribeHistoryMeta,
-    getPersistMetadata: read.getPersistMetadata,
-    restorePersisted: feature.restorePersisted,
-    forceSave: feature.forceSave,
-    clearPersisted: feature.clearPersisted,
-    subscribePersistMeta: observe.subscribePersistMeta,
+  };
+
+  return {
+    ...read,
+    ...observe,
+    ...write,
+    ...featureBindings,
+    resolveMask: store.resolveMask.bind(store),
+    createArrayItemId: store.createArrayItemId.bind(store),
     hasValidationsInProgress: store.hasValidationsInProgress.bind(store),
     getScopeFields: store.getScopeFields.bind(store),
-    getScopeStatus: read.getScopeStatus,
-    getScopeErrors: read.getScopeErrors,
-    subscribeScopeStatus: observe.subscribeScopeStatus,
   };
 }
 
 function bindFrameworkAdapter<T extends object>(
   store: BitFrameworkStoreApi<T>,
 ): BitFrameworkStoreApi<T> {
-  const cacheKey = store as unknown as object;
+  const cacheKey = store as object;
   const cached = frameworkAdapterCache.get(cacheKey);
 
   if (cached) {
     return cached as BitFrameworkStoreApi<T>;
   }
 
-  const hooksLikeStore = store as unknown as BitStoreHooksApi<T> &
-    Partial<BitStoreApi<T>>;
+  const hooksLikeStore = store as unknown as BitStoreHooksApi<T>;
 
   const adapter =
     hooksLikeStore.read &&
@@ -102,12 +77,15 @@ function bindFrameworkAdapter<T extends object>(
   const brandedAdapter = {
     [BIT_FRAMEWORK_STORE_SYMBOL]: true as const,
     ...adapter,
-  };
+  } as BitFrameworkStoreApi<T>;
 
-  frameworkAdapterCache.set(cacheKey, brandedAdapter);
   frameworkAdapterCache.set(
-    brandedAdapter as unknown as object,
-    brandedAdapter,
+    cacheKey,
+    brandedAdapter as BitFrameworkStoreApi<any>,
+  );
+  frameworkAdapterCache.set(
+    brandedAdapter as object,
+    brandedAdapter as BitFrameworkStoreApi<any>,
   );
 
   return brandedAdapter;
