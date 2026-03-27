@@ -223,6 +223,7 @@ class BitStore<T extends object = Record<string, unknown>> {
       state: this.runtime.getState(),
       fieldRegistry: this.fieldRegistry,
       subscriptions: this.runtime.subscriptions,
+      stateReader: this.stateReader,
       invalidateFieldIndexes: () => {
         this.fieldRegistry.invalidateIndexes();
       },

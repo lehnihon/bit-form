@@ -72,4 +72,8 @@ export class BitStoreStateReader<T extends object> {
 
     return snapshot;
   }
+
+  invalidatePath(path: string): void {
+    this.fieldStateCache.delete(path);
+  }
 }
