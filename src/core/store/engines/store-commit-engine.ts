@@ -61,10 +61,7 @@ function routeStoreOperation<T extends object>(
 function executeStatePatchOperation<T extends object>(args: {
   currentState: BitState<T>;
   operation: BitStatePatchOperation<T>;
-  applyValueDerivations: (
-    values: T,
-    changedPaths?: readonly string[],
-  ) => T;
+  applyValueDerivations: (values: T, changedPaths?: readonly string[]) => T;
 }) {
   const { currentState, operation, applyValueDerivations } = args;
 
@@ -86,10 +83,7 @@ function executeStatePatchOperation<T extends object>(args: {
 function executeStoreOperation<T extends object>(args: {
   currentState: BitState<T>;
   operation: BitStoreOperation<T>;
-  applyValueDerivations: (
-    values: T,
-    changedPaths?: readonly string[],
-  ) => T;
+  applyValueDerivations: (values: T, changedPaths?: readonly string[]) => T;
 }) {
   const { currentState, operation, applyValueDerivations } = args;
   const patchOperation = routeStoreOperation(currentState, operation);
