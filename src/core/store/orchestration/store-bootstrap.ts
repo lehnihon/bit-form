@@ -13,6 +13,7 @@ import { BitFieldQueryManager } from "../managers/features/field-query-manager";
 import { BitErrorManager } from "../managers/features/error-manager";
 import { BitFieldRegistry } from "../registry/field-registry";
 import { BitComputedManager } from "../managers/core/computed-manager";
+import { BitCapabilityRegistry } from "./capability-registry";
 import { analyzeCyclicDependencies } from "../managers/core/computed-dependency-analyzer";
 import type { BitStoreOperation } from "../engines/operation-engine";
 import { deepClone } from "../../utils";
@@ -42,10 +43,8 @@ function shouldEnableStoreBus<T extends object>(config: BitFrameworkConfig<T>) {
 }
 
 export type BitStoreCapabilityPorts<T extends object> = {
+  capabilityRegistry: BitCapabilityRegistry;
   config: BitFrameworkConfig<T>;
-  validationPort: BitValidationStorePort<T>;
-  lifecyclePort: BitLifecycleStorePort<T>;
-  arrayPort: BitArrayStorePort<T>;
   getScopeFields(scopeName: string): string[];
   getState(): BitState<T>;
   dispatch(operation: BitStoreOperation<T>): void;
@@ -58,15 +57,27 @@ export function createStoreCapabilities<T extends object>(args: {
   fieldRegistry: BitFieldRegistry<T>;
 }): BitStoreCapabilities<T> {
   const { ports, fieldRegistry } = args;
+  const validationPort = ports.capabilityRegistry.getPort<
+    "validation",
+    BitValidationStorePort<T>
+  >("validation");
+  const lifecyclePort = ports.capabilityRegistry.getPort<
+    "lifecycle",
+    BitLifecycleStorePort<T>
+  >("lifecycle");
+  const arrayPort = ports.capabilityRegistry.getPort<
+    "array",
+    BitArrayStorePort<T>
+  >("array");
 
   return {
-    validation: new BitValidationManager<T>(ports.validationPort),
-    lifecycle: new BitLifecycleManager<T>(ports.lifecyclePort),
+    validation: new BitValidationManager<T>(validationPort),
+    lifecycle: new BitLifecycleManager<T>(lifecyclePort),
     history: new BitHistoryManager<T>(
       !!ports.config.history.enabled,
       ports.config.history.limit ?? 50,
     ),
-    arrays: new BitArrayManager<T>(ports.arrayPort),
+    arrays: new BitArrayManager<T>(arrayPort),
     scope: new BitScopeManager<T>(
       () => ports.getState(),
       () => ports.getBaselineValues(),

@@ -14,27 +14,26 @@ export class BitSubscriptionEngine<T extends object> {
     new Map();
   private pathSelectorIndex: Map<string, Set<SelectorListenerEntry<T>>> =
     new Map();
-  private readonly expandedPathCache = new Map<string, string[]>();
-  private readonly changedPathLookupCache = new Map<string, string[]>();
+  private readonly pathExpansionCache = new Map<string, string[]>();
+  private readonly expandedPathCache = this.pathExpansionCache;
+  private readonly changedPathLookupCache = this.pathExpansionCache;
   private readonly subscriptionSeenVersion = new Map<
     SelectorListenerEntry<T>,
     number
   >();
   private notifyVersion = 0;
-  private readonly MAX_EXPANDED_CACHE_SIZE: number;
-  private readonly MAX_CHANGED_LOOKUP_CACHE_SIZE: number;
+  private readonly MAX_PATH_EXPANSION_CACHE_SIZE: number;
 
   constructor(
     private readonly getState: () => Readonly<BitState<T>>,
     /**
-     * Maximum number of entries for each internal LRU path cache.
+     * Maximum number of entries for path expansion cache.
      * Lower = less memory; higher = fewer cache evictions in large dynamic forms.
      * @default 500
      */
     maxCacheSize = 500,
   ) {
-    this.MAX_EXPANDED_CACHE_SIZE = maxCacheSize;
-    this.MAX_CHANGED_LOOKUP_CACHE_SIZE = maxCacheSize;
+    this.MAX_PATH_EXPANSION_CACHE_SIZE = maxCacheSize;
   }
 
   subscribe(listener: () => void): () => void {
@@ -71,7 +70,7 @@ export class BitSubscriptionEngine<T extends object> {
 
     this.pathScopedSubscriptions.set(subscription, scopedPaths);
     scopedPaths.forEach((pathKey) => {
-      this.expandPathForIndexing(pathKey).forEach((indexPath) => {
+      this.forEachIndexPath(pathKey, (indexPath) => {
         const listeners = this.pathSelectorIndex.get(indexPath) ?? new Set();
         listeners.add(subscription);
         this.pathSelectorIndex.set(indexPath, listeners);
@@ -89,7 +88,7 @@ export class BitSubscriptionEngine<T extends object> {
       if (!paths) return;
 
       paths.forEach((pathKey) => {
-        this.expandPathForIndexing(pathKey).forEach((indexPath) => {
+        this.forEachIndexPath(pathKey, (indexPath) => {
           const listeners = this.pathSelectorIndex.get(indexPath);
           if (!listeners) return;
 
@@ -141,8 +140,7 @@ export class BitSubscriptionEngine<T extends object> {
     this.listeners.clear();
     this.pathScopedSubscriptions.clear();
     this.pathSelectorIndex.clear();
-    this.expandedPathCache.clear();
-    this.changedPathLookupCache.clear();
+    this.pathExpansionCache.clear();
     this.subscriptionSeenVersion.clear();
   }
 
@@ -187,37 +185,66 @@ export class BitSubscriptionEngine<T extends object> {
     };
 
     changedPaths.forEach((changedPath) => {
-      this.expandChangedPathForLookup(changedPath).forEach(addByPath);
+      this.forEachLookupPath(changedPath, addByPath);
     });
 
     return scopedSubscribers;
   }
 
   private expandChangedPathForLookup(path: string): string[] {
-    const cached = this.changedPathLookupCache.get(path);
-    if (cached) {
-      return cached;
-    }
-
-    const parts = path.split(".");
-    const lookupPaths: string[] = [path];
-
-    while (parts.length > 1) {
-      parts.pop();
-      lookupPaths.push(parts.join("."));
-    }
-
-    this.setBoundedCacheEntry(
-      this.changedPathLookupCache,
-      path,
-      lookupPaths,
-      this.MAX_CHANGED_LOOKUP_CACHE_SIZE,
-    );
-    return lookupPaths;
+    // Use unified expansion cache
+    return this.expandPathGeneric(path);
   }
 
   private expandPathForIndexing(path: string): string[] {
-    const cached = this.expandedPathCache.get(path);
+    // Use unified expansion cache
+    return this.expandPathGeneric(path);
+  }
+
+  private forEachIndexPath(
+    path: string,
+    visitor: (path: string) => void,
+  ): void {
+    if (!this.isSimplePath(path)) {
+      this.expandPathForIndexing(path).forEach(visitor);
+      return;
+    }
+
+    const segments = path.split(".");
+    let currentPath = "";
+
+    for (let index = 0; index < segments.length; index += 1) {
+      currentPath = currentPath
+        ? `${currentPath}.${segments[index]}`
+        : segments[index];
+      visitor(currentPath);
+    }
+  }
+
+  private forEachLookupPath(
+    path: string,
+    visitor: (path: string) => void,
+  ): void {
+    if (!this.isSimplePath(path)) {
+      this.expandChangedPathForLookup(path).forEach(visitor);
+      return;
+    }
+
+    visitor(path);
+
+    let separatorIndex = path.lastIndexOf(".");
+    while (separatorIndex > -1) {
+      visitor(path.slice(0, separatorIndex));
+      separatorIndex = path.lastIndexOf(".", separatorIndex - 1);
+    }
+  }
+
+  private isSimplePath(path: string): boolean {
+    return !path.includes("*") && !path.includes("[") && !path.includes("]");
+  }
+
+  private expandPathGeneric(path: string): string[] {
+    const cached = this.pathExpansionCache.get(path);
     if (cached) {
       return cached;
     }
@@ -228,10 +255,10 @@ export class BitSubscriptionEngine<T extends object> {
       keys.push(segments.slice(0, i).join("."));
     }
     this.setBoundedCacheEntry(
-      this.expandedPathCache,
+      this.pathExpansionCache,
       path,
       keys,
-      this.MAX_EXPANDED_CACHE_SIZE,
+      this.MAX_PATH_EXPANSION_CACHE_SIZE,
     );
     return keys;
   }

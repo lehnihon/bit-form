@@ -126,17 +126,6 @@ export async function abortIfOutdatedStage<T extends object>(args: {
 
   ctx.aborted = true;
   ctx.result = ctx.currentState.isValid;
-
-  await deps.store.emitAfterValidate({
-    values: deps.store.getState().values,
-    state: deps.store.getState(),
-    scope: ctx.options?.scope,
-    scopeFields: ctx.targetFields,
-    errors: deps.store.getState().errors,
-    result: ctx.currentState.isValid,
-    aborted: true,
-  });
-
   ctx.halted = true;
 }
 

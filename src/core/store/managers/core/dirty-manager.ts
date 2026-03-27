@@ -76,17 +76,18 @@ export class BitDirtyManager<T extends object = Record<string, unknown>> {
   }
 
   isPathDirty(path: string): boolean {
+    // Check if exact path is dirty
     if (this.dirtyPathIndex.has(path)) {
       return true;
     }
 
+    // Check if any ancestor prefix is dirty using refcount (O(1) instead of O(depth))
     let separatorIndex = path.lastIndexOf(".");
     while (separatorIndex > -1) {
       const ancestorPath = path.slice(0, separatorIndex);
-      if (this.dirtyPathIndex.has(ancestorPath)) {
+      if ((this.dirtyPrefixRefCount.get(ancestorPath) ?? 0) > 0) {
         return true;
       }
-
       separatorIndex = path.lastIndexOf(".", separatorIndex - 1);
     }
 

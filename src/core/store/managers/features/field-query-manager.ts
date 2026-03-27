@@ -1,5 +1,5 @@
 import { BitState } from "../../contracts/types";
-import { BitFieldRegistry } from "../../registry/field-registry";
+import type { BitFieldMetadataProvider } from "../../registry/field-metadata-provider";
 
 /**
  * BitFieldQueryManager
@@ -11,7 +11,7 @@ export class BitFieldQueryManager<T extends object = Record<string, unknown>> {
   private requiredValuesRef: T | null = null;
 
   constructor(
-    private fieldRegistry: BitFieldRegistry<T>,
+    private fieldMetadataProvider: BitFieldMetadataProvider<T>,
     private getState: () => BitState<T>,
     private isPathDirty: (path: string) => boolean,
   ) {}
@@ -20,7 +20,7 @@ export class BitFieldQueryManager<T extends object = Record<string, unknown>> {
    * Check if a field is hidden based on conditional logic.
    */
   isHidden<P extends string>(path: P): boolean {
-    return this.fieldRegistry.isHidden(path);
+    return this.fieldMetadataProvider.isHidden(path);
   }
 
   /**
@@ -33,7 +33,7 @@ export class BitFieldQueryManager<T extends object = Record<string, unknown>> {
       this.requiredValuesRef = values;
     }
 
-    return this.fieldRegistry.isRequired(path, values);
+    return this.fieldMetadataProvider.isRequired(path, values);
   }
 
   /**

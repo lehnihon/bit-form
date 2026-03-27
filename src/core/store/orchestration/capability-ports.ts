@@ -51,16 +51,16 @@ export function createValidationPort<T extends object>(
   deps: BitValidationPortDeps<T>,
 ): BitValidationStorePort<T> {
   return {
-    getState: () => deps.getState(),
-    dispatch: (operation) => deps.dispatch(operation),
-    setError: (path, message) => deps.setError(path, message),
-    validate: (options) => deps.validate(options),
-    getFieldConfig: (path) => deps.getFieldConfig(path),
+    getState: deps.getState,
+    dispatch: deps.dispatch,
+    setError: deps.setError,
+    validate: deps.validate,
+    getFieldConfig: deps.getFieldConfig,
     forEachFieldConfig: (callback) =>
       deps.fieldRegistry.forEachFieldConfig((config, path) =>
         callback(config, path),
       ),
-    getScopeFields: (scopeName) => deps.getScopeFields(scopeName),
+    getScopeFields: deps.getScopeFields,
     config: deps.config,
     getRequiredErrors: (values) => deps.fieldRegistry.getRequiredErrors(values),
     getHiddenFields: () => deps.fieldRegistry.getHiddenFields(),
@@ -93,13 +93,13 @@ export function createLifecyclePort<T extends object>(
   deps: BitLifecyclePortDeps<T>,
 ): BitLifecycleStorePort<T> {
   return {
-    getState: () => deps.getState(),
-    dispatch: (operation) => deps.dispatch(operation),
-    internalSaveSnapshot: () => deps.saveHistorySnapshot(),
-    batchStateUpdates: (callback) => deps.runStateBatch(callback),
+    getState: deps.getState,
+    dispatch: deps.dispatch,
+    internalSaveSnapshot: deps.saveHistorySnapshot,
+    batchStateUpdates: deps.runStateBatch,
     config: deps.config,
     getFieldConfig: (path) => deps.fieldRegistry.getFieldConfig(path),
-    getTransformEntries: () => deps.getTransformEntries(),
+    getTransformEntries: deps.getTransformEntries,
     updateDependencies: (changedPath, currentValues, newValues) =>
       deps.fieldRegistry.updateDependencies(
         changedPath,
@@ -123,10 +123,10 @@ export function createLifecyclePort<T extends object>(
       deps.dirtyManager.updateForPath(path, nextValues, baselineValues),
     rebuildDirtyState: (nextValues, baselineValues) =>
       deps.dirtyManager.rebuild(nextValues, baselineValues),
-    clearDirtyState: () => deps.dirtyManager.clear(),
+    clearDirtyState: deps.dirtyManager.clear.bind(deps.dirtyManager),
     buildDirtyValues: (values) => deps.dirtyManager.buildDirtyValues(values),
-    getBaselineValues: () => deps.getBaselineValues(),
-    setBaselineValues: (values) => deps.setBaselineValues(values),
+    getBaselineValues: deps.getBaselineValues,
+    setBaselineValues: deps.setBaselineValues,
     resetHistory: (initialValues) => deps.getHistory().reset(initialValues),
     emitFieldChange: (event) => deps.getEffects().onFieldChange(event),
     emitBeforeSubmit: (event) => deps.getEffects().beforeSubmit(event),
@@ -163,16 +163,15 @@ export function createArrayPort<T extends object>(
   deps: BitArrayPortDeps<T>,
 ): BitArrayStorePort<T> {
   return {
-    getState: () => deps.getState(),
-    setFieldWithMeta: (path, value, meta) =>
-      deps.setFieldWithMeta(path, value, meta),
+    getState: deps.getState,
+    setFieldWithMeta: deps.setFieldWithMeta,
     emitFieldChange: (event) => deps.getEffects().onFieldChange(event),
-    dispatch: (operation) => deps.dispatch(operation),
-    internalSaveSnapshot: () => deps.saveHistorySnapshot(),
-    unregisterPrefix: (prefix) => deps.unregisterPrefix(prefix),
+    dispatch: deps.dispatch,
+    internalSaveSnapshot: deps.saveHistorySnapshot,
+    unregisterPrefix: deps.unregisterPrefix,
     triggerValidation: (scopeFields) => deps.triggerValidation(scopeFields),
     updateDirtyForPath: (path, nextValues, baselineValues) =>
       deps.dirtyManager.updateForPath(path, nextValues, baselineValues),
-    getBaselineValues: () => deps.getBaselineValues(),
+    getBaselineValues: deps.getBaselineValues,
   };
 }

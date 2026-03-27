@@ -1,5 +1,6 @@
-import { deepClone, getDeepValue, setDeepValues } from "../../../../utils";
+import { deepClone, setDeepValues } from "../../../../utils";
 import type { BitSubmitResult } from "../../../contracts/types";
+import { applyTransformDerivations } from "../../../shared/value-derivation-pipeline";
 import {
   BitPipelineContext,
   BitPipelineRunner,
@@ -136,13 +137,11 @@ export class BitSubmitLifecycleManager<T extends object> {
       updates.push([hiddenPath, undefined]);
     });
 
-    for (const [path, transformer] of this.store.getTransformEntries()) {
-      const currentVal = getDeepValue(ctx.valuesToSubmit, path);
-      updates.push([
-        path,
-        transformer(currentVal, this.store.getState().values),
-      ]);
-    }
+    ctx.valuesToSubmit = applyTransformDerivations({
+      values: ctx.valuesToSubmit,
+      sourceValues: this.store.getState().values,
+      transformEntries: this.store.getTransformEntries(),
+    });
 
     if (updates.length > 0) {
       ctx.valuesToSubmit = setDeepValues(ctx.valuesToSubmit, updates);

@@ -12,6 +12,7 @@ import type {
 export class BitPluginManager<T extends object = Record<string, unknown>> {
   private teardownFns: Array<() => void> = [];
   private notifyingError = false;
+  private cachedContext: BitPluginContext<T> | null = null;
 
   constructor(
     private plugins: BitPlugin<T>[],
@@ -19,7 +20,7 @@ export class BitPluginManager<T extends object = Record<string, unknown>> {
   ) {}
 
   setupAll() {
-    const context = this.contextFactory();
+    const context = this.getContext();
     this.plugins.forEach((plugin) => {
       if (!plugin.setup) return;
 
@@ -51,7 +52,7 @@ export class BitPluginManager<T extends object = Record<string, unknown>> {
   }
 
   onFieldChange(event: BitFieldChangeEvent<T>) {
-    const context = this.contextFactory();
+    const context = this.getContext();
     this.plugins.forEach((plugin) => {
       const hook = plugin.hooks?.onFieldChange;
       if (!hook) return;
@@ -79,7 +80,7 @@ export class BitPluginManager<T extends object = Record<string, unknown>> {
 
     this.notifyingError = true;
 
-    const context = this.contextFactory();
+    const context = this.getContext();
     const payload: BitPluginErrorEvent<T> = {
       source,
       pluginName,
@@ -114,6 +115,7 @@ export class BitPluginManager<T extends object = Record<string, unknown>> {
     }
 
     this.teardownFns = [];
+    this.cachedContext = null;
   }
 
   private async emitHook(
@@ -128,7 +130,7 @@ export class BitPluginManager<T extends object = Record<string, unknown>> {
       | BitBeforeSubmitEvent<T>
       | BitAfterSubmitEvent<T>,
   ) {
-    const context = this.contextFactory();
+    const context = this.getContext();
 
     for (const plugin of this.plugins) {
       const hook = plugin.hooks?.[hookName];
@@ -140,5 +142,13 @@ export class BitPluginManager<T extends object = Record<string, unknown>> {
         await this.reportError(hookName, error, event, plugin.name);
       }
     }
+  }
+
+  private getContext(): BitPluginContext<T> {
+    if (!this.cachedContext) {
+      this.cachedContext = this.contextFactory();
+    }
+
+    return this.cachedContext;
   }
 }
