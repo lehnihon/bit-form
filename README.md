@@ -104,11 +104,8 @@ Below are **measured results** from the quality benchmarks currently in this rep
 - Source tests:
   - `quality/bench/rhf-compare.test.ts`
   - `quality/bench/perf.test.ts`
-  - `quality/e2e/tests/benchmark-compare.spec.ts`
 - Reproduce with:
   - `npm run test:bench:compare`
-  - `npm run test:bench:compare:browser`
-  - `npm run test:bench:compare:browser:prod`
   - `npm run test:bench`
 
 #### React benchmark methodology
@@ -119,7 +116,6 @@ The comparison now uses a more realistic and stricter setup:
 - validation is triggered once at the end of each measured cycle
 - React commit stabilization before and after each sample
 - larger load (`600` fields for bulk, `240` iterations for async burst)
-- browser confirmation with Playwright in both dev and production preview modes
 
 #### React benchmark (Bit-Form vs RHF/Formik/TanStack)
 
