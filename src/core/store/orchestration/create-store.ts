@@ -1,61 +1,66 @@
 import { createInternalBitStore } from "../index";
 import { BitConfig } from "../contracts/types";
 import {
-  BitArrayMutationBindingApi,
-  BitDirtyTrackingBindingApi,
-  BitFieldBindingApi,
-  BitFieldRegistrationBindingApi,
-  BitFormActionBindingApi,
-  BitFormMetaBindingApi,
+  BitStoreApi,
   BitFrameworkStoreApi,
-  BitHistoryBindingApi,
-  BitPersistBindingApi,
-  BitScopeBindingApi,
-  BitStoreSelectorBindingApi,
   BitStoreHooksApi,
 } from "../contracts/public/store-api-types";
 import { BIT_FRAMEWORK_STORE_SYMBOL } from "./framework-store-brand";
-import { BIT_HOOKS_API_SYMBOL } from "./hook-brand";
 
 const frameworkAdapterCache = new WeakMap<object, BitFrameworkStoreApi<any>>();
+
+function defineAllProperties(
+  target: Record<PropertyKey, unknown>,
+  source: object,
+): void {
+  Object.defineProperties(target, Object.getOwnPropertyDescriptors(source));
+}
 
 function createFrameworkStoreFromSlices<T extends object>(
   store: BitStoreHooksApi<T>,
 ): BitFrameworkStoreApi<T> {
   const { read, observe, write, feature } = store;
-  const featureBindings = {
-    registerField: feature.registerField,
-    unregisterField: feature.unregisterField,
-    unregisterPrefix: feature.unregisterPrefix,
-    restorePersisted: feature.restorePersisted,
-    forceSave: feature.forceSave,
-    clearPersisted: feature.clearPersisted,
-    pushItem: feature.pushItem,
-    prependItem: feature.prependItem,
-    insertItem: feature.insertItem,
-    removeItem: feature.removeItem,
-    moveItem: feature.moveItem,
-    swapItems: feature.swapItems,
-    replaceItems: feature.replaceItems,
-    clearItems: feature.clearItems,
-    undo: feature.undo,
-    redo: feature.redo,
-  };
+  const adapter: Record<PropertyKey, unknown> = {};
 
-  return {
-    ...read,
-    ...observe,
-    ...write,
-    ...featureBindings,
-    resolveMask: store.resolveMask.bind(store),
-    createArrayItemId: store.createArrayItemId.bind(store),
-    hasValidationsInProgress: store.hasValidationsInProgress.bind(store),
-    getScopeFields: store.getScopeFields.bind(store),
-  };
+  defineAllProperties(adapter, read);
+  defineAllProperties(adapter, observe);
+  defineAllProperties(adapter, write);
+  defineAllProperties(adapter, feature);
+
+  delete adapter.cleanup;
+
+  Object.defineProperties(adapter, {
+    resolveMask: {
+      value: store.resolveMask.bind(store),
+      enumerable: true,
+      configurable: true,
+      writable: true,
+    },
+    createArrayItemId: {
+      value: store.createArrayItemId.bind(store),
+      enumerable: true,
+      configurable: true,
+      writable: true,
+    },
+    hasValidationsInProgress: {
+      value: store.hasValidationsInProgress.bind(store),
+      enumerable: true,
+      configurable: true,
+      writable: true,
+    },
+    getScopeFields: {
+      value: store.getScopeFields.bind(store),
+      enumerable: true,
+      configurable: true,
+      writable: true,
+    },
+  });
+
+  return adapter as unknown as BitFrameworkStoreApi<T>;
 }
 
 function bindFrameworkAdapter<T extends object>(
-  store: BitFrameworkStoreApi<T>,
+  store: unknown,
 ): BitFrameworkStoreApi<T> {
   const cacheKey = store as object;
   const cached = frameworkAdapterCache.get(cacheKey);
@@ -64,31 +69,29 @@ function bindFrameworkAdapter<T extends object>(
     return cached as BitFrameworkStoreApi<T>;
   }
 
-  const hooksLikeStore = store as unknown as BitStoreHooksApi<T>;
+  const adapter = isHookCompatibleStore<T>(store)
+    ? createFrameworkStoreFromSlices(store)
+    : (store as BitFrameworkStoreApi<T>);
 
-  const adapter =
-    hooksLikeStore.read &&
-    hooksLikeStore.observe &&
-    hooksLikeStore.write &&
-    hooksLikeStore.feature
-      ? createFrameworkStoreFromSlices(hooksLikeStore)
-      : store;
-
-  const brandedAdapter = {
-    [BIT_FRAMEWORK_STORE_SYMBOL]: true as const,
-    ...adapter,
-  } as BitFrameworkStoreApi<T>;
+  const brandedAdapter = {} as Record<PropertyKey, unknown>;
+  Object.defineProperty(brandedAdapter, BIT_FRAMEWORK_STORE_SYMBOL, {
+    value: true,
+    enumerable: true,
+    configurable: true,
+    writable: false,
+  });
+  defineAllProperties(brandedAdapter, adapter as object);
 
   frameworkAdapterCache.set(
     cacheKey,
-    brandedAdapter as BitFrameworkStoreApi<any>,
+    brandedAdapter as unknown as BitFrameworkStoreApi<any>,
   );
   frameworkAdapterCache.set(
     brandedAdapter as object,
-    brandedAdapter as BitFrameworkStoreApi<any>,
+    brandedAdapter as unknown as BitFrameworkStoreApi<any>,
   );
 
-  return brandedAdapter;
+  return brandedAdapter as unknown as BitFrameworkStoreApi<T>;
 }
 
 function isHookCompatibleStore<T extends object>(
@@ -99,14 +102,26 @@ function isHookCompatibleStore<T extends object>(
   }
 
   const candidate = store as Record<PropertyKey, unknown>;
-  return candidate[BIT_HOOKS_API_SYMBOL] === true;
+  const hasNamespaces =
+    !!candidate.read &&
+    !!candidate.observe &&
+    !!candidate.write &&
+    !!candidate.feature;
+
+  const hasFrameworkHelpers =
+    typeof candidate.resolveMask === "function" &&
+    typeof candidate.createArrayItemId === "function" &&
+    typeof candidate.hasValidationsInProgress === "function" &&
+    typeof candidate.getScopeFields === "function";
+
+  return hasNamespaces && hasFrameworkHelpers;
 }
 
 export function resolveBitStoreForHooks<T extends object>(
   store: unknown,
 ): BitStoreHooksApi<T> {
-  if (isHookCompatibleStore(store)) {
-    return store as unknown as BitStoreHooksApi<T>;
+  if (isHookCompatibleStore<T>(store)) {
+    return store;
   }
 
   throw new Error(
@@ -129,7 +144,7 @@ export function createFrameworkStoreAdapter<T extends object>(
   store: unknown,
 ): BitFrameworkStoreApi<T> {
   if (isHookCompatibleStore<T>(store)) {
-    return bindFrameworkAdapter(store as unknown as BitFrameworkStoreApi<T>);
+    return bindFrameworkAdapter(store);
   }
 
   if (isFrameworkBindingStore<T>(store)) {
@@ -143,6 +158,20 @@ export function createFrameworkStoreAdapter<T extends object>(
 
 export function createBitStore<T extends object = Record<string, unknown>>(
   config: BitConfig<T> = {},
-): BitStoreHooksApi<T> {
-  return createInternalBitStore<T>(config);
+): BitStoreApi<T> {
+  const internalStore = createInternalBitStore<T>(config);
+
+  const namespacedStore: BitStoreHooksApi<T> = {
+    read: internalStore.read,
+    observe: internalStore.observe,
+    write: internalStore.write,
+    feature: internalStore.feature,
+    resolveMask: internalStore.resolveMask.bind(internalStore),
+    createArrayItemId: internalStore.createArrayItemId.bind(internalStore),
+    hasValidationsInProgress:
+      internalStore.hasValidationsInProgress.bind(internalStore),
+    getScopeFields: internalStore.getScopeFields.bind(internalStore),
+  };
+
+  return namespacedStore;
 }

@@ -12,50 +12,59 @@ import {
   type BitStoreBatchState,
 } from "./store-batch-engine";
 
+function assertNever(value: never): never {
+  throw new Error(
+    `BitStore: unsupported operation kind: ${String((value as { kind?: unknown }).kind)}`,
+  );
+}
+
 function routeStoreOperation<T extends object>(
   currentState: Readonly<BitState<T>>,
   operation: BitStoreOperation<T>,
 ): BitStatePatchOperation<T> | null {
-  if (operation.kind === "state.patch") {
-    return operation;
-  }
+  switch (operation.kind) {
+    case "state.patch":
+      return operation;
 
-  if (operation.kind === "field.touchMany") {
-    if (operation.paths.length === 0) {
-      return null;
+    case "field.touchMany": {
+      if (operation.paths.length === 0) {
+        return null;
+      }
+
+      const touched = { ...currentState.touched };
+      for (const path of operation.paths) {
+        touched[path as keyof typeof touched] = true;
+      }
+
+      return patchStateOperation({ touched }, operation.paths);
     }
 
-    const touched = { ...currentState.touched };
-    for (const path of operation.paths) {
-      touched[path as keyof typeof touched] = true;
-    }
+    case "form.persistMeta":
+      return patchStateOperation({
+        persist: {
+          ...currentState.persist,
+          ...operation.patch,
+        },
+      });
 
-    return patchStateOperation({ touched }, operation.paths);
+    case "history.apply":
+      return patchStateOperation(
+        {
+          values: operation.values,
+          isDirty: operation.isDirty,
+        },
+        ["*"],
+      );
+
+    case "validation.commit":
+      return patchStateOperation({
+        errors: operation.errors,
+        isValid: operation.isValid,
+      });
+
+    default:
+      return assertNever(operation);
   }
-
-  if (operation.kind === "form.persistMeta") {
-    return patchStateOperation({
-      persist: {
-        ...currentState.persist,
-        ...operation.patch,
-      },
-    });
-  }
-
-  if (operation.kind === "history.apply") {
-    return patchStateOperation(
-      {
-        values: operation.values,
-        isDirty: operation.isDirty,
-      },
-      ["*"],
-    );
-  }
-
-  return patchStateOperation({
-    errors: operation.errors,
-    isValid: operation.isValid,
-  });
 }
 
 function executeStatePatchOperation<T extends object>(args: {

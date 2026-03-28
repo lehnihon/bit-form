@@ -4,7 +4,13 @@
  * Importa APENAS via entrypoint público - nunca caminhos internos.
  */
 import { describe, it, expect } from "vitest";
-import { createBitStore } from "../../../core";
+import {
+  createBitStore as createBitStoreRuntime,
+  createFrameworkStoreAdapter,
+} from "../../../core";
+
+const createBitStore = ((config?: any) =>
+  createFrameworkStoreAdapter(createBitStoreRuntime(config))) as any;
 
 describe("Store Initialization Contract", () => {
   describe("initialValues", () => {
@@ -130,22 +136,11 @@ describe("Store Initialization Contract", () => {
   });
 
   describe("storeId e config", () => {
-    it("deve expor storeId único por instância", () => {
-      const a = createBitStore({ initialValues: { x: 1 } });
-      const b = createBitStore({ initialValues: { x: 2 } });
-      expect(a.storeId).toBeDefined();
-      expect(b.storeId).toBeDefined();
-      expect(a.storeId).not.toBe(b.storeId);
-    });
-
-    it("deve expor config via getter", () => {
-      const store = createBitStore({ initialValues: { x: 1 } });
-      expect(store.config).toBeDefined();
-    });
-
-    it("deve expor config via getConfig()", () => {
-      const store = createBitStore({ initialValues: { x: 1 } });
-      expect(store.getConfig()).toBe(store.config);
+    it("não deve expor metadados internos na API pública", () => {
+      const store = createBitStoreRuntime({ initialValues: { x: 1 } }) as any;
+      expect(store.storeId).toBeUndefined();
+      expect(store.config).toBeUndefined();
+      expect(store.getConfig).toBeUndefined();
     });
   });
 });

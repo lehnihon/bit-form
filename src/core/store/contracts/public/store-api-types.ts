@@ -406,15 +406,6 @@ export interface BitStoreNamespacesApi<
   readonly feature: BitStoreFeatureApi<T>;
 }
 
-export interface BitStoreFlatApi<T extends object = Record<string, unknown>>
-  extends
-    BitStoreIdentityApi<T>,
-    BitStoreStateFlagsApi,
-    BitFormReadApi<T>,
-    BitFormObserveApi<T>,
-    BitFormWriteApi<T>,
-    BitStoreFeatureApi<T> {}
-
 export interface BitStoreApi<
   T extends object = Record<string, unknown>,
 > extends BitStoreNamespacesApi<T> {}
@@ -422,12 +413,7 @@ export interface BitStoreApi<
 export interface BitStoreHooksApi<T extends object = Record<string, unknown>>
   extends
     BitStoreApi<T>,
-    BitStoreFlatApi<T>,
-    BitFieldBindingApi<T>,
-    BitFormMetaBindingApi<T>,
-    BitStoreSelectorBindingApi<T>,
-    BitFieldRegistrationBindingApi<T>,
-    BitScopeBindingApi<T> {
+    Pick<BitScopeBindingApi<T>, "hasValidationsInProgress" | "getScopeFields"> {
   resolveMask(path: string): BitMask | undefined;
   createArrayItemId(path: string, index?: number): string;
 }

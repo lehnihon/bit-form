@@ -3,7 +3,10 @@
 import React from "react";
 import { describe, it, expect, vi } from "vitest";
 import { renderHook, act } from "@testing-library/react";
-import { createBitStore } from "../../../core";
+import {
+  createBitStore as createBitStoreRuntime,
+  createFrameworkStoreAdapter,
+} from "../../../core";
 import { maskBRL } from "../../../mask";
 import {
   BitFormProvider,
@@ -26,6 +29,12 @@ interface MyForm {
   skills: string[];
   hasBonus: boolean;
   bonusValue: number;
+}
+
+function createBitStore<T extends object = Record<string, unknown>>(
+  config?: any,
+) {
+  return createFrameworkStoreAdapter(createBitStoreRuntime<T>(config)) as any;
 }
 
 describe("React Integration (Context + Hooks)", () => {
@@ -614,7 +623,6 @@ describe("React Integration (Context + Hooks)", () => {
       expect(result.current.meta.isSaving).toBe(false);
       expect(result.current.meta.isRestoring).toBe(false);
       expect(result.current.meta.error).toBeNull();
-      store.cleanup();
     });
 
     it("deve salvar com save() e restaurar com restore()", async () => {
@@ -641,7 +649,6 @@ describe("React Integration (Context + Hooks)", () => {
       const ok = await act(() => result.current.restore());
       expect(ok).toBe(true);
       expect(store.getState().values.user.firstName).toBe("Leo");
-      store.cleanup();
     });
 
     it("deve limpar o rascunho com clear()", async () => {
@@ -665,7 +672,6 @@ describe("React Integration (Context + Hooks)", () => {
 
       await act(() => result.current.clear());
       expect(storage.removeItem).toHaveBeenCalledWith("react-test");
-      store.cleanup();
     });
   });
 });

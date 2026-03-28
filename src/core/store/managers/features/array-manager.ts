@@ -1,13 +1,6 @@
-import type {
-  BitFieldChangeEvent,
-  BitFieldChangeMeta,
-  BitState,
-} from "../../contracts/types";
-import {
-  getDeepValue,
-  setDeepValue,
-  reindexFieldArrayMeta,
-} from "../../../utils";
+import type { BitFieldChangeMeta, BitState } from "../../contracts/types";
+import { getDeepValue, reindexFieldArrayMeta } from "../../../utils";
+import { toPathPrefix } from "../../shared/path-prefix";
 import {
   BitStoreOperation,
   patchStateOperation,
@@ -20,17 +13,9 @@ export interface BitArrayStorePort<T extends object> {
     value: unknown,
     meta: BitFieldChangeMeta,
   ) => void;
-  emitFieldChange: (event: BitFieldChangeEvent<T>) => void;
   dispatch: (operation: BitStoreOperation<T>) => void;
   internalSaveSnapshot: () => void;
   unregisterPrefix?: (prefix: string) => void;
-  triggerValidation: (scopeFields?: string[]) => void;
-  updateDirtyForPath: (
-    path: string,
-    nextValues: T,
-    baselineValues: T,
-  ) => boolean;
-  getBaselineValues: () => T;
 }
 
 export class BitArrayManager<T extends object = Record<string, unknown>> {
@@ -74,14 +59,13 @@ export class BitArrayManager<T extends object = Record<string, unknown>> {
     const previousArray = [...arr];
 
     if (this.store.unregisterPrefix) {
-      this.store.unregisterPrefix(`${path}.${index}.`);
+      this.store.unregisterPrefix(toPathPrefix(path, index));
     }
 
     const newArray = arr.filter((_, i) => i !== index);
 
-    this.commitReindexedArrayMutation({
+    this.commitArrayMutationWithFieldPipeline({
       path,
-      previousArray,
       nextArray: newArray,
       meta: { origin: "array", operation: "remove", index },
       reindex: (currentIdx) => {
@@ -97,12 +81,10 @@ export class BitArrayManager<T extends object = Record<string, unknown>> {
   swapItems(path: string, indexA: number, indexB: number) {
     const state = this.store.getState();
     const arr = [...(getDeepValue(state.values, path) || [])];
-    const previousArray = [...arr];
     [arr[indexA], arr[indexB]] = [arr[indexB], arr[indexA]];
 
-    this.commitReindexedArrayMutation({
+    this.commitArrayMutationWithFieldPipeline({
       path,
-      previousArray,
       nextArray: arr,
       meta: {
         origin: "array",
@@ -127,13 +109,11 @@ export class BitArrayManager<T extends object = Record<string, unknown>> {
   moveItem(path: string, from: number, to: number) {
     const state = this.store.getState();
     const arr = [...(getDeepValue(state.values, path) || [])];
-    const previousArray = [...arr];
     const [item] = arr.splice(from, 1);
     arr.splice(to, 0, item);
 
-    this.commitReindexedArrayMutation({
+    this.commitArrayMutationWithFieldPipeline({
       path,
-      previousArray,
       nextArray: arr,
       meta: {
         origin: "array",
@@ -160,13 +140,8 @@ export class BitArrayManager<T extends object = Record<string, unknown>> {
   }
 
   replaceItems(path: string, items: unknown[]) {
-    const state = this.store.getState();
-    const current = getDeepValue(state.values, path) || [];
-    const previousArray = Array.isArray(current) ? [...current] : [];
-
-    this.commitReindexedArrayMutation({
+    this.commitArrayMutationWithFieldPipeline({
       path,
-      previousArray,
       nextArray: items,
       meta: { origin: "array", operation: "replace" },
       reindex: (currentIdx) => (currentIdx < items.length ? currentIdx : null),
@@ -174,25 +149,16 @@ export class BitArrayManager<T extends object = Record<string, unknown>> {
   }
 
   clearItems(path: string) {
-    const state = this.store.getState();
-    const current = getDeepValue(state.values, path) || [];
-    const previousArray = Array.isArray(current) ? [...current] : [];
-
     if (this.store.unregisterPrefix) {
-      this.store.unregisterPrefix(`${path}.`);
+      this.store.unregisterPrefix(toPathPrefix(path));
     }
 
-    this.commitReindexedArrayMutation({
+    this.commitArrayMutationWithFieldPipeline({
       path,
-      previousArray,
       nextArray: [],
       meta: { origin: "array", operation: "clear" },
       reindex: () => null,
     });
-  }
-
-  private revalidate(path: string) {
-    this.store.triggerValidation([path]);
   }
 
   private mutateArrayWithSetField(
@@ -205,48 +171,30 @@ export class BitArrayManager<T extends object = Record<string, unknown>> {
     this.store.internalSaveSnapshot();
   }
 
-  private commitReindexedArrayMutation(args: {
+  private commitArrayMutationWithFieldPipeline(args: {
     path: string;
-    previousArray: unknown[];
     nextArray: unknown[];
     meta: BitFieldChangeMeta;
     reindex: (currentIdx: number) => number | null;
   }) {
-    const { path, previousArray, nextArray, meta, reindex } = args;
-    const state = this.store.getState();
-    const newValues = setDeepValue(state.values, path, nextArray);
+    const { path, nextArray, meta, reindex } = args;
+    const previousState = this.store.getState();
 
-    const isDirty = this.store.updateDirtyForPath(
-      path,
-      newValues,
-      this.store.getBaselineValues(),
-    );
+    this.store.setFieldWithMeta(path, nextArray, meta);
 
-    const reindexedMeta = reindexFieldArrayMeta(state, path, reindex);
+    const reindexedMeta = reindexFieldArrayMeta(previousState, path, reindex);
 
     this.store.dispatch(
       patchStateOperation(
         {
-          values: newValues,
           errors: reindexedMeta.errors,
           touched: reindexedMeta.touched,
           isValidating: reindexedMeta.isValidating,
-          isDirty,
         },
         [path],
       ),
     );
 
-    this.store.emitFieldChange({
-      path,
-      previousValue: previousArray,
-      nextValue: nextArray,
-      values: this.store.getState().values,
-      state: this.store.getState(),
-      meta,
-    });
-
     this.store.internalSaveSnapshot();
-    this.revalidate(path);
   }
 }

@@ -30,5 +30,5 @@ npm publish --tag canary
 ## 5) Post-incident
 
 - Document root cause and fix.
-- Add regression tests in `quality/e2e` or `quality/bench`.
+- Add regression tests in `quality/bench`.
 - Re-run compatibility smoke before re-enabling canary rollout.

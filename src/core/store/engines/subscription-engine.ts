@@ -3,6 +3,7 @@ import type {
   BitScopedSelectorSubscriptionOptions,
 } from "../contracts/public/subscription-types";
 import type { BitState } from "../contracts/types";
+import { isPathWithinPrefix, normalizePathPrefix } from "../shared/path-prefix";
 
 interface SelectorListenerEntry<T extends object> {
   notify(nextState: Readonly<BitState<T>>): void;
@@ -150,11 +151,16 @@ export class BitSubscriptionEngine<T extends object> {
       return;
     }
 
+    const normalizedPrefix = normalizePathPrefix(prefix);
+    if (normalizedPrefix.length === 0) {
+      this.pathExpansionCache.clear();
+      return;
+    }
+
     for (const key of this.pathExpansionCache.keys()) {
       if (
-        key === prefix ||
-        key.startsWith(`${prefix}.`) ||
-        prefix.startsWith(`${key}.`)
+        isPathWithinPrefix(key, normalizedPrefix) ||
+        isPathWithinPrefix(normalizedPrefix, key)
       ) {
         this.pathExpansionCache.delete(key);
       }

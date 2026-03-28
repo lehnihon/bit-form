@@ -6,7 +6,6 @@ export {
 
 export type {
   BitStoreApi,
-  BitStoreHooksApi,
   BitFrameworkStoreApi,
   BitFrameworkConfig,
 } from "./store/contracts/public/store-api-types";

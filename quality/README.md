@@ -4,7 +4,6 @@ This folder is isolated from library runtime and package exports.
 
 ## Blocks
 
-- `e2e/`: Playwright critical-flow tests (fluxo real + benchmark browser).
 - `bench/`: performance baseline tests + framework comparison (bit-form vs RHF/Formik/TanStack).
 - `compat/`: real consumer package smoke checks using `npm pack`.
 - `release-gates/`: bundle/observability and rollback checks.
@@ -12,10 +11,6 @@ This folder is isolated from library runtime and package exports.
 ## Commands
 
 ```bash
-# Testes E2E
-npm run test:e2e
-npm run test:e2e:ui
-
 # Benchmarks internos
 npm run test:bench
 npm run test:bench:memory
@@ -23,12 +18,6 @@ npm run test:bench:all
 
 # Benchmark comparativo (Vitest, Node.js)
 npm run test:bench:compare
-
-# Benchmark comparativo em browser real (Playwright + Chromium, modo dev)
-npm run test:bench:compare:browser
-
-# Benchmark comparativo em browser real (Playwright + Chromium, build preview)
-npm run test:bench:compare:browser:prod
 
 # Release gates
 npm run test:compat
@@ -58,10 +47,6 @@ As comparações entre bit-form, React Hook Form, Formik e TanStack Form seguem:
 - Cenário async burst: 240 iterações (padrão) — configurável via `BENCH_COMPARE_ASYNC_ITERATIONS`.
 - 8 warmups + 40 amostras (padrão) — configurável via `BENCH_COMPARE_WARMUPS` / `BENCH_COMPARE_SAMPLES`.
 - Timeout por teste: 300 s (padrão) — configurável via `BENCH_COMPARE_TEST_TIMEOUT_MS`.
-
-### Modo produção
-
-- `npm run test:bench:compare:browser:prod` constrói o fixture com `vite build` antes do Playwright (sem source maps, minificado, React em modo production).
 
 ## Benchmark calibration (perf.test.ts)
 

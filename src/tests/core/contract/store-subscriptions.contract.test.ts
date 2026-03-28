@@ -4,7 +4,13 @@
  * Importa APENAS via entrypoint público - nunca caminhos internos.
  */
 import { describe, it, expect, vi } from "vitest";
-import { createBitStore } from "../../../core";
+import {
+  createBitStore as createBitStoreRuntime,
+  createFrameworkStoreAdapter,
+} from "../../../core";
+
+const createBitStore = ((config?: any) =>
+  createFrameworkStoreAdapter(createBitStoreRuntime(config))) as any;
 
 describe("Store Subscriptions Contract", () => {
   describe("subscribe (global)", () => {

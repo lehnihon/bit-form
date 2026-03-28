@@ -1,4 +1,5 @@
 import type { BitFieldDefinition } from "../../../contracts/types";
+import { isPathWithinPrefix } from "../../../shared/path-prefix";
 
 export type BitAsyncValidateFn<T extends object> = NonNullable<
   NonNullable<BitFieldDefinition<T>["validation"]>["asyncValidate"]
@@ -71,7 +72,7 @@ export class BitAsyncValidationScheduler<T extends object> {
 
   cleanupPrefix(prefix: string): void {
     for (const path of this.pendingJobs.keys()) {
-      if (path === prefix || path.startsWith(`${prefix}.`)) {
+      if (isPathWithinPrefix(path, prefix)) {
         this.cancel(path);
         this.port.clearAsyncError(path);
         this.port.setFieldValidating(path, false);

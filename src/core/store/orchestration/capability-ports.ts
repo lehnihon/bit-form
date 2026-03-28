@@ -176,13 +176,6 @@ export interface BitArrayPortDeps<T extends object> {
     meta: BitFieldChangeMeta,
   ): void;
   unregisterPrefix(prefix: string): void;
-  triggerValidation(
-    scopeFields?: string[],
-    options?: BitValidationTriggerOptions,
-  ): void;
-  dirtyManager: BitDirtyManager<T>;
-  getBaselineValues(): T;
-  getEffects(): BitStoreEffectEngine<T>;
   saveHistorySnapshot(): void;
 }
 
@@ -192,13 +185,8 @@ export function createArrayPort<T extends object>(
   return {
     getState: deps.getState,
     setFieldWithMeta: deps.setFieldWithMeta,
-    emitFieldChange: (event) => deps.getEffects().onFieldChange(event),
     dispatch: deps.dispatch,
     internalSaveSnapshot: deps.saveHistorySnapshot,
     unregisterPrefix: deps.unregisterPrefix,
-    triggerValidation: (scopeFields) => deps.triggerValidation(scopeFields),
-    updateDirtyForPath: (path, nextValues, baselineValues) =>
-      deps.dirtyManager.updateForPath(path, nextValues, baselineValues),
-    getBaselineValues: deps.getBaselineValues,
   };
 }

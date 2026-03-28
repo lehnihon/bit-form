@@ -137,11 +137,6 @@ export function createStoreRuntime<T extends object>(
     setFieldWithMeta: (path, value, meta) =>
       actions.setFieldWithMeta(path, value, meta),
     unregisterPrefix: actions.unregisterPrefix,
-    triggerValidation: (scopeFields, options) =>
-      actions.triggerValidation(scopeFields, options),
-    dirtyManager,
-    getBaselineValues: () => baselineManager.getValues(),
-    getEffects: featureAccess.getEffects,
     saveHistorySnapshot: stateAccess.saveHistorySnapshot,
   });
 

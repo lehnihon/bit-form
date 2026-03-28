@@ -90,7 +90,7 @@ describe("BitDevtoolsManager", () => {
       expect(devtools.initDevTools).toHaveBeenCalled();
     });
 
-    storeLocal.cleanup();
+    storeLocal.feature.cleanup();
     expect(mockDestroyLocal).toHaveBeenCalled();
 
     const mockDestroyRemote = vi.fn();
@@ -106,7 +106,7 @@ describe("BitDevtoolsManager", () => {
       expect(bridge.setupRemoteBridge).toHaveBeenCalled();
     });
 
-    storeRemote.cleanup();
+    storeRemote.feature.cleanup();
     expect(mockDestroyRemote).toHaveBeenCalled();
   });
 });

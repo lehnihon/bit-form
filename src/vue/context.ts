@@ -1,5 +1,5 @@
 import { inject, provide, InjectionKey } from "vue";
-import type { BitFrameworkStoreApi, BitStoreHooksApi } from "../core";
+import type { BitFrameworkStoreApi, BitStoreApi } from "../core";
 import { createFrameworkStoreAdapter } from "../core";
 
 // Chave única para evitar colisões
@@ -7,7 +7,7 @@ export const BIT_STORE_KEY: InjectionKey<BitFrameworkStoreApi<any>> =
   Symbol("BIT_STORE");
 
 export function provideBitStore<T extends object>(
-  store: BitFrameworkStoreApi<T> | BitStoreHooksApi<T>,
+  store: BitFrameworkStoreApi<T> | BitStoreApi<T>,
 ) {
   provide(BIT_STORE_KEY, createFrameworkStoreAdapter<T>(store));
 }

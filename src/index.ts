@@ -4,9 +4,4 @@ export {
   createFrameworkStoreAdapter,
 } from "./core";
 
-export type {
-  BitStoreHooksApi,
-  BitFrameworkStoreApi,
-  BitStoreApi,
-  BitConfig,
-} from "./core";
+export type { BitFrameworkStoreApi, BitStoreApi, BitConfig } from "./core";

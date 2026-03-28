@@ -1,7 +1,16 @@
 import { describe, it, expect, vi } from "vitest";
 import { createPatternMask } from "../../core/mask/creators";
-import { createBitStore } from "../../core";
+import {
+  createBitStore as createBitStoreRuntime,
+  createFrameworkStoreAdapter,
+} from "../../core";
 import { maskBRL } from "../../mask";
+
+function createBitStore<T extends object = Record<string, unknown>>(
+  config?: any,
+) {
+  return createFrameworkStoreAdapter(createBitStoreRuntime<T>(config)) as any;
+}
 
 describe("Cross-Framework Consistency", () => {
   it("should maintain data integrity and case sensitivity across adapters", async () => {
