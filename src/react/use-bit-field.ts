@@ -9,8 +9,6 @@ import {
 } from "../core";
 import type {
   BitFieldInputEvent,
-  UseBitFieldMeta,
-  UseBitFieldBindProps,
   UseBitFieldResult,
 } from "./types";
 

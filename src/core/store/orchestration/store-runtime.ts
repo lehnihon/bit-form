@@ -4,10 +4,7 @@ import type { BitStoreCapabilityRegistry } from "./store-capability-registry";
 import type { BitFrameworkConfig } from "../contracts/public/store-api-types";
 import type {
   BitConfig,
-  BitPath,
-  BitPathValue,
   BitState,
-  DeepPartial,
 } from "../contracts/types";
 import type { BitFieldRegistry } from "../registry/field-registry";
 import type { BitComputedManager } from "../managers/core/computed-manager";

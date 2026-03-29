@@ -2,7 +2,7 @@
 
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { TestBed } from "@angular/core/testing";
-import { Component, DestroyRef } from "@angular/core";
+import { Component } from "@angular/core";
 import {
   createBitStore as createBitStoreRuntime,
   createFrameworkStoreAdapter,

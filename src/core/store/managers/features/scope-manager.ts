@@ -1,5 +1,4 @@
 import { BitErrors, BitState } from "../../contracts/types";
-import { getDeepValue, valueEqual } from "../../../utils";
 
 /**
  * BitScopeManager

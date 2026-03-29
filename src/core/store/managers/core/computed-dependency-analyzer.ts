@@ -7,8 +7,6 @@
  * This replaces the runtime "did not stabilize" error with early, clear feedback during setup.
  */
 
-import type { BitComputedFn } from "../../contracts/types";
-import type { BitComputedEntry } from "./computed-manager";
 
 export interface CyclicDependencyError {
   cycle: string[];

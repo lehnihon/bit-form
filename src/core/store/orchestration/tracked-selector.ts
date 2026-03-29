@@ -1,7 +1,6 @@
 import type {
   BitSelector,
   BitScopedSelectorSubscriptionOptions,
-  BitSelectorSubscriptionOptions,
   BitTrackedSelectorSubscriptionOptions,
 } from "../contracts/public/subscription-types";
 import type { BitState } from "../contracts/types";

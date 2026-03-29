@@ -10,7 +10,6 @@ import {
 } from "../core";
 import type {
   BitFieldInputEvent,
-  InjectBitFieldMeta,
   InjectBitFieldResult,
 } from "./types";
 

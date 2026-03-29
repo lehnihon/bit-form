@@ -1,37 +1,18 @@
 import type {
-  BitState,
-  BitArrayItem,
-  BitArrayPath,
-  BitErrors,
   BitFieldDefinition,
-  BitFieldState,
-  BitPath,
-  BitPathValue,
-  BitPersistMetadata,
-  BitSubmitResult,
-  DeepPartial,
-  ScopeStatus,
 } from "../contracts/types";
-import type {
-  BitFormMeta,
-  BitHistoryMetadata,
-  BitValidationOptions,
-} from "../contracts/public/meta-types";
-import type {
-  BitSelector,
-  BitScopedSelectorSubscriptionOptions,
-  BitSelectorSubscriptionOptions,
-} from "../contracts/public/subscription-types";
+
+
+
+
 import type {
   BitStoreIdentityApi,
-  BitFrameworkConfig,
   BitStoreReadSliceApi,
   BitStoreObserveSliceApi,
   BitStoreWriteSliceApi,
   BitStoreFeatureApi,
   BitStoreNamespacesApi,
 } from "../contracts/public/store-api-types";
-import type { BitValidationTriggerOptions } from "../contracts/port-types";
 import type {
   BitStoreFeatureDomain,
   BitStoreObserveDomain,

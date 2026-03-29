@@ -1,6 +1,6 @@
 import { formatMaskedValue, parseMaskedInput } from "./mask/field-binding";
 import type { BitMask } from "./mask/types";
-import type { BitPath, BitPathValue } from "./store/contracts/types";
+import type { BitPath } from "./store/contracts/types";
 
 type BitMaskedFieldControllerStore<TForm extends object> = {
   setField(path: BitPath<TForm>, value: unknown): void;

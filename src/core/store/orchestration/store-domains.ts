@@ -2,7 +2,6 @@ import type {
   BitArrayItem,
   BitArrayPath,
   BitErrors,
-  BitFieldChangeMeta,
   BitFieldDefinition,
   BitFieldState,
   BitPath,

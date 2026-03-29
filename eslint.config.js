@@ -1,6 +1,7 @@
 import js from "@eslint/js";
 import tsPlugin from "@typescript-eslint/eslint-plugin";
 import tsParser from "@typescript-eslint/parser";
+import unusedImports from "eslint-plugin-unused-imports";
 
 /**
  * ESLint Configuration with Circular Dependency Detection
@@ -21,13 +22,16 @@ export default [
       parserOptions: {
         ecmaVersion: "latest",
         sourceType: "module",
-        project: "./tsconfig.json",
       },
     },
     plugins: {
       "@typescript-eslint": tsPlugin,
+      "unused-imports": unusedImports,
     },
     rules: {
+      // Remove unused imports automatically (auto-fixable)
+      "unused-imports/no-unused-imports": "error",
+
       // TypeScript rules
       "@typescript-eslint/no-explicit-any": [
         "warn",
