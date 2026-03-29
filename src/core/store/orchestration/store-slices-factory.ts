@@ -2,9 +2,6 @@ import type {
   BitFieldDefinition,
 } from "../contracts/types";
 
-
-
-
 import type {
   BitStoreIdentityApi,
   BitStoreReadSliceApi,
