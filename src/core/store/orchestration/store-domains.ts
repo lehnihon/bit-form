@@ -89,7 +89,7 @@ export interface BitStoreObserveDomain<T extends object> {
   subscribeSelector<TSlice>(
     selector: BitSelector<T, TSlice>,
     listener: (slice: TSlice) => void,
-    options?: BitSelectorSubscriptionOptions<TSlice>,
+    options: BitSelectorSubscriptionOptions<TSlice>,
   ): () => void;
   subscribePath<P extends BitPath<T>>(
     path: P,

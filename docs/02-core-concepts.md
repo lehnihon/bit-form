@@ -17,7 +17,7 @@ In the current V4 runtime, `BitStore` is intentionally a thin facade over a dedi
 - `store-commit-engine`: centralizes operation routing + patch commit + batch flush semantics.
 - `store-runtime-kernel`: owns effective state access, batching, commit flushing, effect notification and history snapshot persistence.
 - `effect-engine`: centralizes side effects (persist, plugin lifecycle hooks, bus dispatch).
-- `store-bootstrap`: builds capabilities and initial state during store construction. Capabilities are now composed as a plain object — no registry indirection.
+- `store-bootstrap`: builds capabilities and initial state during store construction using typed capability registry composition.
 
 This separation reduces coupling inside `BitStore`, keeps the public store facade smaller and makes behavior easier to test in isolated units.
 

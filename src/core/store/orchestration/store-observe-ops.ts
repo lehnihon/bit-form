@@ -26,7 +26,7 @@ export function subscribeStoreSelector<T extends object, TSlice>(args: {
   subscriptions: Pick<BitSubscriptionEngine<T>, "subscribeSelector">;
   selector: BitSelector<T, TSlice>;
   listener: (slice: TSlice) => void;
-  options?: BitSelectorSubscriptionOptions<TSlice>;
+  options: BitSelectorSubscriptionOptions<TSlice>;
 }): () => void {
   const { getState, subscriptions, selector, listener, options } = args;
   const equalityFn = options?.equalityFn ?? valueEqual;
@@ -65,7 +65,7 @@ export function subscribeStorePath<
   subscribeSelector: (
     selector: BitSelector<T, BitPathValue<T, P>>,
     listener: (slice: BitPathValue<T, P>) => void,
-    options?: BitSelectorSubscriptionOptions<BitPathValue<T, P>>,
+    options: BitSelectorSubscriptionOptions<BitPathValue<T, P>>,
   ) => () => void;
 }): () => void {
   const { path, listener, options, subscribeSelector } = args;
@@ -91,7 +91,7 @@ export function subscribeStoreFieldState<
   subscribeSelector: (
     selector: BitSelector<T, Readonly<BitFieldState<T, BitPathValue<T, P>>>>,
     listener: (state: Readonly<BitFieldState<T, BitPathValue<T, P>>>) => void,
-    options?: BitSelectorSubscriptionOptions<
+    options: BitSelectorSubscriptionOptions<
       Readonly<BitFieldState<T, BitPathValue<T, P>>>
     >,
   ) => () => void;
@@ -116,7 +116,7 @@ export function subscribeStoreFormMeta<T extends object>(args: {
   subscribeSelector: (
     selector: BitSelector<T, BitFormMeta>,
     listener: (meta: BitFormMeta) => void,
-    options?: BitSelectorSubscriptionOptions<BitFormMeta>,
+    options: BitSelectorSubscriptionOptions<BitFormMeta>,
   ) => () => void;
 }): () => void {
   const { listener, subscribeSelector } = args;
@@ -143,7 +143,7 @@ export function subscribeStorePersistMeta<T extends object>(args: {
   subscribeSelector: (
     selector: BitSelector<T, BitPersistMetadata>,
     listener: (meta: BitPersistMetadata) => void,
-    options?: BitSelectorSubscriptionOptions<BitPersistMetadata>,
+    options: BitSelectorSubscriptionOptions<BitPersistMetadata>,
   ) => () => void;
 }): () => void {
   const { listener, subscribeSelector } = args;
@@ -162,7 +162,7 @@ export function subscribeStoreHistoryMeta<T extends object>(args: {
   subscribeSelector: (
     selector: BitSelector<T, BitHistoryMetadata>,
     listener: (meta: BitHistoryMetadata) => void,
-    options?: BitSelectorSubscriptionOptions<BitHistoryMetadata>,
+    options: BitSelectorSubscriptionOptions<BitHistoryMetadata>,
   ) => () => void;
   listener: (meta: BitHistoryMetadata) => void;
 }): () => void {
@@ -181,7 +181,7 @@ export function subscribeStoreScopeStatus<T extends object>(args: {
   subscribeSelector: <TSlice>(
     selector: BitSelector<T, TSlice>,
     listener: (slice: TSlice) => void,
-    options?: BitSelectorSubscriptionOptions<TSlice>,
+    options: BitSelectorSubscriptionOptions<TSlice>,
   ) => () => void;
   listener: (status: ScopeStatus) => void;
 }): () => void {

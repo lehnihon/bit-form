@@ -8,7 +8,7 @@ function adaptToLegacyFlat(store: any) {
 
   return Object.assign(legacyStore, {
     getState: () => store.read.getState(),
-    getConfig: () => store.read.getConfig(),
+    getConfig: () => store.read.config,
     getFieldState: (path: any) => store.read.getFieldState(path),
     isHidden: (path: any) => store.read.isHidden(path),
     isRequired: (path: any) => store.read.isRequired(path),
@@ -58,7 +58,7 @@ describe("Cross-Framework Consistency", () => {
       initialValues: { balance: 10 },
       masks: { brl: maskBRL },
     });
-    const brl = store.read.getConfig().masks!.brl;
+    const brl = store.read.config.masks!.brl;
 
     const display = brl.format(store.getState().values.balance);
     expect(display).toBe("R$ 10,00");

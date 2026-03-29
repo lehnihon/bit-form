@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { createInternalBitStore } from "../../core/store";
-import type { BitStore } from "../../core/store/bit-store-class";
 
 describe("BitStore Memory Safety", () => {
   afterEach(() => {
@@ -14,38 +13,40 @@ describe("BitStore Memory Safety", () => {
       initialValues: { name: "" },
     });
 
-    const unsubscribe1 = store.subscribe(() => {});
+    const unsubscribe1 = store.observe.subscribe(() => {});
     const unsubscribe2 = store.observe.subscribePath("name", () => {});
 
     unsubscribe1();
     unsubscribe2();
 
-    store.cleanup();
+    store.feature.cleanup();
     expect(() => {
-      store.subscribe(() => {});
+      store.observe.subscribe(() => {});
     }).not.toThrow();
   });
 
   it("should cleanup multiple store instances without leaking", () => {
-    const stores: BitStore<{ value: number }>[] = [];
+    const stores: ReturnType<
+      typeof createInternalBitStore<{ value: number }>
+    >[] = [];
 
     for (let i = 0; i < 50; i++) {
       const store = createInternalBitStore<{ value: number }>({
         initialValues: { value: i },
       });
-      store.subscribe(() => {});
+      store.observe.subscribe(() => {});
       stores.push(store);
     }
 
     stores.forEach((store) => {
-      store.cleanup();
+      store.feature.cleanup();
     });
 
     const newStore = createInternalBitStore<{ test: boolean }>({
       initialValues: { test: true },
     });
-    expect(newStore.getState().values).toEqual({ test: true });
-    newStore.cleanup();
+    expect(newStore.read.getState().values).toEqual({ test: true });
+    newStore.feature.cleanup();
   });
 
   it("should clear persist timers on cleanup", async () => {
@@ -60,16 +61,16 @@ describe("BitStore Memory Safety", () => {
       },
     });
 
-    store.setField("name", "Updated");
+    store.write.setField("name", "Updated");
 
     // Cleanup should succeed and clear any timers
     expect(() => {
-      store.cleanup();
+      store.feature.cleanup();
     }).not.toThrow();
 
     // Verify cleanup happened - no error should be thrown on second cleanup
     expect(() => {
-      store.cleanup();
+      store.feature.cleanup();
     }).not.toThrow();
   });
 
@@ -81,9 +82,9 @@ describe("BitStore Memory Safety", () => {
     });
 
     expect(() => {
-      store.cleanup();
-      store.cleanup();
-      store.cleanup();
+      store.feature.cleanup();
+      store.feature.cleanup();
+      store.feature.cleanup();
     }).not.toThrow();
   });
 
@@ -106,15 +107,15 @@ describe("BitStore Memory Safety", () => {
       store.observe.subscribePath(`field_${i}`, () => {});
     }
 
-    store.setValues({
+    store.write.setValues({
       field_10: "value_10",
       field_20: "value_20",
     });
 
-    store.cleanup();
+    store.feature.cleanup();
 
     expect(() => {
-      store.getState();
+      store.read.getState();
     }).not.toThrow();
   });
 
@@ -125,11 +126,11 @@ describe("BitStore Memory Safety", () => {
       initialValues: { name: "" },
     });
 
-    store.cleanup();
+    store.feature.cleanup();
 
     expect(() => {
-      store.getState();
-      store.isValid;
+      store.read.getState();
+      store.read.isValid;
     }).not.toThrow();
   });
 });

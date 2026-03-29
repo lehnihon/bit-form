@@ -63,7 +63,6 @@ export interface BitFrameworkConfig<
 }
 
 export interface BitFormReadApi<T extends object = Record<string, unknown>> {
-  getConfig(): Readonly<BitFrameworkConfig<T>>;
   getState(): Readonly<BitState<T>>;
   getFieldConfig(path: string): BitFieldDefinition<T> | undefined;
   getFieldState<P extends BitPath<T>>(
@@ -205,7 +204,7 @@ export interface BitStoreSelectorBindingApi<
   subscribeSelector<TSlice>(
     selector: BitSelector<T, TSlice>,
     listener: (slice: TSlice) => void,
-    options?: BitSelectorSubscriptionOptions<TSlice>,
+    options: BitSelectorSubscriptionOptions<TSlice>,
   ): () => void;
 }
 

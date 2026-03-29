@@ -396,7 +396,10 @@ export interface BitConfig<T extends object = Record<string, unknown>> {
    * Handler opcional para erros operacionais não tratados internamente.
    * Se não informado, o runtime usa fallback para `console.error`.
    */
-  onUnhandledError?: (error: unknown, source: "submit") => void;
+  onUnhandledError?: (
+    error: unknown,
+    source: "submit" | "validation" | "persist",
+  ) => void;
 }
 
 export type BitSubmitResult =
