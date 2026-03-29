@@ -28,8 +28,9 @@ interface MyForm {
 }
 
 function adaptToLegacyFlat(store: any) {
-  return {
-    ...store,
+  const legacyStore = Object.create(store);
+
+  return Object.assign(legacyStore, {
     getState: () => store.read.getState(),
     setField: (path: string, value: unknown) =>
       store.write.setField(path, value),
@@ -49,7 +50,7 @@ function adaptToLegacyFlat(store: any) {
     forceSave: () => store.feature.forceSave(),
     restorePersisted: () => store.feature.restorePersisted(),
     clearPersisted: () => store.feature.clearPersisted(),
-  };
+  });
 }
 
 function createBitStore<T extends object = Record<string, unknown>>(

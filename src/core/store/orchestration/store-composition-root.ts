@@ -7,7 +7,7 @@ import { BitDirtyManager } from "../managers/core/dirty-manager";
 import { BitMaskManager } from "../managers/features/mask-manager";
 import { BitFieldRegistry } from "../registry/field-registry";
 import { normalizeConfig } from "../shared/config";
-import { createStoreEffects } from "./store-bootstrap";
+import { createStoreEffects } from "./store-effects-composition";
 import { unregisterStorePrefix } from "./store-registration-ops";
 import { applyStorePersistedValues } from "./store-persist-ops";
 import { createStoreRuntime } from "./store-runtime";
@@ -84,15 +84,17 @@ export function composeBitStoreRuntime<T extends object>(args: {
       },
       featureAccess: {
         getEffects: () => getRuntimeKernel().effects,
-        getHistory: () => getRuntimeKernel().capabilities.history,
-        getValidation: () => getRuntimeKernel().capabilities.validation,
+        getHistory: () => getRuntimeKernel().getCapability("history"),
+        getValidation: () => getRuntimeKernel().getCapability("validation"),
       },
       actions: {
         setError: (path, message) => {
-          getRuntimeKernel().capabilities.error.setError(path, message);
+          getRuntimeKernel().getCapability("error").setError(path, message);
         },
         validate: (options) => {
-          return getRuntimeKernel().capabilities.validation.validate(options);
+          return getRuntimeKernel()
+            .getCapability("validation")
+            .validate(options);
         },
         setFieldWithMeta: (
           path,
@@ -100,11 +102,9 @@ export function composeBitStoreRuntime<T extends object>(args: {
           meta: BitFieldChangeMeta = { origin: "setField" },
         ) => {
           getRuntimeKernel().runBatch(() => {
-            getRuntimeKernel().capabilities.lifecycle.updateField(
-              path,
-              value,
-              meta,
-            );
+            getRuntimeKernel()
+              .getCapability("lifecycle")
+              .updateField(path, value, meta);
           });
         },
         unregisterPrefix: (prefix) => {
@@ -114,9 +114,9 @@ export function composeBitStoreRuntime<T extends object>(args: {
             fieldRegistry,
             subscriptions: getRuntimeKernel().subscriptions,
             validationCleanupPrefix: (fieldPrefix) =>
-              getRuntimeKernel().capabilities.validation.cleanupPrefix(
-                fieldPrefix,
-              ),
+              getRuntimeKernel()
+                .getCapability("validation")
+                .cleanupPrefix(fieldPrefix),
             invalidateFieldIndexes,
           });
         },
@@ -124,10 +124,9 @@ export function composeBitStoreRuntime<T extends object>(args: {
           scopeFields?: string[],
           options?: BitValidationTriggerOptions,
         ) => {
-          getRuntimeKernel().capabilities.validation.trigger(
-            scopeFields,
-            options,
-          );
+          getRuntimeKernel()
+            .getCapability("validation")
+            .trigger(scopeFields, options);
         },
       },
     },
@@ -143,7 +142,7 @@ export function composeBitStoreRuntime<T extends object>(args: {
       values,
       state: getRuntimeKernel().getState(),
       initialValues: baselineManager.getValues(),
-      validation: getRuntimeKernel().capabilities.validation,
+      validation: getRuntimeKernel().getCapability("validation"),
       fieldRegistry,
       dirtyManager,
       dispatch: (operation) => getRuntimeKernel().dispatch(operation),
@@ -166,6 +165,7 @@ export function composeBitStoreRuntime<T extends object>(args: {
     state: runtime.state,
     subscriptions: runtime.subscriptions,
     effects,
+    capabilityRegistry: runtime.capabilityRegistry,
     capabilities: runtime.capabilities,
     applyValueDerivations: (values, changedPaths) =>
       applyValueDerivations({

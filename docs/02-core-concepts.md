@@ -59,7 +59,7 @@ Bit-Form now centralizes shared UI orchestration into framework-agnostic control
 - `adapters/upload-kernel`: shared upload/remove side effects reused by React, Vue and Angular bindings.
 
 Framework adapters (React/Vue/Angular) become thin bindings over these controllers, reducing duplicated behavior and drift across integrations.
-`createFrameworkStoreAdapter()` now returns a real, memoized adapter object with the framework-safe surface, instead of exposing the raw store instance by cast.
+`createFrameworkStoreAdapter()` requires a store already branded as hook-compatible and framework-compatible (symbol contracts), and returns a memoized framework-safe adapter surface.
 
 ## 🔒 Public vs Internal Boundaries
 

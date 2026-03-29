@@ -4,7 +4,7 @@ Bit-Form provides a modern, Signal-based integration for Angular. It leverages A
 
 Internally, Angular bindings are typed against `BitFrameworkStoreApi<T>` (stable adapter contract), while applications should keep using `createBitStore()` for store creation.
 
-For advanced wiring scenarios, `createFrameworkStoreAdapter(store)` is the explicit way to obtain a framework-compatible binding API.
+For advanced wiring scenarios, `createFrameworkStoreAdapter(store)` is the explicit way to obtain a framework-compatible binding API, as long as `store` comes from `createBitStore()` (or is already symbol-branded).
 
 ## 1. Provide the Store
 

@@ -6,8 +6,9 @@ import {
 } from "../../core";
 
 function adaptToLegacyFlat(store: any) {
-  return {
-    ...store,
+  const legacyStore = Object.create(store);
+
+  return Object.assign(legacyStore, {
     getState: () => store.read.getState(),
     getConfig: () => store.read.getConfig(),
     getFieldState: (path: any) => store.read.getFieldState(path),
@@ -78,7 +79,7 @@ function adaptToLegacyFlat(store: any) {
     isFieldValidating: (path: any) => store.read.isFieldValidating?.(path),
     triggerValidation: (...args: any[]) =>
       store.write.triggerValidation?.(...args),
-  };
+  });
 }
 
 const createBitStore = ((config?: any) => {

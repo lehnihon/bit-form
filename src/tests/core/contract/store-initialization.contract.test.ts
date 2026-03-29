@@ -4,45 +4,27 @@
  * Importa APENAS via entrypoint público - nunca caminhos internos.
  */
 import { describe, it, expect } from "vitest";
-import {
-  createBitStore as createBitStoreRuntime,
-  createFrameworkStoreAdapter,
-} from "../../../core";
+import { createBitStore as createBitStoreRuntime } from "../../../core";
 
-function adaptToLegacyFlat(store: any) {
-  return {
-    ...store,
-    getState: () => store.read.getState(),
-    getFieldState: (path: string) => store.read.getFieldState(path),
-    isHidden: (path: string) => store.read.isHidden(path),
-    isRequired: (path: string) => store.read.isRequired(path),
-    setField: (path: string, value: unknown) =>
-      store.write.setField(path, value),
-  };
-}
-
-const createBitStore = ((config?: any) =>
-  adaptToLegacyFlat(
-    createFrameworkStoreAdapter(createBitStoreRuntime(config)),
-  )) as any;
+const createBitStore = ((config?: any) => createBitStoreRuntime(config)) as any;
 
 describe("Store Initialization Contract", () => {
   describe("initialValues", () => {
     it("deve criar store com valores iniciais simples", () => {
       const store = createBitStore({ initialValues: { name: "Leo", age: 30 } });
-      expect(store.getState().values).toEqual({ name: "Leo", age: 30 });
+      expect(store.read.getState().values).toEqual({ name: "Leo", age: 30 });
     });
 
     it("deve criar store sem initialValues (objeto vazio)", () => {
       const store = createBitStore();
-      expect(store.getState().values).toEqual({});
+      expect(store.read.getState().values).toEqual({});
     });
 
     it("deve criar store com valores aninhados", () => {
       const store = createBitStore({
         initialValues: { user: { name: "Leo", address: { city: "SP" } } },
       });
-      expect(store.getState().values.user.address.city).toBe("SP");
+      expect(store.read.getState().values.user.address.city).toBe("SP");
     });
   });
 
@@ -58,7 +40,7 @@ describe("Store Initialization Contract", () => {
         },
       });
 
-      expect(store.getState().values.total).toBe(30);
+      expect(store.read.getState().values.total).toBe(30);
     });
 
     it("deve recalcular campo computado ao mudar dependência", () => {
@@ -72,8 +54,8 @@ describe("Store Initialization Contract", () => {
         },
       });
 
-      store.setField("price" as any, 20 as any);
-      expect(store.getState().values.total).toBe(60);
+      store.write.setField("price" as any, 20 as any);
+      expect(store.read.getState().values.total).toBe(60);
     });
 
     it("deve encadear campos computados (computed de computed)", () => {
@@ -91,9 +73,9 @@ describe("Store Initialization Contract", () => {
         },
       });
 
-      store.setField("base" as any, 5 as any);
-      expect(store.getState().values.doubled).toBe(10);
-      expect(store.getState().values.quadrupled).toBe(20);
+      store.write.setField("base" as any, 5 as any);
+      expect(store.read.getState().values.doubled).toBe(10);
+      expect(store.read.getState().values.quadrupled).toBe(20);
     });
   });
 
@@ -111,7 +93,7 @@ describe("Store Initialization Contract", () => {
         },
       });
 
-      expect(store.isHidden("extra" as any)).toBe(true);
+      expect(store.read.isHidden("extra" as any)).toBe(true);
     });
 
     it("deve mostrar campo condicional quando showIf é verdadeiro", () => {
@@ -127,7 +109,7 @@ describe("Store Initialization Contract", () => {
         },
       });
 
-      expect(store.isHidden("extra" as any)).toBe(false);
+      expect(store.read.isHidden("extra" as any)).toBe(false);
     });
 
     it("deve atualizar visibilidade ao mudar dependência condicional", () => {
@@ -143,9 +125,9 @@ describe("Store Initialization Contract", () => {
         },
       });
 
-      expect(store.isHidden("extra" as any)).toBe(true);
-      store.setField("showExtra" as any, true as any);
-      expect(store.isHidden("extra" as any)).toBe(false);
+      expect(store.read.isHidden("extra" as any)).toBe(true);
+      store.write.setField("showExtra" as any, true as any);
+      expect(store.read.isHidden("extra" as any)).toBe(false);
     });
   });
 

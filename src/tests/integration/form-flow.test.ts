@@ -1,13 +1,11 @@
 import { describe, it, expect, vi } from "vitest";
 import { createPatternMask, unmaskCurrency } from "../../core/mask/creators";
-import {
-  createBitStore as createBitStoreRuntime,
-  createFrameworkStoreAdapter,
-} from "../../core";
+import { createBitStore as createBitStoreRuntime } from "../../core";
 
 function adaptToLegacyFlat(store: any) {
-  return {
-    ...store,
+  const legacyStore = Object.create(store);
+
+  return Object.assign(legacyStore, {
     getState: () => store.read.getState(),
     getConfig: () => store.read.getConfig(),
     getFieldState: (path: any) => store.read.getFieldState(path),
@@ -31,14 +29,13 @@ function adaptToLegacyFlat(store: any) {
     subscribe: (cb: any) => store.observe.subscribe(cb),
     subscribeField: (path: any, cb: any) =>
       store.observe.subscribeField(path, cb),
-  };
+  });
 }
 
 function createBitStore<T extends object = Record<string, unknown>>(
   config?: any,
 ) {
-  const raw = createFrameworkStoreAdapter(createBitStoreRuntime<T>(config));
-  return adaptToLegacyFlat(raw) as any;
+  return adaptToLegacyFlat(createBitStoreRuntime<T>(config)) as any;
 }
 
 describe("Form Lifecycle Flow", () => {
