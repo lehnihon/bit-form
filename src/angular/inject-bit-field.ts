@@ -21,9 +21,9 @@ export function injectBitField<
 >(path: P): InjectBitFieldResult<TForm, P> {
   const store = inject(BIT_STORE_TOKEN);
 
-  const stateSignal = signal(store.getFieldState(path));
+  const stateSignal = signal(store.read.getFieldState(path));
 
-  const unsubscribe = store.subscribeFieldState(path, (nextState) => {
+  const unsubscribe = store.observe.subscribeFieldState(path, (nextState) => {
     stateSignal.set(nextState);
   });
 

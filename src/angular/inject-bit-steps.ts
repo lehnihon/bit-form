@@ -11,22 +11,30 @@ export function injectBitSteps(scopeNames: string[]): InjectBitStepsResult {
   const scope = computed(() => scopeNames[stepIndex()] ?? "");
 
   const getCurrentScope = () => scopeNames[stepIndex()] ?? "";
-  const status = signal<ScopeStatus>(store.getScopeStatus(getCurrentScope()));
+  const status = signal<ScopeStatus>(
+    store.read.getScopeStatus(getCurrentScope()),
+  );
 
   const updateStatus = () => {
     const scopeName = getCurrentScope();
-    const newStatus = store.getScopeStatus(scopeName);
+    const newStatus = store.read.getScopeStatus(scopeName);
     const current = status();
     if (!isScopeStatusEqual(current, newStatus)) {
       status.set(newStatus);
     }
   };
 
-  let unsubscribe = store.subscribeScopeStatus(getCurrentScope(), updateStatus);
+  let unsubscribe = store.observe.subscribeScopeStatus(
+    getCurrentScope(),
+    updateStatus,
+  );
 
   const rebindScopeSubscription = () => {
     unsubscribe();
-    unsubscribe = store.subscribeScopeStatus(getCurrentScope(), updateStatus);
+    unsubscribe = store.observe.subscribeScopeStatus(
+      getCurrentScope(),
+      updateStatus,
+    );
   };
 
   try {
@@ -36,32 +44,32 @@ export function injectBitSteps(scopeNames: string[]): InjectBitStepsResult {
 
   const validate = async (): Promise<ValidateScopeResult> => {
     const scopeName = getCurrentScope();
-    const valid = await store.validate({ scope: scopeName });
-    const errors = store.getScopeErrors(scopeName);
+    const valid = await store.write.validate({ scope: scopeName });
+    const errors = store.read.getScopeErrors(scopeName);
     return { valid, errors };
   };
 
-  const getErrors = () => store.getScopeErrors(getCurrentScope());
+  const getErrors = () => store.read.getScopeErrors(getCurrentScope());
 
   const next = async (): Promise<boolean> => {
     const scopeName = getCurrentScope();
 
-    const scopeFields = store.getScopeFields(scopeName);
-    if (store.hasValidationsInProgress(scopeFields)) {
+    const scopeFields = store.read.getScopeFields(scopeName);
+    if (store.feature.hasValidationsInProgress(scopeFields)) {
       return false;
     }
 
-    const valid = await store.validate({ scope: scopeName });
+    const valid = await store.write.validate({ scope: scopeName });
     if (valid) {
       const newIndex = Math.min(stepIndex() + 1, scopeNames.length - 1);
       stepIndex.set(newIndex);
-      status.set(store.getScopeStatus(scopeNames[newIndex] ?? ""));
+      status.set(store.read.getScopeStatus(scopeNames[newIndex] ?? ""));
       rebindScopeSubscription();
     } else {
-      const errors = store.getScopeErrors(scopeName);
+      const errors = store.read.getScopeErrors(scopeName);
       const pathsWithErrors = Object.keys(errors);
       if (pathsWithErrors.length > 0) {
-        store.markFieldsTouched(pathsWithErrors);
+        store.write.markFieldsTouched(pathsWithErrors);
       }
     }
     return valid;
@@ -70,7 +78,7 @@ export function injectBitSteps(scopeNames: string[]): InjectBitStepsResult {
   const prev = () => {
     const newIndex = Math.max(stepIndex() - 1, 0);
     stepIndex.set(newIndex);
-    status.set(store.getScopeStatus(scopeNames[newIndex] ?? ""));
+    status.set(store.read.getScopeStatus(scopeNames[newIndex] ?? ""));
     rebindScopeSubscription();
   };
 
@@ -80,7 +88,7 @@ export function injectBitSteps(scopeNames: string[]): InjectBitStepsResult {
       Math.min(targetStep - 1, scopeNames.length - 1),
     );
     stepIndex.set(newIndex);
-    status.set(store.getScopeStatus(scopeNames[newIndex] ?? ""));
+    status.set(store.read.getScopeStatus(scopeNames[newIndex] ?? ""));
     rebindScopeSubscription();
   };
 

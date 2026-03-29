@@ -1,21 +1,25 @@
 type FieldCleanupStore = {
-  unregisterField?: (path: string) => void;
+  feature?: {
+    unregisterField?: (path: string) => void;
+  };
 };
 
 type PrefixCleanupStore = {
-  unregisterPrefix?: (prefix: string) => void;
+  feature?: {
+    unregisterPrefix?: (prefix: string) => void;
+  };
 };
 
 export function cleanupRegisteredField(
   store: FieldCleanupStore,
   path: string,
 ): void {
-  store.unregisterField?.(path);
+  store.feature?.unregisterField?.(path);
 }
 
 export function cleanupRegisteredPrefix(
   store: PrefixCleanupStore,
   prefix: string,
 ): void {
-  store.unregisterPrefix?.(prefix);
+  store.feature?.unregisterPrefix?.(prefix);
 }

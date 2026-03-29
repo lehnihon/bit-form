@@ -7,16 +7,20 @@ export {
 
 export function observeScopeStatusSnapshot(
   store: {
-    getScopeStatus(scopeName: string): ScopeStatus;
-    subscribeScopeStatus(
-      scopeName: string,
-      listener: (status: ScopeStatus) => void,
-    ): () => void;
+    read: {
+      getScopeStatus(scopeName: string): ScopeStatus;
+    };
+    observe: {
+      subscribeScopeStatus(
+        scopeName: string,
+        listener: (status: ScopeStatus) => void,
+      ): () => void;
+    };
   },
   scopeName: string,
   listener: (status: ScopeStatus) => void,
 ): () => void {
-  listener(store.getScopeStatus(scopeName));
+  listener(store.read.getScopeStatus(scopeName));
 
-  return store.subscribeScopeStatus(scopeName, listener);
+  return store.observe.subscribeScopeStatus(scopeName, listener);
 }

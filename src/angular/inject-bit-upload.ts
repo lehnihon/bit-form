@@ -24,7 +24,7 @@ export function injectBitUpload(
   const kernelCallbacks = {
     setLoading: (val: boolean) => isUploading.set(val),
     setError: (path: string, msg: string | undefined) =>
-      store.setError(path, msg),
+      store.write.setError(path, msg),
     setValue: (val: string | null) => field.setValue(val),
     getUploadKey: () => uploadKey,
     setUploadKey: (key: string | null) => {

@@ -1,5 +1,5 @@
 import { getDeepValue } from "../utils";
-import type { BitArrayBindingApi } from "../store/contracts/public/store-api-types";
+import type { BitStoreApi } from "../store/contracts/public/store-api-types";
 import type {
   BitArrayItem,
   BitArrayPath,
@@ -33,16 +33,13 @@ export interface BitArrayBindingController<
 export function createArrayBindingController<
   TForm extends object,
   P extends BitArrayPath<TForm>,
->(
-  store: BitArrayBindingApi<TForm>,
-  path: P,
-): BitArrayBindingController<TForm, P> {
+>(store: BitStoreApi<TForm>, path: P): BitArrayBindingController<TForm, P> {
   type Item = BitArrayItem<BitPathValue<TForm, P>>;
 
   let ids: string[] = [];
 
   const createId = (index?: number) =>
-    store.createArrayItemId(path as string, index);
+    store.feature.createArrayItemId(path as string, index);
 
   const normalizeItems = (value: unknown): Item[] =>
     Array.isArray(value) ? (value as Item[]) : [];
@@ -67,9 +64,10 @@ export function createArrayBindingController<
 
   return {
     readItems() {
-      const value = getDeepValue(store.getState().values, path as string) as
-        | BitPathValue<TForm, P>
-        | undefined;
+      const value = getDeepValue(
+        store.read.getState().values,
+        path as string,
+      ) as BitPathValue<TForm, P> | undefined;
       return syncIds(normalizeItems(value));
     },
 
@@ -83,24 +81,24 @@ export function createArrayBindingController<
 
     append(value) {
       ids = [...ids, createId(ids.length)];
-      store.pushItem(path, value);
+      store.feature.pushItem(path, value);
     },
 
     prepend(value) {
       ids = [createId(0), ...ids];
-      store.prependItem(path, value);
+      store.feature.prependItem(path, value);
     },
 
     insert(index, value) {
       const nextIds = [...ids];
       nextIds.splice(index, 0, createId(index));
       ids = nextIds;
-      store.insertItem(path, index, value);
+      store.feature.insertItem(path, index, value);
     },
 
     remove(index) {
       ids = ids.filter((_, currentIndex) => currentIndex !== index);
-      store.removeItem(path, index);
+      store.feature.removeItem(path, index);
     },
 
     move(from, to) {
@@ -108,24 +106,24 @@ export function createArrayBindingController<
       const [item] = nextIds.splice(from, 1);
       nextIds.splice(to, 0, item);
       ids = nextIds;
-      store.moveItem(path, from, to);
+      store.feature.moveItem(path, from, to);
     },
 
     swap(indexA, indexB) {
       const nextIds = [...ids];
       [nextIds[indexA], nextIds[indexB]] = [nextIds[indexB], nextIds[indexA]];
       ids = nextIds;
-      store.swapItems(path, indexA, indexB);
+      store.feature.swapItems(path, indexA, indexB);
     },
 
     replace(items) {
       ids = items.map((_, index) => createId(index));
-      store.replaceItems(path, items);
+      store.feature.replaceItems(path, items);
     },
 
     clear() {
       ids = [];
-      store.clearItems(path);
+      store.feature.clearItems(path);
     },
   };
 }

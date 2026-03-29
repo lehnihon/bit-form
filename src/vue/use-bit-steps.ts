@@ -9,25 +9,25 @@ export function useBitSteps(scopeNames: string[]): UseBitStepsResult {
   const stepIndex = ref(0);
 
   const scope = computed(() => scopeNames[stepIndex.value] ?? "");
-  const status = ref<ScopeStatus>(store.getScopeStatus(scope.value));
+  const status = ref<ScopeStatus>(store.read.getScopeStatus(scope.value));
   let unsubscribe: (() => void) | undefined;
 
   watch(scope, (newScope) => {
-    status.value = store.getScopeStatus(newScope);
+    status.value = store.read.getScopeStatus(newScope);
     unsubscribe?.();
-    unsubscribe = store.subscribeScopeStatus(newScope, updateStatus);
+    unsubscribe = store.observe.subscribeScopeStatus(newScope, updateStatus);
   });
 
   const updateStatus = () => {
     const scopeName = scope.value;
-    const newStatus = store.getScopeStatus(scopeName);
+    const newStatus = store.read.getScopeStatus(scopeName);
     if (!isScopeStatusEqual(status.value, newStatus)) {
       status.value = newStatus;
     }
   };
 
   onMounted(() => {
-    unsubscribe = store.subscribeScopeStatus(scope.value, updateStatus);
+    unsubscribe = store.observe.subscribeScopeStatus(scope.value, updateStatus);
   });
 
   onUnmounted(() => {
@@ -36,29 +36,29 @@ export function useBitSteps(scopeNames: string[]): UseBitStepsResult {
 
   const validate = async (): Promise<ValidateScopeResult> => {
     const scopeName = scope.value;
-    const valid = await store.validate({ scope: scopeName });
-    const errors = store.getScopeErrors(scopeName);
+    const valid = await store.write.validate({ scope: scopeName });
+    const errors = store.read.getScopeErrors(scopeName);
     return { valid, errors };
   };
 
-  const getErrors = () => store.getScopeErrors(scope.value);
+  const getErrors = () => store.read.getScopeErrors(scope.value);
 
   const next = async (): Promise<boolean> => {
     const scopeName = scope.value;
 
-    const scopeFields = store.getScopeFields(scopeName);
-    if (store.hasValidationsInProgress(scopeFields)) {
+    const scopeFields = store.read.getScopeFields(scopeName);
+    if (store.feature.hasValidationsInProgress(scopeFields)) {
       return false;
     }
 
-    const valid = await store.validate({ scope: scopeName });
+    const valid = await store.write.validate({ scope: scopeName });
     if (valid) {
       stepIndex.value = Math.min(stepIndex.value + 1, scopeNames.length - 1);
     } else {
-      const errors = store.getScopeErrors(scopeName);
+      const errors = store.read.getScopeErrors(scopeName);
       const pathsWithErrors = Object.keys(errors);
       if (pathsWithErrors.length > 0) {
-        store.markFieldsTouched(pathsWithErrors);
+        store.write.markFieldsTouched(pathsWithErrors);
       }
     }
     return valid;

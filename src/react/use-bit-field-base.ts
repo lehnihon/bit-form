@@ -23,25 +23,25 @@ export function useBitFieldBase<
   }, [store, path]);
 
   const getSnapshot = useCallback(() => {
-    const nextState = store.getFieldState(path);
+    const nextState = store.read.getFieldState(path);
     const snapshot = createFieldStateSnapshot(nextState, lastSnapshot.current);
     lastSnapshot.current = snapshot;
     return snapshot;
   }, [store, path]);
 
   const subscribe = useCallback(
-    (cb: () => void) => store.subscribeFieldState(path, () => cb()),
+    (cb: () => void) => store.observe.subscribeFieldState(path, () => cb()),
     [store, path],
   );
 
   const fieldState = useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
 
   const setValue = useCallback(
-    (val: BitPathValue<TForm, P>) => store.setField(path, val),
+    (val: BitPathValue<TForm, P>) => store.write.setField(path, val),
     [store, path],
   );
 
-  const setBlur = useCallback(() => store.blurField(path), [store, path]);
+  const setBlur = useCallback(() => store.write.blurField(path), [store, path]);
 
   return { fieldState, setValue, setBlur, store };
 }

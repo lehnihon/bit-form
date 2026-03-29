@@ -11,7 +11,7 @@ export function useBitArray<
   const controller = createArrayBindingController<TForm, P>(store, path);
   const values = shallowRef(controller.readItems());
 
-  const unsubscribe = store.subscribePath(path, () => {
+  const unsubscribe = store.observe.subscribePath(path, () => {
     values.value = controller.readItems();
   });
 

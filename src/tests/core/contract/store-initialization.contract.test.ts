@@ -9,8 +9,22 @@ import {
   createFrameworkStoreAdapter,
 } from "../../../core";
 
+function adaptToLegacyFlat(store: any) {
+  return {
+    ...store,
+    getState: () => store.read.getState(),
+    getFieldState: (path: string) => store.read.getFieldState(path),
+    isHidden: (path: string) => store.read.isHidden(path),
+    isRequired: (path: string) => store.read.isRequired(path),
+    setField: (path: string, value: unknown) =>
+      store.write.setField(path, value),
+  };
+}
+
 const createBitStore = ((config?: any) =>
-  createFrameworkStoreAdapter(createBitStoreRuntime(config))) as any;
+  adaptToLegacyFlat(
+    createFrameworkStoreAdapter(createBitStoreRuntime(config)),
+  )) as any;
 
 describe("Store Initialization Contract", () => {
   describe("initialValues", () => {

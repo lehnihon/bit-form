@@ -20,7 +20,7 @@ export function injectBitArray<
     controller.readItems(),
   );
 
-  const unsub = store.subscribePath(path, () => {
+  const unsub = store.observe.subscribePath(path, () => {
     valuesSig.set(controller.readItems());
   });
 

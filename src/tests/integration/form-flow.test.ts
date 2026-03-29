@@ -5,10 +5,40 @@ import {
   createFrameworkStoreAdapter,
 } from "../../core";
 
+function adaptToLegacyFlat(store: any) {
+  return {
+    ...store,
+    getState: () => store.read.getState(),
+    getConfig: () => store.read.getConfig(),
+    getFieldState: (path: any) => store.read.getFieldState(path),
+    isHidden: (path: any) => store.read.isHidden(path),
+    isRequired: (path: any) => store.read.isRequired(path),
+    setField: (path: any, value: any) => store.write.setField(path, value),
+    blurField: (path: any) => store.write.blurField(path),
+    setError: (path: any, error: any) => store.write.setError(path, error),
+    clearError: (path: any) => store.write.clearError(path),
+    validate: () => store.write.validate(),
+    submit: (handler: any) => store.write.submit(handler),
+    reset: () => store.write.reset(),
+    registerField: (path: any, config: any) =>
+      store.feature.registerField(path, config),
+    unregisterField: (path: any) => store.feature.unregisterField(path),
+    pushItem: (path: any, item: any) => store.feature.pushItem(path, item),
+    removeItem: (path: any, index: any) =>
+      store.feature.removeItem(path, index),
+    moveItem: (path: any, from: any, to: any) =>
+      store.feature.moveItem(path, from, to),
+    subscribe: (cb: any) => store.observe.subscribe(cb),
+    subscribeField: (path: any, cb: any) =>
+      store.observe.subscribeField(path, cb),
+  };
+}
+
 function createBitStore<T extends object = Record<string, unknown>>(
   config?: any,
 ) {
-  return createFrameworkStoreAdapter(createBitStoreRuntime<T>(config)) as any;
+  const raw = createFrameworkStoreAdapter(createBitStoreRuntime<T>(config));
+  return adaptToLegacyFlat(raw) as any;
 }
 
 describe("Form Lifecycle Flow", () => {

@@ -22,7 +22,7 @@ export function injectBitHistory<
     canRedo: computed(() => meta().canRedo),
     historyIndex: computed(() => meta().historyIndex),
     historySize: computed(() => meta().historySize),
-    undo: () => store.undo(),
-    redo: () => store.redo(),
+    undo: () => store.feature.undo(),
+    redo: () => store.feature.redo(),
   };
 }

@@ -76,6 +76,7 @@ export interface BitFormReadApi<T extends object = Record<string, unknown>> {
   getHistoryMetadata(): BitHistoryMetadata;
   getScopeStatus(scopeName: string): ScopeStatus;
   getScopeErrors(scopeName: string): Record<string, string>;
+  getScopeFields(scopeName: string): string[];
 }
 
 export interface BitFormObserveApi<T extends object = Record<string, unknown>> {
@@ -356,28 +357,17 @@ export interface BitScopeBindingApi<
   ): () => void;
 }
 
-export interface BitFrameworkStoreApi<
-  T extends object = Record<string, unknown>,
->
-  extends
-    BitFieldBindingApi<T>,
-    BitFormMetaBindingApi<T>,
-    BitStoreSelectorBindingApi<T>,
-    BitFormActionBindingApi<T>,
-    BitFieldRegistrationBindingApi<T>,
-    BitDirtyTrackingBindingApi<T>,
-    BitArrayMutationBindingApi<T>,
-    BitHistoryBindingApi,
-    BitPersistBindingApi,
-    BitScopeBindingApi<T> {}
-
 export interface BitStoreFeatureApi<T extends object = Record<string, unknown>>
   extends
     BitStoreLifecycleApi,
     BitStorePersistFeatureApi,
     BitStoreRegistrationFeatureApi<T>,
     BitStoreArrayFeatureApi<T>,
-    BitStoreHistoryFeatureApi {}
+    BitStoreHistoryFeatureApi {
+  hasValidationsInProgress(scopeFields?: string[]): boolean;
+  resolveMask(path: string): BitMask | undefined;
+  createArrayItemId(path: string, index?: number): string;
+}
 
 export interface BitStoreReadSliceApi<
   T extends object = Record<string, unknown>,
@@ -410,10 +400,10 @@ export interface BitStoreApi<
   T extends object = Record<string, unknown>,
 > extends BitStoreNamespacesApi<T> {}
 
-export interface BitStoreHooksApi<T extends object = Record<string, unknown>>
-  extends
-    BitStoreApi<T>,
-    Pick<BitScopeBindingApi<T>, "hasValidationsInProgress" | "getScopeFields"> {
-  resolveMask(path: string): BitMask | undefined;
-  createArrayItemId(path: string, index?: number): string;
-}
+export interface BitStoreHooksApi<
+  T extends object = Record<string, unknown>,
+> extends BitStoreApi<T> {}
+
+export interface BitFrameworkStoreApi<
+  T extends object = Record<string, unknown>,
+> extends BitStoreApi<T> {}

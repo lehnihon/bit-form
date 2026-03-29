@@ -1,26 +1,34 @@
 import { createFormController } from "../form-controller";
-import type { BitFrameworkFormBindingApi } from "../store/contracts/public/store-api-types";
+import type { BitStoreApi } from "../store/contracts/public/store-api-types";
 import type {
   BitFormControllerOptions,
   BitFormControllerRuntime,
 } from "../form-controller";
 
 export function createFrameworkFormBinding<T extends object>(
-  store: BitFrameworkFormBindingApi<T>,
+  store: BitStoreApi<T>,
   runtime: BitFormControllerRuntime,
   options?: BitFormControllerOptions,
 ) {
+  const controllerStore = {
+    getState: store.read.getState,
+    getDirtyValues: store.read.getDirtyValues,
+    submit: store.write.submit,
+    reset: store.write.reset,
+    setServerErrors: store.write.setServerErrors,
+  };
+
   return {
-    controller: createFormController(store, runtime, options),
+    controller: createFormController(controllerStore, runtime, options),
     actions: {
-      setField: store.setField.bind(store),
-      blurField: store.blurField.bind(store),
-      setValues: store.setValues.bind(store),
-      setError: store.setError.bind(store),
-      setErrors: store.setErrors.bind(store),
-      setServerErrors: store.setServerErrors.bind(store),
-      validate: store.validate.bind(store),
-      transaction: store.transaction.bind(store),
+      setField: store.write.setField.bind(store.write),
+      blurField: store.write.blurField.bind(store.write),
+      setValues: store.write.setValues.bind(store.write),
+      setError: store.write.setError.bind(store.write),
+      setErrors: store.write.setErrors.bind(store.write),
+      setServerErrors: store.write.setServerErrors.bind(store.write),
+      validate: store.write.validate.bind(store.write),
+      transaction: store.write.transaction.bind(store.write),
     },
   };
 }

@@ -11,7 +11,7 @@ export function useBitWatch<
 
   const getSnapshot = useCallback(() => {
     const value = getDeepValue(
-      store.getState().values,
+      store.read.getState().values,
       path as string,
     ) as BitPathValue<TForm, P>;
 
@@ -26,7 +26,7 @@ export function useBitWatch<
   // Assina apenas o path monitorado → evita executar getSnapshot em toda
   // mudança de estado do store (blur, validation, outros campos, etc.)
   const subscribe = useCallback(
-    (cb: () => void) => store.subscribePath(path, () => cb()),
+    (cb: () => void) => store.observe.subscribePath(path, () => cb()),
     [store, path],
   );
 

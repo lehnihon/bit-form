@@ -9,8 +9,30 @@ import {
   createFrameworkStoreAdapter,
 } from "../../../core";
 
+function adaptToLegacyFlat(store: any) {
+  return {
+    ...store,
+    subscribe: (listener: () => void) => store.observe.subscribe(listener),
+    subscribePath: (
+      path: string,
+      listener: (value: unknown) => void,
+      options?: any,
+    ) => store.observe.subscribePath(path, listener, options),
+    subscribeSelector: (selector: any, listener: any, options?: any) =>
+      store.observe.subscribeSelector(selector, listener, options),
+    subscribeFormMeta: (listener: any) =>
+      store.observe.subscribeFormMeta(listener),
+    subscribeFieldState: (path: string, listener: any) =>
+      store.observe.subscribeFieldState(path, listener),
+    setField: (path: string, value: unknown) =>
+      store.write.setField(path, value),
+  };
+}
+
 const createBitStore = ((config?: any) =>
-  createFrameworkStoreAdapter(createBitStoreRuntime(config))) as any;
+  adaptToLegacyFlat(
+    createFrameworkStoreAdapter(createBitStoreRuntime(config)),
+  )) as any;
 
 describe("Store Subscriptions Contract", () => {
   describe("subscribe (global)", () => {

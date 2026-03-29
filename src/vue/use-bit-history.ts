@@ -14,8 +14,8 @@ export function useBitHistory<T extends object = any>(): UseBitHistoryResult {
 
   onUnmounted(unsubscribe);
 
-  const undo = () => store.undo();
-  const redo = () => store.redo();
+  const undo = () => store.feature.undo();
+  const redo = () => store.feature.redo();
 
   return {
     canUndo: computed(() => meta.value.canUndo),
