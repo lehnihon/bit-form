@@ -121,10 +121,6 @@ export class BitStore<T extends object = Record<string, unknown>> {
     return this._config;
   }
 
-  getConfig() {
-    return this._config;
-  }
-
   getFieldConfig(path: string): BitFieldDefinition<T> | undefined {
     return this.fieldRegistry.getFieldConfig(path);
   }
