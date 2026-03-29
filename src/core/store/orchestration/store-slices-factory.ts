@@ -23,6 +23,7 @@ import type {
   BitSelectorSubscriptionOptions,
 } from "../contracts/public/subscription-types";
 import type {
+  BitStoreIdentityApi,
   BitFrameworkConfig,
   BitStoreReadSliceApi,
   BitStoreObserveSliceApi,
@@ -31,215 +32,129 @@ import type {
   BitStoreNamespacesApi,
 } from "../contracts/public/store-api-types";
 import type { BitValidationTriggerOptions } from "../contracts/port-types";
+import type {
+  BitStoreFeatureDomain,
+  BitStoreObserveDomain,
+  BitStoreReadDomain,
+  BitStoreWriteDomain,
+} from "./store-domains";
+import type { BitMask } from "../../mask/types";
 
 export interface BitStoreSlicesFactoryDeps<
   T extends object = Record<string, unknown>,
 > {
-  getStoreId(): string;
-  getConfig(): Readonly<BitFrameworkConfig<T>>;
-  getState(): Readonly<BitState<T>>;
+  identity: BitStoreIdentityApi<T>;
+  read: BitStoreReadDomain<T>;
+  observe: BitStoreObserveDomain<T>;
+  write: BitStoreWriteDomain<T>;
+  feature: BitStoreFeatureDomain<T>;
   getFieldConfig(path: string): BitFieldDefinition<T> | undefined;
-  getFieldState<P extends BitPath<T>>(
-    path: P,
-  ): BitFieldState<T, BitPathValue<T, P>>;
-  isHidden<P extends BitPath<T>>(path: P): boolean;
-  isRequired<P extends BitPath<T>>(path: P): boolean;
-  isFieldDirty(path: string): boolean;
-  isFieldValidating(path: string): boolean;
-  getDirtyValues(): Partial<T>;
-  getPersistMetadata(): BitPersistMetadata;
-  getHistoryMetadata(): BitHistoryMetadata;
-  getScopeStatus(scopeName: string): ScopeStatus;
-  getScopeErrors(scopeName: string): Record<string, string>;
-  getScopeFields(scopeName: string): string[];
-
-  subscribe(listener: () => void): () => void;
-  subscribePersistMeta(
-    listener: (meta: BitPersistMetadata) => void,
-  ): () => void;
-  subscribeHistoryMeta(
-    listener: (meta: BitHistoryMetadata) => void,
-  ): () => void;
-  subscribeScopeStatus(
-    scopeName: string,
-    listener: (status: ScopeStatus) => void,
-  ): () => void;
-  subscribeFormMeta(listener: (meta: BitFormMeta) => void): () => void;
-  subscribeSelector<TSlice>(
-    selector: BitSelector<T, TSlice>,
-    listener: (slice: TSlice) => void,
-    options?: BitSelectorSubscriptionOptions<TSlice>,
-  ): () => void;
-  subscribePath<P extends BitPath<T>>(
-    path: P,
-    listener: (value: BitPathValue<T, P>) => void,
-    options?: BitScopedSelectorSubscriptionOptions<BitPathValue<T, P>>,
-  ): () => void;
-  subscribeFieldState<P extends BitPath<T>>(
-    path: P,
-    listener: (state: Readonly<BitFieldState<T, BitPathValue<T, P>>>) => void,
-  ): () => void;
-
-  setField<P extends BitPath<T>>(path: P, value: BitPathValue<T, P>): void;
-  blurField<P extends BitPath<T>>(path: P): void;
-  markFieldsTouched(paths: string[]): void;
-  setValues(
-    values: T | DeepPartial<T>,
-    options?: { partial?: boolean; rebase?: boolean },
-  ): void;
-  setError(path: string, message: string | undefined): void;
-  setErrors(errors: BitErrors<T>): void;
-  setServerErrors(serverErrors: Record<string, string[] | string>): void;
-  validate(options?: BitValidationOptions): Promise<boolean>;
-  triggerValidation(
-    scopeFields?: string[],
-    options?: BitValidationTriggerOptions,
-  ): void;
-  reset(): void;
-  transaction<TResult>(callback: () => TResult): TResult;
-  submit(
-    onSuccess: (values: T, dirtyValues?: Partial<T>) => void | Promise<void>,
-  ): Promise<BitSubmitResult>;
-
-  cleanup(): void;
-  restorePersisted(): Promise<boolean>;
-  forceSave(): Promise<void>;
-  clearPersisted(): Promise<void>;
-  registerField(path: string, config: BitFieldDefinition<T>): void;
-  unregisterField(path: string): void;
-  unregisterPrefix(prefix: string): void;
-  pushItem<P extends BitArrayPath<T>>(
-    path: P,
-    value: BitArrayItem<BitPathValue<T, P>>,
-  ): void;
-  prependItem<P extends BitArrayPath<T>>(
-    path: P,
-    value: BitArrayItem<BitPathValue<T, P>>,
-  ): void;
-  insertItem<P extends BitArrayPath<T>>(
-    path: P,
-    index: number,
-    value: BitArrayItem<BitPathValue<T, P>>,
-  ): void;
-  removeItem<P extends BitArrayPath<T>>(path: P, index: number): void;
-  moveItem<P extends BitArrayPath<T>>(path: P, from: number, to: number): void;
-  swapItems<P extends BitArrayPath<T>>(
-    path: P,
-    indexA: number,
-    indexB: number,
-  ): void;
-  replaceItems<P extends BitArrayPath<T>>(
-    path: P,
-    items: BitArrayItem<BitPathValue<T, P>>[],
-  ): void;
-  clearItems<P extends BitArrayPath<T>>(path: P): void;
-  getCanUndo(): boolean;
-  getCanRedo(): boolean;
-  hasValidationsInProgress(scopeFields?: string[]): boolean;
-  resolveMask(path: string): import("../../../mask/types").BitMask | undefined;
+  resolveMask(path: string): BitMask | undefined;
   createArrayItemId(path: string, index?: number): string;
-  undo(): void;
-  redo(): void;
 }
 
 export function buildStoreSlicesApi<T extends object>(
   deps: BitStoreSlicesFactoryDeps<T>,
 ): BitStoreNamespacesApi<T> {
-  const readState = () => deps.getState();
+  const readState = () => deps.read.getState();
 
   const read: BitStoreReadSliceApi<T> = {
     get storeId() {
-      return deps.getStoreId();
+      return deps.identity.storeId;
     },
     get config() {
-      return deps.getConfig();
+      return deps.identity.config;
     },
     get isValid() {
-      return readState().isValid;
+      return deps.read.getIsValid();
     },
     get isSubmitting() {
-      return readState().isSubmitting;
+      return deps.read.getIsSubmitting();
     },
     get isDirty() {
-      return readState().isDirty;
+      return deps.read.getIsDirty();
     },
-    getConfig: () => deps.getConfig(),
+    getConfig: () => deps.identity.config,
     getState: readState,
     getFieldConfig: (path) => deps.getFieldConfig(path),
-    getFieldState: (path) => deps.getFieldState(path),
-    isHidden: (path) => deps.isHidden(path),
-    isRequired: (path) => deps.isRequired(path),
-    isFieldDirty: (path) => deps.isFieldDirty(path),
-    isFieldValidating: (path) => deps.isFieldValidating(path),
-    getDirtyValues: () => deps.getDirtyValues(),
-    getPersistMetadata: () => deps.getPersistMetadata(),
-    getHistoryMetadata: () => deps.getHistoryMetadata(),
-    getScopeStatus: (scopeName) => deps.getScopeStatus(scopeName),
-    getScopeErrors: (scopeName) => deps.getScopeErrors(scopeName),
-    getScopeFields: (scopeName) => deps.getScopeFields(scopeName),
+    getFieldState: (path) => deps.read.getFieldState(path),
+    isHidden: (path) => deps.read.isHidden(path),
+    isRequired: (path) => deps.read.isRequired(path),
+    isFieldDirty: (path) => deps.read.isFieldDirty(path),
+    isFieldValidating: (path) => deps.read.isFieldValidating(path),
+    getDirtyValues: () => deps.read.getDirtyValues(),
+    getPersistMetadata: () => deps.read.getPersistMetadata(),
+    getHistoryMetadata: () => deps.read.getHistoryMetadata(),
+    getScopeStatus: (scopeName) => deps.read.getScopeStatus(scopeName),
+    getScopeErrors: (scopeName) => deps.read.getScopeErrors(scopeName),
+    getScopeFields: (scopeName) => deps.read.getScopeFields(scopeName),
   };
 
   const observe: BitStoreObserveSliceApi<T> = {
     getState: readState,
-    subscribe: (listener) => deps.subscribe(listener),
-    subscribePersistMeta: (listener) => deps.subscribePersistMeta(listener),
-    subscribeHistoryMeta: (listener) => deps.subscribeHistoryMeta(listener),
+    subscribe: (listener) => deps.observe.subscribe(listener),
+    subscribePersistMeta: (listener) =>
+      deps.observe.subscribePersistMeta(listener),
+    subscribeHistoryMeta: (listener) =>
+      deps.observe.subscribeHistoryMeta(listener),
     subscribeScopeStatus: (scopeName, listener) =>
-      deps.subscribeScopeStatus(scopeName, listener),
-    subscribeFormMeta: (listener) => deps.subscribeFormMeta(listener),
+      deps.observe.subscribeScopeStatus(scopeName, listener),
+    subscribeFormMeta: (listener) => deps.observe.subscribeFormMeta(listener),
     subscribeSelector: (selector, listener, options) =>
-      deps.subscribeSelector(selector, listener, options),
+      deps.observe.subscribeSelector(selector, listener, options),
     subscribePath: (path, listener, options) =>
-      deps.subscribePath(path, listener, options),
+      deps.observe.subscribePath(path, listener, options),
     subscribeFieldState: (path, listener) =>
-      deps.subscribeFieldState(path, listener),
+      deps.observe.subscribeFieldState(path, listener),
   };
 
   const write: BitStoreWriteSliceApi<T> = {
-    setField: (path, value) => deps.setField(path, value),
-    blurField: (path) => deps.blurField(path),
-    markFieldsTouched: (paths) => deps.markFieldsTouched(paths),
-    setValues: (values, options) => deps.setValues(values, options),
-    setError: (path, message) => deps.setError(path, message),
-    setErrors: (errors) => deps.setErrors(errors),
-    setServerErrors: (serverErrors) => deps.setServerErrors(serverErrors),
-    validate: (options) => deps.validate(options),
+    setField: (path, value) => deps.write.setField(path, value),
+    blurField: (path) => deps.write.blurField(path),
+    markFieldsTouched: (paths) => deps.write.markFieldsTouched(paths),
+    setValues: (values, options) => deps.write.setValues(values, options),
+    setError: (path, message) => deps.write.setError(path, message),
+    setErrors: (errors) => deps.write.setErrors(errors),
+    setServerErrors: (serverErrors) => deps.write.setServerErrors(serverErrors),
+    validate: (options) => deps.feature.validate(options),
     triggerValidation: (scopeFields, options) =>
-      deps.triggerValidation(scopeFields, options),
-    reset: () => deps.reset(),
-    transaction: (callback) => deps.transaction(callback),
-    submit: (onSuccess) => deps.submit(onSuccess),
+      deps.feature.triggerValidation(scopeFields, options),
+    reset: () => deps.write.reset(),
+    transaction: (callback) => deps.write.transaction(callback),
+    submit: (onSuccess) => deps.write.submit(onSuccess),
   };
 
   const feature: BitStoreFeatureApi<T> = {
-    cleanup: () => deps.cleanup(),
-    getPersistMetadata: () => deps.getPersistMetadata(),
-    restorePersisted: () => deps.restorePersisted(),
-    forceSave: () => deps.forceSave(),
-    clearPersisted: () => deps.clearPersisted(),
-    registerField: (path, config) => deps.registerField(path, config),
-    unregisterField: (path) => deps.unregisterField(path),
-    unregisterPrefix: (prefix) => deps.unregisterPrefix(prefix),
-    pushItem: (path, value) => deps.pushItem(path, value),
-    prependItem: (path, value) => deps.prependItem(path, value),
-    insertItem: (path, index, value) => deps.insertItem(path, index, value),
-    removeItem: (path, index) => deps.removeItem(path, index),
-    moveItem: (path, from, to) => deps.moveItem(path, from, to),
-    swapItems: (path, indexA, indexB) => deps.swapItems(path, indexA, indexB),
-    replaceItems: (path, items) => deps.replaceItems(path, items),
-    clearItems: (path) => deps.clearItems(path),
+    cleanup: () => deps.feature.cleanup(),
+    getPersistMetadata: () => deps.read.getPersistMetadata(),
+    restorePersisted: () => deps.feature.restorePersisted(),
+    forceSave: () => deps.feature.forceSave(),
+    clearPersisted: () => deps.feature.clearPersisted(),
+    registerField: (path, config) => deps.write.registerField(path, config),
+    unregisterField: (path) => deps.write.unregisterField(path),
+    unregisterPrefix: (prefix) => deps.write.unregisterPrefix(prefix),
+    pushItem: (path, value) => deps.write.pushItem(path, value),
+    prependItem: (path, value) => deps.write.prependItem(path, value),
+    insertItem: (path, index, value) =>
+      deps.write.insertItem(path, index, value),
+    removeItem: (path, index) => deps.write.removeItem(path, index),
+    moveItem: (path, from, to) => deps.write.moveItem(path, from, to),
+    swapItems: (path, indexA, indexB) =>
+      deps.write.swapItems(path, indexA, indexB),
+    replaceItems: (path, items) => deps.write.replaceItems(path, items),
+    clearItems: (path) => deps.write.clearItems(path),
     get canUndo() {
-      return deps.getCanUndo();
+      return deps.read.getCanUndo();
     },
     get canRedo() {
-      return deps.getCanRedo();
+      return deps.read.getCanRedo();
     },
     hasValidationsInProgress: (scopeFields) =>
-      deps.hasValidationsInProgress(scopeFields),
+      deps.feature.hasValidationsInProgress(scopeFields),
     resolveMask: (path) => deps.resolveMask(path),
     createArrayItemId: (path, index) => deps.createArrayItemId(path, index),
-    undo: () => deps.undo(),
-    redo: () => deps.redo(),
+    undo: () => deps.feature.undo(),
+    redo: () => deps.feature.redo(),
   };
 
   return {

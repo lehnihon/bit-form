@@ -33,12 +33,11 @@ import type { BitFieldRegistry } from "./registry/field-registry";
 import type { BitMaskManager } from "./managers/features/mask-manager";
 import type { BitDirtyManager } from "./managers/core/dirty-manager";
 import { resolveFieldMask } from "./engines/store-field-query-engine";
-import { createStoreNamespacesFromFacadeHost } from "./orchestration/store-facade";
+import { buildStoreSlicesApi } from "./orchestration/store-slices-factory";
 import {
   createBitStoreDomains,
   type BitStoreDomains,
 } from "./orchestration/store-domains";
-import { createBitStoreFacadeHostPorts } from "./orchestration/store-facade-host";
 import { BitStoreStateReader } from "./shared/store-state-reader";
 
 export class BitStore<T extends object = Record<string, unknown>> {
@@ -98,9 +97,19 @@ export class BitStore<T extends object = Record<string, unknown>> {
       stateReader: this.stateReader,
     });
 
-    const slices = createStoreNamespacesFromFacadeHost(
-      createBitStoreFacadeHostPorts(this),
-    );
+    const slices = buildStoreSlicesApi<T>({
+      identity: {
+        storeId: this.storeId,
+        config: this._config,
+      },
+      read: this.domains.read,
+      observe: this.domains.observe,
+      write: this.domains.write,
+      feature: this.domains.feature,
+      getFieldConfig: (path) => this.getFieldConfig(path),
+      resolveMask: (path) => this.resolveMask(path),
+      createArrayItemId: (path, index) => this.createArrayItemId(path, index),
+    });
 
     this.read = slices.read;
     this.observe = slices.observe;
