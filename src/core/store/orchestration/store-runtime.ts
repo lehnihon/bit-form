@@ -1,6 +1,5 @@
 import { BitSubscriptionEngine } from "../engines/subscription-engine";
 import { createInitialStoreState } from "./store-bootstrap";
-import type { BitStoreCapabilities } from "./capabilities";
 import type { BitStoreCapabilityRegistry } from "./store-capability-registry";
 import type { BitFrameworkConfig } from "../contracts/public/store-api-types";
 import type {
@@ -23,7 +22,6 @@ export interface BitStoreRuntimeMembers<T extends object> {
   state: BitState<T>;
   subscriptions: BitSubscriptionEngine<T>;
   capabilityRegistry: BitStoreCapabilityRegistry<T>;
-  capabilities: BitStoreCapabilities<T>;
   storeId: string;
 }
 
@@ -87,7 +85,6 @@ export function createStoreRuntime<T extends object>(
     state,
     subscriptions,
     capabilityRegistry: capabilityComposition.registry,
-    capabilities: capabilityComposition.capabilities,
     storeId,
   };
 }

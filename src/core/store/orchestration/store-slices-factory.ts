@@ -74,7 +74,6 @@ export function buildStoreSlicesApi<T extends object>(
     get isDirty() {
       return deps.read.getIsDirty();
     },
-    getConfig: () => deps.identity.config,
     getState: readState,
     getFieldConfig: (path) => deps.getFieldConfig(path),
     getFieldState: (path) => deps.read.getFieldState(path),

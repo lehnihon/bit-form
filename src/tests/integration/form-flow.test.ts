@@ -7,7 +7,7 @@ function adaptToLegacyFlat(store: any) {
 
   return Object.assign(legacyStore, {
     getState: () => store.read.getState(),
-    getConfig: () => store.read.getConfig(),
+    getConfig: () => store.read.config,
     getFieldState: (path: any) => store.read.getFieldState(path),
     isHidden: (path: any) => store.read.isHidden(path),
     isRequired: (path: any) => store.read.isRequired(path),

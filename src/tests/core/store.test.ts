@@ -10,7 +10,7 @@ function adaptToLegacyFlat(store: any) {
 
   return Object.assign(legacyStore, {
     getState: () => store.read.getState(),
-    getConfig: () => store.read.getConfig(),
+    getConfig: () => store.read.config,
     getFieldState: (path: any) => store.read.getFieldState(path),
     isHidden: (path: any) => store.read.isHidden(path),
     isRequired: (path: any) => store.read.isRequired(path),
@@ -210,7 +210,7 @@ describe("BitStore Core", () => {
       expect(store.read.getState().isValid).toBe(true);
       expect(store.read.getState().isDirty).toBe(false);
       expect(store.read.getState().isSubmitting).toBe(false);
-      expect(store.read.getConfig().initialValues).toEqual({ name: "Leo" });
+      expect(store.read.config.initialValues).toEqual({ name: "Leo" });
     });
 
     it("should update field and notify listeners", () => {
@@ -987,7 +987,7 @@ describe("BitStore Core", () => {
         name: "Leandro",
         age: 31,
       });
-      expect(store.read.getConfig().initialValues).toEqual({
+      expect(store.read.config.initialValues).toEqual({
         name: "Leo",
         age: 30,
       });
@@ -1019,7 +1019,7 @@ describe("BitStore Core", () => {
         name: "Leandro",
         age: 31,
       });
-      expect(store.read.getConfig().initialValues).toEqual({
+      expect(store.read.config.initialValues).toEqual({
         name: "Leo",
         age: 30,
       });

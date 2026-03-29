@@ -52,12 +52,12 @@ const state = store.read.getState();
 
 See [`BitState<T>` in the types reference](./types.md#bitstatet) for the full structure.
 
-### `read.getConfig(): BitFrameworkConfig<T>`
+### `read.config: BitFrameworkConfig<T>`
 
 Returns the resolved configuration, including normalized defaults and `initialValues`.
 
 ```ts
-const config = store.read.getConfig();
+const config = store.read.config;
 console.log(config.initialValues);
 ```
 

@@ -340,7 +340,7 @@ See [Lifecycle Plugins](../features/plugins.md) for examples and behavior.
 
 ## `BitFrameworkConfig<T>`
 
-Public framework-facing config returned by `store.getConfig()`. It includes normalized defaults and resolved config sections.
+Public framework-facing config returned by `store.read.config`. It includes normalized defaults and resolved config sections.
 
 ```ts
 interface BitFrameworkConfig<T extends object = any> extends BitConfig<T> {

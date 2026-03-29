@@ -23,6 +23,10 @@ export function normalizeConfig<T extends object>(
     ? `bit-form:${config.name}:draft`
     : "bit-form:draft";
 
+  const onUnhandledError =
+    config.onUnhandledError ?? defaultUnhandledErrorReporter;
+  const persistErrorHandler = config.persist?.onError;
+
   const persist: BitPersistResolvedConfig<T> = {
     enabled: config.persist?.enabled ?? false,
     key: config.persist?.key ?? defaultPersistKey,
@@ -34,7 +38,10 @@ export function normalizeConfig<T extends object>(
     deserialize:
       config.persist?.deserialize ??
       ((raw: string) => JSON.parse(raw) as Partial<T>),
-    onError: config.persist?.onError,
+    onError: (error) => {
+      persistErrorHandler?.(error);
+      onUnhandledError(error, "persist");
+    },
   };
 
   return {
@@ -55,6 +62,6 @@ export function normalizeConfig<T extends object>(
     scheduler: config.scheduler,
     subscriptionCacheSize: config.subscriptionCacheSize,
     bus: config.bus,
-    onUnhandledError: config.onUnhandledError ?? defaultUnhandledErrorReporter,
+    onUnhandledError,
   } as BitFrameworkConfig<T>;
 }

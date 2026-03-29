@@ -166,7 +166,6 @@ export function composeBitStoreRuntime<T extends object>(args: {
     subscriptions: runtime.subscriptions,
     effects,
     capabilityRegistry: runtime.capabilityRegistry,
-    capabilities: runtime.capabilities,
     applyValueDerivations: (values, changedPaths) =>
       applyValueDerivations({
         values,

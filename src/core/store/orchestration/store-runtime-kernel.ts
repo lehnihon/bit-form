@@ -23,7 +23,6 @@ export interface BitStoreRuntimeKernelArgs<T extends object> {
   subscriptions: BitSubscriptionEngine<T>;
   effects: BitStoreEffectEngine<T>;
   capabilityRegistry: BitStoreCapabilityRegistry<T>;
-  capabilities: BitStoreCapabilities<T>;
   applyValueDerivations?: (values: T, changedPaths?: readonly string[]) => T;
 }
 
@@ -42,7 +41,7 @@ export class BitStoreRuntimeKernel<T extends object> {
     this.subscriptions = args.subscriptions;
     this.effects = args.effects;
     this.capabilityRegistry = args.capabilityRegistry;
-    this.capabilities = args.capabilities;
+    this.capabilities = args.capabilityRegistry.toCapabilities();
   }
 
   getCapability<K extends keyof BitStoreCapabilities<T>>(
