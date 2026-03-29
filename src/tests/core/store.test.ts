@@ -204,13 +204,13 @@ describe("BitStore Core", () => {
   describe("Basic State and Getters", () => {
     it("should initialize with correct state", () => {
       const store = createBitStore({ initialValues: { name: "Leo" } });
-      const state = store.getState();
+      const state = store.read.getState();
 
       expect(state.values.name).toBe("Leo");
-      expect(store.getState().isValid).toBe(true);
-      expect(store.getState().isDirty).toBe(false);
-      expect(store.getState().isSubmitting).toBe(false);
-      expect(store.config.initialValues).toEqual({ name: "Leo" });
+      expect(store.read.getState().isValid).toBe(true);
+      expect(store.read.getState().isDirty).toBe(false);
+      expect(store.read.getState().isSubmitting).toBe(false);
+      expect(store.read.getConfig().initialValues).toEqual({ name: "Leo" });
     });
 
     it("should update field and notify listeners", () => {
@@ -983,9 +983,15 @@ describe("BitStore Core", () => {
 
       store.setValues({ name: "Leandro", age: 31 });
 
-      expect(store.getState().values).toEqual({ name: "Leandro", age: 31 });
-      expect(store.config.initialValues).toEqual({ name: "Leo", age: 30 });
-      expect(store.getState().isDirty).toBe(true);
+      expect(store.read.getState().values).toEqual({
+        name: "Leandro",
+        age: 31,
+      });
+      expect(store.read.getConfig().initialValues).toEqual({
+        name: "Leo",
+        age: 30,
+      });
+      expect(store.read.getState().isDirty).toBe(true);
     });
 
     it("should hydrate current values with deep merge semantics", () => {
@@ -1009,9 +1015,15 @@ describe("BitStore Core", () => {
 
       store.setValues({ name: "Leandro", age: 31 }, { rebase: true });
 
-      expect(store.getState().values).toEqual({ name: "Leandro", age: 31 });
-      expect(store.config.initialValues).toEqual({ name: "Leo", age: 30 });
-      expect(store.getState().isDirty).toBe(false);
+      expect(store.read.getState().values).toEqual({
+        name: "Leandro",
+        age: 31,
+      });
+      expect(store.read.getConfig().initialValues).toEqual({
+        name: "Leo",
+        age: 30,
+      });
+      expect(store.read.getState().isDirty).toBe(false);
     });
 
     it("should keep array dirty tracking consistent after rebase", () => {

@@ -58,7 +58,7 @@ describe("Cross-Framework Consistency", () => {
       initialValues: { balance: 10 },
       masks: { brl: maskBRL },
     });
-    const brl = store.config.masks!.brl;
+    const brl = store.read.getConfig().masks!.brl;
 
     const display = brl.format(store.getState().values.balance);
     expect(display).toBe("R$ 10,00");
