@@ -11,10 +11,11 @@ import {
 } from "../../../core";
 
 function adaptToLegacyFlat(store: any) {
-  return {
-    ...store,
+  const legacyStore = Object.create(store);
+
+  return Object.assign(legacyStore, {
     getState: () => store.read.getState(),
-  };
+  });
 }
 
 function createBitStore<T extends object = Record<string, unknown>>(

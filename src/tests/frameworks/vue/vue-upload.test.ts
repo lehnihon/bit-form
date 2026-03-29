@@ -12,10 +12,11 @@ import {
 import { BIT_STORE_KEY } from "../../../vue/context";
 
 function adaptToLegacyFlat(store: any) {
-  return {
-    ...store,
+  const legacyStore = Object.create(store);
+
+  return Object.assign(legacyStore, {
     getState: () => store.read.getState(),
-  };
+  });
 }
 
 function createBitStore<T extends object = Record<string, unknown>>(
@@ -45,7 +46,11 @@ describe("useBitUpload (Vue)", () => {
     });
 
     const wrapper = mount(TestComponent, {
-      global: { provide: { [BIT_STORE_KEY as any]: store } },
+      global: {
+        provide: {
+          [BIT_STORE_KEY as symbol]: store,
+        },
+      },
     });
 
     return { upload, wrapper };

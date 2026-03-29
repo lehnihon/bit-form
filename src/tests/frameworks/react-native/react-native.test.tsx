@@ -9,13 +9,14 @@ import {
 import { BitFormProvider, useBitField } from "../../../react-native";
 
 function adaptToLegacyFlat(store: any) {
-  return {
-    ...store,
+  const legacyStore = Object.create(store);
+
+  return Object.assign(legacyStore, {
     getState: () => store.read.getState(),
     registerField: (path: string, config: unknown) =>
       store.feature.registerField(path, config),
     unregisterField: (path: string) => store.feature.unregisterField(path),
-  };
+  });
 }
 
 function createBitStore<T extends object = Record<string, unknown>>(

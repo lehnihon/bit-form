@@ -8,6 +8,7 @@ import type { BitStoreOperation } from "../engines/operation-engine";
 import type { BitSubscriptionEngine } from "../engines/subscription-engine";
 import type { BitState } from "../contracts/types";
 import type { BitStoreCapabilities } from "./capabilities";
+import type { BitStoreCapabilityRegistry } from "./store-capability-registry";
 import {
   commitStoreStateUpdate,
   dispatchStoreStateOperation,
@@ -21,6 +22,7 @@ export interface BitStoreRuntimeKernelArgs<T extends object> {
   state: BitState<T>;
   subscriptions: BitSubscriptionEngine<T>;
   effects: BitStoreEffectEngine<T>;
+  capabilityRegistry: BitStoreCapabilityRegistry<T>;
   capabilities: BitStoreCapabilities<T>;
   applyValueDerivations?: (values: T, changedPaths?: readonly string[]) => T;
 }
@@ -32,13 +34,21 @@ export class BitStoreRuntimeKernel<T extends object> {
 
   readonly subscriptions: BitSubscriptionEngine<T>;
   readonly effects: BitStoreEffectEngine<T>;
+  readonly capabilityRegistry: BitStoreCapabilityRegistry<T>;
   readonly capabilities: BitStoreCapabilities<T>;
 
   constructor(private readonly args: BitStoreRuntimeKernelArgs<T>) {
     this.state = args.state;
     this.subscriptions = args.subscriptions;
     this.effects = args.effects;
+    this.capabilityRegistry = args.capabilityRegistry;
     this.capabilities = args.capabilities;
+  }
+
+  getCapability<K extends keyof BitStoreCapabilities<T>>(
+    name: K,
+  ): BitStoreCapabilities<T>[K] {
+    return this.capabilityRegistry.resolve(name);
   }
 
   getState(): BitState<T> {

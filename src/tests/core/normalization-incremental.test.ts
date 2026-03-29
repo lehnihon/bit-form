@@ -1,23 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
-import {
-  createBitStore as createBitStoreRuntime,
-  createFrameworkStoreAdapter,
-} from "../../core";
+import { createBitStore as createBitStoreRuntime } from "../../core";
 
-function adaptToLegacyFlat(store: any) {
-  return {
-    ...store,
-    getState: () => store.read.getState(),
-    setField: (path: any, value: any) => store.write.setField(path, value),
-    setValues: (values: any, opts?: any) => store.write.setValues(values, opts),
-    reset: () => store.write.reset(),
-  };
-}
-
-const createBitStore = ((config?: any) => {
-  const raw = createFrameworkStoreAdapter(createBitStoreRuntime(config));
-  return adaptToLegacyFlat(raw);
-}) as any;
+const createBitStore = ((config?: any) => createBitStoreRuntime(config)) as any;
 
 /**
  * Testes de normalização incremental path-driven.
@@ -51,7 +35,7 @@ describe("Incremental Normalization (normalizeDependsOn)", () => {
     normalizeEmail.mockClear();
 
     // Alterar "name" → normalizeName deve rodar, normalizeEmail NÃO
-    store.setField("name", "  Leandro  ");
+    store.write.setField("name", "  Leandro  ");
 
     expect(normalizeName).toHaveBeenCalledTimes(1);
     expect(normalizeEmail).toHaveBeenCalledTimes(0);
@@ -60,7 +44,7 @@ describe("Incremental Normalization (normalizeDependsOn)", () => {
     normalizeEmail.mockClear();
 
     // Alterar "phone" → normalizeEmail deve rodar (é sua dependência), normalizeName NÃO
-    store.setField("phone", "1234");
+    store.write.setField("phone", "1234");
 
     expect(normalizeEmail).toHaveBeenCalledTimes(1);
     expect(normalizeName).toHaveBeenCalledTimes(0);
@@ -81,12 +65,12 @@ describe("Incremental Normalization (normalizeDependsOn)", () => {
       },
     });
 
-    store.setField("name", "  Leandro  ");
+    store.write.setField("name", "  Leandro  ");
 
     // name é trimado
-    expect(store.getState().values.name).toBe("Leandro");
+    expect(store.read.getState().values.name).toBe("Leandro");
     // code normalizer executa porque depende de "name"
-    expect(store.getState().values.code).toBe("populated");
+    expect(store.read.getState().values.code).toBe("populated");
   });
 
   it("não re-executa normalizer cujo dependsOn não foi impactado em setValues parcial", () => {
@@ -105,7 +89,7 @@ describe("Incremental Normalization (normalizeDependsOn)", () => {
     normalizeCode.mockClear();
 
     // Atualiza apenas "email" — não impacta "name", então normalizeCode não deve rodar
-    store.setValues({ email: "test@test.com" }, { partial: true });
+    store.write.setValues({ email: "test@test.com" }, { partial: true });
 
     expect(normalizeCode).toHaveBeenCalledTimes(0);
   });
@@ -129,7 +113,7 @@ describe("Incremental Normalization (normalizeDependsOn)", () => {
     normalizeEmail.mockClear();
 
     // Reset → changedPaths = "*" → todos os normalizers rodam
-    store.reset();
+    store.write.reset();
 
     expect(normalizeName).toHaveBeenCalled();
     expect(normalizeEmail).toHaveBeenCalled();
@@ -152,14 +136,14 @@ describe("Incremental Normalization (normalizeDependsOn)", () => {
     normalizeChild.mockClear();
 
     // Alterar "address.street" deve impactar "address" como prefixo
-    store.setField("address.street", "Rua X");
+    store.write.setField("address.street", "Rua X");
 
     expect(normalizeChild).toHaveBeenCalledTimes(1);
 
     normalizeChild.mockClear();
 
     // Alterar "tag" NÃO deve disparar
-    store.setField("tag", "xyz");
+    store.write.setField("tag", "xyz");
 
     expect(normalizeChild).toHaveBeenCalledTimes(0);
   });
@@ -178,8 +162,8 @@ describe("Incremental Normalization (normalizeDependsOn)", () => {
       },
     });
 
-    expect(store.getState().values.name).toBe("Leandro");
-    expect(store.getState().values.greeting).toBe("Olá, Leandro");
+    expect(store.read.getState().values.name).toBe("Leandro");
+    expect(store.read.getState().values.greeting).toBe("Olá, Leandro");
   });
 
   it("recalcula computeds quando normalizer altera um path dependido", () => {
@@ -196,9 +180,9 @@ describe("Incremental Normalization (normalizeDependsOn)", () => {
       },
     });
 
-    store.setField("name", "  Ana  ");
+    store.write.setField("name", "  Ana  ");
 
-    expect(store.getState().values.name).toBe("Ana");
-    expect(store.getState().values.greeting).toBe("Olá, Ana");
+    expect(store.read.getState().values.name).toBe("Ana");
+    expect(store.read.getState().values.greeting).toBe("Olá, Ana");
   });
 });

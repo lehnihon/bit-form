@@ -11,8 +11,7 @@ import {
 } from "../../../core";
 
 function adaptToLegacyFlat(store: any) {
-  return {
-    ...store,
+  const legacyFacade = {
     getState: () => store.read.getState(),
     getFieldState: (path: string) => store.read.getFieldState(path),
     get isValid() {
@@ -71,6 +70,11 @@ function adaptToLegacyFlat(store: any) {
     hasValidationsInProgress: (scopeFields?: string[]) =>
       store.feature.hasValidationsInProgress(scopeFields),
   };
+
+  return Object.defineProperties(
+    Object.create(store),
+    Object.getOwnPropertyDescriptors(legacyFacade),
+  );
 }
 
 const createBitStore = ((config?: any) =>
@@ -121,7 +125,7 @@ describe("Store Capabilities Contract", () => {
       expect(typeof store.isDirty).toBe("boolean");
     });
 
-    it("isFieldDirty retorna false antes de mudar e true depois", () => {
+    it("isFieldDirty reflete dirty por campo", () => {
       const store = createBitStore({ initialValues: { x: 1 } });
       expect(store.isFieldDirty("x")).toBe(false);
       store.setField("x" as any, 2 as any);

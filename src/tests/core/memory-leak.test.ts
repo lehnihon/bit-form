@@ -5,8 +5,9 @@ import {
 } from "../../core";
 
 function adaptToLegacyFlat(store: any) {
-  return {
-    ...store,
+  const legacyStore = Object.create(store);
+
+  return Object.assign(legacyStore, {
     getState: () => store.read.getState(),
     setField: (path: any, value: any) => store.write.setField(path, value),
     reset: () => store.write.reset(),
@@ -15,7 +16,7 @@ function adaptToLegacyFlat(store: any) {
       store.feature.registerField(path, config),
     unregisterField: (path: any) => store.feature.unregisterField(path),
     cleanup: () => store.feature.cleanup(),
-  };
+  });
 }
 
 function createBitStore<T extends object = Record<string, unknown>>(

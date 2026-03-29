@@ -1,6 +1,3 @@
-import { BitPersistManager } from "../managers/features/persist-manager";
-import { BitPluginManager } from "../managers/features/plugin-manager";
-import { BitStoreEffectEngine } from "../engines/effect-engine";
 import { BitValidationManager } from "../managers/features/validation-manager";
 import { BitLifecycleManager } from "../managers/features/lifecycle-manager";
 import { BitHistoryManager } from "../managers/features/history-manager";
@@ -18,30 +15,16 @@ import type { BitStoreOperation } from "../engines/operation-engine";
 import { deepClone } from "../../utils";
 import { applyValueDerivations } from "../shared/value-derivation-pipeline";
 import type { BitStoreCapabilities } from "./capabilities";
+import {
+  createStoreCapabilityRegistry,
+  type BitStoreCapabilityRegistry,
+} from "./store-capability-registry";
 import type { BitFrameworkConfig } from "../contracts/public/store-api-types";
-import { bitBus, getNoopBitBus } from "../shared/bus";
-import type { BitBusStorePort } from "../contracts/bus-types";
 import type {
   BitLifecyclePorts,
   BitValidationManagerPort,
 } from "../contracts/port-types";
 import type { BitFieldDefinition, BitState } from "../contracts/types";
-
-function shouldEnableStoreBus<T extends object>(config: BitFrameworkConfig<T>) {
-  if (config.bus) {
-    return true;
-  }
-
-  if (typeof config.devTools === "boolean") {
-    return config.devTools;
-  }
-
-  if (config.devTools && typeof config.devTools === "object") {
-    return config.devTools.enabled !== false;
-  }
-
-  return false;
-}
 
 export type BitStoreCapabilityPorts<T extends object> = {
   validationPort: BitValidationManagerPort<T>;
@@ -55,88 +38,72 @@ export type BitStoreCapabilityPorts<T extends object> = {
   isPathDirty(path: string): boolean;
 };
 
-export function createStoreCapabilities<T extends object>(args: {
+export interface BitStoreCapabilityComposition<T extends object> {
+  registry: BitStoreCapabilityRegistry<T>;
+  capabilities: BitStoreCapabilities<T>;
+}
+
+function registerStoreCapabilities<T extends object>(args: {
+  registry: BitStoreCapabilityRegistry<T>;
   ports: BitStoreCapabilityPorts<T>;
   fieldRegistry: BitFieldRegistry<T>;
-}): BitStoreCapabilities<T> {
-  const { ports, fieldRegistry } = args;
+}) {
+  const { registry, ports, fieldRegistry } = args;
 
-  return {
-    validation: new BitValidationManager<T>(ports.validationPort),
-    lifecycle: new BitLifecycleManager<T>(ports.lifecyclePorts),
-    history: new BitHistoryManager<T>(
+  registry.register(
+    "validation",
+    new BitValidationManager<T>(ports.validationPort),
+  );
+  registry.register(
+    "lifecycle",
+    new BitLifecycleManager<T>(ports.lifecyclePorts),
+  );
+  registry.register(
+    "history",
+    new BitHistoryManager<T>(
       !!ports.config.history.enabled,
       ports.config.history.limit ?? 50,
     ),
-    arrays: new BitArrayManager<T>(ports.arrayPort),
-    scope: new BitScopeManager<T>(
+  );
+  registry.register("arrays", new BitArrayManager<T>(ports.arrayPort));
+  registry.register(
+    "scope",
+    new BitScopeManager<T>(
       () => ports.getState(),
       () => ports.getBaselineValues(),
       (scopeName) => ports.getScopeFields(scopeName),
       (path) => ports.isPathDirty(path),
     ),
-    query: new BitFieldQueryManager<T>(
+  );
+  registry.register(
+    "query",
+    new BitFieldQueryManager<T>(
       fieldRegistry,
       () => ports.getState(),
       (path) => ports.isPathDirty(path),
     ),
-    error: new BitErrorManager<T>(
+  );
+  registry.register(
+    "error",
+    new BitErrorManager<T>(
       () => ports.getState(),
       (operation) => ports.dispatch(operation),
     ),
-  };
+  );
 }
 
-export function createStoreEffects<T extends object>(args: {
-  storeId: string;
-  storeBusPort: BitBusStorePort<T>;
-  config: BitFrameworkConfig<T>;
-  getState: () => BitState<T>;
-  getConfig: () => BitFrameworkConfig<T>;
-  getValues: () => T;
-  getDirtyValues: () => Partial<T>;
-  applyPersistedValues: (values: Partial<T>) => void;
-}): BitStoreEffectEngine<T> {
-  const {
-    storeId,
-    storeBusPort,
-    config,
-    getState,
-    getConfig,
-    getValues,
-    getDirtyValues,
-    applyPersistedValues,
-  } = args;
+export function composeStoreCapabilities<T extends object>(args: {
+  ports: BitStoreCapabilityPorts<T>;
+  fieldRegistry: BitFieldRegistry<T>;
+}): BitStoreCapabilityComposition<T> {
+  const { ports, fieldRegistry } = args;
+  const registry = createStoreCapabilityRegistry<T>();
+  registerStoreCapabilities({ registry, ports, fieldRegistry });
 
-  const persistManager = new BitPersistManager<T>(
-    config.persist,
-    getValues,
-    getDirtyValues,
-    applyPersistedValues,
-  );
-
-  const pluginManager = new BitPluginManager<T>([...config.plugins], () => ({
-    storeId,
-    getState: () => getState(),
-    getConfig: () => getConfig(),
-  }));
-
-  const enableBusDispatch = shouldEnableStoreBus(config);
-  const resolvedBus = enableBusDispatch
-    ? (config.bus ?? bitBus)
-    : getNoopBitBus();
-
-  const effects = new BitStoreEffectEngine<T>(
-    storeId,
-    storeBusPort,
-    resolvedBus,
-    persistManager,
-    pluginManager,
-    enableBusDispatch,
-  );
-  effects.initialize();
-
-  return effects;
+  return {
+    registry,
+    capabilities: registry.toCapabilities(),
+  };
 }
 
 export function createInitialStoreState<T extends object>(args: {

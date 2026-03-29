@@ -4,7 +4,7 @@ Bit-Form embraces Vue's Composition API. It utilizes `provide` and `inject` to p
 
 Internally, Vue bindings are typed against `BitFrameworkStoreApi<T>` (stable adapter contract), while app code should continue creating stores with `createBitStore()`.
 
-For custom integrations, use `createFrameworkStoreAdapter(store)` to normalize any compatible store into the framework binding contract.
+For custom integrations, use `createFrameworkStoreAdapter(store)` with stores from `createBitStore()` (or already symbol-branded) to obtain the framework binding contract.
 
 ## 1. Provide the Store
 

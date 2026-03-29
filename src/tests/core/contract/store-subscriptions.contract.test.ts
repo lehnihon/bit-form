@@ -4,35 +4,9 @@
  * Importa APENAS via entrypoint público - nunca caminhos internos.
  */
 import { describe, it, expect, vi } from "vitest";
-import {
-  createBitStore as createBitStoreRuntime,
-  createFrameworkStoreAdapter,
-} from "../../../core";
+import { createBitStore as createBitStoreRuntime } from "../../../core";
 
-function adaptToLegacyFlat(store: any) {
-  return {
-    ...store,
-    subscribe: (listener: () => void) => store.observe.subscribe(listener),
-    subscribePath: (
-      path: string,
-      listener: (value: unknown) => void,
-      options?: any,
-    ) => store.observe.subscribePath(path, listener, options),
-    subscribeSelector: (selector: any, listener: any, options?: any) =>
-      store.observe.subscribeSelector(selector, listener, options),
-    subscribeFormMeta: (listener: any) =>
-      store.observe.subscribeFormMeta(listener),
-    subscribeFieldState: (path: string, listener: any) =>
-      store.observe.subscribeFieldState(path, listener),
-    setField: (path: string, value: unknown) =>
-      store.write.setField(path, value),
-  };
-}
-
-const createBitStore = ((config?: any) =>
-  adaptToLegacyFlat(
-    createFrameworkStoreAdapter(createBitStoreRuntime(config)),
-  )) as any;
+const createBitStore = ((config?: any) => createBitStoreRuntime(config)) as any;
 
 describe("Store Subscriptions Contract", () => {
   describe("subscribe (global)", () => {
@@ -40,12 +14,12 @@ describe("Store Subscriptions Contract", () => {
       const store = createBitStore({ initialValues: { name: "Leo", age: 30 } });
       const listener = vi.fn();
 
-      const unsub = store.subscribe(listener);
-      store.setField("name" as any, "Ana" as any);
+      const unsub = store.observe.subscribe(listener);
+      store.write.setField("name" as any, "Ana" as any);
       expect(listener).toHaveBeenCalledTimes(1);
 
       unsub();
-      store.setField("name" as any, "Carl" as any);
+      store.write.setField("name" as any, "Carl" as any);
       expect(listener).toHaveBeenCalledTimes(1); // não notificado após unsub
     });
 
@@ -54,9 +28,9 @@ describe("Store Subscriptions Contract", () => {
       const a = vi.fn();
       const b = vi.fn();
 
-      store.subscribe(a);
-      store.subscribe(b);
-      store.setField("x" as any, 1 as any);
+      store.observe.subscribe(a);
+      store.observe.subscribe(b);
+      store.write.setField("x" as any, 1 as any);
 
       expect(a).toHaveBeenCalledTimes(1);
       expect(b).toHaveBeenCalledTimes(1);
@@ -70,12 +44,12 @@ describe("Store Subscriptions Contract", () => {
       });
       const listener = vi.fn();
 
-      const unsub = store.subscribePath("name" as any, listener);
+      const unsub = store.observe.subscribePath("name" as any, listener);
 
-      store.setField("age" as any, 31 as any);
+      store.write.setField("age" as any, 31 as any);
       expect(listener).not.toHaveBeenCalled();
 
-      store.setField("name" as any, "Ana" as any);
+      store.write.setField("name" as any, "Ana" as any);
       expect(listener).toHaveBeenCalledTimes(1);
       expect(listener).toHaveBeenCalledWith("Ana");
 
@@ -87,11 +61,11 @@ describe("Store Subscriptions Contract", () => {
       const store = createBitStore({ initialValues: { count: 0 } });
       const values: number[] = [];
 
-      store.subscribePath("count" as any, (v) => values.push(v as any));
-      store.setField("count" as any, 1 as any);
-      store.setField("count" as any, 2 as any);
-      store.setField("count" as any, 1 as any); // volta ao 1
-      store.setField("count" as any, 1 as any); // sem mudança — não deve notificar
+      store.observe.subscribePath("count" as any, (v) => values.push(v as any));
+      store.write.setField("count" as any, 1 as any);
+      store.write.setField("count" as any, 2 as any);
+      store.write.setField("count" as any, 1 as any); // volta ao 1
+      store.write.setField("count" as any, 1 as any); // sem mudança — não deve notificar
 
       expect(values).toEqual([1, 2, 1]);
     });
@@ -100,10 +74,10 @@ describe("Store Subscriptions Contract", () => {
       const store = createBitStore({ initialValues: { x: 0 } });
       const listener = vi.fn();
 
-      const unsub = store.subscribePath("x" as any, listener);
+      const unsub = store.observe.subscribePath("x" as any, listener);
       unsub();
 
-      store.setField("x" as any, 99 as any);
+      store.write.setField("x" as any, 99 as any);
       expect(listener).not.toHaveBeenCalled();
     });
   });
@@ -115,14 +89,18 @@ describe("Store Subscriptions Contract", () => {
       });
       const listener = vi.fn();
 
-      store.subscribeSelector((state) => (state.values as any).name, listener, {
-        paths: ["name"],
-      });
+      store.observe.subscribeSelector(
+        (state) => (state.values as any).name,
+        listener,
+        {
+          paths: ["name"],
+        },
+      );
 
-      store.setField("age" as any, 31 as any);
+      store.write.setField("age" as any, 31 as any);
       expect(listener).not.toHaveBeenCalled();
 
-      store.setField("name" as any, "Ana" as any);
+      store.write.setField("name" as any, "Ana" as any);
       expect(listener).toHaveBeenCalledTimes(1);
       expect(listener).toHaveBeenCalledWith("Ana");
     });
@@ -131,17 +109,21 @@ describe("Store Subscriptions Contract", () => {
       const store = createBitStore({ initialValues: { tags: ["a", "b"] } });
       const listener = vi.fn();
 
-      store.subscribeSelector((state) => (state.values as any).tags, listener, {
-        paths: ["tags"],
-        equalityFn: (a: any, b: any) => a.length === b.length,
-      });
+      store.observe.subscribeSelector(
+        (state) => (state.values as any).tags,
+        listener,
+        {
+          paths: ["tags"],
+          equalityFn: (a: any, b: any) => a.length === b.length,
+        },
+      );
 
       // mesmo tamanho, não deve notificar
-      store.setField("tags" as any, ["x", "y"] as any);
+      store.write.setField("tags" as any, ["x", "y"] as any);
       expect(listener).not.toHaveBeenCalled();
 
       // tamanho diferente, deve notificar
-      store.setField("tags" as any, ["x"] as any);
+      store.write.setField("tags" as any, ["x"] as any);
       expect(listener).toHaveBeenCalledTimes(1);
     });
   });
@@ -153,18 +135,18 @@ describe("Store Subscriptions Contract", () => {
       });
       const listener = vi.fn();
 
-      store.subscribeSelector(
+      store.observe.subscribeSelector(
         (state) => ({ name: (state.values as any).user.name }),
         listener,
         { mode: "tracked" },
       );
 
       // mudança em campo não acessado - não deve notificar
-      store.setField("title" as any, "Mr" as any);
+      store.write.setField("title" as any, "Mr" as any);
       expect(listener).not.toHaveBeenCalled();
 
       // mudança em campo acessado - deve notificar
-      store.setField("user.name" as any, "Ana" as any);
+      store.write.setField("user.name" as any, "Ana" as any);
       expect(listener).toHaveBeenCalledTimes(1);
       expect(listener).toHaveBeenCalledWith({ name: "Ana" });
     });
@@ -175,9 +157,9 @@ describe("Store Subscriptions Contract", () => {
       const store = createBitStore({ initialValues: { name: "" } });
       const metaValues: any[] = [];
 
-      store.subscribeFormMeta((meta) => metaValues.push({ ...meta }));
+      store.observe.subscribeFormMeta((meta) => metaValues.push({ ...meta }));
 
-      store.setField("name" as any, "Leo" as any);
+      store.write.setField("name" as any, "Leo" as any);
       // isDirty deve ter mudado
       expect(metaValues.length).toBeGreaterThan(0);
       expect(metaValues[metaValues.length - 1].isDirty).toBe(true);
@@ -189,9 +171,11 @@ describe("Store Subscriptions Contract", () => {
       const store = createBitStore({ initialValues: { email: "" } });
       const snapshots: any[] = [];
 
-      store.subscribeFieldState("email" as any, (s) => snapshots.push(s));
+      store.observe.subscribeFieldState("email" as any, (s) =>
+        snapshots.push(s),
+      );
 
-      store.setField("email" as any, "leo@test.com" as any);
+      store.write.setField("email" as any, "leo@test.com" as any);
       expect(snapshots.length).toBeGreaterThan(0);
       expect(snapshots[0].value).toBe("leo@test.com");
     });
@@ -200,9 +184,11 @@ describe("Store Subscriptions Contract", () => {
       const store = createBitStore({ initialValues: { email: "" } });
       const snapshots: any[] = [];
 
-      store.subscribeFieldState("email" as any, (s) => snapshots.push(s));
+      store.observe.subscribeFieldState("email" as any, (s) =>
+        snapshots.push(s),
+      );
 
-      store.setField("email" as any, "x@test.com" as any);
+      store.write.setField("email" as any, "x@test.com" as any);
       const last = snapshots[snapshots.length - 1];
       expect(last.isDirty).toBe(true);
     });

@@ -6,6 +6,7 @@ import {
   BitStoreHooksApi,
 } from "../contracts/public/store-api-types";
 import { BIT_FRAMEWORK_STORE_SYMBOL } from "./framework-store-brand";
+import { BIT_HOOKS_API_SYMBOL } from "./hook-brand";
 
 function isHookCompatibleStore<T extends object>(
   store: unknown,
@@ -16,6 +17,7 @@ function isHookCompatibleStore<T extends object>(
 
   const candidate = store as Record<PropertyKey, unknown>;
   return (
+    candidate[BIT_HOOKS_API_SYMBOL] === true &&
     !!candidate.read &&
     !!candidate.observe &&
     !!candidate.write &&
@@ -51,20 +53,37 @@ export function createFrameworkStoreAdapter<T extends object>(
 ): BitFrameworkStoreApi<T> {
   if (!isHookCompatibleStore<T>(store)) {
     throw new Error(
-      "BitForm: o store informado não expõe o contrato namespaced esperado pelo framework adapter.",
+      "BitForm: o store informado não possui branding de hooks (BIT_HOOKS_API_SYMBOL).",
     );
   }
 
   if (!isFrameworkBindingStore<T>(store)) {
-    Object.defineProperty(store as object, BIT_FRAMEWORK_STORE_SYMBOL, {
-      value: true,
-      enumerable: false,
-      configurable: false,
-      writable: false,
-    });
+    throw new Error(
+      "BitForm: o store informado não possui branding de framework (BIT_FRAMEWORK_STORE_SYMBOL).",
+    );
   }
 
   return store as BitFrameworkStoreApi<T>;
+}
+
+function applyStoreBranding<T extends object>(
+  store: BitStoreApi<T>,
+): BitStoreApi<T> {
+  Object.defineProperty(store as object, BIT_HOOKS_API_SYMBOL, {
+    value: true,
+    enumerable: false,
+    configurable: false,
+    writable: false,
+  });
+
+  Object.defineProperty(store as object, BIT_FRAMEWORK_STORE_SYMBOL, {
+    value: true,
+    enumerable: false,
+    configurable: false,
+    writable: false,
+  });
+
+  return store;
 }
 
 export function createBitStore<T extends object = Record<string, unknown>>(
@@ -72,10 +91,12 @@ export function createBitStore<T extends object = Record<string, unknown>>(
 ): BitStoreApi<T> {
   const internalStore = createInternalBitStore<T>(config);
 
-  return {
+  const storeApi: BitStoreApi<T> = {
     read: internalStore.read,
     observe: internalStore.observe,
     write: internalStore.write,
     feature: internalStore.feature,
   };
+
+  return applyStoreBranding(storeApi);
 }
