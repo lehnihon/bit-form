@@ -1,14 +1,13 @@
-import type {
-  BitFieldDefinition,
-} from "../contracts/types";
+import type { BitFieldDefinition } from "../contracts/types";
 
+import type { BitMask } from "../../mask/types";
 import type {
-  BitStoreIdentityApi,
-  BitStoreReadSliceApi,
-  BitStoreObserveSliceApi,
-  BitStoreWriteSliceApi,
   BitStoreFeatureApi,
+  BitStoreIdentityApi,
   BitStoreNamespacesApi,
+  BitStoreObserveSliceApi,
+  BitStoreReadSliceApi,
+  BitStoreWriteSliceApi,
 } from "../contracts/public/store-api-types";
 import type {
   BitStoreFeatureDomain,
@@ -16,7 +15,6 @@ import type {
   BitStoreReadDomain,
   BitStoreWriteDomain,
 } from "./store-domains";
-import type { BitMask } from "../../mask/types";
 
 export interface BitStoreSlicesFactoryDeps<
   T extends object = Record<string, unknown>,
