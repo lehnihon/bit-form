@@ -210,7 +210,7 @@ describe("BitStore Core", () => {
       expect(store.getState().isValid).toBe(true);
       expect(store.getState().isDirty).toBe(false);
       expect(store.getState().isSubmitting).toBe(false);
-      expect(store.getConfig().initialValues).toEqual({ name: "Leo" });
+      expect(store.config.initialValues).toEqual({ name: "Leo" });
     });
 
     it("should update field and notify listeners", () => {
@@ -984,7 +984,7 @@ describe("BitStore Core", () => {
       store.setValues({ name: "Leandro", age: 31 });
 
       expect(store.getState().values).toEqual({ name: "Leandro", age: 31 });
-      expect(store.getConfig().initialValues).toEqual({ name: "Leo", age: 30 });
+      expect(store.config.initialValues).toEqual({ name: "Leo", age: 30 });
       expect(store.getState().isDirty).toBe(true);
     });
 
@@ -1010,7 +1010,7 @@ describe("BitStore Core", () => {
       store.setValues({ name: "Leandro", age: 31 }, { rebase: true });
 
       expect(store.getState().values).toEqual({ name: "Leandro", age: 31 });
-      expect(store.getConfig().initialValues).toEqual({ name: "Leo", age: 30 });
+      expect(store.config.initialValues).toEqual({ name: "Leo", age: 30 });
       expect(store.getState().isDirty).toBe(false);
     });
 

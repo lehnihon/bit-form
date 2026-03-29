@@ -225,39 +225,44 @@ export class BitValidationManager<T extends object> {
   }
 
   async validate(options?: BitValidationOptions): Promise<boolean> {
-    if (options?.scopeFields?.length) {
-      options.scopeFields.forEach((fieldPath) =>
-        this.cancelFieldAsync(fieldPath),
-      );
+    try {
+      if (options?.scopeFields?.length) {
+        options.scopeFields.forEach((fieldPath) =>
+          this.cancelFieldAsync(fieldPath),
+        );
+      }
+
+      const context: ValidationPipelineContext<T> = {
+        options,
+        validationId: this.coordinator.beginValidation(),
+        currentState: this.store.getState(),
+        targetFields: options?.scopeFields,
+        allErrors: {},
+        committedErrors: {},
+        isValid: true,
+        result: true,
+        aborted: false,
+      };
+
+      await this.validationPipeline.run(context);
+
+      if (context.aborted) {
+        await this.store.emitAfterValidate({
+          values: this.store.getState().values,
+          state: this.store.getState(),
+          scope: context.options?.scope,
+          scopeFields: context.targetFields,
+          errors: this.store.getState().errors,
+          result: context.currentState.isValid,
+          aborted: true,
+        });
+      }
+
+      return context.result;
+    } catch (error) {
+      this.store.config.onUnhandledError(error, "validation");
+      return false;
     }
-
-    const context: ValidationPipelineContext<T> = {
-      options,
-      validationId: this.coordinator.beginValidation(),
-      currentState: this.store.getState(),
-      targetFields: options?.scopeFields,
-      allErrors: {},
-      committedErrors: {},
-      isValid: true,
-      result: true,
-      aborted: false,
-    };
-
-    await this.validationPipeline.run(context);
-
-    if (context.aborted) {
-      await this.store.emitAfterValidate({
-        values: this.store.getState().values,
-        state: this.store.getState(),
-        scope: context.options?.scope,
-        scopeFields: context.targetFields,
-        errors: this.store.getState().errors,
-        result: context.currentState.isValid,
-        aborted: true,
-      });
-    }
-
-    return context.result;
   }
 
   clear(path: string) {

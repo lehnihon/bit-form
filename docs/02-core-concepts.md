@@ -139,6 +139,64 @@ Dedicated metadata subscriptions are also available for framework bindings and e
 - `subscribeHistoryMeta()` for undo/redo metadata
 - `subscribeScopeStatus()` for per-scope status snapshots
 
+## 🎯 API Access Patterns
+
+Once you've created a store with `createBitStore()`, you can interact with it in two complementary ways:
+
+### Direct Method Access (Convenience)
+
+Methods are exposed directly on the `BitStore` instance for quick app-level usage:
+
+```typescript
+const store = createBitStore({ initialValues: { name: "" } });
+
+store.setField("name", "Leo");
+store.config.idFactory;
+store.isValid;
+store.subscribe(listener);
+```
+
+This style is ideal for **application code** where you control the entire component lifecycle.
+
+### Namespaced Slice Access (Composition)
+
+For **reusable utilities, services, and custom hooks**, prefer passing specific slices:
+
+```typescript
+function useFormMeta(readSlice: BitStoreReadSliceApi<MyForm>) {
+  const [meta, setMeta] = useState<BitFormMeta>();
+
+  useEffect(() => {
+    return readSlice.subscribe(() => {
+      setMeta({
+        isValid: readSlice.getIsValid(),
+        isDirty: readSlice.getIsDirty(),
+      });
+    });
+  }, [readSlice]);
+
+  return meta;
+}
+
+// Usage
+useFormMeta(store.read);
+```
+
+**Benefits:**
+
+- Type-safe: functions receiving `BitStoreReadSliceApi<T>` can only read, not mutate
+- Composable: easier to test in isolation
+- Explicit: callers know exactly what capabilities they're accessing
+
+### Choosing Your Style
+
+| Context                | Recommended    | Example                                              |
+| ---------------------- | -------------- | ---------------------------------------------------- |
+| **Direct app code**    | Direct methods | `store.setField()`, `store.config`                   |
+| **Shared utilities**   | Slices         | Pass `store.read`, `store.write` to functions        |
+| **Framework bindings** | Slices         | `useBitForm(store.read, store.write, store.feature)` |
+| **Testing**            | Slices         | Easier to mock and verify capability contracts       |
+
 ---
 
 With these concepts in mind, you are ready to tackle complex form scenarios. Next, check out how to integrate this core engine with your favorite framework in the **Framework Guides**.

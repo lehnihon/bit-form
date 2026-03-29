@@ -56,7 +56,10 @@ export interface BitFrameworkConfig<
   scheduler?: BitScheduler;
   subscriptionCacheSize?: number;
   bus?: BitFormGlobal;
-  onUnhandledError: (error: unknown, source: "submit") => void;
+  onUnhandledError: (
+    error: unknown,
+    source: "submit" | "validation" | "persist",
+  ) => void;
 }
 
 export interface BitFormReadApi<T extends object = Record<string, unknown>> {

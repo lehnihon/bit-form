@@ -4,6 +4,14 @@ export {
   createFrameworkStoreAdapter,
 } from "./store/orchestration/create-store";
 
+export {
+  extractReadSlice,
+  extractObserveSlice,
+  extractWriteSlice,
+  extractFeatureSlice,
+  extractSlices,
+} from "./store/orchestration/store-slice-extractors";
+
 export type {
   BitStoreApi,
   BitFrameworkStoreApi,
