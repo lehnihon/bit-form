@@ -4,7 +4,7 @@ Forms often require fields to appear, disappear, or become mandatory based on th
 
 ## Registering Dependencies
 
-You can configure fields using the `fields` property in `createBitStore`, or dynamically using `store.registerField()`.
+You can configure fields using the `fields` property in `createBitStore`, or dynamically using `store.feature.registerField()`.
 
 ```tsx
 const store = createBitStore({

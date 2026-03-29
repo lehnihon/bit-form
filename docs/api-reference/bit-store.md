@@ -30,7 +30,7 @@ For applications and framework integrations, use `createBitStore` and the offici
 
 Framework adapters should prefer the segmented adapter contracts from `@lehnihon/bit-form/core`, such as `BitFormMetaBindingApi`, `BitFieldBindingApi`, `BitArrayBindingApi` and `BitFrameworkStoreApi`.
 
-> Dev note (V5 cycle): `BitStoreApi` now models the namespaced surface (`read`, `observe`, `write`, `feature`) as the canonical contract. The flat method surface remains available on `BitStoreHooksApi` returned by `createBitStore` during migration.
+> Dev note (V5+): `BitStoreApi` uses the namespaced surface (`read`, `observe`, `write`, `feature`) as the official public contract. Flat methods are no longer part of the supported public API.
 
 - **Type parameter**: `T` — the shape of `values`. Defaults to `any` if omitted.
 - **Parameter**: `config?: BitConfig<T>` — see [Types Reference](./types.md) for all options.
@@ -41,23 +41,23 @@ Framework adapters should prefer the segmented adapter contracts from `@lehnihon
 
 ## Core State & Accessors
 
-### `getState(): BitState<T>`
+### `read.getState(): BitState<T>`
 
 Returns the current state snapshot.
 
 ```ts
-const state = store.getState();
+const state = store.read.getState();
 // state.values, state.errors, state.isValid, etc.
 ```
 
 See [`BitState<T>` in the types reference](./types.md#bitstatet) for the full structure.
 
-### `getConfig(): BitFrameworkConfig<T>`
+### `read.getConfig(): BitFrameworkConfig<T>`
 
 Returns the resolved configuration, including normalized defaults and `initialValues`.
 
 ```ts
-const config = store.getConfig();
+const config = store.read.getConfig();
 console.log(config.initialValues);
 ```
 
@@ -65,23 +65,23 @@ console.log(config.initialValues);
 
 These read-only getters mirror common flags from `BitState`:
 
-- **`store.isValid: boolean`** — `true` when there are no validation errors.
-- **`store.isSubmitting: boolean`** — `true` while a submission is in progress.
-- **`store.isDirty: boolean`** — `true` if any field differs from `initialValues`.
+- **`store.read.isValid: boolean`** — `true` when there are no validation errors.
+- **`store.read.isSubmitting: boolean`** — `true` while a submission is in progress.
+- **`store.read.isDirty: boolean`** — `true` if any field differs from `initialValues`.
 
-They are equivalent to reading `getState().isValid`, `getState().isSubmitting`, and `getState().isDirty`.
+They are equivalent to reading `read.getState().isValid`, `read.getState().isSubmitting`, and `read.getState().isDirty`.
 
 ---
 
 ## Subscriptions & Watching
 
-### `subscribe(listener: () => void): () => void`
+### `observe.subscribe(listener: () => void): () => void`
 
 Registers a listener that is called on every state update. Returns an unsubscribe function.
 
 ```ts
-const unsubscribe = store.subscribe(() => {
-  const state = store.getState();
+const unsubscribe = store.observe.subscribe(() => {
+  const state = store.read.getState();
   console.log("Values changed:", state.values);
 });
 
@@ -89,19 +89,22 @@ const unsubscribe = store.subscribe(() => {
 unsubscribe();
 ```
 
-### `subscribePath<P extends BitPath<T>>(path: P, callback: (value: BitPathValue<T, P>) => void): () => void`
+### `observe.subscribePath<P extends BitPath<T>>(path: P, callback: (value: BitPathValue<T, P>) => void): () => void`
 
 Subscribes to changes for a specific field path. The callback is only called when the value at that path actually changes (deep comparison).
 
 ```ts
-const stopWatching = store.subscribePath("user.address.city", (city) => {
-  console.log("City changed:", city);
-});
+const stopWatching = store.observe.subscribePath(
+  "user.address.city",
+  (city) => {
+    console.log("City changed:", city);
+  },
+);
 ```
 
 Use this for side-effects like analytics, autosave, or cross-form coordination.
 
-### `subscribeFieldState<P extends BitPath<T>>(path: P, listener: (state: BitFieldState<T, BitPathValue<T, P>>) => void): () => void`
+### `observe.subscribeFieldState<P extends BitPath<T>>(path: P, listener: (state: BitFieldState<T, BitPathValue<T, P>>) => void): () => void`
 
 Subscribes to the full reactive snapshot of a single field (`value`, `error`, `touched`, `isHidden`, `isRequired`, `isDirty`, `isValidating`).
 
@@ -110,49 +113,49 @@ Subscribes to the full reactive snapshot of a single field (`value`, `error`, `t
 - Reacts to dependency-driven metadata changes too, including `showIf` and `requiredIf` transitions.
 
 ```ts
-const unsubscribe = store.subscribeFieldState("email", (field) => {
+const unsubscribe = store.observe.subscribeFieldState("email", (field) => {
   console.log(field.value, field.error, field.isValidating);
 });
 ```
 
-### `subscribeFormMeta(listener: (meta: { isValid: boolean; isDirty: boolean; isSubmitting: boolean }) => void): () => void`
+### `observe.subscribeFormMeta(listener: (meta: { isValid: boolean; isDirty: boolean; isSubmitting: boolean }) => void): () => void`
 
 Subscribes to form-level metadata updates only (`isValid`, `isDirty`, `isSubmitting`).
 
 ```ts
-const unsubscribe = store.subscribeFormMeta((meta) => {
+const unsubscribe = store.observe.subscribeFormMeta((meta) => {
   console.log(meta.isValid, meta.isDirty, meta.isSubmitting);
 });
 ```
 
-### `subscribePersistMeta(listener: (meta: BitPersistMetadata) => void): () => void`
+### `observe.subscribePersistMeta(listener: (meta: BitPersistMetadata) => void): () => void`
 
 Subscribes only to persistence metadata updates (`isSaving`, `isRestoring`, `error`).
 
 ```ts
-const unsubscribe = store.subscribePersistMeta((meta) => {
+const unsubscribe = store.observe.subscribePersistMeta((meta) => {
   console.log(meta.isSaving, meta.isRestoring, meta.error);
 });
 ```
 
-### `subscribeHistoryMeta(listener: (meta: BitHistoryMetadata) => void): () => void`
+### `observe.subscribeHistoryMeta(listener: (meta: BitHistoryMetadata) => void): () => void`
 
 Subscribes to undo/redo metadata updates (`canUndo`, `canRedo`, `historyIndex`, `historySize`).
 
 ```ts
-const unsubscribe = store.subscribeHistoryMeta((meta) => {
+const unsubscribe = store.observe.subscribeHistoryMeta((meta) => {
   console.log(meta.canUndo, meta.canRedo, meta.historyIndex);
 });
 ```
 
-### `subscribeScopeStatus(scopeName: string, listener: (status: ScopeStatus) => void): () => void`
+### `observe.subscribeScopeStatus(scopeName: string, listener: (status: ScopeStatus) => void): () => void`
 
 Subscribes to the aggregated status of a configured scope/step.
 
 - Scope subscriptions stay consistent even when fields are registered into or removed from the scope after the subscription starts.
 
 ```ts
-const unsubscribe = store.subscribeScopeStatus("shipping", (status) => {
+const unsubscribe = store.observe.subscribeScopeStatus("shipping", (status) => {
   console.log(status.hasErrors, status.isDirty, status.errors);
 });
 ```
@@ -165,12 +168,12 @@ const unsubscribe = store.subscribeScopeStatus("shipping", (status) => {
 > Example:
 >
 > ```ts
-> store.subscribeSelector((state) => state.values.user.name, listener, {
+> store.observe.subscribeSelector((state) => state.values.user.name, listener, {
 >   mode: "scoped",
 >   paths: ["user.name"],
 > });
 >
-> store.subscribeSelector(
+> store.observe.subscribeSelector(
 >   (state) =>
 >     state.values.mode === "name" ? state.values.user.name : state.values.city,
 >   listener,
@@ -184,15 +187,15 @@ const unsubscribe = store.subscribeScopeStatus("shipping", (status) => {
 
 Bit-Form exposes manual draft persistence actions on the public store facade.
 
-### `forceSave(): Promise<void>`
+### `feature.forceSave(): Promise<void>`
 
 Saves the current persist payload immediately.
 
 ```ts
-await store.forceSave();
+await store.feature.forceSave();
 ```
 
-### `restorePersisted(): Promise<boolean>`
+### `feature.restorePersisted(): Promise<boolean>`
 
 Attempts to read saved payload and apply it to current state.
 
@@ -201,32 +204,32 @@ Attempts to read saved payload and apply it to current state.
 - Restored payloads are deep-merged with the current baseline, so partial nested drafts do not erase sibling keys.
 
 ```ts
-const restored = await store.restorePersisted();
+const restored = await store.feature.restorePersisted();
 if (restored) {
   console.log("Draft restored");
 }
 ```
 
-### `clearPersisted(): Promise<void>`
+### `feature.clearPersisted(): Promise<void>`
 
 Removes persisted payload from storage.
 
 ```ts
-await store.clearPersisted();
+await store.feature.clearPersisted();
 ```
 
 See [Draft Persistence feature guide](../features/persistence.md) for full configuration details.
 
-### `getPersistMetadata(): BitPersistMetadata`
+### `read.getPersistMetadata(): BitPersistMetadata`
 
 Returns the latest persistence metadata snapshot from core state.
 
 ```ts
-const meta = store.getPersistMetadata();
+const meta = store.read.getPersistMetadata();
 console.log(meta.isSaving, meta.isRestoring, meta.error);
 ```
 
-### `getDirtyValues(): Partial<T>`
+### `read.getDirtyValues(): Partial<T>`
 
 Returns an object containing only the fields that have changed from their initial values.
 
@@ -236,17 +239,17 @@ Returns an object containing only the fields that have changed from their initia
 
 ```ts
 // Initial: { name: "Leo", age: 30, city: "Tokyo" }
-store.setField("name", "Leandro");
-store.setField("age", 31);
+store.write.setField("name", "Leandro");
+store.write.setField("age", 31);
 
-const dirty = store.getDirtyValues();
+const dirty = store.read.getDirtyValues();
 // { name: "Leandro", age: 31 }
 ```
 
 Useful for PATCH requests that only send modified fields:
 
 ```ts
-const dirtyValues = store.getDirtyValues();
+const dirtyValues = store.read.getDirtyValues();
 if (Object.keys(dirtyValues).length > 0) {
   await api.patch(`/users/${id}`, dirtyValues);
 }
@@ -256,7 +259,7 @@ if (Object.keys(dirtyValues).length > 0) {
 
 ## Field & Value Management
 
-### `setField(path: string, value: any): void`
+### `write.setField(path: string, value: any): void`
 
 Updates a single field value by path.
 
@@ -265,10 +268,10 @@ Updates a single field value by path.
 - Triggers validation lifecycle (depending on your `resolver` & async validation configuration).
 
 ```ts
-store.setField("email", "john@example.com");
+store.write.setField("email", "john@example.com");
 ```
 
-### `setValues(values, options?): void`
+### `write.setValues(values, options?): void`
 
 Sets multiple values with three modes:
 
@@ -279,19 +282,22 @@ Sets multiple values with three modes:
 After `rebase`, all dirty calculations (including array operations like `pushItem`, `removeItem`, `swapItems`) are evaluated against the new runtime baseline.
 
 ```ts
-store.setValues({ name: "John", email: "john@example.com" });
+store.write.setValues({ name: "John", email: "john@example.com" });
 
-store.setValues(
+store.write.setValues(
   {
     profile: { city: "Osaka" },
   },
   { partial: true },
 );
 
-store.setValues({ name: "John", email: "john@example.com" }, { rebase: true });
+store.write.setValues(
+  { name: "John", email: "john@example.com" },
+  { rebase: true },
+);
 ```
 
-### `blurField(path: string): void`
+### `write.blurField(path: string): void`
 
 Signals that a field has been blurred (lost focus).
 
@@ -299,22 +305,22 @@ Signals that a field has been blurred (lost focus).
 - Triggers validation for that field.
 
 ```ts
-store.blurField("email");
+store.write.blurField("email");
 ```
 
-### `reset(): void`
+### `write.reset(): void`
 
 Resets the form to `initialValues` and clears errors, touched state and dirty flags (through the lifecycle manager).
 
 ```ts
-store.reset();
+store.write.reset();
 ```
 
 ---
 
 ## Validation & Errors
 
-### `validate(options?: { scope?: string; scopeFields?: string[] }): Promise<boolean>`
+### `write.validate(options?: { scope?: string; scopeFields?: string[] }): Promise<boolean>`
 
 Runs validation for the configured resolver and returns whether the form is valid.
 
@@ -322,31 +328,31 @@ Runs validation for the configured resolver and returns whether the form is vali
 - **`scopeFields`**: explicit list of field paths to validate.
 
 ```ts
-const isValid = await store.validate();
-const stepValid = await store.validate({ scope: "shipping" });
+const isValid = await store.write.validate();
+const stepValid = await store.write.validate({ scope: "shipping" });
 ```
 
-### `setError(path: string, message: string | undefined): void`
+### `write.setError(path: string, message: string | undefined): void`
 
 Manually sets (or clears) a single field error.
 
 ```ts
-store.setError("email", "Email already taken");
-store.setError("email", undefined); // clear
+store.write.setError("email", "Email already taken");
+store.write.setError("email", undefined); // clear
 ```
 
-### `setErrors(errors: BitErrors<T>): void`
+### `write.setErrors(errors: BitErrors<T>): void`
 
 Merges a partial set of errors into the current error map.
 
 ```ts
-store.setErrors({
+store.write.setErrors({
   email: "Invalid email",
   name: "Name is required",
 });
 ```
 
-### `setServerErrors(serverErrors: Record<string, string | string[]>): void`
+### `write.setServerErrors(serverErrors: Record<string, string | string[]>): void`
 
 Helper for mapping server-side validation responses into the internal error structure.
 
@@ -354,18 +360,18 @@ Helper for mapping server-side validation responses into the internal error stru
 - Automatically marks the form as invalid.
 
 ```ts
-store.setServerErrors({
+store.write.setServerErrors({
   email: ["Email already taken"],
   "address.zip": "Invalid ZIP code",
 });
 ```
 
-### `isFieldValidating(path: string): boolean`
+### `read.isFieldValidating(path: string): boolean`
 
 Returns `true` if the given field is currently running an asynchronous validation.
 
 ```ts
-if (store.isFieldValidating("email")) {
+if (store.read.isFieldValidating("email")) {
   // show a loading indicator for the email field
 }
 ```
@@ -376,22 +382,22 @@ if (store.isFieldValidating("email")) {
 
 These methods let you query the dependency manager directly.
 
-### `isHidden(path: string): boolean`
+### `read.isHidden(path: string): boolean`
 
 Returns `true` if the field is currently hidden due to its `showIf` condition.
 
 ```ts
-if (store.isHidden("company.name")) {
+if (store.read.isHidden("company.name")) {
   // do not render that field
 }
 ```
 
-### `isRequired(path: string): boolean`
+### `read.isRequired(path: string): boolean`
 
 Returns `true` if the field is currently required due to `requiredIf` or other config.
 
 ```ts
-const required = store.isRequired("company.taxId");
+const required = store.read.isRequired("company.taxId");
 ```
 
 ### Field configuration: `fields` vs `registerField`
@@ -423,7 +429,7 @@ const store = createBitStore({
 **Example with `registerField` (imperative, at runtime):**
 
 ```ts
-store.registerField("company.taxId", {
+store.feature.registerField("company.taxId", {
   conditional: {
     dependsOn: ["company.country"],
     showIf: (values) => values.company?.country === "BR",
@@ -431,12 +437,12 @@ store.registerField("company.taxId", {
 });
 ```
 
-### `registerField(path: string, config: BitFieldDefinition<T>): void`
+### `feature.registerField(path: string, config: BitFieldDefinition<T>): void`
 
 Registers or updates the configuration for a single field path after the store has been created. Ideal for dynamic fields or when passing config from a component.
 
 ```ts
-store.registerField("company.taxId", {
+store.feature.registerField("company.taxId", {
   conditional: {
     dependsOn: ["company.country"],
     showIf: (values) => values.company?.country === "BR",
@@ -444,12 +450,12 @@ store.registerField("company.taxId", {
 });
 ```
 
-### `unregisterField(path: string): void`
+### `feature.unregisterField(path: string): void`
 
 Unregisters a single field from the dependency manager and removes its `errors` and `touched` entries from the state.
 
 ```ts
-store.unregisterField("company.name");
+store.feature.unregisterField("company.name");
 ```
 
 ---
@@ -460,17 +466,17 @@ Array operations delegate to the internal `BitArrayManager` and keep errors/touc
 
 All methods receive a **path to an array field** plus indices/values.
 
-- `pushItem(path: string, value: any): void`
-- `prependItem(path: string, value: any): void`
-- `insertItem(path: string, index: number, value: any): void`
-- `removeItem(path: string, index: number): void`
-- `swapItems(path: string, indexA: number, indexB: number): void`
-- `moveItem(path: string, fromIndex: number, toIndex: number): void`
+- `feature.pushItem(path: string, value: any): void`
+- `feature.prependItem(path: string, value: any): void`
+- `feature.insertItem(path: string, index: number, value: any): void`
+- `feature.removeItem(path: string, index: number): void`
+- `feature.swapItems(path: string, indexA: number, indexB: number): void`
+- `feature.moveItem(path: string, fromIndex: number, toIndex: number): void`
 
 ```ts
-store.pushItem("items", { name: "", price: 0 });
-store.removeItem("items", 2);
-store.moveItem("items", 0, 1);
+store.feature.pushItem("items", { name: "", price: 0 });
+store.feature.removeItem("items", 2);
+store.feature.moveItem("items", 0, 1);
 ```
 
 ---
@@ -481,27 +487,27 @@ History is enabled by setting `history: { enabled: true }` in the `BitConfig`. S
 
 When using `transaction(...)`, history snapshots are batch-aware: multiple mutations inside the same transaction produce a single history entry.
 
-### `canUndo: boolean` / `canRedo: boolean`
+### `feature.canUndo: boolean` / `feature.canRedo: boolean`
 
 Flags indicating whether there is a previous or next snapshot to navigate to.
 
 ```ts
-if (store.canUndo) {
-  store.undo();
+if (store.feature.canUndo) {
+  store.feature.undo();
 }
 ```
 
-### `undo(): void`
+### `feature.undo(): void`
 
 Restores the previous snapshot of `values` and re-runs validation.
 
-### `redo(): void`
+### `feature.redo(): void`
 
 Restores the next snapshot of `values` and re-runs validation.
 
 ```ts
-store.undo();
-store.redo();
+store.feature.undo();
+store.feature.redo();
 ```
 
 ---
@@ -518,24 +524,24 @@ Framework adapters (React/Vue/Angular) are typed against `BitFrameworkStoreApi<T
 
 ## Multi‑Step Flows & Scopes
 
-### `getScopeStatus(scopeName: string): { hasErrors: boolean; isDirty: boolean; errors: Record<string, string> }`
+### `read.getScopeStatus(scopeName: string): { hasErrors: boolean; isDirty: boolean; errors: Record<string, string> }`
 
 Returns a summary of the state of a scope (typically a wizard step) based on fields mapped with `scope`.
 
 ```ts
-const shippingStatus = store.getScopeStatus("shipping");
+const shippingStatus = store.read.getScopeStatus("shipping");
 
 if (shippingStatus.hasErrors) {
   // show a badge on the step
 }
 ```
 
-### `isFieldDirty(path: string): boolean`
+### `read.isFieldDirty(path: string): boolean`
 
 Checks whether a single field differs from its initial value.
 
 ```ts
-if (store.isFieldDirty("address.zip")) {
+if (store.read.isFieldDirty("address.zip")) {
   // enable a "Reset field" button
 }
 ```
@@ -544,7 +550,7 @@ if (store.isFieldDirty("address.zip")) {
 
 ## Submission Lifecycle
 
-### `submit(onSuccess: (values: T, dirtyValues?: Partial<T>) => void | Promise<void>): Promise<BitSubmitResult>`
+### `write.submit(onSuccess: (values: T, dirtyValues?: Partial<T>) => void | Promise<void>): Promise<BitSubmitResult>`
 
 Runs the full submission lifecycle through the internal `BitLifecycleManager`:
 
@@ -563,14 +569,14 @@ The callback receives two parameters:
 
 ```ts
 // Using dirtyValues for PATCH
-const onSubmit = store.submit(async (values, dirtyValues) => {
+const onSubmit = store.write.submit(async (values, dirtyValues) => {
   if (dirtyValues && Object.keys(dirtyValues).length > 0) {
     await api.patch(`/users/${id}`, dirtyValues);
   }
 });
 
 // Or ignore dirtyValues if not needed
-const onSubmit = store.submit(async (values) => {
+const onSubmit = store.write.submit(async (values) => {
   await api.post("/users", values);
 });
 ```
@@ -588,7 +594,7 @@ The returned result follows:
 
 ## Cleanup
 
-### `cleanup(): void`
+### `feature.cleanup(): void`
 
 Disposes the store completely:
 
@@ -599,7 +605,7 @@ Disposes the store completely:
 Call this when a store is no longer needed (e.g. when unmounting a long-lived custom instance).
 
 ```ts
-store.cleanup();
+store.feature.cleanup();
 ```
 
 ---

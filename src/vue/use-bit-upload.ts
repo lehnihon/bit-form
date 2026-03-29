@@ -26,7 +26,7 @@ export function useBitUpload(
       isUploading.value = val;
     },
     setError: (path: string, msg: string | undefined) =>
-      store.setError(path, msg),
+      store.write.setError(path, msg),
     setValue: (val: string | null) => field.setValue(val),
     getUploadKey: () => uploadKey,
     setUploadKey: (key: string | null) => {

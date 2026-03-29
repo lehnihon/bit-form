@@ -10,10 +10,19 @@ import {
   createFrameworkStoreAdapter,
 } from "../../../core";
 
+function adaptToLegacyFlat(store: any) {
+  return {
+    ...store,
+    getState: () => store.read.getState(),
+  };
+}
+
 function createBitStore<T extends object = Record<string, unknown>>(
   config?: any,
 ) {
-  return createFrameworkStoreAdapter(createBitStoreRuntime<T>(config)) as any;
+  return adaptToLegacyFlat(
+    createFrameworkStoreAdapter(createBitStoreRuntime<T>(config)),
+  ) as any;
 }
 
 describe("useBitUpload (React)", () => {

@@ -10,8 +10,73 @@ import {
   createFrameworkStoreAdapter,
 } from "../../../core";
 
+function adaptToLegacyFlat(store: any) {
+  return {
+    ...store,
+    getState: () => store.read.getState(),
+    getFieldState: (path: string) => store.read.getFieldState(path),
+    get isValid() {
+      return store.read.isValid;
+    },
+    get isSubmitting() {
+      return store.read.isSubmitting;
+    },
+    get isDirty() {
+      return store.read.isDirty;
+    },
+    isFieldDirty: (path: string) => store.read.isFieldDirty(path),
+    getDirtyValues: () => store.read.getDirtyValues(),
+    getPersistMetadata: () => store.read.getPersistMetadata(),
+    getHistoryMetadata: () => store.read.getHistoryMetadata(),
+    getScopeStatus: (scopeName: string) => store.read.getScopeStatus(scopeName),
+    getScopeErrors: (scopeName: string) => store.read.getScopeErrors(scopeName),
+
+    subscribe: (listener: () => void) => store.observe.subscribe(listener),
+
+    setField: (path: string, value: unknown) =>
+      store.write.setField(path, value),
+    blurField: (path: string) => store.write.blurField(path),
+    markFieldsTouched: (paths: string[]) =>
+      store.write.markFieldsTouched(paths),
+    setValues: (values: unknown, options?: any) =>
+      store.write.setValues(values, options),
+    setError: (path: string, message: string | undefined) =>
+      store.write.setError(path, message),
+    setErrors: (errors: unknown) => store.write.setErrors(errors),
+    setServerErrors: (errors: Record<string, string[] | string>) =>
+      store.write.setServerErrors(errors),
+    validate: (options?: any) => store.write.validate(options),
+    triggerValidation: (scopeFields?: string[], options?: any) =>
+      store.write.triggerValidation(scopeFields, options),
+    reset: () => store.write.reset(),
+    transaction: (callback: () => unknown) => store.write.transaction(callback),
+    submit: (onSuccess: (values: unknown, dirtyValues?: unknown) => unknown) =>
+      store.write.submit(onSuccess),
+
+    pushItem: (path: string, value: unknown) =>
+      store.feature.pushItem(path, value),
+    removeItem: (path: string, index: number) =>
+      store.feature.removeItem(path, index),
+    swapItems: (path: string, indexA: number, indexB: number) =>
+      store.feature.swapItems(path, indexA, indexB),
+    clearItems: (path: string) => store.feature.clearItems(path),
+    get canUndo() {
+      return store.feature.canUndo;
+    },
+    get canRedo() {
+      return store.feature.canRedo;
+    },
+    undo: () => store.feature.undo(),
+    redo: () => store.feature.redo(),
+    hasValidationsInProgress: (scopeFields?: string[]) =>
+      store.feature.hasValidationsInProgress(scopeFields),
+  };
+}
+
 const createBitStore = ((config?: any) =>
-  createFrameworkStoreAdapter(createBitStoreRuntime(config))) as any;
+  adaptToLegacyFlat(
+    createFrameworkStoreAdapter(createBitStoreRuntime(config)),
+  )) as any;
 
 describe("Store Capabilities Contract", () => {
   describe("Namespaced API (read/observe/write/feature)", () => {

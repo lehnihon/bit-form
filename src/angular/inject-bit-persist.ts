@@ -7,7 +7,7 @@ export function injectBitPersist<
   T extends object = any,
 >(): InjectBitPersistResult {
   const store = useBitStore<T>();
-  const persist = signal(store.getPersistMetadata());
+  const persist = signal(store.read.getPersistMetadata());
 
   const unsubscribe = observePersistMetaSnapshot(store, (nextPersist) => {
     persist.set(nextPersist);
@@ -18,15 +18,15 @@ export function injectBitPersist<
   } catch {}
 
   const restore = async (): Promise<boolean> => {
-    return store.restorePersisted();
+    return store.feature.restorePersisted();
   };
 
   const save = async (): Promise<void> => {
-    await store.forceSave();
+    await store.feature.forceSave();
   };
 
   const clear = async (): Promise<void> => {
-    await store.clearPersisted();
+    await store.feature.clearPersisted();
   };
 
   return {

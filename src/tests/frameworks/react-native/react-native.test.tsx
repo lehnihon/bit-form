@@ -8,10 +8,22 @@ import {
 } from "../../../core";
 import { BitFormProvider, useBitField } from "../../../react-native";
 
+function adaptToLegacyFlat(store: any) {
+  return {
+    ...store,
+    getState: () => store.read.getState(),
+    registerField: (path: string, config: unknown) =>
+      store.feature.registerField(path, config),
+    unregisterField: (path: string) => store.feature.unregisterField(path),
+  };
+}
+
 function createBitStore<T extends object = Record<string, unknown>>(
   config?: any,
 ) {
-  return createFrameworkStoreAdapter(createBitStoreRuntime<T>(config)) as any;
+  return adaptToLegacyFlat(
+    createFrameworkStoreAdapter(createBitStoreRuntime<T>(config)),
+  ) as any;
 }
 
 describe("React Native Integration (bit-form/react-native)", () => {
@@ -100,7 +112,7 @@ describe("React Native Integration (bit-form/react-native)", () => {
 
   it("deve limpar config ao desmontar o hook no mobile", () => {
     const store = createTestStore({ name: "" });
-    const spy = vi.spyOn(store, "unregisterField");
+    const spy = vi.spyOn(store.feature, "unregisterField");
 
     const { unmount } = renderHook(() => useBitField("name"), {
       wrapper: (props) => wrapper({ ...props, store }),

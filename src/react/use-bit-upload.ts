@@ -40,7 +40,7 @@ export function useBitUpload(
   const kernelCallbacks = {
     setLoading: setIsUploading,
     setError: (path: string, msg: string | undefined) =>
-      store.setError(path, msg),
+      store.write.setError(path, msg),
     setValue: (val: string | null) => field.setValue(val as any),
     getUploadKey: () => uploadKeyRef.current,
     setUploadKey: (key: string | null) => {

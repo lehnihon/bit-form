@@ -4,13 +4,23 @@ import {
   createFrameworkStoreAdapter,
 } from "../../core";
 
+function adaptToLegacyFlat(store: any) {
+  return {
+    ...store,
+    getState: () => store.read.getState(),
+    setField: (path: any, value: any) => store.write.setField(path, value),
+    restorePersisted: () => store.feature.restorePersisted(),
+    forceSave: () => store.feature.forceSave(),
+    clearPersisted: () => store.feature.clearPersisted(),
+    cleanup: () => store.feature.cleanup(),
+  };
+}
+
 function createBitStore<T extends object = Record<string, unknown>>(
   config?: any,
 ) {
-  const runtimeStore = createBitStoreRuntime<T>(config) as any;
-  const adapter = createFrameworkStoreAdapter(runtimeStore) as any;
-  adapter.cleanup = runtimeStore.feature.cleanup.bind(runtimeStore.feature);
-  return adapter;
+  const raw = createFrameworkStoreAdapter(createBitStoreRuntime<T>(config));
+  return adaptToLegacyFlat(raw) as any;
 }
 
 interface TestForm {

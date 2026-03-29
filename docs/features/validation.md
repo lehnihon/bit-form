@@ -39,7 +39,7 @@ Sometimes you need to validate a field against a backend API (e.g., checking if 
 - `change`: opt-in live validation while typing. Pair it with `asyncValidateDelay` to debounce requests.
 
 ```tsx
-store.registerField("username", {
+store.feature.registerField("username", {
   validation: {
     asyncValidate: async (value, allValues) => {
       if (!value) return null;

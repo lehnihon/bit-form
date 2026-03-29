@@ -12,7 +12,7 @@ export function useBitSteps(scopeNames: string[]): UseBitStepsResult {
   const lastStatus = useRef<ScopeStatus | null>(null);
 
   const getStatusSnapshot = useCallback(() => {
-    const nextStatus = store.getScopeStatus(scope);
+    const nextStatus = store.read.getScopeStatus(scope);
 
     if (
       lastStatus.current &&
@@ -27,7 +27,7 @@ export function useBitSteps(scopeNames: string[]): UseBitStepsResult {
 
   const status = useSyncExternalStore(
     useCallback(
-      (cb: () => void) => store.subscribeScopeStatus(scope, () => cb()),
+      (cb: () => void) => store.observe.subscribeScopeStatus(scope, () => cb()),
       [store, scope],
     ),
     getStatusSnapshot,
@@ -35,30 +35,30 @@ export function useBitSteps(scopeNames: string[]): UseBitStepsResult {
   );
 
   const validate = useCallback(async (): Promise<ValidateScopeResult> => {
-    const valid = await store.validate({ scope });
-    const errors = store.getScopeErrors(scope);
+    const valid = await store.write.validate({ scope });
+    const errors = store.read.getScopeErrors(scope);
     return { valid, errors };
   }, [store, scope]);
 
   const getErrors = useCallback(() => {
-    return store.getScopeErrors(scope);
+    return store.read.getScopeErrors(scope);
   }, [store, scope]);
 
   const next = useCallback(async (): Promise<boolean> => {
-    const scopeFields = store.getScopeFields(scope);
+    const scopeFields = store.read.getScopeFields(scope);
 
-    if (store.hasValidationsInProgress(scopeFields)) {
+    if (store.feature.hasValidationsInProgress(scopeFields)) {
       return false;
     }
 
-    const valid = await store.validate({ scope });
+    const valid = await store.write.validate({ scope });
     if (valid) {
       setStepIndex((s) => Math.min(s + 1, scopeNames.length - 1));
     } else {
-      const errors = store.getScopeErrors(scope);
+      const errors = store.read.getScopeErrors(scope);
       const pathsWithErrors = Object.keys(errors);
       if (pathsWithErrors.length > 0) {
-        store.markFieldsTouched(pathsWithErrors);
+        store.write.markFieldsTouched(pathsWithErrors);
       }
     }
     return valid;

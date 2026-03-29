@@ -27,10 +27,37 @@ interface MyForm {
   bonusValue: number;
 }
 
+function adaptToLegacyFlat(store: any) {
+  return {
+    ...store,
+    getState: () => store.read.getState(),
+    setField: (path: string, value: unknown) =>
+      store.write.setField(path, value),
+    blurField: (path: string) => store.write.blurField(path),
+    setError: (path: string, message: string | undefined) =>
+      store.write.setError(path, message),
+    validate: (options?: any) => store.write.validate(options),
+    triggerValidation: (scopeFields?: string[], options?: any) =>
+      store.write.triggerValidation(scopeFields, options),
+    registerField: (path: string, config: unknown) =>
+      store.feature.registerField(path, config),
+    unregisterField: (path: string) => store.feature.unregisterField(path),
+    unregisterPrefix: (prefix: string) =>
+      store.feature.unregisterPrefix(prefix),
+    undo: () => store.feature.undo(),
+    redo: () => store.feature.redo(),
+    forceSave: () => store.feature.forceSave(),
+    restorePersisted: () => store.feature.restorePersisted(),
+    clearPersisted: () => store.feature.clearPersisted(),
+  };
+}
+
 function createBitStore<T extends object = Record<string, unknown>>(
   config?: any,
 ) {
-  return createFrameworkStoreAdapter(createBitStoreRuntime<T>(config)) as any;
+  return adaptToLegacyFlat(
+    createFrameworkStoreAdapter(createBitStoreRuntime<T>(config)),
+  ) as any;
 }
 
 @Component({ standalone: true, template: "" })
@@ -133,8 +160,8 @@ describe("Angular Integration (Signals)", () => {
   });
 
   it("deve chamar unregister ao destruir o componente", () => {
-    const spyField = vi.spyOn(store, "unregisterField");
-    const spyPrefix = vi.spyOn(store, "unregisterPrefix");
+    const spyField = vi.spyOn(store.feature, "unregisterField");
+    const spyPrefix = vi.spyOn(store.feature, "unregisterPrefix");
     const fixture = TestBed.createComponent(HostComponent);
     fixture.detectChanges();
     fixture.destroy();

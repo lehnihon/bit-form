@@ -13,15 +13,15 @@ export function useBitPersist(): UseBitPersistResult {
   );
 
   const restore = useCallback(async () => {
-    return store.restorePersisted();
+    return store.feature.restorePersisted();
   }, [store]);
 
   const save = useCallback(async () => {
-    await store.forceSave();
+    await store.feature.forceSave();
   }, [store]);
 
   const clear = useCallback(async () => {
-    await store.clearPersisted();
+    await store.feature.clearPersisted();
   }, [store]);
 
   const meta = useMemo(

@@ -24,9 +24,11 @@ export function isHistoryMetaEqual(a: HistoryMeta, b: HistoryMeta): boolean {
 }
 
 export function readHistoryMetaSnapshot<T extends object>(store: {
-  getHistoryMetadata(): BitHistoryMetadata;
+  read: {
+    getHistoryMetadata(): BitHistoryMetadata;
+  };
 }): HistoryMeta {
-  const nextMeta = store.getHistoryMetadata();
+  const nextMeta = store.read.getHistoryMetadata();
 
   return {
     canUndo: nextMeta.canUndo,
@@ -38,16 +40,20 @@ export function readHistoryMetaSnapshot<T extends object>(store: {
 
 export function observeHistoryMetaSnapshot<T extends object>(
   store: {
-    getHistoryMetadata(): BitHistoryMetadata;
-    subscribeHistoryMeta(
-      listener: (meta: BitHistoryMetadata) => void,
-    ): () => void;
+    read: {
+      getHistoryMetadata(): BitHistoryMetadata;
+    };
+    observe: {
+      subscribeHistoryMeta(
+        listener: (meta: BitHistoryMetadata) => void,
+      ): () => void;
+    };
   },
   listener: (meta: HistoryMeta) => void,
 ): () => void {
   listener(readHistoryMetaSnapshot(store));
 
-  return store.subscribeHistoryMeta(() => {
+  return store.observe.subscribeHistoryMeta(() => {
     listener(readHistoryMetaSnapshot(store));
   });
 }

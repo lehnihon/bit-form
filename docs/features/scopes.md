@@ -28,7 +28,7 @@ const store = createBitStore({
 - **`step1`** groups `name` and `email`
 - **`step2`** groups `address` and `city`
 
-You can use these scope names with the framework integrations (`useBitSteps`, `useBitScope`, `injectBitScope`, `injectBitSteps`) and with `store.validate({ scope })`, `store.getScopeStatus()`, and `store.getScopeErrors()`.
+You can use these scope names with the framework integrations (`useBitSteps`, `useBitScope`, `injectBitScope`, `injectBitSteps`) and with `store.write.validate({ scope })`, `store.read.getScopeStatus()`, and `store.read.getScopeErrors()`.
 
 ## Linear wizard: `useBitSteps` / `injectBitSteps`
 
@@ -172,9 +172,9 @@ Angular exposes `status`, `errors`, `isValid`, and `isDirty` as signals (call th
 
 If you use the store directly (without framework hooks):
 
-- **`store.validate({ scope: "step1" })`** — Validates only the fields in `step1`
-- **`store.getScopeStatus(scopeName)`** — Returns `{ hasErrors, isDirty, errors }`
-- **`store.getScopeErrors(scopeName)`** — Returns `Record<string, string>`
+- **`store.write.validate({ scope: "step1" })`** — Validates only the fields in `step1`
+- **`store.read.getScopeStatus(scopeName)`** — Returns `{ hasErrors, isDirty, errors }`
+- **`store.read.getScopeErrors(scopeName)`** — Returns `Record<string, string>`
 
 ## Typical use: Wizard / multi-step forms
 

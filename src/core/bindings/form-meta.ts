@@ -1,10 +1,10 @@
 import type { BitFormMeta } from "../store/contracts/public/meta-types";
-import type { BitFormMetaBindingApi } from "../store/contracts/public/store-api-types";
+import type { BitStoreApi } from "../store/contracts/public/store-api-types";
 
 export function readFormMetaSnapshot<T extends object>(
-  store: BitFormMetaBindingApi<T>,
+  store: BitStoreApi<T>,
 ): BitFormMeta {
-  const state = store.getState();
+  const state = store.read.getState();
   return {
     isValid: state.isValid,
     isDirty: state.isDirty,
@@ -13,14 +13,14 @@ export function readFormMetaSnapshot<T extends object>(
 }
 
 export function subscribeFormMetaSnapshot<T extends object>(
-  store: BitFormMetaBindingApi<T>,
+  store: BitStoreApi<T>,
   listener: () => void,
 ): () => void {
-  return store.subscribeFormMeta(() => listener());
+  return store.observe.subscribeFormMeta(() => listener());
 }
 
 export function observeFormMetaSnapshot<T extends object>(
-  store: BitFormMetaBindingApi<T>,
+  store: BitStoreApi<T>,
   listener: (meta: BitFormMeta) => void,
 ): () => void {
   listener(readFormMetaSnapshot(store));

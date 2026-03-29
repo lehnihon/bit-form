@@ -11,7 +11,7 @@ export function useBitScope(scopeName: string) {
   const lastStatus = useRef<ScopeStatus | null>(null);
 
   const getStatusSnapshot = useCallback(() => {
-    const nextStatus = store.getScopeStatus(scopeName);
+    const nextStatus = store.read.getScopeStatus(scopeName);
 
     if (
       lastStatus.current &&
@@ -28,7 +28,8 @@ export function useBitScope(scopeName: string) {
   // isDirty), evitando execuções desnecessárias do getStatusSnapshot em
   // mudanças não relacionadas (isSubmitting, isValidating de outros campos…)
   const subscribe = useCallback(
-    (cb: () => void) => store.subscribeScopeStatus(scopeName, () => cb()),
+    (cb: () => void) =>
+      store.observe.subscribeScopeStatus(scopeName, () => cb()),
     [store, scopeName],
   );
 
@@ -39,13 +40,13 @@ export function useBitScope(scopeName: string) {
   );
 
   const validate = useCallback(async (): Promise<ValidateScopeResult> => {
-    const valid = await store.validate({ scope: scopeName });
-    const errors = store.getScopeErrors(scopeName);
+    const valid = await store.write.validate({ scope: scopeName });
+    const errors = store.read.getScopeErrors(scopeName);
     return { valid, errors };
   }, [store, scopeName]);
 
   const getErrors = useCallback(() => {
-    return store.getScopeErrors(scopeName);
+    return store.read.getScopeErrors(scopeName);
   }, [store, scopeName]);
 
   return {

@@ -21,7 +21,7 @@ export function useBitArray<
   }, [controller]);
 
   const subscribeArray = useCallback(
-    (cb: () => void) => store.subscribePath(path, () => cb()),
+    (cb: () => void) => store.observe.subscribePath(path, () => cb()),
     [store, path],
   );
 

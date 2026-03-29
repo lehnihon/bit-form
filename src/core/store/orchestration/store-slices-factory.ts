@@ -51,6 +51,7 @@ export interface BitStoreSlicesFactoryDeps<
   getHistoryMetadata(): BitHistoryMetadata;
   getScopeStatus(scopeName: string): ScopeStatus;
   getScopeErrors(scopeName: string): Record<string, string>;
+  getScopeFields(scopeName: string): string[];
 
   subscribe(listener: () => void): () => void;
   subscribePersistMeta(
@@ -134,6 +135,9 @@ export interface BitStoreSlicesFactoryDeps<
   clearItems<P extends BitArrayPath<T>>(path: P): void;
   getCanUndo(): boolean;
   getCanRedo(): boolean;
+  hasValidationsInProgress(scopeFields?: string[]): boolean;
+  resolveMask(path: string): import("../../../mask/types").BitMask | undefined;
+  createArrayItemId(path: string, index?: number): string;
   undo(): void;
   redo(): void;
 }
@@ -172,6 +176,7 @@ export function buildStoreSlicesApi<T extends object>(
     getHistoryMetadata: () => deps.getHistoryMetadata(),
     getScopeStatus: (scopeName) => deps.getScopeStatus(scopeName),
     getScopeErrors: (scopeName) => deps.getScopeErrors(scopeName),
+    getScopeFields: (scopeName) => deps.getScopeFields(scopeName),
   };
 
   const observe: BitStoreObserveSliceApi<T> = {
@@ -229,6 +234,10 @@ export function buildStoreSlicesApi<T extends object>(
     get canRedo() {
       return deps.getCanRedo();
     },
+    hasValidationsInProgress: (scopeFields) =>
+      deps.hasValidationsInProgress(scopeFields),
+    resolveMask: (path) => deps.resolveMask(path),
+    createArrayItemId: (path, index) => deps.createArrayItemId(path, index),
     undo: () => deps.undo(),
     redo: () => deps.redo(),
   };

@@ -4,8 +4,20 @@ import {
   createFrameworkStoreAdapter,
 } from "../../core";
 
-const createBitStore = ((config?: any) =>
-  createFrameworkStoreAdapter(createBitStoreRuntime(config))) as any;
+function adaptToLegacyFlat(store: any) {
+  return {
+    ...store,
+    getState: () => store.read.getState(),
+    setField: (path: any, value: any) => store.write.setField(path, value),
+    setValues: (values: any, opts?: any) => store.write.setValues(values, opts),
+    reset: () => store.write.reset(),
+  };
+}
+
+const createBitStore = ((config?: any) => {
+  const raw = createFrameworkStoreAdapter(createBitStoreRuntime(config));
+  return adaptToLegacyFlat(raw);
+}) as any;
 
 /**
  * Testes de normalização incremental path-driven.

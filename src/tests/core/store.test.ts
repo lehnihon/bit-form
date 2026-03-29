@@ -5,11 +5,85 @@ import {
   resolveBitStoreForHooks,
 } from "../../core";
 
+function adaptToLegacyFlat(store: any) {
+  return {
+    ...store,
+    getState: () => store.read.getState(),
+    getConfig: () => store.read.getConfig(),
+    getFieldState: (path: any) => store.read.getFieldState(path),
+    isHidden: (path: any) => store.read.isHidden(path),
+    isRequired: (path: any) => store.read.isRequired(path),
+    isFieldDirty: (path: any) => store.read.isFieldDirty(path),
+    getDirtyValues: () => store.read.getDirtyValues(),
+    getScopeStatus: (scope: any) => store.read.getScopeStatus(scope),
+    getScopeFields: (scope: any) => store.read.getScopeFields(scope),
+    getScopeErrors: (scope: any) => store.read.getScopeErrors(scope),
+    getPersistMetadata: () => store.read.getPersistMetadata(),
+    getHistoryMetadata: () => store.read.getHistoryMetadata(),
+    hasValidationsInProgress: () => store.read.hasValidationsInProgress?.(),
+    getFieldConfig: (path: any) => store.read.getFieldConfig?.(path),
+    setField: (path: any, value: any) => store.write.setField(path, value),
+    blurField: (path: any) => store.write.blurField(path),
+    setError: (path: any, error: any) => store.write.setError(path, error),
+    setErrors: (errors: any) => store.write.setErrors(errors),
+    setServerErrors: (errors: any) => store.write.setServerErrors(errors),
+    clearError: (path: any) => store.write.clearError?.(path),
+    validate: () => store.write.validate(),
+    submit: (handler: any) => store.write.submit(handler),
+    reset: () => store.write.reset(),
+    setValues: (values: any, opts?: any) => store.write.setValues(values, opts),
+    markFieldsTouched: (paths: any) => store.write.markFieldsTouched?.(paths),
+    transaction: (fn: any) =>
+      store.write.transaction?.(fn) ?? (store as any).transaction?.(fn),
+    subscribe: (cb: any) => store.observe.subscribe(cb),
+    subscribePath: (path: any, cb: any) =>
+      store.observe.subscribePath(path, cb),
+    subscribeSelector: (sel: any, cb: any, opts?: any) =>
+      store.observe.subscribeSelector(sel, cb, opts),
+    subscribeField: (path: any, cb: any) =>
+      store.observe.subscribeField?.(path, cb),
+    subscribeFieldState: (path: any, cb: any) =>
+      store.observe.subscribeFieldState(path, cb),
+    subscribeFormMeta: (cb: any) => store.observe.subscribeFormMeta(cb),
+    subscribeScopeStatus: (scope: any, cb: any) =>
+      store.observe.subscribeScopeStatus(scope, cb),
+    subscribeHistoryMeta: (cb: any) => store.observe.subscribeHistoryMeta?.(cb),
+    subscribePersistMeta: (cb: any) => store.observe.subscribePersistMeta?.(cb),
+    registerField: (path: any, config: any) =>
+      store.feature.registerField(path, config),
+    unregisterField: (path: any) => store.feature.unregisterField(path),
+    unregisterPrefix: (prefix: any) => store.feature.unregisterPrefix(prefix),
+    pushItem: (path: any, item: any) => store.feature.pushItem(path, item),
+    prependItem: (path: any, item: any) =>
+      store.feature.prependItem?.(path, item),
+    insertItem: (path: any, index: any, item: any) =>
+      store.feature.insertItem?.(path, index, item),
+    removeItem: (path: any, index: any) =>
+      store.feature.removeItem(path, index),
+    moveItem: (path: any, from: any, to: any) =>
+      store.feature.moveItem(path, from, to),
+    swapItems: (path: any, a: any, b: any) =>
+      store.feature.swapItems?.(path, a, b),
+    replaceItems: (path: any, items: any) =>
+      store.feature.replaceItems?.(path, items),
+    clearItems: (path: any) => store.feature.clearItems?.(path),
+    createArrayItemId: () => store.feature.createArrayItemId?.(),
+    undo: () => store.feature.undo?.(),
+    redo: () => store.feature.redo?.(),
+    restorePersisted: () => store.feature.restorePersisted?.(),
+    forceSave: () => store.feature.forceSave?.(),
+    clearPersisted: () => store.feature.clearPersisted?.(),
+    resolveMask: (path: any, value: any) =>
+      store.feature.resolveMask?.(path, value),
+    isFieldValidating: (path: any) => store.read.isFieldValidating?.(path),
+    triggerValidation: (...args: any[]) =>
+      store.write.triggerValidation?.(...args),
+  };
+}
+
 const createBitStore = ((config?: any) => {
-  const runtimeStore = createBitStoreRuntime(config) as any;
-  const adapter = createFrameworkStoreAdapter(runtimeStore) as any;
-  adapter.feature = runtimeStore.feature;
-  return adapter;
+  const raw = createFrameworkStoreAdapter(createBitStoreRuntime(config));
+  return adaptToLegacyFlat(raw) as any;
 }) as any;
 
 describe("BitStore Core", () => {
@@ -75,71 +149,54 @@ describe("BitStore Core", () => {
 
       const frameworkStore = createFrameworkStoreAdapter(store);
 
-      expect(frameworkStore).not.toBe(store);
-      expect(typeof frameworkStore.subscribeSelector).toBe("function");
-      expect(typeof frameworkStore.setField).toBe("function");
-      expect(typeof frameworkStore.submit).toBe("function");
-      expect("cleanup" in frameworkStore).toBe(false);
+      expect(frameworkStore).toBe(store);
+      expect(typeof frameworkStore.observe.subscribeSelector).toBe("function");
+      expect(typeof frameworkStore.write.setField).toBe("function");
+      expect(typeof frameworkStore.write.submit).toBe("function");
+      expect(typeof frameworkStore.feature.cleanup).toBe("function");
     });
 
     it("should expose complete framework contract from adapter", () => {
-      const store = createBitStore({
+      const rawStore = createBitStoreRuntime({
         initialValues: { name: "Leo", items: [] as string[] },
       }) as any;
-      const frameworkStore = createFrameworkStoreAdapter(store) as any;
+      const frameworkStore = createFrameworkStoreAdapter(rawStore) as any;
 
-      const expectedMethods = [
-        "getState",
-        "subscribe",
-        "subscribePath",
-        "subscribeSelector",
-        "getFieldState",
-        "subscribeFieldState",
-        "setField",
-        "blurField",
-        "resolveMask",
-        "unregisterField",
-        "subscribeFormMeta",
-        "submit",
-        "reset",
-        "validate",
-        "setError",
-        "setErrors",
-        "setServerErrors",
-        "setValues",
-        "transaction",
-        "registerField",
-        "unregisterPrefix",
-        "markFieldsTouched",
-        "getDirtyValues",
-        "pushItem",
-        "prependItem",
-        "insertItem",
-        "removeItem",
-        "moveItem",
-        "swapItems",
-        "replaceItems",
-        "clearItems",
-        "createArrayItemId",
-        "undo",
-        "redo",
-        "getHistoryMetadata",
-        "subscribeHistoryMeta",
-        "getPersistMetadata",
-        "restorePersisted",
-        "forceSave",
-        "clearPersisted",
-        "subscribePersistMeta",
-        "hasValidationsInProgress",
-        "getScopeFields",
-        "getScopeStatus",
-        "getScopeErrors",
-        "subscribeScopeStatus",
-      ] as const;
-
-      expectedMethods.forEach((methodName) => {
-        expect(typeof frameworkStore[methodName]).toBe("function");
-      });
+      // Verifica namespaces da nova API namespaced
+      expect(typeof frameworkStore.read.getState).toBe("function");
+      expect(typeof frameworkStore.read.getFieldState).toBe("function");
+      expect(typeof frameworkStore.read.getDirtyValues).toBe("function");
+      expect(typeof frameworkStore.read.getScopeStatus).toBe("function");
+      expect(typeof frameworkStore.read.getScopeFields).toBe("function");
+      expect(typeof frameworkStore.read.getScopeErrors).toBe("function");
+      expect(typeof frameworkStore.read.getHistoryMetadata).toBe("function");
+      expect(typeof frameworkStore.read.getPersistMetadata).toBe("function");
+      expect(typeof frameworkStore.write.setField).toBe("function");
+      expect(typeof frameworkStore.write.blurField).toBe("function");
+      expect(typeof frameworkStore.write.setError).toBe("function");
+      expect(typeof frameworkStore.write.setErrors).toBe("function");
+      expect(typeof frameworkStore.write.setServerErrors).toBe("function");
+      expect(typeof frameworkStore.write.setValues).toBe("function");
+      expect(typeof frameworkStore.write.validate).toBe("function");
+      expect(typeof frameworkStore.write.submit).toBe("function");
+      expect(typeof frameworkStore.write.reset).toBe("function");
+      expect(typeof frameworkStore.observe.subscribe).toBe("function");
+      expect(typeof frameworkStore.observe.subscribePath).toBe("function");
+      expect(typeof frameworkStore.observe.subscribeSelector).toBe("function");
+      expect(typeof frameworkStore.observe.subscribeFieldState).toBe(
+        "function",
+      );
+      expect(typeof frameworkStore.observe.subscribeFormMeta).toBe("function");
+      expect(typeof frameworkStore.observe.subscribeScopeStatus).toBe(
+        "function",
+      );
+      expect(typeof frameworkStore.feature.registerField).toBe("function");
+      expect(typeof frameworkStore.feature.unregisterField).toBe("function");
+      expect(typeof frameworkStore.feature.unregisterPrefix).toBe("function");
+      expect(typeof frameworkStore.feature.pushItem).toBe("function");
+      expect(typeof frameworkStore.feature.removeItem).toBe("function");
+      expect(typeof frameworkStore.feature.moveItem).toBe("function");
+      expect(typeof frameworkStore.feature.cleanup).toBe("function");
     });
   });
 

@@ -9,14 +9,14 @@ export function injectBitWatch<
   const store = useBitStore<TForm>();
   const destroyRef = inject(DestroyRef);
   const valueSig = signal<BitPathValue<TForm, P>>(
-    getDeepValue(store.getState().values, path as string) as BitPathValue<
+    getDeepValue(store.read.getState().values, path as string) as BitPathValue<
       TForm,
       P
     >,
     { equal: valueEqual },
   );
 
-  const unsub = store.subscribePath(path, (v) => {
+  const unsub = store.observe.subscribePath(path, (v) => {
     valueSig.set(v as BitPathValue<TForm, P>);
   });
 

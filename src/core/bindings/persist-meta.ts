@@ -1,34 +1,28 @@
 import type { BitPersistMetadata } from "../store/contracts/types";
+import type { BitStoreApi } from "../store/contracts/public/store-api-types";
 
 export function readPersistMetaSnapshot(store: {
-  getPersistMetadata(): BitPersistMetadata;
+  read: {
+    getPersistMetadata(): BitPersistMetadata;
+  };
 }): BitPersistMetadata {
-  return store.getPersistMetadata();
+  return store.read.getPersistMetadata();
 }
 
 export function subscribePersistMetaSnapshot(
-  store: {
-    subscribePersistMeta(
-      listener: (meta: BitPersistMetadata) => void,
-    ): () => void;
-  },
+  store: BitStoreApi<any>,
   listener: () => void,
 ): () => void {
-  return store.subscribePersistMeta(() => listener());
+  return store.observe.subscribePersistMeta(() => listener());
 }
 
 export function observePersistMetaSnapshot(
-  store: {
-    getPersistMetadata(): BitPersistMetadata;
-    subscribePersistMeta(
-      listener: (meta: BitPersistMetadata) => void,
-    ): () => void;
-  },
+  store: BitStoreApi<any>,
   listener: (meta: BitPersistMetadata) => void,
 ): () => void {
   listener(readPersistMetaSnapshot(store));
 
-  return store.subscribePersistMeta((meta) => {
+  return store.observe.subscribePersistMeta((meta) => {
     listener(meta);
   });
 }

@@ -27,6 +27,7 @@ import type {
   BitSelectorSubscriptionOptions,
 } from "../contracts/public/subscription-types";
 import type { BitValidationTriggerOptions } from "../contracts/port-types";
+import type { BitMask } from "../../../mask/types";
 import { buildStoreSlicesApi } from "./store-slices-factory";
 
 export interface BitStoreFacadeHostPorts<T extends object> {
@@ -48,6 +49,7 @@ export interface BitStoreFacadeHostPorts<T extends object> {
   getHistoryMetadata(): BitHistoryMetadata;
   getScopeStatus(scopeName: string): ScopeStatus;
   getScopeErrors(scopeName: string): Record<string, string>;
+  getScopeFields(scopeName: string): string[];
 
   subscribe(listener: () => void): () => void;
   subscribePersistMeta(
@@ -131,6 +133,9 @@ export interface BitStoreFacadeHostPorts<T extends object> {
   clearItems<P extends BitArrayPath<T>>(path: P): void;
   undo(): void;
   redo(): void;
+  hasValidationsInProgress(scopeFields?: string[]): boolean;
+  resolveMask(path: string): BitMask | undefined;
+  createArrayItemId(path: string, index?: number): string;
 }
 
 export class BitStoreNamespacesFacade<T extends object> {
@@ -154,6 +159,7 @@ export class BitStoreNamespacesFacade<T extends object> {
       getHistoryMetadata: () => host.getHistoryMetadata(),
       getScopeStatus: (scopeName) => host.getScopeStatus(scopeName),
       getScopeErrors: (scopeName) => host.getScopeErrors(scopeName),
+      getScopeFields: (scopeName) => host.getScopeFields(scopeName),
       subscribe: (listener) => host.subscribe(listener),
       subscribePersistMeta: (listener) => host.subscribePersistMeta(listener),
       subscribeHistoryMeta: (listener) => host.subscribeHistoryMeta(listener),
@@ -198,6 +204,10 @@ export class BitStoreNamespacesFacade<T extends object> {
       getCanRedo: () => host.canRedo,
       undo: () => host.undo(),
       redo: () => host.redo(),
+      hasValidationsInProgress: (scopeFields) =>
+        host.hasValidationsInProgress(scopeFields),
+      resolveMask: (path) => host.resolveMask(path),
+      createArrayItemId: (path, index) => host.createArrayItemId(path, index),
     });
   }
 }

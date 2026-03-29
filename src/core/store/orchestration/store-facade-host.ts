@@ -28,6 +28,7 @@ export function createBitStoreFacadeHostPorts<T extends object>(
     getHistoryMetadata: () => host.getHistoryMetadata(),
     getScopeStatus: (scopeName) => host.getScopeStatus(scopeName),
     getScopeErrors: (scopeName) => host.getScopeErrors(scopeName),
+    getScopeFields: (scopeName) => host.getScopeFields(scopeName),
     subscribe: (listener) => host.subscribe(listener),
     subscribePersistMeta: (listener) => host.subscribePersistMeta(listener),
     subscribeHistoryMeta: (listener) => host.subscribeHistoryMeta(listener),
@@ -68,6 +69,10 @@ export function createBitStoreFacadeHostPorts<T extends object>(
     swapItems: (path, indexA, indexB) => host.swapItems(path, indexA, indexB),
     replaceItems: (path, items) => host.replaceItems(path, items),
     clearItems: (path) => host.clearItems(path),
+    hasValidationsInProgress: (scopeFields) =>
+      host.hasValidationsInProgress(scopeFields),
+    resolveMask: (path) => host.resolveMask(path),
+    createArrayItemId: (path, index) => host.createArrayItemId(path, index),
     undo: () => host.undo(),
     redo: () => host.redo(),
   };

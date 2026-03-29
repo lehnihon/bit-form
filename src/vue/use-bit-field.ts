@@ -16,9 +16,9 @@ export function useBitField<
 
   const { fieldController } = createFrameworkMaskedFieldBinding(store, path);
 
-  const state = shallowRef(store.getFieldState(path));
+  const state = shallowRef(store.read.getFieldState(path));
 
-  const unsubscribe = store.subscribeFieldState(path, (nextState) => {
+  const unsubscribe = store.observe.subscribeFieldState(path, (nextState) => {
     state.value = nextState;
   });
 

@@ -8,12 +8,12 @@ export function useBitWatch<
 >(path: P) {
   const store = useBitStore<TForm>();
   const initialValue = getDeepValue(
-    store.getState().values,
+    store.read.getState().values,
     path as string,
   ) as BitPathValue<TForm, P>;
   const value = ref<BitPathValue<TForm, P>>(initialValue);
 
-  const unsubscribe = store.subscribePath(path, (newValue) => {
+  const unsubscribe = store.observe.subscribePath(path, (newValue) => {
     if (!valueEqual(value.value, newValue)) {
       value.value = newValue as BitPathValue<TForm, P>;
     }

@@ -5,7 +5,7 @@ import type { UseBitPersistResult } from "./types";
 
 export function useBitPersist<T extends object = any>(): UseBitPersistResult {
   const store = useBitStore<T>();
-  const meta = ref(store.getPersistMetadata());
+  const meta = ref(store.read.getPersistMetadata());
 
   const unsubscribe = observePersistMetaSnapshot(store, (nextMeta) => {
     meta.value = nextMeta;
@@ -14,15 +14,15 @@ export function useBitPersist<T extends object = any>(): UseBitPersistResult {
   onUnmounted(() => unsubscribe());
 
   const restore = async (): Promise<boolean> => {
-    return store.restorePersisted();
+    return store.feature.restorePersisted();
   };
 
   const save = async (): Promise<void> => {
-    await store.forceSave();
+    await store.feature.forceSave();
   };
 
   const clear = async (): Promise<void> => {
-    await store.clearPersisted();
+    await store.feature.clearPersisted();
   };
 
   return {

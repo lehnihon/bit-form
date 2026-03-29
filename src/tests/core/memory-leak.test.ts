@@ -4,10 +4,25 @@ import {
   createFrameworkStoreAdapter,
 } from "../../core";
 
+function adaptToLegacyFlat(store: any) {
+  return {
+    ...store,
+    getState: () => store.read.getState(),
+    setField: (path: any, value: any) => store.write.setField(path, value),
+    reset: () => store.write.reset(),
+    subscribe: (cb: any) => store.observe.subscribe(cb),
+    registerField: (path: any, config: any) =>
+      store.feature.registerField(path, config),
+    unregisterField: (path: any) => store.feature.unregisterField(path),
+    cleanup: () => store.feature.cleanup(),
+  };
+}
+
 function createBitStore<T extends object = Record<string, unknown>>(
   config?: any,
 ) {
-  return createFrameworkStoreAdapter(createBitStoreRuntime<T>(config)) as any;
+  const raw = createFrameworkStoreAdapter(createBitStoreRuntime<T>(config));
+  return adaptToLegacyFlat(raw) as any;
 }
 
 /**

@@ -19,10 +19,36 @@ import {
 } from "bit-form/vue";
 import { BIT_STORE_KEY } from "../../../vue/context";
 
+function adaptToLegacyFlat(store: any) {
+  return {
+    ...store,
+    getState: () => store.read.getState(),
+    setField: (path: string, value: unknown) =>
+      store.write.setField(path, value),
+    setError: (path: string, message: string | undefined) =>
+      store.write.setError(path, message),
+    registerField: (path: string, config: unknown) =>
+      store.feature.registerField(path, config),
+    unregisterField: (path: string) => store.feature.unregisterField(path),
+    unregisterPrefix: (prefix: string) =>
+      store.feature.unregisterPrefix(prefix),
+    validate: (options?: any) => store.write.validate(options),
+    triggerValidation: (scopeFields?: string[], options?: any) =>
+      store.write.triggerValidation(scopeFields, options),
+    undo: () => store.feature.undo(),
+    redo: () => store.feature.redo(),
+    forceSave: () => store.feature.forceSave(),
+    restorePersisted: () => store.feature.restorePersisted(),
+    clearPersisted: () => store.feature.clearPersisted(),
+  };
+}
+
 function createBitStore<T extends object = Record<string, unknown>>(
   config?: any,
 ) {
-  return createFrameworkStoreAdapter(createBitStoreRuntime<T>(config)) as any;
+  return adaptToLegacyFlat(
+    createFrameworkStoreAdapter(createBitStoreRuntime<T>(config)),
+  ) as any;
 }
 
 describe("Vue Integration", () => {
@@ -83,7 +109,7 @@ describe("Vue Integration", () => {
 
   it("should call unregisterField on unmount", async () => {
     const store = createBitStore({ initialValues: { name: "" } });
-    const spy = vi.spyOn(store, "unregisterField");
+    const spy = vi.spyOn(store.feature, "unregisterField");
 
     const wrapper = createWrapper(store, () => ({
       field: useBitField("name"),
@@ -148,7 +174,7 @@ describe("Vue Integration", () => {
 
   it("should call unregisterPrefix on array unmount", async () => {
     const store = createBitStore({ initialValues: { tags: [] } });
-    const spy = vi.spyOn(store, "unregisterPrefix");
+    const spy = vi.spyOn(store.feature, "unregisterPrefix");
 
     const wrapper = createWrapper(store, () => ({
       list: useBitArray("tags"),
