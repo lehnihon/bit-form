@@ -1,6 +1,6 @@
-import type { BitConfig, BitPersistResolvedConfig } from "../contracts/types";
-import type { BitFrameworkConfig } from "../contracts/public/store-api-types";
 import { deepClone } from "../../utils";
+import type { BitFrameworkConfig } from "../contracts/public/store-api-types";
+import type { BitConfig, BitPersistResolvedConfig } from "../contracts/types";
 
 function defaultIdFactory() {
   return `bit-form-${Math.random().toString(36).slice(2, 9)}`;
@@ -61,6 +61,7 @@ export function normalizeConfig<T extends object>(
     plugins: config.plugins ?? [],
     scheduler: config.scheduler,
     subscriptionCacheSize: config.subscriptionCacheSize,
+    trackedSubscriptions: config.trackedSubscriptions ?? false,
     bus: config.bus,
     onUnhandledError,
   } as BitFrameworkConfig<T>;

@@ -1,3 +1,15 @@
+import type { BitValidationTriggerOptions } from "../contracts/port-types";
+import type {
+  BitFormMeta,
+  BitHistoryMetadata,
+  BitValidationOptions,
+} from "../contracts/public/meta-types";
+import type { BitFrameworkConfig } from "../contracts/public/store-api-types";
+import type {
+  BitScopedSelectorSubscriptionOptions,
+  BitSelector,
+  BitSelectorSubscriptionOptions,
+} from "../contracts/public/subscription-types";
 import type {
   BitArrayItem,
   BitArrayPath,
@@ -11,23 +23,10 @@ import type {
   DeepPartial,
   ScopeStatus,
 } from "../contracts/types";
-import type {
-  BitFormMeta,
-  BitHistoryMetadata,
-  BitValidationOptions,
-} from "../contracts/public/meta-types";
-import type {
-  BitScopedSelectorSubscriptionOptions,
-  BitSelector,
-  BitSelectorSubscriptionOptions,
-} from "../contracts/public/subscription-types";
-import type { BitValidationTriggerOptions } from "../contracts/port-types";
-import type { BitFrameworkConfig } from "../contracts/public/store-api-types";
-import type { BitStoreRuntimeKernel } from "./store-runtime-kernel";
-import type { BitFieldRegistry } from "../registry/field-registry";
-import type { BitDirtyManager } from "../managers/core/dirty-manager";
-import type { BitStoreStateReader } from "../shared/store-state-reader";
 import { touchFieldsOperation } from "../engines/operation-engine";
+import type { BitDirtyManager } from "../managers/core/dirty-manager";
+import type { BitFieldRegistry } from "../registry/field-registry";
+import type { BitStoreStateReader } from "../shared/store-state-reader";
 import {
   clearPersistedFeature,
   forceSavePersistedFeature,
@@ -37,11 +36,6 @@ import {
   runUndoFeature,
 } from "./store-feature-ops";
 import {
-  registerStoreField,
-  unregisterStoreField,
-  unregisterStorePrefix,
-} from "./store-registration-ops";
-import {
   subscribeStoreFieldState,
   subscribeStoreFormMeta,
   subscribeStoreHistoryMeta,
@@ -50,6 +44,12 @@ import {
   subscribeStoreScopeStatus,
   subscribeStoreSelector,
 } from "./store-observe-ops";
+import {
+  registerStoreField,
+  unregisterStoreField,
+  unregisterStorePrefix,
+} from "./store-registration-ops";
+import type { BitStoreRuntimeKernel } from "./store-runtime-kernel";
 
 export interface BitStoreReadDomain<T extends object> {
   getState(): ReturnType<BitStoreStateReader<T>["getState"]>;
@@ -235,6 +235,7 @@ export function createBitStoreDomains<T extends object>(args: {
         selector,
         listener,
         options,
+        trackedSubscriptionsEnabled: !!config.trackedSubscriptions,
       }),
     subscribePath: (path, listener, options) =>
       subscribeStorePath({

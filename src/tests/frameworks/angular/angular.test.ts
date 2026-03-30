@@ -1,23 +1,20 @@
 // @vitest-environment jsdom
 
-import { describe, it, expect, beforeEach, vi } from "vitest";
-import { TestBed } from "@angular/core/testing";
 import { Component } from "@angular/core";
+import { TestBed } from "@angular/core/testing";
 import {
-  createBitStore as createBitStoreRuntime,
-  createFrameworkStoreAdapter,
-} from "../../../core";
-import { maskBRL } from "../../../mask";
-import {
+  injectBitArray,
   injectBitField,
   injectBitForm,
-  injectBitArray,
   injectBitHistory,
+  injectBitPersist,
   injectBitScope,
   injectBitSteps,
-  injectBitPersist,
   provideBitStore,
 } from "bit-form/angular";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { createBitStore as createBitStoreRuntime } from "../../../core";
+import { maskBRL } from "../../../mask";
 
 interface MyForm {
   user: { name: string };
@@ -27,38 +24,10 @@ interface MyForm {
   bonusValue: number;
 }
 
-function adaptToLegacyFlat(store: any) {
-  const legacyStore = Object.create(store);
-
-  return Object.assign(legacyStore, {
-    getState: () => store.read.getState(),
-    setField: (path: string, value: unknown) =>
-      store.write.setField(path, value),
-    blurField: (path: string) => store.write.blurField(path),
-    setError: (path: string, message: string | undefined) =>
-      store.write.setError(path, message),
-    validate: (options?: any) => store.write.validate(options),
-    triggerValidation: (scopeFields?: string[], options?: any) =>
-      store.write.triggerValidation(scopeFields, options),
-    registerField: (path: string, config: unknown) =>
-      store.feature.registerField(path, config),
-    unregisterField: (path: string) => store.feature.unregisterField(path),
-    unregisterPrefix: (prefix: string) =>
-      store.feature.unregisterPrefix(prefix),
-    undo: () => store.feature.undo(),
-    redo: () => store.feature.redo(),
-    forceSave: () => store.feature.forceSave(),
-    restorePersisted: () => store.feature.restorePersisted(),
-    clearPersisted: () => store.feature.clearPersisted(),
-  });
-}
-
 function createBitStore<T extends object = Record<string, unknown>>(
   config?: any,
 ) {
-  return adaptToLegacyFlat(
-    createFrameworkStoreAdapter(createBitStoreRuntime<T>(config)),
-  ) as any;
+  return createBitStoreRuntime<T>(config) as any;
 }
 
 @Component({ standalone: true, template: "" })
@@ -104,7 +73,7 @@ describe("Angular Integration (Signals)", () => {
     const app = fixture.componentInstance;
     fixture.detectChanges();
 
-    store.setError("items.0", "Erro no Item 1");
+    store.write.setError("items.0", "Erro no Item 1");
     const initialKey0 = app.list.fields()[0].key;
 
     app.list.move(0, 1);
@@ -112,7 +81,7 @@ describe("Angular Integration (Signals)", () => {
 
     expect(app.form.getValues().items).toEqual(["Item 2", "Item 1"]);
     expect(app.list.fields()[1].key).toBe(initialKey0);
-    expect(store.getState().errors["items.1"]).toBe("Erro no Item 1");
+    expect(store.read.getState().errors["items.1"]).toBe("Erro no Item 1");
   });
 
   it("deve limpar erros residuais ao remover item da lista", () => {
@@ -122,19 +91,19 @@ describe("Angular Integration (Signals)", () => {
     const app = fixture.componentInstance;
     fixture.detectChanges();
 
-    store.setError("items.1", "Erro no Item 2");
+    store.write.setError("items.1", "Erro no Item 2");
     app.list.remove(1);
     fixture.detectChanges();
 
     expect(app.form.getValues().items).toEqual(["Item 1"]);
-    expect(store.getState().errors["items.1"]).toBeUndefined();
+    expect(store.read.getState().errors["items.1"]).toBeUndefined();
   });
 
   it("deve reagir a mudanças de visibilidade e obrigatoriedade via Signals", () => {
     const fixture = TestBed.createComponent(HostComponent);
     const app = fixture.componentInstance;
 
-    store.registerField("bonusValue", {
+    store.feature.registerField("bonusValue", {
       conditional: {
         dependsOn: ["hasBonus"],
         showIf: (v) => v.hasBonus === true,
@@ -144,7 +113,7 @@ describe("Angular Integration (Signals)", () => {
     fixture.detectChanges();
     expect(app.bonusValue.meta.isHidden()).toBe(true);
 
-    store.setField("hasBonus", true);
+    store.write.setField("hasBonus", true);
     fixture.detectChanges();
     expect(app.bonusValue.meta.isHidden()).toBe(false);
   });
@@ -205,7 +174,7 @@ describe("Angular Integration (Signals)", () => {
     app.history.undo();
     fixture.detectChanges();
 
-    expect(store.getState().values.user.name).toBe("Leo");
+    expect(store.read.getState().values.user.name).toBe("Leo");
     expect(app.history.canRedo()).toBe(true);
   });
 
@@ -235,7 +204,7 @@ describe("Angular Integration (Signals)", () => {
     const fixture = TestBed.createComponent(HostComponent);
     const app = fixture.componentInstance;
 
-    store.setField("user.name", "Updated");
+    store.write.setField("user.name", "Updated");
     fixture.detectChanges();
 
     const submitFn = app.form.submit(submitHandler);
@@ -252,7 +221,7 @@ describe("Angular Integration (Signals)", () => {
     const fixture = TestBed.createComponent(HostComponent);
     const app = fixture.componentInstance;
 
-    store.setField("salary", 5000);
+    store.write.setField("salary", 5000);
     fixture.detectChanges();
 
     const submitFn = app.form.onSubmit(apiHandler);
@@ -289,8 +258,8 @@ describe("Angular Integration (Signals)", () => {
     const fixture = TestBed.createComponent(HostComponent);
     const app = fixture.componentInstance;
 
-    await storeWithResolver.validate();
-    storeWithResolver.blurField("user.name");
+    await storeWithResolver.write.validate();
+    storeWithResolver.write.blurField("user.name");
     fixture.detectChanges();
 
     expect(app.userName.meta.invalid()).toBe(true);
@@ -327,13 +296,13 @@ describe("Angular Integration (Signals)", () => {
     expect(app.step.status().hasErrors).toBe(false);
     expect(app.step.status().isDirty).toBe(false);
 
-    storeWithScopes.setField("user.name", "Leo");
+    storeWithScopes.write.setField("user.name", "Leo");
     fixture.detectChanges();
 
     expect(app.step.status().isDirty).toBe(true);
     expect(app.step.isDirty()).toBe(true);
 
-    storeWithScopes.setError("user.name", "Erro");
+    storeWithScopes.write.setError("user.name", "Erro");
     fixture.detectChanges();
 
     expect(app.step.status().hasErrors).toBe(true);
@@ -375,7 +344,7 @@ describe("Angular Integration (Signals)", () => {
     expect(app.steps.step()).toBe(1);
     expect(app.steps.scope()).toBe("step1");
 
-    storeWithScopes.setField("user.name", "Leo");
+    storeWithScopes.write.setField("user.name", "Leo");
     fixture.detectChanges();
 
     const advanced = await app.steps.next();
@@ -464,10 +433,10 @@ describe("Angular Integration (Signals)", () => {
       await app.persist.save();
       expect(storage.setItem).toHaveBeenCalled();
 
-      persistStore.setField("user.name", "Changed");
+      persistStore.write.setField("user.name", "Changed");
       const ok = await app.persist.restore();
       expect(ok).toBe(true);
-      expect(persistStore.getState().values.user.name).toBe("Leo");
+      expect(persistStore.read.getState().values.user.name).toBe("Leo");
     });
   });
 });

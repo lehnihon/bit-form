@@ -1,29 +1,10 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import {
-  createBitStore as createBitStoreRuntime,
-  createFrameworkStoreAdapter,
-} from "../../core";
-
-function adaptToLegacyFlat(store: any) {
-  const legacyStore = Object.create(store);
-
-  return Object.assign(legacyStore, {
-    getState: () => store.read.getState(),
-    setField: (path: any, value: any) => store.write.setField(path, value),
-    reset: () => store.write.reset(),
-    subscribe: (cb: any) => store.observe.subscribe(cb),
-    registerField: (path: any, config: any) =>
-      store.feature.registerField(path, config),
-    unregisterField: (path: any) => store.feature.unregisterField(path),
-    cleanup: () => store.feature.cleanup(),
-  });
-}
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { createBitStore as createBitStoreRuntime } from "../../core";
 
 function createBitStore<T extends object = Record<string, unknown>>(
   config?: any,
 ) {
-  const raw = createFrameworkStoreAdapter(createBitStoreRuntime<T>(config));
-  return adaptToLegacyFlat(raw) as any;
+  return createBitStoreRuntime<T>(config) as any;
 }
 
 /**
@@ -51,23 +32,23 @@ describe("Memory Leak Detection", () => {
   });
 
   afterEach(() => {
-    if (store.cleanup) {
-      store.cleanup();
+    if (store.feature.cleanup) {
+      store.feature.cleanup();
     }
   });
 
   it("should cleanup subscriptions when unsubscribe is called", () => {
     const listener = vi.fn();
-    const unsubscribe = store.subscribe(listener);
+    const unsubscribe = store.observe.subscribe(listener);
 
     expect(listener).not.toHaveBeenCalled();
 
-    store.setField("count", 1);
+    store.write.setField("count", 1);
     expect(listener).toHaveBeenCalled();
 
     unsubscribe();
     const callsBeforeUnsubscribe = listener.mock.calls.length;
-    store.setField("count", 2);
+    store.write.setField("count", 2);
 
     // Should still be same number of calls (not called again after unsubscribe)
     expect(listener.mock.calls.length).toBe(callsBeforeUnsubscribe);
@@ -75,17 +56,17 @@ describe("Memory Leak Detection", () => {
 
   it("should cleanup field subscriptions on unregisterField", () => {
     const listener = vi.fn();
-    store.registerField("test", {});
+    store.feature.registerField("test", {});
 
-    const unsubscribe = store.subscribe(() => {
+    const unsubscribe = store.observe.subscribe(() => {
       listener();
     });
 
-    store.setField("test", "value");
+    store.write.setField("test", "value");
     const callsBefore = listener.mock.calls.length;
 
-    store.unregisterField("test");
-    store.setField("test", "value2");
+    store.feature.unregisterField("test");
+    store.write.setField("test", "value2");
 
     // Verify cleanup occurred
     const callsAfter = listener.mock.calls.length;
@@ -99,18 +80,18 @@ describe("Memory Leak Detection", () => {
 
     for (let i = 0; i < numCycles; i++) {
       const fieldPath = `field_${i}`;
-      store.registerField(fieldPath, {});
-      store.setField(fieldPath, `value_${i}`);
-      store.unregisterField(fieldPath);
+      store.feature.registerField(fieldPath, {});
+      store.write.setField(fieldPath, `value_${i}`);
+      store.feature.unregisterField(fieldPath);
     }
 
     // After all cycles, store should be functional
-    const state = store.getState();
+    const state = store.read.getState();
     expect(state).toBeDefined();
   });
 
   it("should cleanup async validations on reset", async () => {
-    store.registerField("asyncField", {
+    store.feature.registerField("asyncField", {
       validation: {
         asyncValidateOn: "change",
         asyncValidate: async () => {
@@ -122,15 +103,15 @@ describe("Memory Leak Detection", () => {
     });
 
     // Trigger async validation
-    store.setField("asyncField", "test");
+    store.write.setField("asyncField", "test");
 
-    const stateBefore = store.getState();
+    const stateBefore = store.read.getState();
     expect(stateBefore.isValidating["asyncField"]).toBe(true);
 
     // Reset should cancel validations
-    store.reset();
+    store.write.reset();
 
-    const stateAfter = store.getState();
+    const stateAfter = store.read.getState();
     expect(stateAfter.isValidating["asyncField"]).toBeUndefined();
   });
 
@@ -138,12 +119,12 @@ describe("Memory Leak Detection", () => {
     // Register many different paths
     for (let i = 0; i < 500; i++) {
       const path = `field_${i % 50}.sub_${i}`;
-      store.registerField(path, {});
+      store.feature.registerField(path, {});
 
       // Subscribe to field changes
-      const unsubscribe = store.subscribe(() => {
+      const unsubscribe = store.observe.subscribe(() => {
         try {
-          store.getState();
+          store.read.getState();
         } catch {
           // Ignore errors
         }
@@ -155,29 +136,29 @@ describe("Memory Leak Detection", () => {
 
     // Store should still be responsive
     expect(() => {
-      store.getState();
+      store.read.getState();
     }).not.toThrow();
   });
 
   it("should maintain store functionality after many operations", () => {
     // Perform many field operations
     for (let i = 0; i < 50; i++) {
-      store.registerField(`field_${i}`, {});
-      store.setField(`field_${i}`, `value_${i}`);
+      store.feature.registerField(`field_${i}`, {});
+      store.write.setField(`field_${i}`, `value_${i}`);
     }
 
     // Store should still function correctly
-    const state = store.getState();
+    const state = store.read.getState();
     expect(state).toBeDefined();
     expect(state.values).toBeDefined();
 
     // Unregister half
     for (let i = 0; i < 25; i++) {
-      store.unregisterField(`field_${i}`);
+      store.feature.unregisterField(`field_${i}`);
     }
 
     // Store should still function
-    const finalState = store.getState();
+    const finalState = store.read.getState();
     expect(finalState).toBeDefined();
   });
 });

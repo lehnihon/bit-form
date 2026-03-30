@@ -41,9 +41,9 @@
       "require": "./dist/index.cjs"
     },
     "./core": {
-      "types": "./dist/core.d.ts",
-      "import": "./dist/core.js",
-      "require": "./dist/core.cjs"
+      "types": "./dist/core/store.d.ts",
+      "import": "./dist/core/store.js",
+      "require": "./dist/core/store.cjs"
     },
     "./core/store": {
       "types": "./dist/core/store.d.ts",

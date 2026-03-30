@@ -161,6 +161,12 @@ export type BitPluginHookSource =
   | "teardown"
   | "submit";
 
+export type BitOperationalErrorSource =
+  | "submit"
+  | "validation"
+  | "persist"
+  | (string & {});
+
 export type BitFieldChangeOrigin =
   | "setField"
   | "rebase"
@@ -393,12 +399,18 @@ export interface BitConfig<T extends object = Record<string, unknown>> {
   bus?: BitFormGlobal;
 
   /**
+   * Enables advanced tracked selector subscriptions (`mode: "tracked"`).
+   * Disabled by default to keep observe semantics explicit and predictable.
+   */
+  trackedSubscriptions?: boolean;
+
+  /**
    * Handler opcional para erros operacionais não tratados internamente.
    * Se não informado, o runtime usa fallback para `console.error`.
    */
   onUnhandledError?: (
     error: unknown,
-    source: "submit" | "validation" | "persist",
+    source: BitOperationalErrorSource,
   ) => void;
 }
 

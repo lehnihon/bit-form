@@ -1,30 +1,14 @@
 // @vitest-environment jsdom
 
-import { describe, it, expect, vi } from "vitest";
-import { renderHook, act } from "@testing-library/react";
-import {
-  createBitStore as createBitStoreRuntime,
-  createFrameworkStoreAdapter,
-} from "../../../core";
+import { act, renderHook } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
+import { createBitStore as createBitStoreRuntime } from "../../../core";
 import { BitFormProvider, useBitField } from "../../../react-native";
-
-function adaptToLegacyFlat(store: any) {
-  const legacyStore = Object.create(store);
-
-  return Object.assign(legacyStore, {
-    getState: () => store.read.getState(),
-    registerField: (path: string, config: unknown) =>
-      store.feature.registerField(path, config),
-    unregisterField: (path: string) => store.feature.unregisterField(path),
-  });
-}
 
 function createBitStore<T extends object = Record<string, unknown>>(
   config?: any,
 ) {
-  return adaptToLegacyFlat(
-    createFrameworkStoreAdapter(createBitStoreRuntime<T>(config)),
-  ) as any;
+  return createBitStoreRuntime<T>(config) as any;
 }
 
 describe("React Native Integration (bit-form/react-native)", () => {
@@ -67,7 +51,7 @@ describe("React Native Integration (bit-form/react-native)", () => {
     });
 
     expect(result.current.value).toBe("Desenvolvedor BitForm");
-    expect(store.getState().values.bio).toBe("Desenvolvedor BitForm");
+    expect(store.read.getState().values.bio).toBe("Desenvolvedor BitForm");
   });
 
   it("deve disparar onBlur corretamente no mobile", () => {
@@ -85,7 +69,7 @@ describe("React Native Integration (bit-form/react-native)", () => {
 
   it("deve reagir a isHidden e isRequired no mobile", () => {
     const store = createTestStore({ type: "PF", cnpj: "" });
-    store.registerField("cnpj", {
+    store.feature.registerField("cnpj", {
       conditional: {
         dependsOn: ["type"],
         showIf: (v: any) => v.type === "PJ",

@@ -1,91 +1,12 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   createBitStore as createBitStoreRuntime,
   createFrameworkStoreAdapter,
   resolveBitStoreForHooks,
 } from "../../core";
 
-function adaptToLegacyFlat(store: any) {
-  const legacyStore = Object.create(store);
-
-  return Object.assign(legacyStore, {
-    getState: () => store.read.getState(),
-    getConfig: () => store.read.config,
-    getFieldState: (path: any) => store.read.getFieldState(path),
-    isHidden: (path: any) => store.read.isHidden(path),
-    isRequired: (path: any) => store.read.isRequired(path),
-    isFieldDirty: (path: any) => store.read.isFieldDirty(path),
-    getDirtyValues: () => store.read.getDirtyValues(),
-    getScopeStatus: (scope: any) => store.read.getScopeStatus(scope),
-    getScopeFields: (scope: any) => store.read.getScopeFields(scope),
-    getScopeErrors: (scope: any) => store.read.getScopeErrors(scope),
-    getPersistMetadata: () => store.read.getPersistMetadata(),
-    getHistoryMetadata: () => store.read.getHistoryMetadata(),
-    hasValidationsInProgress: () => store.read.hasValidationsInProgress?.(),
-    getFieldConfig: (path: any) => store.read.getFieldConfig?.(path),
-    setField: (path: any, value: any) => store.write.setField(path, value),
-    blurField: (path: any) => store.write.blurField(path),
-    setError: (path: any, error: any) => store.write.setError(path, error),
-    setErrors: (errors: any) => store.write.setErrors(errors),
-    setServerErrors: (errors: any) => store.write.setServerErrors(errors),
-    clearError: (path: any) => store.write.clearError?.(path),
-    validate: () => store.write.validate(),
-    submit: (handler: any) => store.write.submit(handler),
-    reset: () => store.write.reset(),
-    setValues: (values: any, opts?: any) => store.write.setValues(values, opts),
-    markFieldsTouched: (paths: any) => store.write.markFieldsTouched?.(paths),
-    transaction: (fn: any) =>
-      store.write.transaction?.(fn) ?? (store as any).transaction?.(fn),
-    subscribe: (cb: any) => store.observe.subscribe(cb),
-    subscribePath: (path: any, cb: any) =>
-      store.observe.subscribePath(path, cb),
-    subscribeSelector: (sel: any, cb: any, opts?: any) =>
-      store.observe.subscribeSelector(sel, cb, opts),
-    subscribeField: (path: any, cb: any) =>
-      store.observe.subscribeField?.(path, cb),
-    subscribeFieldState: (path: any, cb: any) =>
-      store.observe.subscribeFieldState(path, cb),
-    subscribeFormMeta: (cb: any) => store.observe.subscribeFormMeta(cb),
-    subscribeScopeStatus: (scope: any, cb: any) =>
-      store.observe.subscribeScopeStatus(scope, cb),
-    subscribeHistoryMeta: (cb: any) => store.observe.subscribeHistoryMeta?.(cb),
-    subscribePersistMeta: (cb: any) => store.observe.subscribePersistMeta?.(cb),
-    registerField: (path: any, config: any) =>
-      store.feature.registerField(path, config),
-    unregisterField: (path: any) => store.feature.unregisterField(path),
-    unregisterPrefix: (prefix: any) => store.feature.unregisterPrefix(prefix),
-    pushItem: (path: any, item: any) => store.feature.pushItem(path, item),
-    prependItem: (path: any, item: any) =>
-      store.feature.prependItem?.(path, item),
-    insertItem: (path: any, index: any, item: any) =>
-      store.feature.insertItem?.(path, index, item),
-    removeItem: (path: any, index: any) =>
-      store.feature.removeItem(path, index),
-    moveItem: (path: any, from: any, to: any) =>
-      store.feature.moveItem(path, from, to),
-    swapItems: (path: any, a: any, b: any) =>
-      store.feature.swapItems?.(path, a, b),
-    replaceItems: (path: any, items: any) =>
-      store.feature.replaceItems?.(path, items),
-    clearItems: (path: any) => store.feature.clearItems?.(path),
-    createArrayItemId: () => store.feature.createArrayItemId?.(),
-    undo: () => store.feature.undo?.(),
-    redo: () => store.feature.redo?.(),
-    restorePersisted: () => store.feature.restorePersisted?.(),
-    forceSave: () => store.feature.forceSave?.(),
-    clearPersisted: () => store.feature.clearPersisted?.(),
-    resolveMask: (path: any, value: any) =>
-      store.feature.resolveMask?.(path, value),
-    isFieldValidating: (path: any) => store.read.isFieldValidating?.(path),
-    triggerValidation: (...args: any[]) =>
-      store.write.triggerValidation?.(...args),
-  });
-}
-
-const createBitStore = ((config?: any) => {
-  const raw = createFrameworkStoreAdapter(createBitStoreRuntime(config));
-  return adaptToLegacyFlat(raw) as any;
-}) as any;
+const createBitStore = ((config?: any) =>
+  createFrameworkStoreAdapter(createBitStoreRuntime(config))) as any;
 
 describe("BitStore Core", () => {
   beforeEach(() => {
@@ -96,12 +17,12 @@ describe("BitStore Core", () => {
     it("should create a store with core operations", async () => {
       const store = createBitStore({ initialValues: { name: "Leo", age: 30 } });
 
-      store.setField("name", "Leandro");
+      store.write.setField("name", "Leandro");
 
       let submittedValues: any;
       let submittedDirtyValues: any;
 
-      await store.submit((values, dirtyValues) => {
+      await store.write.submit((values, dirtyValues) => {
         submittedValues = values;
         submittedDirtyValues = dirtyValues;
       });
@@ -113,18 +34,22 @@ describe("BitStore Core", () => {
     it("should expose core and hook-compatible methods from store instance", () => {
       const store = createBitStore({ initialValues: { name: "Leo" } }) as any;
 
-      expect("undo" in store).toBe(true);
-      expect("redo" in store).toBe(true);
-      expect("getHistoryMetadata" in store).toBe(true);
-      expect("subscribeSelector" in store).toBe(true);
-      expect("subscribePath" in store).toBe(true);
-      expect("getFieldState" in store).toBe(true);
-      expect("setValues" in store).toBe(true);
+      expect("feature" in store).toBe(true);
+      expect("observe" in store).toBe(true);
+      expect("read" in store).toBe(true);
+      expect("write" in store).toBe(true);
+      expect("undo" in store.feature).toBe(true);
+      expect("redo" in store.feature).toBe(true);
+      expect("getHistoryMetadata" in store.read).toBe(true);
+      expect("subscribeSelector" in store.observe).toBe(true);
+      expect("subscribePath" in store.observe).toBe(true);
+      expect("getFieldState" in store.read).toBe(true);
+      expect("setValues" in store.write).toBe(true);
       expect("beginFieldValidation" in store).toBe(false);
       expect("replaceValues" in store).toBe(false);
       expect("hydrate" in store).toBe(false);
       expect("rebase" in store).toBe(false);
-      expect("transaction" in store).toBe(true);
+      expect("transaction" in store.write).toBe(true);
       expect("historyMg" in store).toBe(false);
       expect("depsMg" in store).toBe(false);
     });
@@ -216,11 +141,11 @@ describe("BitStore Core", () => {
     it("should update field and notify listeners", () => {
       const store = createBitStore({ initialValues: { name: "" } });
       const listener = vi.fn();
-      store.subscribe(listener);
+      store.observe.subscribe(listener);
 
-      store.setField("name", "Leo");
+      store.write.setField("name", "Leo");
 
-      expect(store.getState().values.name).toBe("Leo");
+      expect(store.read.getState().values.name).toBe("Leo");
       expect(listener).toHaveBeenCalled();
     });
 
@@ -228,14 +153,17 @@ describe("BitStore Core", () => {
       const store = createBitStore({ initialValues: { name: "Leo", age: 30 } });
       const listener = vi.fn();
 
-      store.subscribe(listener);
+      store.observe.subscribe(listener);
 
-      store.transaction(() => {
-        store.setField("name", "Leandro");
-        store.setField("age", 31);
+      store.write.transaction(() => {
+        store.write.setField("name", "Leandro");
+        store.write.setField("age", 31);
       });
 
-      expect(store.getState().values).toEqual({ name: "Leandro", age: 31 });
+      expect(store.read.getState().values).toEqual({
+        name: "Leandro",
+        age: 31,
+      });
       expect(listener).toHaveBeenCalledTimes(1);
     });
 
@@ -245,12 +173,12 @@ describe("BitStore Core", () => {
       });
       const watcher = vi.fn();
 
-      store.subscribePath("user.name", watcher);
+      store.observe.subscribePath("user.name", watcher);
 
-      store.setField("user.age", 31);
+      store.write.setField("user.age", 31);
       expect(watcher).not.toHaveBeenCalled();
 
-      store.setField("user.name", "Leandro");
+      store.write.setField("user.name", "Leandro");
       expect(watcher).toHaveBeenCalledWith("Leandro");
     });
 
@@ -260,16 +188,16 @@ describe("BitStore Core", () => {
       });
       const listener = vi.fn();
 
-      const unsubscribe = store.subscribeSelector(
+      const unsubscribe = store.observe.subscribeSelector(
         (state) => state.values.user.name,
         listener,
         { paths: ["user.name"] },
       );
 
-      store.setField("age", 31);
+      store.write.setField("age", 31);
       expect(listener).not.toHaveBeenCalled();
 
-      store.setField("user.name", "Leandro");
+      store.write.setField("user.name", "Leandro");
       expect(listener).toHaveBeenCalledWith("Leandro");
 
       unsubscribe();
@@ -281,19 +209,19 @@ describe("BitStore Core", () => {
       });
       const listener = vi.fn();
 
-      const unsubscribe = store.subscribeSelector(
+      const unsubscribe = store.observe.subscribeSelector(
         (state) => state.values.user.name,
         listener,
         { paths: ["user.name"] },
       );
 
-      store.setField("city", "Osaka");
+      store.write.setField("city", "Osaka");
       expect(listener).not.toHaveBeenCalled();
 
-      store.setField("user.age", 31);
+      store.write.setField("user.age", 31);
       expect(listener).not.toHaveBeenCalled();
 
-      store.setField("user.name", "Leandro");
+      store.write.setField("user.name", "Leandro");
       expect(listener).toHaveBeenCalledTimes(1);
       expect(listener).toHaveBeenCalledWith("Leandro");
 
@@ -305,7 +233,7 @@ describe("BitStore Core", () => {
         initialValues: { country: "BR", state: "SP" },
       });
 
-      store.registerField("state", {
+      store.feature.registerField("state", {
         conditional: {
           dependsOn: ["country"],
           showIf: (values) => values.country === "BR",
@@ -314,17 +242,17 @@ describe("BitStore Core", () => {
 
       const listener = vi.fn();
 
-      const unsubscribe = store.subscribeSelector(
-        () => store.getFieldState("state").isHidden,
+      const unsubscribe = store.observe.subscribeSelector(
+        () => store.read.getFieldState("state").isHidden,
         listener,
         { paths: ["state"] },
       );
 
-      store.setField("country", "US");
+      store.write.setField("country", "US");
       expect(listener).toHaveBeenCalledTimes(1);
       expect(listener).toHaveBeenCalledWith(true);
 
-      store.setField("country", "BR");
+      store.write.setField("country", "BR");
       expect(listener).toHaveBeenCalledTimes(2);
       expect(listener).toHaveBeenLastCalledWith(false);
 
@@ -336,7 +264,7 @@ describe("BitStore Core", () => {
         initialValues: { hasLicense: false, licenseNumber: "" },
       });
 
-      store.registerField("licenseNumber", {
+      store.feature.registerField("licenseNumber", {
         conditional: {
           dependsOn: ["hasLicense"],
           requiredIf: (values) => values.hasLicense === true,
@@ -344,9 +272,12 @@ describe("BitStore Core", () => {
       });
 
       const listener = vi.fn();
-      const unsubscribe = store.subscribeFieldState("licenseNumber", listener);
+      const unsubscribe = store.observe.subscribeFieldState(
+        "licenseNumber",
+        listener,
+      );
 
-      store.setField("hasLicense", true);
+      store.write.setField("hasLicense", true);
 
       expect(listener).toHaveBeenCalledTimes(1);
       expect(listener.mock.calls[0]?.[0]).toMatchObject({
@@ -364,7 +295,7 @@ describe("BitStore Core", () => {
 
       const listener = vi.fn();
 
-      const unsubscribe = store.subscribeSelector(
+      const unsubscribe = store.observe.subscribeSelector(
         (state) => state.values.user,
         listener,
         {
@@ -377,10 +308,10 @@ describe("BitStore Core", () => {
       expect(listener).toHaveBeenCalledTimes(1);
       expect(listener).toHaveBeenCalledWith({ name: "Leo" });
 
-      store.setField("age", 31);
+      store.write.setField("age", 31);
       expect(listener).toHaveBeenCalledTimes(1);
 
-      store.setField("user.name", "Leandro");
+      store.write.setField("user.name", "Leandro");
       expect(listener).toHaveBeenCalledTimes(2);
       expect(listener).toHaveBeenLastCalledWith({ name: "Leandro" });
 
@@ -390,20 +321,21 @@ describe("BitStore Core", () => {
     it("should support tracked selector subscriptions without explicit paths", () => {
       const store = createBitStore({
         initialValues: { user: { name: "Leo" }, age: 30 },
+        trackedSubscriptions: true,
       });
 
       const listener = vi.fn();
 
-      const unsubscribe = store.subscribeSelector(
+      const unsubscribe = store.observe.subscribeSelector(
         (state) => state.values.user.name,
         listener,
         { mode: "tracked" },
       );
 
-      store.setField("age", 31);
+      store.write.setField("age", 31);
       expect(listener).not.toHaveBeenCalled();
 
-      store.setField("user.name", "Leandro");
+      store.write.setField("user.name", "Leandro");
       expect(listener).toHaveBeenCalledTimes(1);
       expect(listener).toHaveBeenLastCalledWith("Leandro");
 
@@ -417,11 +349,12 @@ describe("BitStore Core", () => {
           user: { name: "Leo" },
           city: "Tokyo",
         },
+        trackedSubscriptions: true,
       });
 
       const listener = vi.fn();
 
-      const unsubscribe = store.subscribeSelector(
+      const unsubscribe = store.observe.subscribeSelector(
         (state) =>
           state.values.mode === "name"
             ? state.values.user.name
@@ -430,16 +363,16 @@ describe("BitStore Core", () => {
         { mode: "tracked" },
       );
 
-      store.setField("city", "Osaka");
+      store.write.setField("city", "Osaka");
       expect(listener).not.toHaveBeenCalled();
 
-      store.setField("mode", "city");
+      store.write.setField("mode", "city");
       expect(listener).toHaveBeenCalledTimes(1);
       expect(listener).toHaveBeenLastCalledWith("Osaka");
 
       await Promise.resolve();
 
-      store.setField("city", "Kyoto");
+      store.write.setField("city", "Kyoto");
       expect(listener).toHaveBeenCalledTimes(2);
       expect(listener).toHaveBeenLastCalledWith("Kyoto");
 
@@ -452,12 +385,12 @@ describe("BitStore Core", () => {
       });
       const listener = vi.fn();
 
-      const unsubscribe = store.subscribePath("user.name", listener);
+      const unsubscribe = store.observe.subscribePath("user.name", listener);
 
-      store.setField("age", 31);
+      store.write.setField("age", 31);
       expect(listener).not.toHaveBeenCalled();
 
-      store.setField("user.name", "Leandro");
+      store.write.setField("user.name", "Leandro");
       expect(listener).toHaveBeenCalledWith("Leandro");
 
       unsubscribe();
@@ -469,12 +402,12 @@ describe("BitStore Core", () => {
       });
       const listener = vi.fn();
 
-      const unsubscribe = store.subscribeFieldState("name", listener);
+      const unsubscribe = store.observe.subscribeFieldState("name", listener);
 
-      store.setField("age", 31);
+      store.write.setField("age", 31);
       expect(listener).not.toHaveBeenCalled();
 
-      store.setField("name", "Leandro");
+      store.write.setField("name", "Leandro");
       expect(listener).toHaveBeenCalledTimes(1);
       expect(listener.mock.calls[0]?.[0]?.value).toBe("Leandro");
 
@@ -487,16 +420,16 @@ describe("BitStore Core", () => {
       });
       const listener = vi.fn();
 
-      const unsubscribe = store.subscribeFormMeta(listener);
+      const unsubscribe = store.observe.subscribeFormMeta(listener);
 
-      store.setField("name", "Leandro");
+      store.write.setField("name", "Leandro");
       expect(listener).toHaveBeenCalledTimes(1);
       expect(listener.mock.calls[0]?.[0]).toMatchObject({
         isDirty: true,
         isValid: true,
       });
 
-      store.setField("name", "Leo");
+      store.write.setField("name", "Leo");
       expect(listener).toHaveBeenCalledTimes(2);
       expect(listener.mock.calls[1]?.[0]).toMatchObject({
         isDirty: false,
@@ -512,18 +445,18 @@ describe("BitStore Core", () => {
         history: { enabled: true, limit: 20 },
       });
 
-      expect(store.getHistoryMetadata().historySize).toBe(1);
+      expect(store.read.getHistoryMetadata().historySize).toBe(1);
 
-      store.transaction(() => {
-        store.pushItem("items", 2);
-        store.pushItem("items", 3);
+      store.write.transaction(() => {
+        store.feature.pushItem("items", 2);
+        store.feature.pushItem("items", 3);
       });
 
-      expect(store.getState().values.items).toEqual([1, 2, 3]);
-      expect(store.getHistoryMetadata().historySize).toBe(2);
+      expect(store.read.getState().values.items).toEqual([1, 2, 3]);
+      expect(store.read.getHistoryMetadata().historySize).toBe(2);
 
-      store.undo();
-      expect(store.getState().values.items).toEqual([1]);
+      store.feature.undo();
+      expect(store.read.getState().values.items).toEqual([1]);
     });
 
     it("should update nested fields using dot notation", () => {
@@ -531,30 +464,30 @@ describe("BitStore Core", () => {
         initialValues: { user: { profile: { name: "" } } },
       });
 
-      store.setField("user.profile.name", "Leo");
-      expect(store.getState().values.user.profile.name).toBe("Leo");
+      store.write.setField("user.profile.name", "Leo");
+      expect(store.read.getState().values.user.profile.name).toBe("Leo");
     });
 
     it("should mark field as touched on blur", () => {
       const store = createBitStore({ initialValues: { name: "" } });
 
-      store.blurField("name");
-      expect(store.getState().touched.name).toBe(true);
+      store.write.blurField("name");
+      expect(store.read.getState().touched.name).toBe(true);
     });
 
     it("should track isDirty state accurately", () => {
       const store = createBitStore({ initialValues: { name: "Leo" } });
 
-      expect(store.getState().isDirty).toBe(false);
-      expect(store.isFieldDirty("name")).toBe(false);
+      expect(store.read.getState().isDirty).toBe(false);
+      expect(store.read.isFieldDirty("name")).toBe(false);
 
-      store.setField("name", "Leandro");
-      expect(store.getState().isDirty).toBe(true);
-      expect(store.isFieldDirty("name")).toBe(true);
+      store.write.setField("name", "Leandro");
+      expect(store.read.getState().isDirty).toBe(true);
+      expect(store.read.isFieldDirty("name")).toBe(true);
 
-      store.setField("name", "Leo");
-      expect(store.getState().isDirty).toBe(false);
-      expect(store.isFieldDirty("name")).toBe(false);
+      store.write.setField("name", "Leo");
+      expect(store.read.getState().isDirty).toBe(false);
+      expect(store.read.isFieldDirty("name")).toBe(false);
     });
 
     it("should return only dirty values", () => {
@@ -562,16 +495,16 @@ describe("BitStore Core", () => {
         initialValues: { name: "Leo", age: 30, city: "Tokyo" },
       });
 
-      expect(store.getDirtyValues()).toEqual({});
+      expect(store.read.getDirtyValues()).toEqual({});
 
-      store.setField("name", "Leandro");
-      expect(store.getDirtyValues()).toEqual({ name: "Leandro" });
+      store.write.setField("name", "Leandro");
+      expect(store.read.getDirtyValues()).toEqual({ name: "Leandro" });
 
-      store.setField("age", 31);
-      expect(store.getDirtyValues()).toEqual({ name: "Leandro", age: 31 });
+      store.write.setField("age", 31);
+      expect(store.read.getDirtyValues()).toEqual({ name: "Leandro", age: 31 });
 
-      store.setField("name", "Leo");
-      expect(store.getDirtyValues()).toEqual({ age: 31 });
+      store.write.setField("name", "Leo");
+      expect(store.read.getDirtyValues()).toEqual({ age: 31 });
     });
 
     it("should return dirty values for nested objects", () => {
@@ -579,11 +512,13 @@ describe("BitStore Core", () => {
         initialValues: { user: { name: "Leo", profile: { bio: "Dev" } } },
       });
 
-      store.setField("user.name", "Leandro");
-      expect(store.getDirtyValues()).toEqual({ user: { name: "Leandro" } });
+      store.write.setField("user.name", "Leandro");
+      expect(store.read.getDirtyValues()).toEqual({
+        user: { name: "Leandro" },
+      });
 
-      store.setField("user.profile.bio", "Developer");
-      expect(store.getDirtyValues()).toEqual({
+      store.write.setField("user.profile.bio", "Developer");
+      expect(store.read.getDirtyValues()).toEqual({
         user: { name: "Leandro", profile: { bio: "Developer" } },
       });
     });
@@ -593,8 +528,8 @@ describe("BitStore Core", () => {
         initialValues: { tags: ["react", "vue"], count: 0 },
       });
 
-      store.setField("tags.1", "angular");
-      const dirty = store.getDirtyValues();
+      store.write.setField("tags.1", "angular");
+      const dirty = store.read.getDirtyValues();
 
       expect(dirty.tags).toEqual(["react", "angular"]);
       expect(dirty.count).toBeUndefined();
@@ -613,7 +548,7 @@ describe("BitStore Core", () => {
         },
       });
 
-      expect(store.getState().values.total).toBe(20);
+      expect(store.read.getState().values.total).toBe(20);
     });
 
     it("should update computed field when dependencies change", () => {
@@ -631,8 +566,8 @@ describe("BitStore Core", () => {
         },
       });
 
-      store.setField("firstName", "Leo");
-      expect(store.getState().values.fullName).toBe("Leo Ishikawa");
+      store.write.setField("firstName", "Leo");
+      expect(store.read.getState().values.fullName).toBe("Leo Ishikawa");
     });
 
     it("should handle cascading computed fields (double pass)", () => {
@@ -650,10 +585,10 @@ describe("BitStore Core", () => {
         },
       });
 
-      store.setField("netPrice", 200);
+      store.write.setField("netPrice", 200);
 
-      expect(store.getState().values.tax).toBe(20);
-      expect(store.getState().values.finalPrice).toBe(220);
+      expect(store.read.getState().values.tax).toBe(20);
+      expect(store.read.getState().values.finalPrice).toBe(220);
     });
 
     it("should fail fast on explicit cyclic computed dependencies", () => {
@@ -680,14 +615,14 @@ describe("BitStore Core", () => {
       const store = createBitStore({
         initialValues: { country: "US", state: "" },
       });
-      store.registerField("state", {
+      store.feature.registerField("state", {
         conditional: {
           dependsOn: ["country"],
           showIf: (values) => values.country === "BR",
         },
       });
 
-      expect(store.isHidden("state")).toBe(true);
+      expect(store.read.isHidden("state")).toBe(true);
     });
 
     it("should show field and trigger re-render when dependency changes", () => {
@@ -695,18 +630,18 @@ describe("BitStore Core", () => {
         initialValues: { country: "US", state: "" },
       });
       const listener = vi.fn();
-      store.subscribe(listener);
+      store.observe.subscribe(listener);
 
-      store.registerField("state", {
+      store.feature.registerField("state", {
         conditional: {
           dependsOn: ["country"],
           showIf: (values) => values.country === "BR",
         },
       });
 
-      store.setField("country", "BR");
+      store.write.setField("country", "BR");
 
-      expect(store.isHidden("state")).toBe(false);
+      expect(store.read.isHidden("state")).toBe(false);
       expect(listener).toHaveBeenCalled();
     });
 
@@ -714,19 +649,19 @@ describe("BitStore Core", () => {
       const store = createBitStore({
         initialValues: { type: "company", cnpj: "" },
       });
-      store.registerField("cnpj", {
+      store.feature.registerField("cnpj", {
         conditional: {
           dependsOn: ["type"],
           showIf: (values) => values.type === "company",
         },
       });
 
-      store.setError("cnpj", "Required");
-      expect(store.getState().errors.cnpj).toBe("Required");
+      store.write.setError("cnpj", "Required");
+      expect(store.read.getState().errors.cnpj).toBe("Required");
 
-      store.setField("type", "person");
-      expect(store.isHidden("cnpj")).toBe(true);
-      expect(store.getState().errors.cnpj).toBeUndefined();
+      store.write.setField("type", "person");
+      expect(store.read.isHidden("cnpj")).toBe(true);
+      expect(store.read.getState().errors.cnpj).toBeUndefined();
     });
 
     it("should unregister field configurations and dependencies", () => {
@@ -734,19 +669,19 @@ describe("BitStore Core", () => {
         initialValues: { country: "BR", state: "" },
       });
 
-      store.registerField("state", {
+      store.feature.registerField("state", {
         conditional: {
           dependsOn: ["country"],
           showIf: (v) => v.country === "BR",
         },
       });
 
-      expect(store.isHidden("state")).toBe(false);
+      expect(store.read.isHidden("state")).toBe(false);
 
-      store.unregisterField("state");
+      store.feature.unregisterField("state");
 
-      expect(store.isHidden("state")).toBe(false);
-      store.setField("country", "US");
+      expect(store.read.isHidden("state")).toBe(false);
+      store.write.setField("country", "US");
     });
 
     it("should NOT unregister fields from config.fields (keeps them for validation)", () => {
@@ -765,11 +700,11 @@ describe("BitStore Core", () => {
         },
       });
 
-      expect((store as any).getFieldConfig("bonusValue")).toBeDefined();
+      expect(store.read.getFieldConfig("bonusValue")).toBeDefined();
 
-      store.unregisterField("bonusValue");
+      store.feature.unregisterField("bonusValue");
 
-      expect((store as any).getFieldConfig("bonusValue")).toBeDefined();
+      expect(store.read.getFieldConfig("bonusValue")).toBeDefined();
     });
   });
 
@@ -777,20 +712,20 @@ describe("BitStore Core", () => {
     it("should handle manual error setting with setError and setErrors", () => {
       const store = createBitStore({ initialValues: { email: "" } });
 
-      store.setError("email", "Invalid email");
-      expect(store.getState().errors.email).toBe("Invalid email");
-      expect(store.getState().isValid).toBe(false);
+      store.write.setError("email", "Invalid email");
+      expect(store.read.getState().errors.email).toBe("Invalid email");
+      expect(store.read.getState().isValid).toBe(false);
 
-      store.setErrors({ email: "Too short" });
-      expect(store.getState().errors.email).toBe("Too short");
+      store.write.setErrors({ email: "Too short" });
+      expect(store.read.getState().errors.email).toBe("Too short");
     });
 
     it("should clear field error instantly when value changes", () => {
       const store = createBitStore({ initialValues: { name: "" } });
-      store.setError("name", "Required");
+      store.write.setError("name", "Required");
 
-      store.setField("name", "L");
-      expect(store.getState().errors.name).toBeUndefined();
+      store.write.setField("name", "L");
+      expect(store.read.getState().errors.name).toBeUndefined();
     });
 
     it("should evaluate step status correctly", () => {
@@ -802,10 +737,10 @@ describe("BitStore Core", () => {
         },
       });
 
-      store.setError("p1", "Error");
-      store.setField("p2", "Changed");
+      store.write.setError("p1", "Error");
+      store.write.setField("p2", "Changed");
 
-      const status = store.getScopeStatus("step1");
+      const status = store.read.getScopeStatus("step1");
       expect(status.hasErrors).toBe(true);
       expect(status.isDirty).toBe(true);
     });
@@ -819,10 +754,10 @@ describe("BitStore Core", () => {
       });
 
       const listener = vi.fn();
-      const unsubscribe = store.subscribeScopeStatus("step1", listener);
+      const unsubscribe = store.observe.subscribeScopeStatus("step1", listener);
 
-      store.registerField("p2", { scope: "step1" });
-      store.setError("p2", "Dynamic scope error");
+      store.feature.registerField("p2", { scope: "step1" });
+      store.write.setError("p2", "Dynamic scope error");
 
       expect(listener).toHaveBeenCalledTimes(1);
       expect(listener.mock.calls[0]?.[0]).toMatchObject({
@@ -836,14 +771,14 @@ describe("BitStore Core", () => {
     it("should map server errors", () => {
       const store = createBitStore({ initialValues: { email: "", cpf: "" } });
 
-      store.setServerErrors({
+      store.write.setServerErrors({
         email: ["Already taken"],
         cpf: "Invalid format",
       });
 
-      expect(store.getState().errors.email).toBe("Already taken");
-      expect(store.getState().errors.cpf).toBe("Invalid format");
-      expect(store.getState().isValid).toBe(false);
+      expect(store.read.getState().errors.email).toBe("Already taken");
+      expect(store.read.getState().errors.cpf).toBe("Invalid format");
+      expect(store.read.getState().isValid).toBe(false);
     });
 
     it("should trigger requiredIf validation dynamically", async () => {
@@ -851,19 +786,19 @@ describe("BitStore Core", () => {
         initialValues: { hasLicense: true, licenseNumber: "" },
       });
 
-      store.registerField("licenseNumber", {
+      store.feature.registerField("licenseNumber", {
         conditional: {
           dependsOn: ["hasLicense"],
           requiredIf: (v) => v.hasLicense === true,
         },
       });
 
-      const isValid = await store.validate();
+      const isValid = await store.write.validate();
       expect(isValid).toBe(false);
-      expect(store.getState().errors.licenseNumber).toBe("required field");
+      expect(store.read.getState().errors.licenseNumber).toBe("required field");
 
-      store.setField("hasLicense", false);
-      const isValidNow = await store.validate();
+      store.write.setField("hasLicense", false);
+      const isValidNow = await store.write.validate();
       expect(isValidNow).toBe(true);
     });
 
@@ -872,7 +807,7 @@ describe("BitStore Core", () => {
         initialValues: { hasBonus: true, bonusValue: "" },
       });
 
-      store.registerField("bonusValue", {
+      store.feature.registerField("bonusValue", {
         conditional: {
           dependsOn: ["hasBonus"],
           requiredIf: (v: any) => v.hasBonus === true,
@@ -880,9 +815,9 @@ describe("BitStore Core", () => {
         },
       });
 
-      const isValid = await store.validate();
+      const isValid = await store.write.validate();
       expect(isValid).toBe(false);
-      expect(store.getState().errors.bonusValue).toBe(
+      expect(store.read.getState().errors.bonusValue).toBe(
         "Bonus amount is required",
       );
     });
@@ -895,20 +830,20 @@ describe("BitStore Core", () => {
         history: { enabled: true },
       });
 
-      store.setField("name", "Leandro");
-      store.blurField("name");
+      store.write.setField("name", "Leandro");
+      store.write.blurField("name");
 
-      store.setField("name", "Ishikawa");
-      store.blurField("name");
+      store.write.setField("name", "Ishikawa");
+      store.write.blurField("name");
 
-      expect(store.getHistoryMetadata().canUndo).toBe(true);
+      expect(store.read.getHistoryMetadata().canUndo).toBe(true);
 
-      store.undo();
-      expect(store.getState().values.name).toBe("Leandro");
-      expect(store.getHistoryMetadata().canRedo).toBe(true);
+      store.feature.undo();
+      expect(store.read.getState().values.name).toBe("Leandro");
+      expect(store.read.getHistoryMetadata().canRedo).toBe(true);
 
-      store.redo();
-      expect(store.getState().values.name).toBe("Ishikawa");
+      store.feature.redo();
+      expect(store.read.getState().values.name).toBe("Ishikawa");
     });
 
     it("should expose history metadata", () => {
@@ -917,15 +852,15 @@ describe("BitStore Core", () => {
         history: { enabled: true },
       });
 
-      let history = store.getHistoryMetadata();
+      let history = store.read.getHistoryMetadata();
       expect(history.enabled).toBe(true);
       expect(history.historySize).toBe(1);
       expect(history.historyIndex).toBe(0);
 
-      store.setField("name", "Leandro");
-      store.blurField("name");
+      store.write.setField("name", "Leandro");
+      store.write.blurField("name");
 
-      history = store.getHistoryMetadata();
+      history = store.read.getHistoryMetadata();
       expect(history.historySize).toBe(2);
       expect(history.historyIndex).toBe(1);
       expect(history.canUndo).toBe(true);
@@ -937,22 +872,22 @@ describe("BitStore Core", () => {
         history: { enabled: true },
       });
 
-      store.setField("name", "B");
-      store.blurField("name");
+      store.write.setField("name", "B");
+      store.write.blurField("name");
 
-      store.setField("name", "C");
-      store.blurField("name");
+      store.write.setField("name", "C");
+      store.write.blurField("name");
 
-      store.undo();
-      expect(store.getState().values.name).toBe("B");
-      expect(store.getHistoryMetadata().canRedo).toBe(true);
+      store.feature.undo();
+      expect(store.read.getState().values.name).toBe("B");
+      expect(store.read.getHistoryMetadata().canRedo).toBe(true);
 
-      store.setField("name", "D");
-      store.blurField("name");
+      store.write.setField("name", "D");
+      store.write.blurField("name");
 
-      expect(store.getHistoryMetadata().canRedo).toBe(false);
-      expect(store.redo()).toBeUndefined();
-      expect(store.getState().values.name).toBe("D");
+      expect(store.read.getHistoryMetadata().canRedo).toBe(false);
+      expect(store.feature.redo()).toBeUndefined();
+      expect(store.read.getState().values.name).toBe("D");
     });
   });
 
@@ -960,28 +895,28 @@ describe("BitStore Core", () => {
     it("should reset form to initial values", () => {
       const store = createBitStore({ initialValues: { name: "Leo" } });
 
-      store.setField("name", "Leandro");
-      store.setError("name", "Error");
+      store.write.setField("name", "Leandro");
+      store.write.setError("name", "Error");
 
-      store.reset();
+      store.write.reset();
 
-      expect(store.getState().values.name).toBe("Leo");
-      expect(store.getState().errors).toEqual({});
-      expect(store.getState().isDirty).toBe(false);
+      expect(store.read.getState().values.name).toBe("Leo");
+      expect(store.read.getState().errors).toEqual({});
+      expect(store.read.getState().isDirty).toBe(false);
     });
 
     it("should reset baseline using rebase", () => {
       const store = createBitStore({ initialValues: { name: "" } });
 
-      store.setValues({ name: "Leandro" }, { rebase: true });
-      expect(store.getState().values.name).toBe("Leandro");
-      expect(store.getState().isDirty).toBe(false);
+      store.write.setValues({ name: "Leandro" }, { rebase: true });
+      expect(store.read.getState().values.name).toBe("Leandro");
+      expect(store.read.getState().isDirty).toBe(false);
     });
 
     it("should replace values without rebasing the initial state", () => {
       const store = createBitStore({ initialValues: { name: "Leo", age: 30 } });
 
-      store.setValues({ name: "Leandro", age: 31 });
+      store.write.setValues({ name: "Leandro", age: 31 });
 
       expect(store.read.getState().values).toEqual({
         name: "Leandro",
@@ -999,21 +934,21 @@ describe("BitStore Core", () => {
         initialValues: { user: { name: "Leo", profile: { city: "Tokyo" } } },
       });
 
-      store.setValues(
+      store.write.setValues(
         { user: { profile: { city: "Osaka" } } },
         { partial: true },
       );
 
-      expect(store.getState().values).toEqual({
+      expect(store.read.getState().values).toEqual({
         user: { name: "Leo", profile: { city: "Osaka" } },
       });
-      expect(store.getState().isDirty).toBe(true);
+      expect(store.read.getState().isDirty).toBe(true);
     });
 
     it("should rebase values explicitly", () => {
       const store = createBitStore({ initialValues: { name: "Leo", age: 30 } });
 
-      store.setValues({ name: "Leandro", age: 31 }, { rebase: true });
+      store.write.setValues({ name: "Leandro", age: 31 }, { rebase: true });
 
       expect(store.read.getState().values).toEqual({
         name: "Leandro",
@@ -1031,14 +966,14 @@ describe("BitStore Core", () => {
         initialValues: { items: ["A"] },
       });
 
-      store.setValues({ items: ["X"] }, { rebase: true });
-      expect(store.getState().isDirty).toBe(false);
+      store.write.setValues({ items: ["X"] }, { rebase: true });
+      expect(store.read.getState().isDirty).toBe(false);
 
-      store.pushItem("items", "Y");
-      expect(store.getState().isDirty).toBe(true);
+      store.feature.pushItem("items", "Y");
+      expect(store.read.getState().isDirty).toBe(true);
 
-      store.removeItem("items", 1);
-      expect(store.getState().isDirty).toBe(false);
+      store.feature.removeItem("items", 1);
+      expect(store.read.getState().isDirty).toBe(false);
     });
 
     it("should reset history when rebasing values", () => {
@@ -1047,15 +982,15 @@ describe("BitStore Core", () => {
         history: { enabled: true },
       });
 
-      store.setField("name", "Leandro");
-      store.blurField("name");
+      store.write.setField("name", "Leandro");
+      store.write.blurField("name");
 
-      expect(store.getHistoryMetadata().canUndo).toBe(true);
+      expect(store.read.getHistoryMetadata().canUndo).toBe(true);
 
-      store.setValues({ name: "Ishikawa" }, { rebase: true });
+      store.write.setValues({ name: "Ishikawa" }, { rebase: true });
 
-      expect(store.getState().values.name).toBe("Ishikawa");
-      expect(store.getHistoryMetadata()).toMatchObject({
+      expect(store.read.getState().values.name).toBe("Ishikawa");
+      expect(store.read.getHistoryMetadata()).toMatchObject({
         canUndo: false,
         canRedo: false,
         historyIndex: 0,
@@ -1096,13 +1031,13 @@ describe("BitStore Core", () => {
       });
 
       let submittedData: any;
-      await store.submit((values) => {
+      await store.write.submit((values) => {
         submittedData = values;
       });
 
       expect(submittedData.email).toBeUndefined();
       expect(submittedData.price).toBe(20);
-      expect(store.getState().isSubmitting).toBe(false);
+      expect(store.read.getState().isSubmitting).toBe(false);
     });
 
     it("should pass dirtyValues as second parameter to submit callback", async () => {
@@ -1110,13 +1045,13 @@ describe("BitStore Core", () => {
         initialValues: { name: "Leo", age: 30, city: "Tokyo" },
       });
 
-      store.setField("name", "Leandro");
-      store.setField("age", 31);
+      store.write.setField("name", "Leandro");
+      store.write.setField("age", 31);
 
       let receivedValues: any;
       let receivedDirtyValues: any;
 
-      await store.submit((values, dirtyValues) => {
+      await store.write.submit((values, dirtyValues) => {
         receivedValues = values;
         receivedDirtyValues = dirtyValues;
       });
@@ -1137,11 +1072,11 @@ describe("BitStore Core", () => {
         },
       });
 
-      store.setField("price", 20);
+      store.write.setField("price", 20);
 
       let receivedDirtyValues: any;
 
-      await store.submit((values, dirtyValues) => {
+      await store.write.submit((values, dirtyValues) => {
         receivedDirtyValues = dirtyValues;
       });
 
@@ -1159,9 +1094,9 @@ describe("BitStore Core", () => {
         },
       });
 
-      store.setField("name", "  leandro  ");
+      store.write.setField("name", "  leandro  ");
 
-      expect(store.getState().values.name).toBe("leandro");
+      expect(store.read.getState().values.name).toBe("leandro");
     });
   });
 
@@ -1169,85 +1104,85 @@ describe("BitStore Core", () => {
     it("should push and prepend items", () => {
       const store = createBitStore({ initialValues: { list: [2] } });
 
-      store.pushItem("list", 3);
-      expect(store.getState().values.list).toEqual([2, 3]);
+      store.feature.pushItem("list", 3);
+      expect(store.read.getState().values.list).toEqual([2, 3]);
 
-      store.prependItem("list", 1);
-      expect(store.getState().values.list).toEqual([1, 2, 3]);
+      store.feature.prependItem("list", 1);
+      expect(store.read.getState().values.list).toEqual([1, 2, 3]);
     });
 
     it("should insert item at specific index", () => {
       const store = createBitStore({ initialValues: { list: [1, 3] } });
 
-      store.insertItem("list", 1, 2);
-      expect(store.getState().values.list).toEqual([1, 2, 3]);
+      store.feature.insertItem("list", 1, 2);
+      expect(store.read.getState().values.list).toEqual([1, 2, 3]);
     });
 
     it("should clean up and shift errors when item is removed", () => {
       const store = createBitStore({
         initialValues: { list: ["A", "B", "C"] },
       });
-      (store as any).triggerValidation = vi.fn();
+      store.write.triggerValidation = vi.fn();
 
-      store.setError("list.2", "Error on C");
-      store.removeItem("list", 1);
+      store.write.setError("list.2", "Error on C");
+      store.feature.removeItem("list", 1);
 
-      expect(store.getState().values.list).toEqual(["A", "C"]);
-      expect(store.getState().errors["list.1"]).toBe("Error on C");
-      expect(store.getState().errors["list.2"]).toBeUndefined();
+      expect(store.read.getState().values.list).toEqual(["A", "C"]);
+      expect(store.read.getState().errors["list.1"]).toBe("Error on C");
+      expect(store.read.getState().errors["list.2"]).toBeUndefined();
     });
 
     it("should swap items and swap their errors", () => {
       const store = createBitStore({ initialValues: { list: ["A", "B"] } });
-      (store as any).triggerValidation = vi.fn();
+      store.write.triggerValidation = vi.fn();
 
-      store.setError("list.0", "Error on A");
-      store.swapItems("list", 0, 1);
+      store.write.setError("list.0", "Error on A");
+      store.feature.swapItems("list", 0, 1);
 
-      expect(store.getState().values.list).toEqual(["B", "A"]);
-      expect(store.getState().errors["list.1"]).toBe("Error on A");
-      expect(store.getState().errors["list.0"]).toBeUndefined();
+      expect(store.read.getState().values.list).toEqual(["B", "A"]);
+      expect(store.read.getState().errors["list.1"]).toBe("Error on A");
+      expect(store.read.getState().errors["list.0"]).toBeUndefined();
     });
 
     it("should move items and shift errors accordingly", () => {
       const store = createBitStore({
         initialValues: { list: ["A", "B", "C"] },
       });
-      (store as any).triggerValidation = vi.fn();
+      store.write.triggerValidation = vi.fn();
 
-      store.setError("list.0", "Error on A");
-      store.moveItem("list", 0, 2);
+      store.write.setError("list.0", "Error on A");
+      store.feature.moveItem("list", 0, 2);
 
-      expect(store.getState().values.list).toEqual(["B", "C", "A"]);
-      expect(store.getState().errors["list.2"]).toBe("Error on A");
-      expect(store.getState().errors["list.0"]).toBeUndefined();
+      expect(store.read.getState().values.list).toEqual(["B", "C", "A"]);
+      expect(store.read.getState().errors["list.2"]).toBe("Error on A");
+      expect(store.read.getState().errors["list.0"]).toBeUndefined();
     });
 
     it("should replace array items through native array capability", () => {
       const store = createBitStore({
         initialValues: { list: ["A", "B", "C"] },
       });
-      (store as any).triggerValidation = vi.fn();
+      store.write.triggerValidation = vi.fn();
 
-      store.setError("list.2", "Error on C");
-      store.replaceItems("list", ["X"]);
+      store.write.setError("list.2", "Error on C");
+      store.feature.replaceItems("list", ["X"]);
 
-      expect(store.getState().values.list).toEqual(["X"]);
-      expect(store.getState().errors["list.0"]).toBeUndefined();
-      expect(store.getState().errors["list.2"]).toBeUndefined();
+      expect(store.read.getState().values.list).toEqual(["X"]);
+      expect(store.read.getState().errors["list.0"]).toBeUndefined();
+      expect(store.read.getState().errors["list.2"]).toBeUndefined();
     });
 
     it("should clear array items through native array capability", () => {
       const store = createBitStore({
         initialValues: { list: ["A", "B"] },
       });
-      (store as any).triggerValidation = vi.fn();
+      store.write.triggerValidation = vi.fn();
 
-      store.setError("list.0", "Error on A");
-      store.clearItems("list");
+      store.write.setError("list.0", "Error on A");
+      store.feature.clearItems("list");
 
-      expect(store.getState().values.list).toEqual([]);
-      expect(store.getState().errors["list.0"]).toBeUndefined();
+      expect(store.read.getState().values.list).toEqual([]);
+      expect(store.read.getState().errors["list.0"]).toBeUndefined();
     });
   });
 
@@ -1271,7 +1206,7 @@ describe("BitStore Core", () => {
         });
       });
 
-      store.registerField("username", {
+      store.feature.registerField("username", {
         validation: {
           asyncValidateOn: "change",
           asyncValidate: mockApi,
@@ -1279,26 +1214,26 @@ describe("BitStore Core", () => {
         },
       });
 
-      store.setField("username", "lea");
+      store.write.setField("username", "lea");
       await vi.advanceTimersByTimeAsync(300);
 
-      store.setField("username", "leandro");
+      store.write.setField("username", "leandro");
 
       expect(mockApi).not.toHaveBeenCalled();
-      expect(store.isFieldValidating("username")).toBe(true);
+      expect(store.read.isFieldValidating("username")).toBe(true);
 
       await vi.advanceTimersByTimeAsync(500);
 
       expect(mockApi).toHaveBeenCalledTimes(1);
       expect(mockApi).toHaveBeenCalledWith("leandro", { username: "leandro" });
 
-      expect(store.isFieldValidating("username")).toBe(true);
+      expect(store.read.isFieldValidating("username")).toBe(true);
 
       resolveApi!("Username já existe");
       await vi.advanceTimersByTimeAsync(1);
 
-      expect(store.isFieldValidating("username")).toBe(false);
-      expect(store.getState().errors.username).toBe("Username já existe");
+      expect(store.read.isFieldValidating("username")).toBe(false);
+      expect(store.read.getState().errors.username).toBe("Username já existe");
     });
 
     it("deve bloquear submit enquanto houver validação assíncrona pendente", async () => {
@@ -1313,7 +1248,7 @@ describe("BitStore Core", () => {
 
       const onSuccess = vi.fn();
 
-      store.registerField("username", {
+      store.feature.registerField("username", {
         validation: {
           asyncValidateOn: "change",
           asyncValidate: mockApi,
@@ -1321,18 +1256,18 @@ describe("BitStore Core", () => {
         },
       });
 
-      store.setField("username", "leandro");
+      store.write.setField("username", "leandro");
 
-      await store.submit(onSuccess);
+      await store.write.submit(onSuccess);
       expect(onSuccess).not.toHaveBeenCalled();
 
       await vi.advanceTimersByTimeAsync(500);
-      expect(store.isFieldValidating("username")).toBe(true);
+      expect(store.read.isFieldValidating("username")).toBe(true);
 
       resolveApi!(null);
       await vi.advanceTimersByTimeAsync(1);
 
-      const secondSubmit = store.submit(onSuccess);
+      const secondSubmit = store.write.submit(onSuccess);
       await vi.advanceTimersByTimeAsync(0);
       resolveApi!(null);
       await vi.advanceTimersByTimeAsync(1);
@@ -1355,7 +1290,7 @@ describe("BitStore Core", () => {
         });
       });
 
-      store.registerField("email", {
+      store.feature.registerField("email", {
         validation: {
           asyncValidateOn: "change",
           asyncValidate: mockApi,
@@ -1363,22 +1298,22 @@ describe("BitStore Core", () => {
         },
       });
 
-      store.setField("email", "dev@");
+      store.write.setField("email", "dev@");
       await vi.advanceTimersByTimeAsync(100);
 
-      store.setField("email", "dev@bitform.com");
+      store.write.setField("email", "dev@bitform.com");
       await vi.advanceTimersByTimeAsync(100);
 
       resolveSecondReq!(null);
       await vi.advanceTimersByTimeAsync(1);
-      expect(store.getState().errors.email).toBeUndefined();
+      expect(store.read.getState().errors.email).toBeUndefined();
 
       resolveFirstReq!("Email inválido");
       await vi.advanceTimersByTimeAsync(1);
 
-      expect(store.getState().errors.email).toBeUndefined();
+      expect(store.read.getState().errors.email).toBeUndefined();
       await vi.advanceTimersByTimeAsync(5);
-      expect(store.isFieldValidating("email")).toBe(false);
+      expect(store.read.isFieldValidating("email")).toBe(false);
     });
 
     it("deve acumular scopeFields no debounce de triggerValidation", async () => {
@@ -1395,9 +1330,9 @@ describe("BitStore Core", () => {
         },
       });
 
-      (store as any).triggerValidation(["email"]);
+      store.write.triggerValidation(["email"]);
       await vi.advanceTimersByTimeAsync(10);
-      (store as any).triggerValidation(["name"]);
+      store.write.triggerValidation(["name"]);
 
       await vi.advanceTimersByTimeAsync(25);
 
@@ -1406,8 +1341,8 @@ describe("BitStore Core", () => {
       expect(calledScopeFields).toEqual(
         expect.arrayContaining(["email", "name"]),
       );
-      expect(store.getState().errors.email).toBe("Email inválido");
-      expect(store.getState().errors.name).toBe("Nome inválido");
+      expect(store.read.getState().errors.email).toBe("Email inválido");
+      expect(store.read.getState().errors.name).toBe("Nome inválido");
     });
 
     it("deve fazer o MERGE perfeito entre erros Síncronos (Zod) e Assíncronos (API)", async () => {
@@ -1420,7 +1355,7 @@ describe("BitStore Core", () => {
         validation: { resolver: mockResolver, delay: 0 },
       });
 
-      store.registerField("username", {
+      store.feature.registerField("username", {
         validation: {
           asyncValidateOn: "change",
           asyncValidate: async () => "API: Username ocupado",
@@ -1428,15 +1363,17 @@ describe("BitStore Core", () => {
         },
       });
 
-      store.setField("username", "leandro");
+      store.write.setField("username", "leandro");
       await vi.advanceTimersByTimeAsync(10);
 
-      expect(store.getState().errors.username).toBe("API: Username ocupado");
+      expect(store.read.getState().errors.username).toBe(
+        "API: Username ocupado",
+      );
 
-      store.setField("password", "123");
+      store.write.setField("password", "123");
       await vi.advanceTimersByTimeAsync(10);
 
-      expect(store.getState().errors).toEqual({
+      expect(store.read.getState().errors).toEqual({
         username: "API: Username ocupado",
         password: "Senha fraca",
       });
@@ -1456,20 +1393,20 @@ describe("BitStore Core", () => {
         },
       });
 
-      store.registerField("email", {
+      store.feature.registerField("email", {
         validation: {
           asyncValidate: async () => null,
           asyncValidateDelay: 0,
         },
       });
 
-      store.setField("email", "invalido");
-      store.blurField("email");
+      store.write.setField("email", "invalido");
+      store.write.blurField("email");
       await vi.advanceTimersByTimeAsync(50);
-      expect(store.getState().errors.email).toBe("E-mail inválido");
+      expect(store.read.getState().errors.email).toBe("E-mail inválido");
 
       await vi.advanceTimersByTimeAsync(50);
-      expect(store.getState().errors.email).toBe("E-mail inválido");
+      expect(store.read.getState().errors.email).toBe("E-mail inválido");
     });
 
     it("deve limpar a memória do erro assíncrono ao ocultar e recalcular quando validado novamente", async () => {
@@ -1477,7 +1414,7 @@ describe("BitStore Core", () => {
         initialValues: { hasCnpj: true, cnpj: "111" },
       });
 
-      store.registerField("cnpj", {
+      store.feature.registerField("cnpj", {
         conditional: {
           dependsOn: ["hasCnpj"],
           showIf: (v) => v.hasCnpj,
@@ -1489,19 +1426,19 @@ describe("BitStore Core", () => {
         },
       });
 
-      store.setField("cnpj", "111");
+      store.write.setField("cnpj", "111");
       await vi.advanceTimersByTimeAsync(10);
-      expect(store.getState().errors.cnpj).toBe("API: CNPJ Inválido");
+      expect(store.read.getState().errors.cnpj).toBe("API: CNPJ Inválido");
 
-      store.setField("hasCnpj", false);
+      store.write.setField("hasCnpj", false);
       await vi.advanceTimersByTimeAsync(10);
 
-      expect(store.getState().errors.cnpj).toBeUndefined();
+      expect(store.read.getState().errors.cnpj).toBeUndefined();
 
-      store.setField("hasCnpj", true);
-      await store.validate({ scopeFields: ["cnpj"] });
+      store.write.setField("hasCnpj", true);
+      await store.write.validate({ scopeFields: ["cnpj"] });
 
-      expect(store.getState().errors.cnpj).toBe("API: CNPJ Inválido");
+      expect(store.read.getState().errors.cnpj).toBe("API: CNPJ Inválido");
     });
 
     it("deve executar asyncValidate apenas no blur por padrão", async () => {
@@ -1512,23 +1449,23 @@ describe("BitStore Core", () => {
 
       const mockApi = vi.fn().mockResolvedValue("Username já existe");
 
-      store.registerField("username", {
+      store.feature.registerField("username", {
         validation: {
           asyncValidate: mockApi,
           asyncValidateDelay: 0,
         },
       });
 
-      store.setField("username", "leandro");
+      store.write.setField("username", "leandro");
       await vi.advanceTimersByTimeAsync(10);
 
       expect(mockApi).not.toHaveBeenCalled();
 
-      store.blurField("username");
+      store.write.blurField("username");
       await vi.advanceTimersByTimeAsync(10);
 
       expect(mockApi).toHaveBeenCalledTimes(1);
-      expect(store.getState().errors.username).toBe("Username já existe");
+      expect(store.read.getState().errors.username).toBe("Username já existe");
     });
   });
 
@@ -1572,7 +1509,7 @@ describe("BitStore Core", () => {
         ],
       });
 
-      await store.validate();
+      await store.write.validate();
 
       expect(calls).toEqual(["beforeValidate", "afterValidate"]);
       store.feature.cleanup();
@@ -1603,7 +1540,7 @@ describe("BitStore Core", () => {
         ],
       });
 
-      await store.submit(async () => {
+      await store.write.submit(async () => {
         calls.push("onSuccess");
       });
 
@@ -1636,9 +1573,12 @@ describe("BitStore Core", () => {
         ],
       });
 
-      store.setField("name", "Leo");
-      store.setValues({ name: "Leandro", items: ["A"] }, { rebase: true });
-      store.pushItem("items", "B");
+      store.write.setField("name", "Leo");
+      store.write.setValues(
+        { name: "Leandro", items: ["A"] },
+        { rebase: true },
+      );
+      store.feature.pushItem("items", "B");
 
       expect(changes.some((event) => event.origin === "setField")).toBe(true);
       expect(changes.some((event) => event.origin === "rebase")).toBe(true);
@@ -1678,7 +1618,7 @@ describe("BitStore Core", () => {
         ],
       });
 
-      const result = await store.validate();
+      const result = await store.write.validate();
 
       expect(result).toBe(true);
       expect(onError).toHaveBeenCalledWith(
@@ -1716,7 +1656,7 @@ describe("BitStore Core", () => {
         ],
       });
 
-      await store.submit(async () => {
+      await store.write.submit(async () => {
         throw new Error("submit failed");
       });
 

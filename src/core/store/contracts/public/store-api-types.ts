@@ -1,37 +1,38 @@
+import { BitMask } from "../../../mask/types";
+import type { BitFormGlobal } from "../bus-types";
+import type { BitValidationTriggerOptions } from "../port-types";
 import {
+  BitArrayItem,
+  BitArrayPath,
+  BitConfig,
   BitErrors,
-  BitFieldState,
   BitFieldDefinition,
+  BitFieldState,
+  BitIdFactory,
+  BitOperationalErrorSource,
   BitPath,
   BitPathValue,
-  BitArrayPath,
-  BitArrayItem,
-  BitConfig,
+  BitPersistMetadata,
+  BitPersistResolvedConfig,
+  BitPlugin,
+  BitScheduler,
+  BitState,
+  BitSubmitResult,
+  DeepPartial,
   DevToolsOptions,
   ScopeStatus,
   ValidatorFn,
-  BitState,
-  BitPersistResolvedConfig,
-  BitPlugin,
-  DeepPartial,
-  BitPersistMetadata,
-  BitIdFactory,
-  BitScheduler,
-  BitSubmitResult,
 } from "../types";
-import { BitMask } from "../../../mask/types";
-import type { BitFormGlobal } from "../bus-types";
 import type {
-  BitSelector,
+  BitFormMeta,
+  BitHistoryMetadata,
+  BitValidationOptions,
+} from "./meta-types";
+import type {
   BitScopedSelectorSubscriptionOptions,
+  BitSelector,
   BitSelectorSubscriptionOptions,
 } from "./subscription-types";
-import type {
-  BitValidationOptions,
-  BitHistoryMetadata,
-  BitFormMeta,
-} from "./meta-types";
-import type { BitValidationTriggerOptions } from "../port-types";
 
 export interface BitStoreIdentityApi<
   T extends object = Record<string, unknown>,
@@ -55,11 +56,9 @@ export interface BitFrameworkConfig<
   plugins: BitPlugin<T>[];
   scheduler?: BitScheduler;
   subscriptionCacheSize?: number;
+  trackedSubscriptions?: boolean;
   bus?: BitFormGlobal;
-  onUnhandledError: (
-    error: unknown,
-    source: "submit" | "validation" | "persist",
-  ) => void;
+  onUnhandledError: (error: unknown, source: BitOperationalErrorSource) => void;
 }
 
 export interface BitFormReadApi<T extends object = Record<string, unknown>> {
