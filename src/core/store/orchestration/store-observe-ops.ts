@@ -1,25 +1,32 @@
+import {
+  getHistorySubscriptionPath,
+  isHistoryMetaEqual,
+} from "../../history-status";
 import { getDeepValue, valueEqual } from "../../utils";
-import { createTrackedSubscription } from "./tracked-selector";
-import type {
-  BitSelector,
-  BitScopedSelectorSubscriptionOptions,
-  BitSelectorSubscriptionOptions,
-} from "../contracts/public/subscription-types";
 import type {
   BitFormMeta,
   BitHistoryMetadata,
 } from "../contracts/public/meta-types";
-import type { BitFieldState, BitPath, BitPathValue } from "../contracts/types";
-import type { BitState } from "../contracts/types";
+import type {
+  BitScopedSelectorSubscriptionOptions,
+  BitSelector,
+  BitSelectorSubscriptionOptions,
+} from "../contracts/public/subscription-types";
+import type {
+  BitFieldState,
+  BitPath,
+  BitPathValue,
+  BitPersistMetadata,
+  BitState,
+  ScopeStatus,
+} from "../contracts/types";
 import type { BitSubscriptionEngine } from "../engines/subscription-engine";
-import type { BitPersistMetadata, ScopeStatus } from "../contracts/types";
-import { isHistoryMetaEqual } from "../../history-status";
 import {
   getScopeRegistrySubscriptionPath,
   getScopeSubscriptionPaths,
   isScopeStatusEqual,
 } from "../shared/scope-status";
-import { getHistorySubscriptionPath } from "../../history-status";
+import { createTrackedSubscription } from "./tracked-selector";
 
 export function subscribeStoreSelector<T extends object, TSlice>(args: {
   getState: () => Readonly<BitState<T>>;
@@ -27,11 +34,25 @@ export function subscribeStoreSelector<T extends object, TSlice>(args: {
   selector: BitSelector<T, TSlice>;
   listener: (slice: TSlice) => void;
   options: BitSelectorSubscriptionOptions<TSlice>;
+  trackedSubscriptionsEnabled: boolean;
 }): () => void {
-  const { getState, subscriptions, selector, listener, options } = args;
+  const {
+    getState,
+    subscriptions,
+    selector,
+    listener,
+    options,
+    trackedSubscriptionsEnabled,
+  } = args;
   const equalityFn = options?.equalityFn ?? valueEqual;
 
   if (options?.mode === "tracked") {
+    if (!trackedSubscriptionsEnabled) {
+      throw new Error(
+        'BitForm: subscribeSelector com mode="tracked" está desabilitado por padrão. Ative config.trackedSubscriptions=true para habilitar o modo avançado.',
+      );
+    }
+
     return createTrackedSubscription({
       getState,
       subscribeSelector: (trackedSelector, trackedListener, trackedOptions) =>

@@ -1,29 +1,15 @@
 // @vitest-environment jsdom
 
-import React from "react";
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { renderHook, act, waitFor } from "@testing-library/react";
-import { useBitUpload, BitFormProvider } from "bit-form/react";
+import { act, renderHook, waitFor } from "@testing-library/react";
+import { BitFormProvider, useBitUpload } from "bit-form/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { createBitStore as createBitStoreRuntime } from "../../../core";
 import type { BitUploadFn } from "../../../core/types/upload";
-import {
-  createBitStore as createBitStoreRuntime,
-  createFrameworkStoreAdapter,
-} from "../../../core";
-
-function adaptToLegacyFlat(store: any) {
-  const legacyStore = Object.create(store);
-
-  return Object.assign(legacyStore, {
-    getState: () => store.read.getState(),
-  });
-}
 
 function createBitStore<T extends object = Record<string, unknown>>(
   config?: any,
 ) {
-  return adaptToLegacyFlat(
-    createFrameworkStoreAdapter(createBitStoreRuntime<T>(config)),
-  ) as any;
+  return createBitStoreRuntime<T>(config) as any;
 }
 
 describe("useBitUpload (React)", () => {
@@ -87,7 +73,7 @@ describe("useBitUpload (React)", () => {
 
     await act(() => result.current.upload(file));
 
-    expect(store.getState().errors.avatar).toContain("Network");
+    expect(store.read.getState().errors.avatar).toContain("Network");
     expect(result.current.error).toBeUndefined();
     expect(result.current.value).toBeUndefined();
   });

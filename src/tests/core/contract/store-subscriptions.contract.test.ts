@@ -3,7 +3,7 @@
  * Testes de contrato para todas as APIs de subscription do store.
  * Importa APENAS via entrypoint público - nunca caminhos internos.
  */
-import { describe, it, expect, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { createBitStore as createBitStoreRuntime } from "../../../core";
 
 const createBitStore = ((config?: any) => createBitStoreRuntime(config)) as any;
@@ -129,9 +129,25 @@ describe("Store Subscriptions Contract", () => {
   });
 
   describe("subscribeSelector (mode: tracked)", () => {
+    it("deve falhar quando trackedSubscriptions não está habilitado", () => {
+      const store = createBitStore({
+        initialValues: { user: { name: "Leo", age: 30 }, title: "Dr" },
+      });
+      const listener = vi.fn();
+
+      expect(() =>
+        store.observe.subscribeSelector(
+          (state) => ({ name: (state.values as any).user.name }),
+          listener,
+          { mode: "tracked" },
+        ),
+      ).toThrowError(/trackedSubscriptions=true/);
+    });
+
     it("deve rastrear paths acessados automaticamente", () => {
       const store = createBitStore({
         initialValues: { user: { name: "Leo", age: 30 }, title: "Dr" },
+        trackedSubscriptions: true,
       });
       const listener = vi.fn();
 

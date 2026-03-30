@@ -1,41 +1,11 @@
-import { describe, it, expect, vi } from "vitest";
-import { createPatternMask, unmaskCurrency } from "../../core/mask/creators";
+import { describe, expect, it, vi } from "vitest";
 import { createBitStore as createBitStoreRuntime } from "../../core";
-
-function adaptToLegacyFlat(store: any) {
-  const legacyStore = Object.create(store);
-
-  return Object.assign(legacyStore, {
-    getState: () => store.read.getState(),
-    getConfig: () => store.read.config,
-    getFieldState: (path: any) => store.read.getFieldState(path),
-    isHidden: (path: any) => store.read.isHidden(path),
-    isRequired: (path: any) => store.read.isRequired(path),
-    setField: (path: any, value: any) => store.write.setField(path, value),
-    blurField: (path: any) => store.write.blurField(path),
-    setError: (path: any, error: any) => store.write.setError(path, error),
-    clearError: (path: any) => store.write.clearError(path),
-    validate: () => store.write.validate(),
-    submit: (handler: any) => store.write.submit(handler),
-    reset: () => store.write.reset(),
-    registerField: (path: any, config: any) =>
-      store.feature.registerField(path, config),
-    unregisterField: (path: any) => store.feature.unregisterField(path),
-    pushItem: (path: any, item: any) => store.feature.pushItem(path, item),
-    removeItem: (path: any, index: any) =>
-      store.feature.removeItem(path, index),
-    moveItem: (path: any, from: any, to: any) =>
-      store.feature.moveItem(path, from, to),
-    subscribe: (cb: any) => store.observe.subscribe(cb),
-    subscribeField: (path: any, cb: any) =>
-      store.observe.subscribeField(path, cb),
-  });
-}
+import { createPatternMask, unmaskCurrency } from "../../core/mask/creators";
 
 function createBitStore<T extends object = Record<string, unknown>>(
   config?: any,
 ) {
-  return adaptToLegacyFlat(createBitStoreRuntime<T>(config)) as any;
+  return createBitStoreRuntime<T>(config) as any;
 }
 
 describe("Form Lifecycle Flow", () => {
@@ -43,7 +13,7 @@ describe("Form Lifecycle Flow", () => {
     let store: any;
 
     const mockResolver = vi.fn().mockImplementation(() => {
-      const errors = store.getState().errors;
+      const errors = store.read.getState().errors;
       return Object.keys(errors).length > 0 ? errors : {};
     });
 
@@ -61,28 +31,31 @@ describe("Form Lifecycle Flow", () => {
       },
     });
 
-    store.registerField("secretKey", {
+    store.feature.registerField("secretKey", {
       conditional: {
         dependsOn: ["showAdvanced"],
         showIf: (v: any) => v.showAdvanced === true,
       },
     });
 
-    store.setField("coupon", createPatternMask("UUUU-##").format("save20"));
-    store.setField("price", "R$ 1.500,90");
+    store.write.setField(
+      "coupon",
+      createPatternMask("UUUU-##").format("save20"),
+    );
+    store.write.setField("price", "R$ 1.500,90");
 
-    store.pushItem("items", { id: 2, val: "ok" });
-    store.setError("items.1.val", "Invalid item");
-    store.removeItem("items", 0);
+    store.feature.pushItem("items", { id: 2, val: "ok" });
+    store.write.setError("items.1.val", "Invalid item");
+    store.feature.removeItem("items", 0);
 
-    expect(store.getState().values.coupon).toBe("SAVE-20");
-    expect(store.getState().errors["items.0.val"]).toBe("Invalid item");
+    expect(store.read.getState().values.coupon).toBe("SAVE-20");
+    expect(store.read.getState().errors["items.0.val"]).toBe("Invalid item");
 
-    store.setField("items.0.val", "fixed");
-    store.setField("showAdvanced", true);
+    store.write.setField("items.0.val", "fixed");
+    store.write.setField("showAdvanced", true);
 
     let finalPayload: any = null;
-    await store.submit((values: any) => {
+    await store.write.submit((values: any) => {
       finalPayload = values;
     });
 
@@ -91,8 +64,8 @@ describe("Form Lifecycle Flow", () => {
     expect(finalPayload.items).toHaveLength(1);
     expect(finalPayload.secretKey).toBe("HIDDEN");
 
-    store.setField("showAdvanced", false);
-    await store.submit((values: any) => {
+    store.write.setField("showAdvanced", false);
+    await store.write.submit((values: any) => {
       finalPayload = values;
     });
 

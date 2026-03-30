@@ -1,24 +1,20 @@
 // @vitest-environment jsdom
 
-import React from "react";
-import { describe, it, expect, vi } from "vitest";
-import { renderHook, act } from "@testing-library/react";
-import {
-  createBitStore as createBitStoreRuntime,
-  createFrameworkStoreAdapter,
-} from "../../../core";
-import { maskBRL } from "../../../mask";
+import { act, renderHook } from "@testing-library/react";
 import {
   BitFormProvider,
+  useBitArray,
   useBitField,
   useBitForm,
-  useBitArray,
   useBitHistory,
+  useBitPersist,
   useBitScope,
   useBitSteps,
   useBitWatch,
-  useBitPersist,
 } from "bit-form/react";
+import { describe, expect, it, vi } from "vitest";
+import { createBitStore as createBitStoreRuntime } from "../../../core";
+import { maskBRL } from "../../../mask";
 
 interface MyForm {
   salary: number;
@@ -31,101 +27,10 @@ interface MyForm {
   bonusValue: number;
 }
 
-function adaptToLegacyFlat(store: any) {
-  const legacyStore = Object.create(store);
-
-  return Object.assign(legacyStore, {
-    getState: () => store.read.getState(),
-    getFieldState: (path: string) => store.read.getFieldState(path),
-    getDirtyValues: () => store.read.getDirtyValues(),
-    getPersistMetadata: () => store.read.getPersistMetadata(),
-    getHistoryMetadata: () => store.read.getHistoryMetadata(),
-    getScopeStatus: (scopeName: string) => store.read.getScopeStatus(scopeName),
-    getScopeErrors: (scopeName: string) => store.read.getScopeErrors(scopeName),
-    getScopeFields: (scopeName: string) => store.read.getScopeFields(scopeName),
-    isFieldDirty: (path: string) => store.read.isFieldDirty(path),
-    isFieldValidating: (path: string) => store.read.isFieldValidating(path),
-    isHidden: (path: string) => store.read.isHidden(path),
-    isRequired: (path: string) => store.read.isRequired(path),
-
-    subscribe: (listener: () => void) => store.observe.subscribe(listener),
-    subscribePath: (
-      path: string,
-      listener: (value: unknown) => void,
-      options?: any,
-    ) => store.observe.subscribePath(path, listener, options),
-    subscribeSelector: (selector: any, listener: any, options?: any) =>
-      store.observe.subscribeSelector(selector, listener, options),
-    subscribeFormMeta: (listener: any) =>
-      store.observe.subscribeFormMeta(listener),
-    subscribeFieldState: (path: string, listener: any) =>
-      store.observe.subscribeFieldState(path, listener),
-    subscribeScopeStatus: (scopeName: string, listener: any) =>
-      store.observe.subscribeScopeStatus(scopeName, listener),
-    subscribePersistMeta: (listener: any) =>
-      store.observe.subscribePersistMeta(listener),
-    subscribeHistoryMeta: (listener: any) =>
-      store.observe.subscribeHistoryMeta(listener),
-
-    setField: (path: string, value: unknown) =>
-      store.write.setField(path, value),
-    blurField: (path: string) => store.write.blurField(path),
-    markFieldsTouched: (paths: string[]) =>
-      store.write.markFieldsTouched(paths),
-    setValues: (values: unknown, options?: any) =>
-      store.write.setValues(values, options),
-    setError: (path: string, message: string | undefined) =>
-      store.write.setError(path, message),
-    setErrors: (errors: unknown) => store.write.setErrors(errors),
-    setServerErrors: (errors: Record<string, string[] | string>) =>
-      store.write.setServerErrors(errors),
-    validate: (options?: any) => store.write.validate(options),
-    triggerValidation: (scopeFields?: string[], options?: any) =>
-      store.write.triggerValidation(scopeFields, options),
-    submit: (onSuccess: any) => store.write.submit(onSuccess),
-    reset: () => store.write.reset(),
-    transaction: (callback: () => unknown) => store.write.transaction(callback),
-
-    registerField: (path: string, config: unknown) =>
-      store.feature.registerField(path, config),
-    unregisterField: (path: string) => store.feature.unregisterField(path),
-    unregisterPrefix: (prefix: string) =>
-      store.feature.unregisterPrefix(prefix),
-    pushItem: (path: string, value: unknown) =>
-      store.feature.pushItem(path, value),
-    prependItem: (path: string, value: unknown) =>
-      store.feature.prependItem(path, value),
-    insertItem: (path: string, index: number, value: unknown) =>
-      store.feature.insertItem(path, index, value),
-    removeItem: (path: string, index: number) =>
-      store.feature.removeItem(path, index),
-    swapItems: (path: string, a: number, b: number) =>
-      store.feature.swapItems(path, a, b),
-    moveItem: (path: string, from: number, to: number) =>
-      store.feature.moveItem(path, from, to),
-    replaceItems: (path: string, items: unknown[]) =>
-      store.feature.replaceItems(path, items),
-    clearItems: (path: string) => store.feature.clearItems(path),
-    get canUndo() {
-      return store.feature.canUndo;
-    },
-    get canRedo() {
-      return store.feature.canRedo;
-    },
-    undo: () => store.feature.undo(),
-    redo: () => store.feature.redo(),
-    restorePersisted: () => store.feature.restorePersisted(),
-    forceSave: () => store.feature.forceSave(),
-    clearPersisted: () => store.feature.clearPersisted(),
-  });
-}
-
 function createBitStore<T extends object = Record<string, unknown>>(
   config?: any,
 ) {
-  return adaptToLegacyFlat(
-    createFrameworkStoreAdapter(createBitStoreRuntime<T>(config)),
-  ) as any;
+  return createBitStoreRuntime<T>(config) as any;
 }
 
 describe("React Integration (Context + Hooks)", () => {
@@ -177,7 +82,7 @@ describe("React Integration (Context + Hooks)", () => {
       });
 
       await act(() => {
-        store.setError("user.firstName", "Erro");
+        store.write.setError("user.firstName", "Erro");
       });
 
       expect(result.current.field.meta.invalid).toBe(true);
@@ -200,7 +105,7 @@ describe("React Integration (Context + Hooks)", () => {
     it("deve reagir a mudanças de isHidden e isRequired via DependencyManager", async () => {
       const store = createTestStore();
 
-      store.registerField("bonusValue", {
+      store.feature.registerField("bonusValue", {
         conditional: {
           dependsOn: ["hasBonus"],
           showIf: (v) => v.hasBonus === true,
@@ -247,7 +152,7 @@ describe("React Integration (Context + Hooks)", () => {
       });
 
       expect(result.current.props.value).toBe("R$ 2.500,50");
-      expect(store.getState().values.salary).toBe(2500.5);
+      expect(store.read.getState().values.salary).toBe(2500.5);
     });
 
     it("deve aceitar máscaras de padrão (pattern) como CPF", async () => {
@@ -272,7 +177,7 @@ describe("React Integration (Context + Hooks)", () => {
       });
 
       expect(result.current.props.value).toBe("123.456.789-01");
-      expect(store.getState().values.user.lastName).toBe("12345678901");
+      expect(store.read.getState().values.user.lastName).toBe("12345678901");
     });
   });
 
@@ -286,7 +191,7 @@ describe("React Integration (Context + Hooks)", () => {
       });
 
       await act(() => {
-        store.setError("skills.0", "Erro no React");
+        store.write.setError("skills.0", "Erro no React");
       });
 
       const initialKeyReact = result.current.fields[0].key;
@@ -295,10 +200,10 @@ describe("React Integration (Context + Hooks)", () => {
         result.current.move(0, 1);
       });
 
-      expect(store.getState().values.skills).toEqual(["Vue", "React"]);
+      expect(store.read.getState().values.skills).toEqual(["Vue", "React"]);
       expect(result.current.fields[1].key).toBe(initialKeyReact);
-      expect(store.getState().errors["skills.1"]).toBe("Erro no React");
-      expect(store.getState().errors["skills.0"]).toBeUndefined();
+      expect(store.read.getState().errors["skills.1"]).toBe("Erro no React");
+      expect(store.read.getState().errors["skills.0"]).toBeUndefined();
     });
 
     it("deve limpar erros residuais ao remover um item do array", async () => {
@@ -310,12 +215,12 @@ describe("React Integration (Context + Hooks)", () => {
       });
 
       await act(() => {
-        store.setError("skills.1", "Erro no Vue");
+        store.write.setError("skills.1", "Erro no Vue");
         result.current.remove(1);
       });
 
-      expect(store.getState().values.skills).toEqual(["React"]);
-      expect(store.getState().errors["skills.1"]).toBeUndefined();
+      expect(store.read.getState().values.skills).toEqual(["React"]);
+      expect(store.read.getState().errors["skills.1"]).toBeUndefined();
     });
 
     it("deve chamar unregisterPrefix ao desmontar useBitArray", () => {
@@ -351,7 +256,7 @@ describe("React Integration (Context + Hooks)", () => {
       expect(result.current).toBe("Leandro");
 
       await act(() => {
-        store.setField("user.firstName", "Kenji");
+        store.write.setField("user.firstName", "Kenji");
       });
 
       expect(result.current).toBe("Kenji");
@@ -396,7 +301,7 @@ describe("React Integration (Context + Hooks)", () => {
         result.current.history.undo();
       });
 
-      expect(store.getState().values.user.firstName).toBe("Leandro");
+      expect(store.read.getState().values.user.firstName).toBe("Leandro");
       expect(result.current.history.canRedo).toBe(true);
     });
 
@@ -416,7 +321,7 @@ describe("React Integration (Context + Hooks)", () => {
       });
 
       await act(() => {
-        store.setError("user.firstName", "Erro");
+        store.write.setError("user.firstName", "Erro");
       });
 
       await act(() => {
@@ -454,7 +359,7 @@ describe("React Integration (Context + Hooks)", () => {
       expect(result.current.getDirtyValues()).toEqual({});
 
       await act(() => {
-        store.setField("user.firstName", "Kenji");
+        store.write.setField("user.firstName", "Kenji");
       });
 
       expect(result.current.getDirtyValues()).toEqual({
@@ -470,7 +375,7 @@ describe("React Integration (Context + Hooks)", () => {
       });
 
       await act(() => {
-        store.setField("user.firstName", "Updated");
+        store.write.setField("user.firstName", "Updated");
       });
 
       await act(() => {
@@ -491,7 +396,7 @@ describe("React Integration (Context + Hooks)", () => {
       });
 
       await act(() => {
-        store.setField("salary", 5000);
+        store.write.setField("salary", 5000);
       });
 
       await act(() => {
@@ -535,14 +440,14 @@ describe("React Integration (Context + Hooks)", () => {
       expect(result.current.isValid).toBe(true);
 
       act(() => {
-        store.setField("user.firstName", "Leo");
+        store.write.setField("user.firstName", "Leo");
       });
 
       expect(result.current.status.isDirty).toBe(true);
       expect(result.current.isDirty).toBe(true);
 
       act(() => {
-        store.setField("user.firstName", "");
+        store.write.setField("user.firstName", "");
       });
 
       let validateResult: { valid: boolean; errors: Record<string, string> };
@@ -605,7 +510,7 @@ describe("React Integration (Context + Hooks)", () => {
       expect(result.current.step).toBe(1);
 
       await act(() => {
-        store.setField("user.firstName", "Leo");
+        store.write.setField("user.firstName", "Leo");
       });
 
       await act(() =>
@@ -647,7 +552,7 @@ describe("React Integration (Context + Hooks)", () => {
       });
 
       await act(() => {
-        store.setField("name", "Leo");
+        store.write.setField("name", "Leo");
       });
 
       let advanced = false;
@@ -736,10 +641,10 @@ describe("React Integration (Context + Hooks)", () => {
       await act(() => result.current.save());
       expect(storage.setItem).toHaveBeenCalled();
 
-      store.setField("user.firstName", "Changed");
+      store.write.setField("user.firstName", "Changed");
       const ok = await act(() => result.current.restore());
       expect(ok).toBe(true);
-      expect(store.getState().values.user.firstName).toBe("Leo");
+      expect(store.read.getState().values.user.firstName).toBe("Leo");
     });
 
     it("deve limpar o rascunho com clear()", async () => {

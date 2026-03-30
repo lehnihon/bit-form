@@ -1,55 +1,25 @@
 // @vitest-environment jsdom
 
-import { describe, it, expect, vi } from "vitest";
 import { mount } from "@vue/test-utils";
-import { defineComponent, nextTick } from "vue";
 import {
-  createBitStore as createBitStoreRuntime,
-  createFrameworkStoreAdapter,
-} from "../../../core";
-import { maskBRL } from "../../../mask";
-import {
+  useBitArray,
   useBitField,
   useBitForm,
-  useBitArray,
   useBitHistory,
+  useBitPersist,
   useBitScope,
   useBitSteps,
-  useBitPersist,
 } from "bit-form/vue";
+import { describe, expect, it, vi } from "vitest";
+import { defineComponent, nextTick } from "vue";
+import { createBitStore as createBitStoreRuntime } from "../../../core";
+import { maskBRL } from "../../../mask";
 import { BIT_STORE_KEY } from "../../../vue/context";
-
-function adaptToLegacyFlat(store: any) {
-  const legacyStore = Object.create(store);
-
-  return Object.assign(legacyStore, {
-    getState: () => store.read.getState(),
-    setField: (path: string, value: unknown) =>
-      store.write.setField(path, value),
-    setError: (path: string, message: string | undefined) =>
-      store.write.setError(path, message),
-    registerField: (path: string, config: unknown) =>
-      store.feature.registerField(path, config),
-    unregisterField: (path: string) => store.feature.unregisterField(path),
-    unregisterPrefix: (prefix: string) =>
-      store.feature.unregisterPrefix(prefix),
-    validate: (options?: any) => store.write.validate(options),
-    triggerValidation: (scopeFields?: string[], options?: any) =>
-      store.write.triggerValidation(scopeFields, options),
-    undo: () => store.feature.undo(),
-    redo: () => store.feature.redo(),
-    forceSave: () => store.feature.forceSave(),
-    restorePersisted: () => store.feature.restorePersisted(),
-    clearPersisted: () => store.feature.clearPersisted(),
-  });
-}
 
 function createBitStore<T extends object = Record<string, unknown>>(
   config?: any,
 ) {
-  return adaptToLegacyFlat(
-    createFrameworkStoreAdapter(createBitStoreRuntime<T>(config)),
-  ) as any;
+  return createBitStoreRuntime<T>(config) as any;
 }
 
 describe("Vue Integration", () => {
@@ -87,7 +57,7 @@ describe("Vue Integration", () => {
 
   it("should react to isHidden and isRequired changes", async () => {
     const store = createBitStore({ initialValues: { type: "PF", cnpj: "" } });
-    store.registerField("cnpj", {
+    store.feature.registerField("cnpj", {
       conditional: {
         dependsOn: ["type"],
         showIf: (v: any) => v.type === "PJ",
@@ -134,7 +104,7 @@ describe("Vue Integration", () => {
     wrapper.vm.salary.setValue("R$ 2.500,50");
     await nextTick();
 
-    expect(store.getState().values.salary).toBe(2500.5);
+    expect(store.read.getState().values.salary).toBe(2500.5);
   });
 
   it("should shift errors and keep stable keys in arrays", async () => {
@@ -146,14 +116,14 @@ describe("Vue Integration", () => {
       form: useBitForm(),
     }));
 
-    store.setError("tags.2", "Error on C");
+    store.write.setError("tags.2", "Error on C");
     const initialKeyC = wrapper.vm.list.fields.value[2].key;
 
     wrapper.vm.list.remove(1);
     await nextTick();
 
     expect(wrapper.vm.form.getValues().tags).toEqual(["A", "C"]);
-    expect(store.getState().errors["tags.1"]).toBe("Error on C");
+    expect(store.read.getState().errors["tags.1"]).toBe("Error on C");
     expect(wrapper.vm.list.fields.value[1].key).toBe(initialKeyC);
   });
 
@@ -165,12 +135,12 @@ describe("Vue Integration", () => {
       list: useBitArray("tags"),
     }));
 
-    store.setError("tags.0", "Error on A");
+    store.write.setError("tags.0", "Error on A");
     wrapper.vm.list.swap(0, 1);
     await nextTick();
 
-    expect(store.getState().values.tags).toEqual(["B", "A"]);
-    expect(store.getState().errors["tags.1"]).toBe("Error on A");
+    expect(store.read.getState().values.tags).toEqual(["B", "A"]);
+    expect(store.read.getState().errors["tags.1"]).toBe("Error on A");
   });
 
   it("should call unregisterPrefix on array unmount", async () => {
@@ -208,7 +178,7 @@ describe("Vue Integration", () => {
     const store = createBitStore({ initialValues: { count: 0 } });
     const wrapper = createWrapper(store, () => ({ form: useBitForm() }));
 
-    store.setField("count", 10);
+    store.write.setField("count", 10);
     await nextTick();
 
     wrapper.vm.form.reset();
@@ -243,7 +213,7 @@ describe("Vue Integration", () => {
     wrapper.vm.history.undo();
     await nextTick();
 
-    expect(store.getState().values.name).toBe("Leo");
+    expect(store.read.getState().values.name).toBe("Leo");
     expect(wrapper.vm.history.canRedo.value).toBe(true);
   });
 
@@ -260,7 +230,7 @@ describe("Vue Integration", () => {
 
     expect(wrapper.vm.form.getDirtyValues()).toEqual({});
 
-    store.setField("name", "Leandro");
+    store.write.setField("name", "Leandro");
     await nextTick();
 
     expect(wrapper.vm.form.getDirtyValues()).toEqual({ name: "Leandro" });
@@ -271,7 +241,7 @@ describe("Vue Integration", () => {
     const submitHandler = vi.fn();
     const wrapper = createWrapper(store, () => ({ form: useBitForm() }));
 
-    store.setField("name", "Updated");
+    store.write.setField("name", "Updated");
     await nextTick();
 
     const submitFn = wrapper.vm.form.submit(submitHandler);
@@ -288,7 +258,7 @@ describe("Vue Integration", () => {
     const apiHandler = vi.fn().mockResolvedValue({ success: true });
     const wrapper = createWrapper(store, () => ({ form: useBitForm() }));
 
-    store.setField("email", "new@test.com");
+    store.write.setField("email", "new@test.com");
     await nextTick();
 
     const submitFn = wrapper.vm.form.onSubmit(apiHandler);
@@ -316,13 +286,13 @@ describe("Vue Integration", () => {
     expect(wrapper.vm.step.status.value.hasErrors).toBe(false);
     expect(wrapper.vm.step.status.value.isDirty).toBe(false);
 
-    store.setField("name", "Leo");
+    store.write.setField("name", "Leo");
     await nextTick();
 
     expect(wrapper.vm.step.status.value.isDirty).toBe(true);
     expect(wrapper.vm.step.isDirty.value).toBe(true);
 
-    store.setError("name", "Erro");
+    store.write.setError("name", "Erro");
     await nextTick();
 
     expect(wrapper.vm.step.status.value.hasErrors).toBe(true);
@@ -347,7 +317,7 @@ describe("Vue Integration", () => {
     expect(wrapper.vm.steps.step.value).toBe(1);
     expect(wrapper.vm.steps.scope.value).toBe("step1");
 
-    store.setField("name", "Leo");
+    store.write.setField("name", "Leo");
     await nextTick();
 
     const advanced = await wrapper.vm.steps.next();
@@ -409,10 +379,10 @@ describe("Vue Integration", () => {
       await wrapper.vm.persist.save();
       expect(storage.setItem).toHaveBeenCalled();
 
-      store.setField("name", "Changed");
+      store.write.setField("name", "Changed");
       const ok = await wrapper.vm.persist.restore();
       expect(ok).toBe(true);
-      expect(store.getState().values.name).toBe("Leo");
+      expect(store.read.getState().values.name).toBe("Leo");
     });
   });
 });

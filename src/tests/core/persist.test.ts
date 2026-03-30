@@ -1,27 +1,10 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import {
-  createBitStore as createBitStoreRuntime,
-  createFrameworkStoreAdapter,
-} from "../../core";
-
-function adaptToLegacyFlat(store: any) {
-  const legacyStore = Object.create(store);
-
-  return Object.assign(legacyStore, {
-    getState: () => store.read.getState(),
-    setField: (path: any, value: any) => store.write.setField(path, value),
-    restorePersisted: () => store.feature.restorePersisted(),
-    forceSave: () => store.feature.forceSave(),
-    clearPersisted: () => store.feature.clearPersisted(),
-    cleanup: () => store.feature.cleanup(),
-  });
-}
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { createBitStore as createBitStoreRuntime } from "../../core";
 
 function createBitStore<T extends object = Record<string, unknown>>(
   config?: any,
 ) {
-  const raw = createFrameworkStoreAdapter(createBitStoreRuntime<T>(config));
-  return adaptToLegacyFlat(raw) as any;
+  return createBitStoreRuntime<T>(config) as any;
 }
 
 interface TestForm {
@@ -65,12 +48,12 @@ describe("Persist Feature (BitPersistManager)", () => {
         },
       });
 
-      store.setField("name", "Changed");
+      store.write.setField("name", "Changed");
       vi.runAllTimers();
       await Promise.resolve();
 
       expect(storage.setItem).not.toHaveBeenCalled();
-      store.cleanup();
+      store.feature.cleanup();
     });
 
     it("should return false on restorePersisted when disabled", async () => {
@@ -84,9 +67,9 @@ describe("Persist Feature (BitPersistManager)", () => {
         },
       });
 
-      const restored = await store.restorePersisted();
+      const restored = await store.feature.restorePersisted();
       expect(restored).toBe(false);
-      store.cleanup();
+      store.feature.cleanup();
     });
   });
 
@@ -103,7 +86,7 @@ describe("Persist Feature (BitPersistManager)", () => {
         },
       });
 
-      store.setField("name", "Leandro");
+      store.write.setField("name", "Leandro");
       expect(storage.setItem).not.toHaveBeenCalled();
 
       vi.advanceTimersByTime(300);
@@ -117,7 +100,7 @@ describe("Persist Feature (BitPersistManager)", () => {
       const saved = JSON.parse(storage._data["test-form"]);
       expect(saved.name).toBe("Leandro");
 
-      store.cleanup();
+      store.feature.cleanup();
     });
 
     it("should not autosave if autoSave is false", async () => {
@@ -132,12 +115,12 @@ describe("Persist Feature (BitPersistManager)", () => {
         },
       });
 
-      store.setField("name", "Leandro");
+      store.write.setField("name", "Leandro");
       vi.runAllTimers();
       await Promise.resolve();
 
       expect(storage.setItem).not.toHaveBeenCalled();
-      store.cleanup();
+      store.feature.cleanup();
     });
 
     it("should debounce multiple rapid changes into one save", async () => {
@@ -152,14 +135,14 @@ describe("Persist Feature (BitPersistManager)", () => {
         },
       });
 
-      store.setField("name", "A");
-      store.setField("name", "AB");
-      store.setField("name", "ABC");
+      store.write.setField("name", "A");
+      store.write.setField("name", "AB");
+      store.write.setField("name", "ABC");
       vi.advanceTimersByTime(300);
       await Promise.resolve();
 
       expect(storage.setItem).toHaveBeenCalledTimes(1);
-      store.cleanup();
+      store.feature.cleanup();
     });
   });
 
@@ -176,8 +159,8 @@ describe("Persist Feature (BitPersistManager)", () => {
         },
       });
 
-      store.setField("name", "Leandro");
-      await store.forceSave();
+      store.write.setField("name", "Leandro");
+      await store.feature.forceSave();
 
       expect(storage.setItem).toHaveBeenCalledWith(
         "test-form",
@@ -185,7 +168,7 @@ describe("Persist Feature (BitPersistManager)", () => {
       );
       const saved = JSON.parse(storage._data["test-form"]);
       expect(saved.name).toBe("Leandro");
-      store.cleanup();
+      store.feature.cleanup();
     });
   });
 
@@ -207,12 +190,12 @@ describe("Persist Feature (BitPersistManager)", () => {
         },
       });
 
-      const restored = await store.restorePersisted();
+      const restored = await store.feature.restorePersisted();
 
       expect(restored).toBe(true);
-      expect(store.getState().values.name).toBe("Restored");
-      expect(store.getState().values.email).toBe("restored@test.com");
-      store.cleanup();
+      expect(store.read.getState().values.name).toBe("Restored");
+      expect(store.read.getState().values.email).toBe("restored@test.com");
+      store.feature.cleanup();
     });
 
     it("should return false when nothing is saved", async () => {
@@ -226,9 +209,9 @@ describe("Persist Feature (BitPersistManager)", () => {
         },
       });
 
-      const restored = await store.restorePersisted();
+      const restored = await store.feature.restorePersisted();
       expect(restored).toBe(false);
-      store.cleanup();
+      store.feature.cleanup();
     });
 
     it("should partially restore (only saved fields override)", async () => {
@@ -244,12 +227,12 @@ describe("Persist Feature (BitPersistManager)", () => {
         },
       });
 
-      await store.restorePersisted();
+      await store.feature.restorePersisted();
 
-      expect(store.getState().values.name).toBe("Partial");
-      expect(store.getState().values.email).toBe("leo@test.com");
-      expect(store.getState().values.age).toBe(30);
-      store.cleanup();
+      expect(store.read.getState().values.name).toBe("Partial");
+      expect(store.read.getState().values.email).toBe("leo@test.com");
+      expect(store.read.getState().values.age).toBe(30);
+      store.feature.cleanup();
     });
 
     it("should deeply merge nested restored payloads with the baseline", async () => {
@@ -270,15 +253,15 @@ describe("Persist Feature (BitPersistManager)", () => {
         },
       });
 
-      const restored = await store.restorePersisted();
+      const restored = await store.feature.restorePersisted();
 
       expect(restored).toBe(true);
-      expect(store.getState().values).toEqual({
+      expect(store.read.getState().values).toEqual({
         profile: { city: "Osaka", zip: "100-0001" },
         preferences: { theme: "dark" },
       });
 
-      store.cleanup();
+      store.feature.cleanup();
     });
   });
 
@@ -296,11 +279,11 @@ describe("Persist Feature (BitPersistManager)", () => {
         },
       });
 
-      await store.clearPersisted();
+      await store.feature.clearPersisted();
 
       expect(storage.removeItem).toHaveBeenCalledWith("test-form");
       expect(storage._data["test-form"]).toBeUndefined();
-      store.cleanup();
+      store.feature.cleanup();
     });
   });
 
@@ -327,14 +310,14 @@ describe("Persist Feature (BitPersistManager)", () => {
         },
       });
 
-      store.setField("name", "Async");
-      await store.forceSave();
+      store.write.setField("name", "Async");
+      await store.feature.forceSave();
       expect(asyncStorage.setItem).toHaveBeenCalled();
 
-      const restored = await store.restorePersisted();
+      const restored = await store.feature.restorePersisted();
       expect(restored).toBe(true);
-      expect(store.getState().values.name).toBe("Async");
-      store.cleanup();
+      expect(store.read.getState().values.name).toBe("Async");
+      store.feature.cleanup();
     });
   });
 
@@ -359,11 +342,11 @@ describe("Persist Feature (BitPersistManager)", () => {
         },
       });
 
-      const restored = await store.restorePersisted();
+      const restored = await store.feature.restorePersisted();
 
       expect(restored).toBe(false);
       expect(onError).toHaveBeenCalledWith(expect.any(Error));
-      store.cleanup();
+      store.feature.cleanup();
     });
   });
 
@@ -378,9 +361,9 @@ describe("Persist Feature (BitPersistManager)", () => {
         },
       });
 
-      expect(typeof store.restorePersisted).toBe("function");
-      expect(typeof store.forceSave).toBe("function");
-      expect(typeof store.clearPersisted).toBe("function");
+      expect(typeof store.feature.restorePersisted).toBe("function");
+      expect(typeof store.feature.forceSave).toBe("function");
+      expect(typeof store.feature.clearPersisted).toBe("function");
     });
   });
 });
