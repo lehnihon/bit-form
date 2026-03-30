@@ -32,6 +32,9 @@ export default [
       // Remove unused imports automatically (auto-fixable)
       "unused-imports/no-unused-imports": "error",
 
+      // Disable base rule for TypeScript syntax such as interface method params
+      "no-unused-vars": "off",
+
       // TypeScript rules
       "@typescript-eslint/no-explicit-any": [
         "warn",
