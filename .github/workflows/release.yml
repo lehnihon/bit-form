@@ -23,7 +23,7 @@ jobs:
           node-version: "24"
 
       - name: Instalar dependências
-        run: npm install
+        run: npm ci --fetch-retries=5 --fetch-retry-mintimeout=20000 --fetch-retry-maxtimeout=120000
 
       - name: Rodar Testes
         run: npm test
