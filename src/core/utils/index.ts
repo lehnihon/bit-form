@@ -1,9 +1,9 @@
 export {
+  collectDirtyPaths,
   deepClone,
+  deepEqual,
   deepMerge,
   valueEqual,
-  deepEqual,
-  collectDirtyPaths,
 } from "./structural";
 
 export {
@@ -11,14 +11,15 @@ export {
   setDeepValue,
   setDeepValues,
   unsetDeepValue,
+  unsetDeepValues,
 } from "./path-value";
 
 export {
   cleanPrefixedKeys,
-  shiftKeys,
-  swapKeys,
   moveKeys,
   reindexFieldArrayMeta,
+  shiftKeys,
+  swapKeys,
 } from "./array-meta";
 
-export { isValidationErrorShape, extractServerErrors } from "./server-errors";
+export { extractServerErrors, isValidationErrorShape } from "./server-errors";

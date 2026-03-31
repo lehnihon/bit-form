@@ -1,6 +1,6 @@
 import type {
-  BitSelector,
   BitScopedSelectorSubscriptionOptions,
+  BitSelector,
 } from "../contracts/public/subscription-types";
 import type { BitState } from "../contracts/types";
 import { isPathWithinPrefix, normalizePathPrefix } from "../shared/path-prefix";
@@ -114,15 +114,27 @@ export class BitSubscriptionEngine<T extends object> {
       return;
     }
 
-    const normalizedChangedPaths = changedPaths
-      ? this.normalizeSubscriptionPaths(Array.from(changedPaths))
-      : [];
+    const normalizedChangedPaths =
+      this.normalizeChangedPathIterable(changedPaths);
 
     if (
       normalizedChangedPaths.length === 0 ||
       normalizedChangedPaths.includes("*")
     ) {
       this.pathScopedSubscriptions.forEach((_paths, subscription) => {
+        subscription.notify(nextState);
+      });
+      return;
+    }
+
+    if (
+      normalizedChangedPaths.length === 1 &&
+      this.isSimplePath(normalizedChangedPaths[0])
+    ) {
+      const singleScopedSubscribers =
+        this.collectSubscribersForSingleChangedPath(normalizedChangedPaths[0]);
+
+      singleScopedSubscribers.forEach((subscription) => {
         subscription.notify(nextState);
       });
       return;
@@ -186,6 +198,27 @@ export class BitSubscriptionEngine<T extends object> {
     return normalized;
   }
 
+  private normalizeChangedPathIterable(paths?: Iterable<string>): string[] {
+    if (!paths) {
+      return [];
+    }
+
+    const seen = new Set<string>();
+    const normalized: string[] = [];
+
+    for (const path of paths) {
+      const trimmed = path.trim();
+      if (trimmed.length === 0 || seen.has(trimmed)) {
+        continue;
+      }
+
+      seen.add(trimmed);
+      normalized.push(trimmed);
+    }
+
+    return normalized;
+  }
+
   private collectSubscribersForChangedPaths(
     changedPaths: string[],
   ): SelectorListenerEntry<T>[] {
@@ -211,6 +244,31 @@ export class BitSubscriptionEngine<T extends object> {
       this.forEachLookupPath(changedPath, addByPath);
     });
 
+    return scopedSubscribers;
+  }
+
+  private collectSubscribersForSingleChangedPath(
+    changedPath: string,
+  ): SelectorListenerEntry<T>[] {
+    const scopedSubscribers: SelectorListenerEntry<T>[] = [];
+    const currentVersion = ++this.notifyVersion;
+
+    const addByPath = (path: string) => {
+      const listeners = this.pathSelectorIndex.get(path);
+      if (!listeners) return;
+
+      listeners.forEach((subscription) => {
+        const seenVersion = this.subscriptionSeenVersion.get(subscription) ?? 0;
+        if (seenVersion >= currentVersion) {
+          return;
+        }
+
+        this.subscriptionSeenVersion.set(subscription, currentVersion);
+        scopedSubscribers.push(subscription);
+      });
+    };
+
+    this.forEachLookupPath(changedPath, addByPath);
     return scopedSubscribers;
   }
 

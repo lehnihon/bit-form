@@ -1,4 +1,4 @@
-import { getDeepValue, setDeepValue, deepEqual } from "../../../utils";
+import { deepEqual, getDeepValue, setDeepValue } from "../../../utils";
 import type { BitComputedFn } from "../../contracts/types";
 
 export interface BitComputedEntry<T extends object> {
@@ -15,9 +15,14 @@ export class BitComputedManager<T extends object> {
   private reverseDepsCache: Map<string, Set<string>> | null = null;
   private childDepsIndex: Map<string, Set<string>> | null = null;
   private validatedEntriesSignature: string | null = null;
+  private validatedEntriesRef: BitComputedEntry<T>[] | null = null;
   private orderedAllEntriesCache: {
     signature: string;
     ordered: BitComputedEntry<T>[];
+  } | null = null;
+  private orderedIndexByPathCache: {
+    signature: string;
+    indexByPath: Map<string, number>;
   } | null = null;
 
   constructor(private getComputedEntries: () => BitComputedEntry<T>[]) {}
@@ -34,6 +39,8 @@ export class BitComputedManager<T extends object> {
     this.childDepsIndex = null;
     this.orderedAllEntriesCache = null;
     this.validatedEntriesSignature = null;
+    this.validatedEntriesRef = null;
+    this.orderedIndexByPathCache = null;
     this.equalityCache.clear();
   }
 
@@ -145,9 +152,10 @@ export class BitComputedManager<T extends object> {
     const reverseDependencies = this.getReverseDependencies(entries);
     const affectedPaths = new Set<string>();
     const queue = [...changedPaths];
+    let queueIndex = 0;
 
-    while (queue.length > 0) {
-      const currentPath = queue.shift()!;
+    while (queueIndex < queue.length) {
+      const currentPath = queue[queueIndex++]!;
       const dependents = this.getDependentsForPath(
         reverseDependencies,
         currentPath,
@@ -171,10 +179,29 @@ export class BitComputedManager<T extends object> {
       return [];
     }
 
-    // Optimization: Use pre-computed global order instead of recalculating
-    // This keeps entries in their proper topological order without O(n²) recalculation
     const orderedAllEntries = this.getOrderedAllEntries(entries);
-    return orderedAllEntries.filter((entry) => affectedPaths.has(entry.path));
+    const indexByPath = this.getOrderedIndexByPath(entries, orderedAllEntries);
+    const affectedEntries: Array<{
+      index: number;
+      entry: BitComputedEntry<T>;
+    }> = [];
+
+    affectedPaths.forEach((path) => {
+      const entryIndex = indexByPath.get(path);
+      if (entryIndex === undefined) {
+        return;
+      }
+
+      const entry = orderedAllEntries[entryIndex];
+      if (!entry) {
+        return;
+      }
+
+      affectedEntries.push({ index: entryIndex, entry });
+    });
+
+    affectedEntries.sort((left, right) => left.index - right.index);
+    return affectedEntries.map((item) => item.entry);
   }
 
   private orderEntries(entries: BitComputedEntry<T>[]) {
@@ -250,15 +277,42 @@ export class BitComputedManager<T extends object> {
     return ordered;
   }
 
+  private getOrderedIndexByPath(
+    entries: BitComputedEntry<T>[],
+    orderedEntries: BitComputedEntry<T>[],
+  ): Map<string, number> {
+    const signature = this.createEntriesSignature(entries);
+    if (
+      this.orderedIndexByPathCache &&
+      this.orderedIndexByPathCache.signature === signature
+    ) {
+      return this.orderedIndexByPathCache.indexByPath;
+    }
+
+    const indexByPath = new Map<string, number>();
+    orderedEntries.forEach((entry, index) => {
+      indexByPath.set(entry.path, index);
+    });
+
+    this.orderedIndexByPathCache = { signature, indexByPath };
+    return indexByPath;
+  }
+
   private ensureEntriesAreValid(entries: BitComputedEntry<T>[]) {
+    if (this.validatedEntriesRef === entries) {
+      return;
+    }
+
     const signature = this.createEntriesSignature(entries);
     if (this.validatedEntriesSignature === signature) {
+      this.validatedEntriesRef = entries;
       return;
     }
 
     entries.forEach((entry) => this.assertDependencies(entry));
-    this.validatedEntriesSignature = signature;
     this.invalidateReverseDeps();
+    this.validatedEntriesSignature = signature;
+    this.validatedEntriesRef = entries;
   }
 
   private createEntriesSignature(entries: BitComputedEntry<T>[]): string {

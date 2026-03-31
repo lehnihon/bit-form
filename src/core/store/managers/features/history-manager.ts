@@ -1,4 +1,4 @@
-import { deepClone, deepEqual } from "../../../utils";
+import { deepClone } from "../../../utils";
 import {
   applyHistoryPatch,
   createHistoryPatch,
@@ -25,10 +25,6 @@ export class BitHistoryManager<T extends object = Record<string, unknown>> {
       return;
     }
 
-    if (deepEqual(this.currentSnapshot, values)) {
-      return;
-    }
-
     if (this.historyIndex < this.historySize - 1) {
       this.patches.splice(this.historyIndex);
       this.historySize = this.historyIndex + 1;
@@ -40,7 +36,7 @@ export class BitHistoryManager<T extends object = Record<string, unknown>> {
     }
 
     this.patches.push(patch);
-    this.currentSnapshot = deepClone(values);
+    this.currentSnapshot = values;
     this.historyIndex += 1;
     this.historySize = this.historyIndex + 1;
 
@@ -71,7 +67,7 @@ export class BitHistoryManager<T extends object = Record<string, unknown>> {
       "undo",
     );
 
-    this.currentSnapshot = deepClone(previousSnapshot);
+    this.currentSnapshot = previousSnapshot;
     this.historyIndex -= 1;
     return previousSnapshot;
   }
@@ -84,7 +80,7 @@ export class BitHistoryManager<T extends object = Record<string, unknown>> {
     const patch = this.patches[this.historyIndex];
     const nextSnapshot = applyHistoryPatch(this.currentSnapshot, patch, "redo");
 
-    this.currentSnapshot = deepClone(nextSnapshot);
+    this.currentSnapshot = nextSnapshot;
     this.historyIndex += 1;
     return nextSnapshot;
   }
@@ -100,7 +96,7 @@ export class BitHistoryManager<T extends object = Record<string, unknown>> {
     }
 
     this.baseSnapshot = deepClone(initialValues);
-    this.currentSnapshot = deepClone(initialValues);
+    this.currentSnapshot = this.baseSnapshot;
     this.patches = [];
     this.historyIndex = 0;
     this.historySize = 1;

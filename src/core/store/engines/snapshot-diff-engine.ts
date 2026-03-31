@@ -1,8 +1,8 @@
 import {
   deepClone,
   deepEqual,
-  setDeepValue,
-  unsetDeepValue,
+  setDeepValues,
+  unsetDeepValues,
 } from "../../utils";
 
 type HistoryDirection = "undo" | "redo";
@@ -102,6 +102,8 @@ export function applyHistoryPatch<T extends object>(
   direction: HistoryDirection,
 ): T {
   let nextValue: unknown = currentValue;
+  const setUpdates: Array<readonly [string, unknown]> = [];
+  const unsetPaths: string[] = [];
 
   for (const operation of patch.operations) {
     const shouldSet =
@@ -112,13 +114,26 @@ export function applyHistoryPatch<T extends object>(
       direction === "undo" ? operation.previousValue : operation.nextValue;
 
     if (!operation.path) {
-      nextValue = shouldSet ? deepClone(value) : {};
+      nextValue = shouldSet ? value : {};
+      setUpdates.length = 0;
+      unsetPaths.length = 0;
       continue;
     }
 
-    nextValue = shouldSet
-      ? setDeepValue(nextValue, operation.path, deepClone(value))
-      : unsetDeepValue(nextValue, operation.path);
+    if (shouldSet) {
+      setUpdates.push([operation.path, value]);
+      continue;
+    }
+
+    unsetPaths.push(operation.path);
+  }
+
+  if (setUpdates.length > 0) {
+    nextValue = setDeepValues(nextValue, setUpdates);
+  }
+
+  if (unsetPaths.length > 0) {
+    nextValue = unsetDeepValues(nextValue, unsetPaths);
   }
 
   return nextValue as T;

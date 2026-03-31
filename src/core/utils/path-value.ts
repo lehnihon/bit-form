@@ -157,3 +157,62 @@ export function unsetDeepValue(obj: any, path: string): any {
 
   return root;
 }
+
+export function unsetDeepValues(obj: any, paths: ReadonlyArray<string>): any {
+  if (paths.length === 0) {
+    return obj;
+  }
+
+  const root = Array.isArray(obj) ? [...obj] : { ...obj };
+  const clonedNodes = new WeakSet<object>();
+  if (root && typeof root === "object") {
+    clonedNodes.add(root);
+  }
+
+  for (const path of paths) {
+    if (!path) {
+      return Array.isArray(obj) ? [] : {};
+    }
+
+    const keys = getPathKeys(path);
+    let current: any = root;
+
+    for (let i = 0; i < keys.length - 1; i++) {
+      const key = keys[i];
+      const currentValue = current?.[key];
+
+      if (currentValue === null || currentValue === undefined) {
+        current = undefined;
+        break;
+      }
+
+      if (typeof currentValue === "object") {
+        if (!clonedNodes.has(currentValue)) {
+          current[key] = Array.isArray(currentValue)
+            ? [...currentValue]
+            : { ...currentValue };
+          clonedNodes.add(current[key]);
+        }
+      } else {
+        current = undefined;
+        break;
+      }
+
+      current = current[key];
+    }
+
+    if (!current) {
+      continue;
+    }
+
+    const leafKey = keys[keys.length - 1];
+
+    if (Array.isArray(current)) {
+      current.splice(Number(leafKey), 1);
+    } else if (current && typeof current === "object") {
+      delete current[leafKey];
+    }
+  }
+
+  return root;
+}
