@@ -60,7 +60,7 @@ export class BitFieldUpdateManager<T extends object> {
     path: string,
     value: unknown,
     meta: BitFieldChangeMeta = { origin: "setField" },
-  ) {
+  ): void {
     const state = this.store.getState();
     const previousValue = getDeepValue(state.values, path);
 
