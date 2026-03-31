@@ -1,4 +1,4 @@
-import { getDeepValue, setDeepValue, valueEqual } from "../../../../utils";
+import { getDeepValue, setDeepValue } from "../../../../utils";
 import { clearErrorPath } from "../../../../utils/error-utils";
 import type {
   BitDependencyUpdateDiff,
@@ -63,10 +63,6 @@ export class BitFieldUpdateManager<T extends object> {
   ) {
     const state = this.store.getState();
     const previousValue = getDeepValue(state.values, path);
-
-    if (valueEqual(previousValue, value)) {
-      return;
-    }
 
     const context: FieldUpdatePipelineContext<T> = {
       path,
