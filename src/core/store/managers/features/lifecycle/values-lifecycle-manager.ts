@@ -1,14 +1,16 @@
-import type { DeepPartial } from "../../../contracts/types";
-import { deepClone, deepMerge } from "../../../../utils";
-import { patchStateOperation } from "../../../engines/operation-engine";
+import { deepClone, setDeepValues } from "../../../../utils";
 import type { BitLifecycleValuesPort } from "../../../contracts/port-types";
+import type { DeepPartial } from "../../../contracts/types";
+import { patchStateOperation } from "../../../engines/operation-engine";
 
 export class BitValuesLifecycleManager<T extends object> {
   constructor(private readonly store: BitLifecycleValuesPort<T>) {}
 
-  private collectChangedPaths(values: DeepPartial<T>, prefix = ""): string[] {
-    const changedPaths: string[] = [];
-
+  private collectChangedUpdates(
+    values: DeepPartial<T>,
+    prefix = "",
+    updates: Array<readonly [string, unknown]> = [],
+  ): Array<readonly [string, unknown]> {
     Object.entries(values as Record<string, unknown>).forEach(
       ([key, value]) => {
         const nextPath = prefix ? `${prefix}.${key}` : key;
@@ -19,17 +21,19 @@ export class BitValuesLifecycleManager<T extends object> {
           !Array.isArray(value) &&
           Object.keys(value as Record<string, unknown>).length > 0
         ) {
-          changedPaths.push(
-            ...this.collectChangedPaths(value as DeepPartial<T>, nextPath),
+          this.collectChangedUpdates(
+            value as DeepPartial<T>,
+            nextPath,
+            updates,
           );
           return;
         }
 
-        changedPaths.push(nextPath);
+        updates.push([nextPath, value]);
       },
     );
 
-    return changedPaths;
+    return updates;
   }
 
   setValues(
@@ -50,8 +54,13 @@ export class BitValuesLifecycleManager<T extends object> {
   }
 
   hydrateValues(values: DeepPartial<T>) {
-    const mergedValues = deepMerge(this.store.getState().values, values);
-    const changedPaths = this.collectChangedPaths(values);
+    const changedUpdates = this.collectChangedUpdates(values);
+    const changedPaths = changedUpdates.map(([path]) => path);
+    const mergedValues =
+      changedUpdates.length > 0
+        ? setDeepValues(this.store.getState().values, changedUpdates)
+        : this.store.getState().values;
+
     this.replaceValuesInternal(
       mergedValues,
       "hydrate",
@@ -63,7 +72,7 @@ export class BitValuesLifecycleManager<T extends object> {
     const previousValues = this.store.getState().values;
     const clonedValues = deepClone(newValues);
 
-    this.store.setBaselineValues(deepClone(clonedValues));
+    this.store.setBaselineValues(newValues);
 
     this.store.cancelAllValidations();
     this.store.evaluateAllDependencies(clonedValues);

@@ -5,6 +5,7 @@ export interface BitStoreBatchState<T extends object> {
   depth: number;
   pendingState: BitState<T> | null;
   changedPathSet: Set<string> | null;
+  changedPathList: string[] | null;
   valuesChanged: boolean;
   /** When true, a history snapshot should be recorded the moment the top-level
    * batch flushes. This allows multiple mutations inside a `transaction()` –
@@ -15,7 +16,7 @@ export interface BitStoreBatchState<T extends object> {
 
 export interface BitStoreBatchFlushResult<T extends object> {
   nextState: BitState<T>;
-  changedPaths?: Set<string>;
+  changedPaths?: readonly string[];
   valuesChanged: boolean;
 }
 
@@ -26,6 +27,7 @@ export function createStoreBatchState<
     depth: 0,
     pendingState: null,
     changedPathSet: null,
+    changedPathList: null,
     valuesChanged: false,
     pendingHistorySnapshot: false,
   };
@@ -63,8 +65,46 @@ export function trackBatchedStoreUpdate<T extends object>(
 
   if (updateResult.changedPaths && updateResult.changedPaths.length > 0) {
     const pathSet = batchState.changedPathSet ?? new Set<string>();
-    updateResult.changedPaths.forEach((path) => pathSet.add(path));
+    const pathList = batchState.changedPathList ?? [];
+
+    updateResult.changedPaths.forEach((path) => {
+      if (pathSet.has("*") || pathSet.has(path)) {
+        return;
+      }
+
+      if (path === "*") {
+        pathSet.clear();
+        pathList.length = 0;
+        pathSet.add("*");
+        pathList.push("*");
+        return;
+      }
+
+      const hasAncestor = pathList.some(
+        (existingPath) =>
+          existingPath !== "*" && path.startsWith(`${existingPath}.`),
+      );
+
+      if (hasAncestor) {
+        return;
+      }
+
+      for (let index = pathList.length - 1; index >= 0; index -= 1) {
+        const existingPath = pathList[index];
+        if (existingPath === "*" || !existingPath.startsWith(`${path}.`)) {
+          continue;
+        }
+
+        pathSet.delete(existingPath);
+        pathList.splice(index, 1);
+      }
+
+      pathSet.add(path);
+      pathList.push(path);
+    });
+
     batchState.changedPathSet = pathSet;
+    batchState.changedPathList = pathList;
   }
 }
 
@@ -81,21 +121,19 @@ export function flushStoreBatchState<T extends object>(args: {
   }
 
   let nextState = batchState.pendingState;
-  let changedPaths = batchState.changedPathSet ?? undefined;
+  const changedPaths = batchState.changedPathList ?? undefined;
   const valuesChanged = batchState.valuesChanged;
 
   if (valuesChanged) {
     nextState = {
       ...nextState,
-      values: applyValueDerivations(
-        nextState.values,
-        changedPaths ? [...changedPaths] : undefined,
-      ),
+      values: applyValueDerivations(nextState.values, changedPaths),
     };
   }
 
   batchState.pendingState = null;
   batchState.changedPathSet = null;
+  batchState.changedPathList = null;
   batchState.valuesChanged = false;
   // Note: pendingHistorySnapshot is reset by the caller after it records the snapshot.
 

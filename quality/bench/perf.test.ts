@@ -19,6 +19,16 @@ function createBigValues(total: number): BigForm {
   return values as BigForm;
 }
 
+function createPartialHydratePayload(total: number): Record<string, string> {
+  const payload: Record<string, string> = {};
+
+  for (let index = 0; index < total; index++) {
+    payload[`field_${index}`] = `hydrated-${index}`;
+  }
+
+  return payload;
+}
+
 function percentile(values: number[], p: number): number {
   if (values.length === 0) return 0;
   const sorted = [...values].sort((a, b) => a - b);
@@ -35,15 +45,17 @@ function withCiHeadroom(baseMs: number): number {
 }
 
 describe("quality perf baseline", () => {
-  // Budgets recalibrados com medições locais de 20/03/2026:
-  // - updates 300 fields: ~19ms
-  // - transaction 1000 fields: ~43ms (O(n²) em cópias imutáveis; sensível à
-  //   velocidade da máquina — budget aumentado para absorver variações de hardware)
-  // - scoped subscribers: ~9ms
-  // - async burst: ~13ms
-  // - computed chain: ~51ms
-  // - notify fanout: ~16ms
-  // Mantemos margem realista para variações de máquina/CI.
+  // Budgets recalibrados com medições locais de 31/03/2026:
+  // - updates 300 fields: ~39-45ms
+  // - transaction 1000 fields + history: ~190-213ms
+  // - hydrate parcial 400 fields: ~6-7ms
+  // - scoped subscribers: ~22-25ms
+  // - async burst: ~25-28ms
+  // - computed chain: ~44-45ms
+  // - notify fanout: ~24-29ms
+  // - deep-path burst 500 updates: ~25ms
+  // - computed sparse (120/1 affected): ~40-46ms
+  // Budgets mantidos com folga para variação de hardware/CI.
   it("updates 300 fields under baseline budget", () => {
     const store = createBitStore<BigForm>({
       initialValues: createBigValues(300),
@@ -95,6 +107,22 @@ describe("quality perf baseline", () => {
 
     const duration = performance.now() - start;
     expect(duration).toBeLessThan(withCiHeadroom(600));
+  });
+
+  it("hydrates 400 partial fields under baseline budget", () => {
+    type HydrateForm = Record<string, string>;
+
+    const store = createBitStore<HydrateForm>({
+      initialValues: createBigValues(500) as unknown as HydrateForm,
+    });
+
+    const payload = createPartialHydratePayload(400);
+    const start = performance.now();
+
+    store.write.setValues(payload, { partial: true });
+
+    const duration = performance.now() - start;
+    expect(duration).toBeLessThan(withCiHeadroom(80));
   });
 
   it("handles 400 scoped subscribers under baseline budget", () => {
@@ -246,5 +274,103 @@ describe("quality perf baseline", () => {
 
     const p95 = percentile(samples, 95);
     expect(p95).toBeLessThan(withCiHeadroom(0.8));
+  });
+
+  it("deep-path setField burst: 500 updates sob budget", () => {
+    type NestedPerfForm = {
+      profile: {
+        contact: {
+          email: string;
+        };
+      };
+    } & Record<string, string>;
+
+    const initialValues = {
+      ...createBigValues(150),
+      profile: {
+        contact: {
+          email: "",
+        },
+      },
+    } as unknown as NestedPerfForm;
+
+    const store = createBitStore<NestedPerfForm>({ initialValues });
+
+    const start = performance.now();
+
+    for (let i = 0; i < 500; i++) {
+      store.write.setField("profile.contact.email", `nested-${i}`);
+    }
+
+    const duration = performance.now() - start;
+    expect(duration).toBeLessThan(withCiHeadroom(55));
+  });
+
+  it("computed sparse impact: 120 computeds com 1 afetado sob budget", () => {
+    type SparseComputedForm = Record<string, number>;
+
+    const initialValues: SparseComputedForm = {};
+    const fieldsConfig: Record<string, any> = {};
+
+    for (let i = 0; i < 120; i++) {
+      initialValues[`base_${i}`] = i;
+      initialValues[`c_${i}`] = 0;
+
+      fieldsConfig[`c_${i}`] = {
+        computed: (values: SparseComputedForm) =>
+          (values[`base_${i}`] as number) + 1,
+        computedDependsOn: [`base_${i}`],
+      };
+    }
+
+    const store = createBitStore<SparseComputedForm>({
+      initialValues,
+      fields: fieldsConfig,
+    });
+
+    const start = performance.now();
+
+    for (let i = 0; i < 300; i++) {
+      store.write.setField("base_0", i);
+    }
+
+    const duration = performance.now() - start;
+    expect(duration).toBeLessThan(withCiHeadroom(70));
+  });
+
+  it("history undo/redo throughput: 200 ciclos sob budget", () => {
+    type HistoryPerfForm = {
+      step: number;
+      payload: string;
+    };
+
+    const store = createBitStore<HistoryPerfForm>({
+      initialValues: {
+        step: 0,
+        payload: "",
+      },
+      history: {
+        enabled: true,
+        limit: 600,
+      },
+    });
+
+    for (let i = 1; i <= 400; i++) {
+      store.write.setField("step", i);
+      store.write.setField("payload", `snapshot-${i}`);
+    }
+
+    const start = performance.now();
+
+    for (let i = 0; i < 200; i++) {
+      store.feature.undo();
+    }
+
+    for (let i = 0; i < 200; i++) {
+      store.feature.redo();
+    }
+
+    const duration = performance.now() - start;
+    expect(duration).toBeLessThan(withCiHeadroom(120));
   });
 });

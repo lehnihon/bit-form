@@ -1,7 +1,7 @@
 import {
   collectDirtyPaths,
   getDeepValue,
-  setDeepValue,
+  setDeepValues,
   valueEqual,
 } from "../../../utils";
 
@@ -102,10 +102,26 @@ export class BitDirtyManager<T extends object = Record<string, unknown>> {
   buildDirtyValues<T extends object>(values: T): Partial<T> {
     if (this.dirtyPaths.size === 0) return {};
 
-    let result: Partial<T> = {};
+    const updates: Array<readonly [string, unknown]> = [];
+    const sortedPaths = [...this.dirtyPaths].sort();
     const processedArrays = new Set<string>();
+    const includedPaths: string[] = [];
 
-    for (const path of this.dirtyPaths) {
+    const isDescendantOfIncludedPath = (path: string) => {
+      for (const parentPath of includedPaths) {
+        if (path.startsWith(`${parentPath}.`)) {
+          return true;
+        }
+      }
+
+      return false;
+    };
+
+    for (const path of sortedPaths) {
+      if (isDescendantOfIncludedPath(path)) {
+        continue;
+      }
+
       const arrayMatch = path.match(/^(.+)\.\d+/);
 
       if (arrayMatch) {
@@ -113,14 +129,20 @@ export class BitDirtyManager<T extends object = Record<string, unknown>> {
         if (processedArrays.has(arrayPath)) continue;
         processedArrays.add(arrayPath);
         const arrayVal = getDeepValue(values, arrayPath);
-        result = setDeepValue(result, arrayPath, arrayVal);
+        updates.push([arrayPath, arrayVal]);
+        includedPaths.push(arrayPath);
       } else {
         const fieldVal = getDeepValue(values, path);
-        result = setDeepValue(result, path, fieldVal);
+        updates.push([path, fieldVal]);
+        includedPaths.push(path);
       }
     }
 
-    return result;
+    if (updates.length === 0) {
+      return {};
+    }
+
+    return setDeepValues({}, updates) as Partial<T>;
   }
 
   private rebuildIndex() {

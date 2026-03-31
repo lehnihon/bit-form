@@ -1,5 +1,5 @@
-import type { BitErrors, BitFieldDefinition } from "../../../contracts/types";
 import { getDeepValue } from "../../../../utils";
+import type { BitErrors, BitFieldDefinition } from "../../../contracts/types";
 
 type BitAsyncValidateFn<T extends object> = NonNullable<
   NonNullable<BitFieldDefinition<T>["validation"]>["asyncValidate"]
@@ -14,15 +14,35 @@ export function mergeValidationErrors<T extends object>(args: {
   const { targetFields, currentErrors, allErrors, asyncErrors } = args;
 
   if (targetFields && targetFields.length > 0) {
-    const scopedErrors = { ...currentErrors } as BitErrors<T>;
+    let scopedErrors = currentErrors;
+    let hasScopedMutation = false;
+
+    const ensureScopedMutable = () => {
+      if (!hasScopedMutation) {
+        scopedErrors = { ...currentErrors } as BitErrors<T>;
+        hasScopedMutation = true;
+      }
+
+      return scopedErrors;
+    };
 
     targetFields.forEach((field) => {
+      const key = field as keyof BitErrors<T>;
+      const currentMessage = currentErrors[key] as string | undefined;
+
       if (allErrors[field]) {
-        scopedErrors[field as keyof BitErrors<T>] = allErrors[field];
+        if (currentMessage !== allErrors[field]) {
+          ensureScopedMutable()[key] = allErrors[field];
+        }
       } else if (asyncErrors.has(field)) {
-        scopedErrors[field as keyof BitErrors<T>] = asyncErrors.get(field)!;
+        const asyncMessage = asyncErrors.get(field)!;
+        if (currentMessage !== asyncMessage) {
+          ensureScopedMutable()[key] = asyncMessage;
+        }
       } else {
-        delete scopedErrors[field as keyof BitErrors<T>];
+        if (currentMessage !== undefined) {
+          delete ensureScopedMutable()[key];
+        }
       }
     });
 
@@ -31,16 +51,21 @@ export function mergeValidationErrors<T extends object>(args: {
     );
 
     return {
-      committedErrors: scopedErrors,
+      committedErrors: hasScopedMutation ? scopedErrors : currentErrors,
       result: scopedResult,
       mode: "scoped" as const,
     };
   }
 
-  const globalErrors = {
-    ...Object.fromEntries(asyncErrors.entries()),
-    ...allErrors,
-  } as BitErrors<T>;
+  const globalErrors = {} as BitErrors<T>;
+
+  asyncErrors.forEach((message, path) => {
+    globalErrors[path as keyof BitErrors<T>] = message;
+  });
+
+  Object.entries(allErrors).forEach(([path, message]) => {
+    globalErrors[path as keyof BitErrors<T>] = message;
+  });
 
   return {
     committedErrors: globalErrors,

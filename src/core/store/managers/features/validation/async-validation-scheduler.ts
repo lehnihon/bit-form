@@ -122,9 +122,13 @@ export class BitAsyncValidationScheduler<T extends object> {
     this.cancelSchedulerTimeout = undefined;
 
     const now = Date.now();
-    const dueJobs = Array.from(this.pendingJobs.entries()).filter(
-      ([, job]) => job.dueAt <= now,
-    );
+    const dueJobs: Array<[string, PendingAsyncValidationJob<T>]> = [];
+
+    for (const [path, job] of this.pendingJobs.entries()) {
+      if (job.dueAt <= now) {
+        dueJobs.push([path, job]);
+      }
+    }
 
     if (dueJobs.length === 0) {
       this.schedulePendingJobs();

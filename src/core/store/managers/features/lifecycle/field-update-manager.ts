@@ -1,15 +1,15 @@
-import type { BitErrors, BitFieldChangeMeta } from "../../../contracts/types";
-import { getDeepValue, setDeepValue } from "../../../../utils";
+import { getDeepValue, setDeepValue, valueEqual } from "../../../../utils";
 import { clearErrorPath } from "../../../../utils/error-utils";
-import {
-  BitPipelineContext,
-  BitSyncPipelineRunner,
-} from "../../../shared/pipeline";
-import { patchStateOperation } from "../../../engines/operation-engine";
 import type {
   BitDependencyUpdateDiff,
   BitLifecycleFieldUpdatePort,
 } from "../../../contracts/port-types";
+import type { BitErrors, BitFieldChangeMeta } from "../../../contracts/types";
+import { patchStateOperation } from "../../../engines/operation-engine";
+import {
+  BitPipelineContext,
+  BitSyncPipelineRunner,
+} from "../../../shared/pipeline";
 
 interface FieldUpdatePipelineContext<
   T extends object,
@@ -62,11 +62,17 @@ export class BitFieldUpdateManager<T extends object> {
     meta: BitFieldChangeMeta = { origin: "setField" },
   ) {
     const state = this.store.getState();
+    const previousValue = getDeepValue(state.values, path);
+
+    if (valueEqual(previousValue, value)) {
+      return;
+    }
+
     const context: FieldUpdatePipelineContext<T> = {
       path,
       value,
       meta,
-      previousValue: getDeepValue(state.values, path),
+      previousValue,
       nextValues: setDeepValue(state.values, path, value),
       nextErrors: state.errors,
       hasMutatedErrors: false,
