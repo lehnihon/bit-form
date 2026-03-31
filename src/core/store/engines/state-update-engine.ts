@@ -1,3 +1,4 @@
+import { mergePaths } from "../../utils/path-utils";
 import type { BitErrors, BitState } from "../contracts/types";
 import { hasAnyError } from "../shared/error-map";
 
@@ -72,7 +73,7 @@ export function applyStateUpdate<T extends object>(args: {
   const explicitChangedPaths =
     changedPaths && changedPaths.length > 0 ? changedPaths : undefined;
   const inferredChangedPaths = inferChangedPaths(partialState);
-  const effectiveChangedPaths = mergeChangedPaths(
+  const effectiveChangedPaths = mergePaths(
     explicitChangedPaths,
     inferredChangedPaths,
   );
@@ -121,29 +122,4 @@ function inferChangedPaths<T extends object>(
   }
 
   return changedPaths.size > 0 ? Array.from(changedPaths) : undefined;
-}
-
-function mergeChangedPaths(
-  explicitChangedPaths?: string[],
-  inferredChangedPaths?: string[],
-): string[] | undefined {
-  if (!explicitChangedPaths?.length) {
-    return inferredChangedPaths;
-  }
-
-  if (!inferredChangedPaths?.length) {
-    return explicitChangedPaths;
-  }
-
-  const merged = new Set<string>();
-
-  for (const path of explicitChangedPaths) {
-    merged.add(path);
-  }
-
-  for (const path of inferredChangedPaths) {
-    merged.add(path);
-  }
-
-  return Array.from(merged);
 }

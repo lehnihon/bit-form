@@ -107,12 +107,6 @@ export interface BitFormWriteApi<T extends object = Record<string, unknown>> {
   setErrors(errors: BitErrors<T>): void;
   setServerErrors(serverErrors: Record<string, string[] | string>): void;
 
-  validate(options?: BitValidationOptions): Promise<boolean>;
-  triggerValidation(
-    scopeFields?: string[],
-    options?: BitValidationTriggerOptions,
-  ): void;
-
   reset(): void;
 
   transaction<TResult>(callback: () => TResult): TResult;
@@ -127,7 +121,6 @@ export interface BitStoreLifecycleApi {
 }
 
 export interface BitStorePersistFeatureApi {
-  getPersistMetadata(): BitPersistMetadata;
   restorePersisted(): Promise<boolean>;
   forceSave(): Promise<void>;
   clearPersisted(): Promise<void>;
@@ -365,6 +358,11 @@ export interface BitStoreFeatureApi<T extends object = Record<string, unknown>>
     BitStoreRegistrationFeatureApi<T>,
     BitStoreArrayFeatureApi<T>,
     BitStoreHistoryFeatureApi {
+  validate(options?: BitValidationOptions): Promise<boolean>;
+  triggerValidation(
+    scopeFields?: string[],
+    options?: BitValidationTriggerOptions,
+  ): void;
   hasValidationsInProgress(scopeFields?: string[]): boolean;
   resolveMask(path: string): BitMask | undefined;
   createArrayItemId(path: string, index?: number): string;

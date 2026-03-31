@@ -157,13 +157,10 @@ export const createCurrencyMask = ({
   const formatFn = (value: any) => {
     if (value === undefined || value === null || value === "") return "";
 
-    let stringValue = "";
-
-    if (typeof value === "number") {
-      stringValue = Math.abs(value).toFixed(precision).replace(/\D/g, "");
-    } else {
-      stringValue = String(value).replace(/\D/g, "");
-    }
+    let stringValue =
+      typeof value === "number"
+        ? Math.abs(value).toFixed(precision).replace(/\D/g, "")
+        : String(value).replace(/\D/g, "");
 
     if (!stringValue && String(value).includes("-") && allowNegative)
       return "-";
@@ -253,9 +250,9 @@ export const createDateMask = (config?: DateMaskConfig): BitMask => {
       let stringVal = unmask(value);
       if (!stringVal) return "";
 
-      let day = "";
-      let month = "";
-      let year = "";
+      let day: string;
+      let month: string;
+      let year: string;
 
       // Separamos os componentes consoante o que o utilizador já digitou
       if (isISO) {

@@ -1,19 +1,18 @@
-import { applyValueDerivations } from "../shared/value-derivation-pipeline";
-import type { BitConfig, BitFieldChangeMeta } from "../contracts/types";
-import type { BitFrameworkConfig } from "../contracts/public/store-api-types";
 import type { BitValidationTriggerOptions } from "../contracts/port-types";
+import type { BitFrameworkConfig } from "../contracts/public/store-api-types";
+import type { BitConfig, BitFieldChangeMeta } from "../contracts/types";
+import { BitBaselineManager } from "../managers/core/baseline-manager";
 import { BitComputedManager } from "../managers/core/computed-manager";
 import { BitDirtyManager } from "../managers/core/dirty-manager";
 import { BitMaskManager } from "../managers/features/mask-manager";
 import { BitFieldRegistry } from "../registry/field-registry";
 import { normalizeConfig } from "../shared/config";
+import { applyValueDerivations } from "../shared/value-derivation-pipeline";
 import { createStoreEffects } from "./store-effects-composition";
-import { unregisterStorePrefix } from "./store-registration-ops";
 import { applyStorePersistedValues } from "./store-persist-ops";
+import { unregisterStorePrefix } from "./store-registration-ops";
 import { createStoreRuntime } from "./store-runtime";
 import { BitStoreRuntimeKernel } from "./store-runtime-kernel";
-import { BitBaselineManager } from "../managers/core/baseline-manager";
-import type { BitBusStorePort } from "../contracts/bus-types";
 
 export interface BitStoreComposition<T extends object> {
   config: BitFrameworkConfig<T>;
@@ -26,20 +25,30 @@ export interface BitStoreComposition<T extends object> {
   baselineManager: BitBaselineManager<T>;
 }
 
+export interface BitStoreRuntimeOverrides<T extends object> {
+  fieldRegistry?: BitFieldRegistry<T>;
+  computedManager?: BitComputedManager<T>;
+  dirtyManager?: BitDirtyManager<T>;
+  maskManager?: BitMaskManager;
+  baselineManager?: BitBaselineManager<T>;
+}
+
 export function composeBitStoreRuntime<T extends object>(args: {
   rawConfig: BitConfig<T>;
-  storeBusPort: BitBusStorePort<T>;
+  overrides?: BitStoreRuntimeOverrides<T>;
 }): BitStoreComposition<T> {
-  const { rawConfig, storeBusPort } = args;
+  const { rawConfig, overrides } = args;
   const config = normalizeConfig(rawConfig);
-  const baselineManager = new BitBaselineManager<T>(config.initialValues);
+  const baselineManager =
+    overrides?.baselineManager ??
+    new BitBaselineManager<T>(config.initialValues);
 
-  const fieldRegistry = new BitFieldRegistry<T>();
-  const computedManager = new BitComputedManager<T>(() =>
-    fieldRegistry.getComputedEntries(),
-  );
-  const dirtyManager = new BitDirtyManager<T>();
-  const maskManager = new BitMaskManager();
+  const fieldRegistry = overrides?.fieldRegistry ?? new BitFieldRegistry<T>();
+  const computedManager =
+    overrides?.computedManager ??
+    new BitComputedManager<T>(() => fieldRegistry.getComputedEntries());
+  const dirtyManager = overrides?.dirtyManager ?? new BitDirtyManager<T>();
+  const maskManager = overrides?.maskManager ?? new BitMaskManager();
 
   if (config.masks) {
     Object.entries(config.masks).forEach(([name, mask]) => {
@@ -71,7 +80,7 @@ export function composeBitStoreRuntime<T extends object>(args: {
     baselineManager,
     runtimeContext: {
       stateAccess: {
-        getState: () => runtimeKernel?.getState() ?? runtime.state,
+        getState: () => getRuntimeKernel().getState(),
         dispatch: (operation) => getRuntimeKernel().dispatch(operation),
         saveHistorySnapshot: () => getRuntimeKernel().saveHistorySnapshot(),
         runStateBatch: (callback) => getRuntimeKernel().runBatch(callback),
@@ -133,7 +142,7 @@ export function composeBitStoreRuntime<T extends object>(args: {
   });
 
   const getDirtyValues = () => {
-    const effectiveState = runtimeKernel?.getState() ?? runtime.state;
+    const effectiveState = getRuntimeKernel().getState();
     return dirtyManager.buildDirtyValues(effectiveState.values);
   };
 
@@ -152,11 +161,10 @@ export function composeBitStoreRuntime<T extends object>(args: {
 
   const effects = createStoreEffects<T>({
     storeId: runtime.storeId,
-    storeBusPort,
     config,
-    getState: () => runtimeKernel?.getState() ?? runtime.state,
+    getState: () => getRuntimeKernel().getState(),
     getConfig: () => config,
-    getValues: () => (runtimeKernel?.getState() ?? runtime.state).values,
+    getValues: () => getRuntimeKernel().getState().values,
     getDirtyValues,
     applyPersistedValues,
   });

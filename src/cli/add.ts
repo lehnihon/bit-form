@@ -93,7 +93,10 @@ export function runAddCommand(args: string[]): void {
   try {
     fs.mkdirSync(outDir, { recursive: true });
   } catch (e) {
-    throw new Error(`bit-form add: could not create output directory: ${(e as Error).message}`);
+    const message = e instanceof Error ? e.message : String(e);
+    throw new Error(`bit-form add: could not create output directory: ${message}`, {
+      cause: e,
+    });
   }
 
   const ctx = {

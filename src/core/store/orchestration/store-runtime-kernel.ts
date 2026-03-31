@@ -1,12 +1,13 @@
+import { getHistorySubscriptionPath } from "../../history-status";
+import type { BitState } from "../contracts/types";
+import type { BitStoreEffectEngine } from "../engines/effect-engine";
+import type { BitStoreOperation } from "../engines/operation-engine";
 import {
   createStoreBatchState,
   getEffectiveStoreState,
   type BitStoreBatchState,
 } from "../engines/store-batch-engine";
-import type { BitStoreEffectEngine } from "../engines/effect-engine";
-import type { BitStoreOperation } from "../engines/operation-engine";
 import type { BitSubscriptionEngine } from "../engines/subscription-engine";
-import type { BitState } from "../contracts/types";
 import type { BitStoreCapabilities } from "./capabilities";
 import type { BitStoreCapabilityRegistry } from "./store-capability-registry";
 import {
@@ -16,7 +17,6 @@ import {
   runStoreStateBatch,
   saveStoreHistorySnapshot,
 } from "./store-state-ops";
-import { getHistorySubscriptionPath } from "../../history-status";
 
 export interface BitStoreRuntimeKernelArgs<T extends object> {
   state: BitState<T>;
@@ -83,16 +83,7 @@ export class BitStoreRuntimeKernel<T extends object> {
     });
 
     const after = this.capabilities.history.getMetadata();
-    if (
-      before.canUndo !== after.canUndo ||
-      before.canRedo !== after.canRedo ||
-      before.historyIndex !== after.historyIndex ||
-      before.historySize !== after.historySize
-    ) {
-      this.subscriptions.notify(this.getState(), [
-        getHistorySubscriptionPath(),
-      ]);
-    }
+    this.notifyIfHistoryChanged(before, after);
   }
 
   cleanup(): void {
@@ -131,16 +122,7 @@ export class BitStoreRuntimeKernel<T extends object> {
     });
 
     const historyAfterFlush = this.capabilities.history.getMetadata();
-    if (
-      historyBeforeFlush.canUndo !== historyAfterFlush.canUndo ||
-      historyBeforeFlush.canRedo !== historyAfterFlush.canRedo ||
-      historyBeforeFlush.historyIndex !== historyAfterFlush.historyIndex ||
-      historyBeforeFlush.historySize !== historyAfterFlush.historySize
-    ) {
-      this.subscriptions.notify(this.getState(), [
-        getHistorySubscriptionPath(),
-      ]);
-    }
+    this.notifyIfHistoryChanged(historyBeforeFlush, historyAfterFlush);
   }
 
   private applyValueDerivations(
@@ -150,5 +132,31 @@ export class BitStoreRuntimeKernel<T extends object> {
     return this.args.applyValueDerivations
       ? this.args.applyValueDerivations(values, changedPaths)
       : values;
+  }
+
+  private notifyIfHistoryChanged(
+    before: {
+      canUndo: boolean;
+      canRedo: boolean;
+      historyIndex: number;
+      historySize: number;
+    },
+    after: {
+      canUndo: boolean;
+      canRedo: boolean;
+      historyIndex: number;
+      historySize: number;
+    },
+  ): void {
+    if (
+      before.canUndo === after.canUndo &&
+      before.canRedo === after.canRedo &&
+      before.historyIndex === after.historyIndex &&
+      before.historySize === after.historySize
+    ) {
+      return;
+    }
+
+    this.subscriptions.notify(this.getState(), [getHistorySubscriptionPath()]);
   }
 }

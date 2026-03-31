@@ -1,23 +1,11 @@
 import { getDeepValue, setDeepValues, valueEqual } from "../../utils";
+import { mergePaths } from "../../utils/path-utils";
 import type { BitTransformFn } from "../contracts/types";
 import type { BitNormalizerEntry } from "../registry/field-catalog";
 
 interface BitDependencyAwareEntry {
   path: string;
   dependsOn: readonly string[];
-}
-
-function mergeChangedPaths(
-  previous?: readonly string[],
-  next?: readonly string[],
-): string[] | undefined {
-  if ((!previous || previous.length === 0) && (!next || next.length === 0)) {
-    return undefined;
-  }
-
-  const merged = new Set<string>(previous ?? []);
-  next?.forEach((path) => merged.add(path));
-  return Array.from(merged);
 }
 
 function collectChangedValueUpdates<
@@ -47,18 +35,42 @@ export function createDependencyImpactChecker(
   changedPaths?: readonly string[],
 ) {
   const hasWildcardChange = changedPaths?.includes("*") ?? false;
+  const changedPathSet = new Set(changedPaths ?? []);
+  const changedAncestorSet = new Set<string>();
+
+  for (const changedPath of changedPathSet) {
+    changedAncestorSet.add(changedPath);
+
+    let separatorIndex = changedPath.lastIndexOf(".");
+    while (separatorIndex > -1) {
+      changedAncestorSet.add(changedPath.slice(0, separatorIndex));
+      separatorIndex = changedPath.lastIndexOf(".", separatorIndex - 1);
+    }
+  }
 
   return (dependencyPath: string) => {
     if (!changedPaths || changedPaths.length === 0 || hasWildcardChange) {
       return true;
     }
 
-    return changedPaths.some(
-      (changedPath) =>
-        dependencyPath === changedPath ||
-        dependencyPath.startsWith(`${changedPath}.`) ||
-        changedPath.startsWith(`${dependencyPath}.`),
-    );
+    if (changedPathSet.has(dependencyPath)) {
+      return true;
+    }
+
+    if (changedAncestorSet.has(dependencyPath)) {
+      return true;
+    }
+
+    let separatorIndex = dependencyPath.lastIndexOf(".");
+    while (separatorIndex > -1) {
+      if (changedPathSet.has(dependencyPath.slice(0, separatorIndex))) {
+        return true;
+      }
+
+      separatorIndex = dependencyPath.lastIndexOf(".", separatorIndex - 1);
+    }
+
+    return false;
   };
 }
 
@@ -109,7 +121,7 @@ export function applyValueDerivations<T extends object>(args: {
     normalizerUpdates.length > 0
       ? setDeepValues(values, normalizerUpdates)
       : values;
-  const nextChangedPaths = mergeChangedPaths(
+  const nextChangedPaths = mergePaths(
     changedPaths,
     normalizerUpdates.map(([path]) => path),
   );

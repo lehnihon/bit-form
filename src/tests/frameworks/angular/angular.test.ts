@@ -258,7 +258,7 @@ describe("Angular Integration (Signals)", () => {
     const fixture = TestBed.createComponent(HostComponent);
     const app = fixture.componentInstance;
 
-    await storeWithResolver.write.validate();
+    await storeWithResolver.feature.validate();
     storeWithResolver.write.blurField("user.name");
     fixture.detectChanges();
 

@@ -5,20 +5,16 @@
  * (React, Vue, Angular). Reduces code duplication while maintaining type safety.
  */
 
+import type { BitFieldState } from "../store/contracts/types";
 import { deepEqual } from "../utils";
 
 /**
  * Represents a stable snapshot of field state that can be compared for equality.
  */
-export interface BitFieldSnapshot<TValue = any> {
-  value: TValue;
-  error: string | undefined;
-  touched: boolean;
-  isHidden: boolean;
-  isRequired: boolean;
-  isDirty: boolean;
-  isValidating: boolean;
-}
+export type BitFieldSnapshot<TValue = unknown> = BitFieldState<
+  Record<string, unknown>,
+  TValue
+>;
 
 /**
  * Creates or reuses a field state snapshot with shallow equality checking.
@@ -39,7 +35,7 @@ export interface BitFieldSnapshot<TValue = any> {
  * }
  * ```
  */
-export function createFieldStateSnapshot<TValue = any>(
+export function createFieldStateSnapshot<TValue = unknown>(
   nextState: {
     value: TValue;
     error: string | undefined;
@@ -103,3 +99,5 @@ export function areFieldSnapshotsEqual(
     snapshotA.isValidating === snapshotB.isValidating
   );
 }
+
+export const areFieldStatesEqual = areFieldSnapshotsEqual;

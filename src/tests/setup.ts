@@ -63,14 +63,12 @@ afterEach(() => {
 });
 
 const testBed = getTestBed();
-try {
-  if (!testBed.platform) {
-    testBed.initTestEnvironment(
-      BrowserTestingModule,
-      platformBrowserTesting(),
-      {
-        teardown: { destroyAfterEach: true },
-      },
-    );
-  }
-} catch (error) {}
+if (!testBed.platform) {
+  testBed.initTestEnvironment(
+    BrowserTestingModule,
+    platformBrowserTesting(),
+    {
+      teardown: { destroyAfterEach: true },
+    },
+  );
+}

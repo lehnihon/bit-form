@@ -1,4 +1,4 @@
-import { useCallback, useSyncExternalStore, useRef, useState } from "react";
+import { useCallback, useRef, useState, useSyncExternalStore } from "react";
 import type { ScopeStatus, ValidateScopeResult } from "../core";
 import { isScopeStatusEqual } from "../core";
 import { useBitStore } from "./context";
@@ -35,7 +35,7 @@ export function useBitSteps(scopeNames: string[]): UseBitStepsResult {
   );
 
   const validate = useCallback(async (): Promise<ValidateScopeResult> => {
-    const valid = await store.write.validate({ scope });
+    const valid = await store.feature.validate({ scope });
     const errors = store.read.getScopeErrors(scope);
     return { valid, errors };
   }, [store, scope]);
@@ -51,7 +51,7 @@ export function useBitSteps(scopeNames: string[]): UseBitStepsResult {
       return false;
     }
 
-    const valid = await store.write.validate({ scope });
+    const valid = await store.feature.validate({ scope });
     if (valid) {
       setStepIndex((s) => Math.min(s + 1, scopeNames.length - 1));
     } else {

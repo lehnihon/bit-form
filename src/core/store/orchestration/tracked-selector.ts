@@ -1,6 +1,6 @@
 import type {
-  BitSelector,
   BitScopedSelectorSubscriptionOptions,
+  BitSelector,
   BitTrackedSelectorSubscriptionOptions,
 } from "../contracts/public/subscription-types";
 import type { BitState } from "../contracts/types";
@@ -130,7 +130,7 @@ export function createTrackedSubscription<T extends object, TSlice>(args: {
   subscribeSelector: (
     selector: BitSelector<T, TSlice>,
     listener: (slice: TSlice) => void,
-    options?: BitScopedSelectorSubscriptionOptions<TSlice>,
+    options: BitScopedSelectorSubscriptionOptions<TSlice>,
   ) => () => void;
   selector: BitSelector<T, TSlice>;
   listener: (slice: TSlice) => void;

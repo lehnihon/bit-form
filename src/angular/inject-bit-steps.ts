@@ -1,4 +1,4 @@
-import { signal, computed, DestroyRef, inject } from "@angular/core";
+import { computed, DestroyRef, inject, signal } from "@angular/core";
 import type { ScopeStatus, ValidateScopeResult } from "../core";
 import { isScopeStatusEqual } from "../core";
 import { useBitStore } from "./provider";
@@ -37,14 +37,12 @@ export function injectBitSteps(scopeNames: string[]): InjectBitStepsResult {
     );
   };
 
-  try {
-    const destroyRef = inject(DestroyRef);
-    destroyRef.onDestroy(() => unsubscribe());
-  } catch {}
+  const destroyRef = inject(DestroyRef, { optional: true });
+  destroyRef?.onDestroy(() => unsubscribe());
 
   const validate = async (): Promise<ValidateScopeResult> => {
     const scopeName = getCurrentScope();
-    const valid = await store.write.validate({ scope: scopeName });
+    const valid = await store.feature.validate({ scope: scopeName });
     const errors = store.read.getScopeErrors(scopeName);
     return { valid, errors };
   };
@@ -59,7 +57,7 @@ export function injectBitSteps(scopeNames: string[]): InjectBitStepsResult {
       return false;
     }
 
-    const valid = await store.write.validate({ scope: scopeName });
+    const valid = await store.feature.validate({ scope: scopeName });
     if (valid) {
       const newIndex = Math.min(stepIndex() + 1, scopeNames.length - 1);
       stepIndex.set(newIndex);

@@ -29,6 +29,9 @@ export default [
       "unused-imports": unusedImports,
     },
     rules: {
+      // TypeScript resolve símbolos em nível de tipo; no-undef gera falso positivo.
+      "no-undef": "off",
+
       // Remove unused imports automatically (auto-fixable)
       "unused-imports/no-unused-imports": "error",
 

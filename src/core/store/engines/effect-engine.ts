@@ -1,3 +1,4 @@
+import type { BitBusStorePort, BitFormGlobal } from "../contracts/bus-types";
 import type {
   BitAfterSubmitEvent,
   BitAfterValidateEvent,
@@ -6,12 +7,11 @@ import type {
   BitFieldChangeEvent,
   BitState,
 } from "../contracts/types";
-import type { BitBusStorePort, BitFormGlobal } from "../contracts/bus-types";
 import { BitPersistManager } from "../managers/features/persist-manager";
 import { BitPluginManager } from "../managers/features/plugin-manager";
+import { BitBusEffects } from "./effects/bus-effects";
 import { BitPersistEffects } from "./effects/persist-effects";
 import { BitPluginEffects } from "./effects/plugin-effects";
-import { BitBusEffects } from "./effects/bus-effects";
 
 export class BitStoreEffectEngine<T extends object> {
   private readonly persistEffects: BitPersistEffects<T>;
@@ -20,20 +20,24 @@ export class BitStoreEffectEngine<T extends object> {
 
   constructor(
     storeId: string,
-    storeBusPort: BitBusStorePort<T>,
     bus: BitFormGlobal,
     persistManager: BitPersistManager<T>,
     pluginManager: BitPluginManager<T>,
     enableBusDispatch = true,
+    storeBusPort?: BitBusStorePort<T>,
   ) {
     this.persistEffects = new BitPersistEffects<T>(persistManager);
     this.pluginEffects = new BitPluginEffects<T>(pluginManager);
     this.busEffects = new BitBusEffects<T>(
       storeId,
-      storeBusPort,
       bus,
       enableBusDispatch,
+      storeBusPort,
     );
+  }
+
+  attachStorePort(storeBusPort: BitBusStorePort<T>): void {
+    this.busEffects.attachStorePort(storeBusPort);
   }
 
   initialize(): void {

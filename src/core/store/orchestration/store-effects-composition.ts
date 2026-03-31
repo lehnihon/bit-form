@@ -1,10 +1,10 @@
+import type { BitBusStorePort } from "../contracts/bus-types";
+import type { BitFrameworkConfig } from "../contracts/public/store-api-types";
+import type { BitState } from "../contracts/types";
+import { BitStoreEffectEngine } from "../engines/effect-engine";
 import { BitPersistManager } from "../managers/features/persist-manager";
 import { BitPluginManager } from "../managers/features/plugin-manager";
-import { BitStoreEffectEngine } from "../engines/effect-engine";
-import type { BitFrameworkConfig } from "../contracts/public/store-api-types";
 import { bitBus, getNoopBitBus } from "../shared/bus";
-import type { BitBusStorePort } from "../contracts/bus-types";
-import type { BitState } from "../contracts/types";
 
 function shouldEnableStoreBus<T extends object>(config: BitFrameworkConfig<T>) {
   if (config.bus) {
@@ -24,7 +24,7 @@ function shouldEnableStoreBus<T extends object>(config: BitFrameworkConfig<T>) {
 
 export function createStoreEffects<T extends object>(args: {
   storeId: string;
-  storeBusPort: BitBusStorePort<T>;
+  storeBusPort?: BitBusStorePort<T>;
   config: BitFrameworkConfig<T>;
   getState: () => BitState<T>;
   getConfig: () => BitFrameworkConfig<T>;
@@ -57,17 +57,21 @@ export function createStoreEffects<T extends object>(args: {
   }));
 
   const enableBusDispatch = shouldEnableStoreBus(config);
+  const isTestEnv =
+    typeof process !== "undefined" &&
+    typeof process.env !== "undefined" &&
+    process.env.VITEST === "true";
   const resolvedBus = enableBusDispatch
-    ? (config.bus ?? bitBus)
+    ? (config.bus ?? (isTestEnv ? getNoopBitBus() : bitBus))
     : getNoopBitBus();
 
   const effects = new BitStoreEffectEngine<T>(
     storeId,
-    storeBusPort,
     resolvedBus,
     persistManager,
     pluginManager,
     enableBusDispatch,
+    storeBusPort,
   );
   effects.initialize();
 

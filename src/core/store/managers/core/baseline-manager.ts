@@ -6,12 +6,18 @@ export class BitBaselineManager<T extends object> {
   }
 
   private baselineValues: T;
+  private baselineSnapshot?: Readonly<T>;
 
   getValues(): T {
-    return deepClone(this.baselineValues);
+    if (!this.baselineSnapshot) {
+      this.baselineSnapshot = Object.freeze(deepClone(this.baselineValues));
+    }
+
+    return this.baselineSnapshot as T;
   }
 
   setValues(values: T): void {
     this.baselineValues = deepClone(values);
+    this.baselineSnapshot = undefined;
   }
 }

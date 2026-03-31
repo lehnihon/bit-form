@@ -1,7 +1,7 @@
+import { useForm as useTanstackForm } from "@tanstack/react-form";
 import { act, renderHook } from "@testing-library/react";
 import { useFormik } from "formik";
 import { useForm } from "react-hook-form";
-import { useForm as useTanstackForm } from "@tanstack/react-form";
 import { createBitStore } from "../../../src";
 
 export type CompareFormValues = Record<string, string> & {
@@ -57,7 +57,7 @@ export function createBitFormBulkHarness(
         );
       }
 
-      await store.write.validate({ touch: false });
+      await store.feature.validate({ touch: false });
       store.write.reset();
     },
   };
@@ -132,7 +132,7 @@ export function createBitFormAsyncBurstHarness(
         );
       }
 
-      await store.write.validate({ touch: false });
+      await store.feature.validate({ touch: false });
       store.write.reset();
     },
   };
@@ -368,7 +368,7 @@ export async function runBitFormBulkUpdate(totalFields: number) {
     );
   }
 
-  await store.write.validate();
+  await store.feature.validate();
 }
 
 export async function runRhfBulkUpdate(totalFields: number) {
@@ -430,7 +430,7 @@ export async function runBitFormAsyncBurst(iterations: number) {
     );
   }
 
-  await store.write.validate();
+  await store.feature.validate();
 }
 
 export async function runRhfAsyncBurst(iterations: number) {

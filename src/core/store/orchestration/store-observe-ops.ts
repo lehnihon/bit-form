@@ -3,6 +3,7 @@ import {
   isHistoryMetaEqual,
 } from "../../history-status";
 import { getDeepValue, valueEqual } from "../../utils";
+import { areFieldStatesEqual } from "../../utils/field-state-snapshot";
 import type {
   BitFormMeta,
   BitHistoryMetadata,
@@ -121,14 +122,7 @@ export function subscribeStoreFieldState<
 
   return subscribeSelector(() => getFieldState(path), listener, {
     paths: [path as string],
-    equalityFn: (prev, next) =>
-      prev.value === next.value &&
-      prev.error === next.error &&
-      prev.touched === next.touched &&
-      prev.isHidden === next.isHidden &&
-      prev.isRequired === next.isRequired &&
-      prev.isDirty === next.isDirty &&
-      prev.isValidating === next.isValidating,
+    equalityFn: areFieldStatesEqual,
   });
 }
 

@@ -50,19 +50,38 @@ export class BitStoreStateReader<T extends object> {
     const state = this.deps.getState();
     const cached = this.fieldStateCache.get(pathKey);
 
-    if (cached?.state === state) {
-      return cached.snapshot as Readonly<BitFieldState<T, BitPathValue<T, P>>>;
+    const value = getDeepValue(state.values, pathKey) as BitPathValue<T, P>;
+    const error = state.errors[pathKey as keyof typeof state.errors];
+    const touched = !!state.touched[pathKey as keyof typeof state.touched];
+    const isHidden = this.deps.isHidden(pathKey);
+    const isRequired = this.deps.isRequired(pathKey);
+    const isDirty = this.deps.isFieldDirty(pathKey);
+    const isValidating = this.deps.isFieldValidating(pathKey);
+
+    if (cached) {
+      const snapshot = cached.snapshot;
+
+      if (
+        snapshot.value === value &&
+        snapshot.error === error &&
+        snapshot.touched === touched &&
+        snapshot.isHidden === isHidden &&
+        snapshot.isRequired === isRequired &&
+        snapshot.isDirty === isDirty &&
+        snapshot.isValidating === isValidating
+      ) {
+        return snapshot as Readonly<BitFieldState<T, BitPathValue<T, P>>>;
+      }
     }
 
-    const value = getDeepValue(state.values, pathKey) as BitPathValue<T, P>;
     const snapshot = createFieldStateSnapshot({
       state,
       path,
       value,
-      isHidden: this.deps.isHidden(pathKey),
-      isRequired: this.deps.isRequired(pathKey),
-      isDirty: this.deps.isFieldDirty(pathKey),
-      isValidating: this.deps.isFieldValidating(pathKey),
+      isHidden,
+      isRequired,
+      isDirty,
+      isValidating,
     });
 
     this.fieldStateCache.set(pathKey, {
