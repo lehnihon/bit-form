@@ -45,7 +45,7 @@ export class BitSyncPipelineRunner<TContext extends BitPipelineContext> {
         process.env?.NODE_ENV !== "production"
       ) {
         console.warn(
-          `BitSyncPipelineRunner: step \"${step.name}\" returned a Promise and will not be awaited.`,
+          `BitSyncPipelineRunner: step "${step.name}" returned a Promise and will not be awaited.`,
         );
       }
     }

@@ -91,9 +91,6 @@ export function buildStoreSlicesApi<T extends object>(
     setError: (path, message) => deps.write.setError(path, message),
     setErrors: (errors) => deps.write.setErrors(errors),
     setServerErrors: (serverErrors) => deps.write.setServerErrors(serverErrors),
-    validate: (options) => deps.feature.validate(options),
-    triggerValidation: (scopeFields, options) =>
-      deps.feature.triggerValidation(scopeFields, options),
     reset: () => deps.write.reset(),
     transaction: (callback) => deps.write.transaction(callback),
     submit: (onSuccess) => deps.write.submit(onSuccess),
@@ -101,7 +98,9 @@ export function buildStoreSlicesApi<T extends object>(
 
   const feature: BitStoreFeatureApi<T> = {
     cleanup: () => deps.feature.cleanup(),
-    getPersistMetadata: () => deps.read.getPersistMetadata(),
+    validate: (options) => deps.feature.validate(options),
+    triggerValidation: (scopeFields, options) =>
+      deps.feature.triggerValidation(scopeFields, options),
     restorePersisted: () => deps.feature.restorePersisted(),
     forceSave: () => deps.feature.forceSave(),
     clearPersisted: () => deps.feature.clearPersisted(),

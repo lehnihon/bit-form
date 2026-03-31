@@ -1,9 +1,9 @@
-import { createFormController } from "../form-controller";
-import type { BitStoreApi } from "../store/contracts/public/store-api-types";
 import type {
   BitFormControllerOptions,
   BitFormControllerRuntime,
 } from "../form-controller";
+import { createFormController } from "../form-controller";
+import type { BitStoreApi } from "../store/contracts/public/store-api-types";
 
 export function createFrameworkFormBinding<T extends object>(
   store: BitStoreApi<T>,
@@ -27,7 +27,7 @@ export function createFrameworkFormBinding<T extends object>(
       setError: store.write.setError.bind(store.write),
       setErrors: store.write.setErrors.bind(store.write),
       setServerErrors: store.write.setServerErrors.bind(store.write),
-      validate: store.write.validate.bind(store.write),
+      validate: store.feature.validate.bind(store.feature),
       transaction: store.write.transaction.bind(store.write),
     },
   };

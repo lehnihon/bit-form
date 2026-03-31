@@ -1,4 +1,4 @@
-import { ref, computed, onMounted, onUnmounted } from "vue";
+import { computed, onMounted, onUnmounted, ref } from "vue";
 import type { ScopeStatus, ValidateScopeResult } from "../core";
 import { observeScopeStatusSnapshot } from "../core";
 import { useBitStore } from "./context";
@@ -21,7 +21,7 @@ export function useBitScope(scopeName: string) {
   });
 
   const validate = async (): Promise<ValidateScopeResult> => {
-    const valid = await store.write.validate({ scope: scopeName });
+    const valid = await store.feature.validate({ scope: scopeName });
     const errors = store.read.getScopeErrors(scopeName);
     return { valid, errors };
   };

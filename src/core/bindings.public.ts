@@ -1,18 +1,18 @@
 export {
+  observeFormMetaSnapshot,
   readFormMetaSnapshot,
   subscribeFormMetaSnapshot,
-  observeFormMetaSnapshot,
 } from "./bindings/form-meta";
 
 export {
+  observePersistMetaSnapshot,
   readPersistMetaSnapshot,
   subscribePersistMetaSnapshot,
-  observePersistMetaSnapshot,
 } from "./bindings/persist-meta";
 
-export { createFrameworkFormBinding } from "./bindings/form-binding";
+export { createArrayBinding } from "./bindings/array-controller";
 export { createFrameworkMaskedFieldBinding } from "./bindings/field-binding";
-export { createArrayBindingController } from "./bindings/array-controller";
+export { createFrameworkFormBinding } from "./bindings/form-binding";
 
 export {
   cleanupRegisteredField,
@@ -20,20 +20,20 @@ export {
 } from "./bindings/framework-cleanup";
 
 export type {
-  BitArrayBindingController,
+  BitArrayBinding,
   BitArrayBindingField,
 } from "./bindings/array-controller";
 
 export {
-  isBitFieldInputEventObject,
   formatMaskedValue,
+  isBitFieldInputEventObject,
   parseMaskedInput,
 } from "./mask/field-binding";
 
 export type { BitFieldInputEvent } from "./mask/field-binding";
 
 export type {
-  BitUploadFn,
   BitDeleteUploadFn,
+  BitUploadFn,
   BitUploadResult,
 } from "./types/upload";

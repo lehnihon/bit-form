@@ -16,8 +16,6 @@ export class BitSubscriptionEngine<T extends object> {
   private pathSelectorIndex: Map<string, Set<SelectorListenerEntry<T>>> =
     new Map();
   private readonly pathExpansionCache = new Map<string, string[]>();
-  private readonly expandedPathCache = this.pathExpansionCache;
-  private readonly changedPathLookupCache = this.pathExpansionCache;
   private readonly subscriptionSeenVersion = new Map<
     SelectorListenerEntry<T>,
     number
@@ -45,7 +43,7 @@ export class BitSubscriptionEngine<T extends object> {
   subscribeSelector<TSlice>(
     selector: BitSelector<T, TSlice>,
     listener: (slice: TSlice) => void,
-    options: BitScopedSelectorSubscriptionOptions<TSlice> | undefined,
+    options: BitScopedSelectorSubscriptionOptions<TSlice>,
     equalityFn: (previous: TSlice, next: TSlice) => boolean,
   ): () => void {
     let lastSlice = selector(this.getState());
@@ -63,11 +61,7 @@ export class BitSubscriptionEngine<T extends object> {
       },
     };
 
-    const scopedPaths = this.normalizeSubscriptionPaths(options?.paths);
-
-    if (scopedPaths.length === 0) {
-      throw new Error("BitStore: subscribeSelector requires explicit `paths`.");
-    }
+    const scopedPaths = this.normalizeSubscriptionPaths(options.paths);
 
     this.pathScopedSubscriptions.set(subscription, scopedPaths);
     scopedPaths.forEach((pathKey) => {
@@ -78,7 +72,7 @@ export class BitSubscriptionEngine<T extends object> {
       });
     });
 
-    if (options?.emitImmediately) {
+    if (options.emitImmediately) {
       listener(lastSlice);
     }
 

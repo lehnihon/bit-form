@@ -1,5 +1,15 @@
 import type { BitPersistMetadata } from "../store/contracts/types";
-import type { BitStoreApi } from "../store/contracts/public/store-api-types";
+
+type BitPersistMetaReadableStore = {
+  read: {
+    getPersistMetadata(): BitPersistMetadata;
+  };
+  observe: {
+    subscribePersistMeta(
+      listener: (meta: BitPersistMetadata) => void,
+    ): () => void;
+  };
+};
 
 export function readPersistMetaSnapshot(store: {
   read: {
@@ -10,14 +20,14 @@ export function readPersistMetaSnapshot(store: {
 }
 
 export function subscribePersistMetaSnapshot(
-  store: BitStoreApi<any>,
+  store: BitPersistMetaReadableStore,
   listener: () => void,
 ): () => void {
   return store.observe.subscribePersistMeta(() => listener());
 }
 
 export function observePersistMetaSnapshot(
-  store: BitStoreApi<any>,
+  store: BitPersistMetaReadableStore,
   listener: (meta: BitPersistMetadata) => void,
 ): () => void {
   listener(readPersistMetaSnapshot(store));

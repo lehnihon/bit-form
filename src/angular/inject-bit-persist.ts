@@ -1,6 +1,6 @@
-import { computed, inject, signal, DestroyRef } from "@angular/core";
-import { useBitStore } from "./provider";
+import { computed, DestroyRef, inject, signal } from "@angular/core";
 import { observePersistMetaSnapshot } from "../core";
+import { useBitStore } from "./provider";
 import type { InjectBitPersistResult } from "./types";
 
 export function injectBitPersist<
@@ -13,9 +13,8 @@ export function injectBitPersist<
     persist.set(nextPersist);
   });
 
-  try {
-    inject(DestroyRef).onDestroy(() => unsubscribe());
-  } catch {}
+  const destroyRef = inject(DestroyRef, { optional: true });
+  destroyRef?.onDestroy(() => unsubscribe());
 
   const restore = async (): Promise<boolean> => {
     return store.feature.restorePersisted();

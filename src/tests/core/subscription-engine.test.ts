@@ -166,8 +166,8 @@ describe("BitSubscriptionEngine", () => {
     );
 
     const internals = engine as unknown as {
-      expandedPathCache: Map<string, string[]>;
-      changedPathLookupCache: Map<string, string[]>;
+      pathExpansionCache: Map<string, string[]>;
+      MAX_PATH_EXPANSION_CACHE_SIZE: number;
       expandPathForIndexing(path: string): string[];
       expandChangedPathForLookup(path: string): string[];
     };
@@ -178,8 +178,9 @@ describe("BitSubscriptionEngine", () => {
       internals.expandChangedPathForLookup(path);
     }
 
-    expect(internals.expandedPathCache.size).toBeLessThanOrEqual(2000);
-    expect(internals.changedPathLookupCache.size).toBeLessThanOrEqual(2000);
+    expect(internals.pathExpansionCache.size).toBeLessThanOrEqual(
+      internals.MAX_PATH_EXPANSION_CACHE_SIZE,
+    );
   });
 
   it("invalida entradas relacionadas ao prefixo informado", () => {
@@ -188,7 +189,7 @@ describe("BitSubscriptionEngine", () => {
     );
 
     const internals = engine as unknown as {
-      expandedPathCache: Map<string, string[]>;
+      pathExpansionCache: Map<string, string[]>;
       expandPathForIndexing(path: string): string[];
       invalidatePathExpansionCache(prefix?: string): void;
     };
@@ -199,8 +200,8 @@ describe("BitSubscriptionEngine", () => {
 
     internals.invalidatePathExpansionCache("user");
 
-    expect(internals.expandedPathCache.has("user.name")).toBe(false);
-    expect(internals.expandedPathCache.has("user.age")).toBe(false);
-    expect(internals.expandedPathCache.has("account.name")).toBe(true);
+    expect(internals.pathExpansionCache.has("user.name")).toBe(false);
+    expect(internals.pathExpansionCache.has("user.age")).toBe(false);
+    expect(internals.pathExpansionCache.has("account.name")).toBe(true);
   });
 });

@@ -183,7 +183,7 @@ describe("quality perf baseline", () => {
       );
     }
 
-    await store.write.validate();
+    await store.feature.validate();
 
     const duration = performance.now() - start;
     expect(duration).toBeLessThan(withCiHeadroom(40));

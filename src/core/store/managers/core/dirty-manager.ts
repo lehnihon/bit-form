@@ -105,13 +105,17 @@ export class BitDirtyManager<T extends object = Record<string, unknown>> {
     const updates: Array<readonly [string, unknown]> = [];
     const sortedPaths = [...this.dirtyPaths].sort();
     const processedArrays = new Set<string>();
-    const includedPaths: string[] = [];
+    const includedPaths = new Set<string>();
 
     const isDescendantOfIncludedPath = (path: string) => {
-      for (const parentPath of includedPaths) {
-        if (path.startsWith(`${parentPath}.`)) {
+      let separatorIndex = path.lastIndexOf(".");
+
+      while (separatorIndex > -1) {
+        if (includedPaths.has(path.slice(0, separatorIndex))) {
           return true;
         }
+
+        separatorIndex = path.lastIndexOf(".", separatorIndex - 1);
       }
 
       return false;
@@ -130,11 +134,11 @@ export class BitDirtyManager<T extends object = Record<string, unknown>> {
         processedArrays.add(arrayPath);
         const arrayVal = getDeepValue(values, arrayPath);
         updates.push([arrayPath, arrayVal]);
-        includedPaths.push(arrayPath);
+        includedPaths.add(arrayPath);
       } else {
         const fieldVal = getDeepValue(values, path);
         updates.push([path, fieldVal]);
-        includedPaths.push(path);
+        includedPaths.add(path);
       }
     }
 

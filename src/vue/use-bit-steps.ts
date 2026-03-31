@@ -1,4 +1,4 @@
-import { ref, computed, watch, onMounted, onUnmounted } from "vue";
+import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 import type { ScopeStatus, ValidateScopeResult } from "../core";
 import { isScopeStatusEqual } from "../core";
 import { useBitStore } from "./context";
@@ -36,7 +36,7 @@ export function useBitSteps(scopeNames: string[]): UseBitStepsResult {
 
   const validate = async (): Promise<ValidateScopeResult> => {
     const scopeName = scope.value;
-    const valid = await store.write.validate({ scope: scopeName });
+    const valid = await store.feature.validate({ scope: scopeName });
     const errors = store.read.getScopeErrors(scopeName);
     return { valid, errors };
   };
@@ -51,7 +51,7 @@ export function useBitSteps(scopeNames: string[]): UseBitStepsResult {
       return false;
     }
 
-    const valid = await store.write.validate({ scope: scopeName });
+    const valid = await store.feature.validate({ scope: scopeName });
     if (valid) {
       stepIndex.value = Math.min(stepIndex.value + 1, scopeNames.length - 1);
     } else {

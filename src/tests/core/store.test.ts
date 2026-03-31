@@ -103,7 +103,7 @@ describe("BitStore Core", () => {
       expect(typeof frameworkStore.write.setErrors).toBe("function");
       expect(typeof frameworkStore.write.setServerErrors).toBe("function");
       expect(typeof frameworkStore.write.setValues).toBe("function");
-      expect(typeof frameworkStore.write.validate).toBe("function");
+      expect(typeof frameworkStore.feature.validate).toBe("function");
       expect(typeof frameworkStore.write.submit).toBe("function");
       expect(typeof frameworkStore.write.reset).toBe("function");
       expect(typeof frameworkStore.observe.subscribe).toBe("function");
@@ -793,12 +793,12 @@ describe("BitStore Core", () => {
         },
       });
 
-      const isValid = await store.write.validate();
+      const isValid = await store.feature.validate();
       expect(isValid).toBe(false);
       expect(store.read.getState().errors.licenseNumber).toBe("required field");
 
       store.write.setField("hasLicense", false);
-      const isValidNow = await store.write.validate();
+      const isValidNow = await store.feature.validate();
       expect(isValidNow).toBe(true);
     });
 
@@ -815,7 +815,7 @@ describe("BitStore Core", () => {
         },
       });
 
-      const isValid = await store.write.validate();
+      const isValid = await store.feature.validate();
       expect(isValid).toBe(false);
       expect(store.read.getState().errors.bonusValue).toBe(
         "Bonus amount is required",
@@ -1122,7 +1122,7 @@ describe("BitStore Core", () => {
       const store = createBitStore({
         initialValues: { list: ["A", "B", "C"] },
       });
-      store.write.triggerValidation = vi.fn();
+      store.feature.triggerValidation = vi.fn();
 
       store.write.setError("list.2", "Error on C");
       store.feature.removeItem("list", 1);
@@ -1134,7 +1134,7 @@ describe("BitStore Core", () => {
 
     it("should swap items and swap their errors", () => {
       const store = createBitStore({ initialValues: { list: ["A", "B"] } });
-      store.write.triggerValidation = vi.fn();
+      store.feature.triggerValidation = vi.fn();
 
       store.write.setError("list.0", "Error on A");
       store.feature.swapItems("list", 0, 1);
@@ -1148,7 +1148,7 @@ describe("BitStore Core", () => {
       const store = createBitStore({
         initialValues: { list: ["A", "B", "C"] },
       });
-      store.write.triggerValidation = vi.fn();
+      store.feature.triggerValidation = vi.fn();
 
       store.write.setError("list.0", "Error on A");
       store.feature.moveItem("list", 0, 2);
@@ -1162,7 +1162,7 @@ describe("BitStore Core", () => {
       const store = createBitStore({
         initialValues: { list: ["A", "B", "C"] },
       });
-      store.write.triggerValidation = vi.fn();
+      store.feature.triggerValidation = vi.fn();
 
       store.write.setError("list.2", "Error on C");
       store.feature.replaceItems("list", ["X"]);
@@ -1176,7 +1176,7 @@ describe("BitStore Core", () => {
       const store = createBitStore({
         initialValues: { list: ["A", "B"] },
       });
-      store.write.triggerValidation = vi.fn();
+      store.feature.triggerValidation = vi.fn();
 
       store.write.setError("list.0", "Error on A");
       store.feature.clearItems("list");
@@ -1330,9 +1330,9 @@ describe("BitStore Core", () => {
         },
       });
 
-      store.write.triggerValidation(["email"]);
+      store.feature.triggerValidation(["email"]);
       await vi.advanceTimersByTimeAsync(10);
-      store.write.triggerValidation(["name"]);
+      store.feature.triggerValidation(["name"]);
 
       await vi.advanceTimersByTimeAsync(25);
 
@@ -1436,7 +1436,7 @@ describe("BitStore Core", () => {
       expect(store.read.getState().errors.cnpj).toBeUndefined();
 
       store.write.setField("hasCnpj", true);
-      await store.write.validate({ scopeFields: ["cnpj"] });
+      await store.feature.validate({ scopeFields: ["cnpj"] });
 
       expect(store.read.getState().errors.cnpj).toBe("API: CNPJ Inválido");
     });
@@ -1509,7 +1509,7 @@ describe("BitStore Core", () => {
         ],
       });
 
-      await store.write.validate();
+      await store.feature.validate();
 
       expect(calls).toEqual(["beforeValidate", "afterValidate"]);
       store.feature.cleanup();
@@ -1618,7 +1618,7 @@ describe("BitStore Core", () => {
         ],
       });
 
-      const result = await store.write.validate();
+      const result = await store.feature.validate();
 
       expect(result).toBe(true);
       expect(onError).toHaveBeenCalledWith(

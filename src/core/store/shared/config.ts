@@ -39,7 +39,11 @@ export function normalizeConfig<T extends object>(
       config.persist?.deserialize ??
       ((raw: string) => JSON.parse(raw) as Partial<T>),
     onError: (error) => {
-      persistErrorHandler?.(error);
+      if (persistErrorHandler) {
+        persistErrorHandler(error);
+        return;
+      }
+
       onUnhandledError(error, "persist");
     },
   };

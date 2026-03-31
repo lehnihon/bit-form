@@ -1,11 +1,23 @@
-import { signal, computed, DestroyRef, inject } from "@angular/core";
+import type { Signal } from "@angular/core";
+import { computed, DestroyRef, inject, signal } from "@angular/core";
 import type { ScopeStatus, ValidateScopeResult } from "../core";
 import { observeScopeStatusSnapshot } from "../core";
 import { useBitStore } from "./provider";
 
 export type { ScopeStatus, ValidateScopeResult };
 
-export function injectBitScope(scopeName: string) {
+interface InjectBitScopeResult {
+  scopeName: string;
+  status: Signal<ScopeStatus>;
+  errors: Signal<Record<string, string>>;
+  validate: () => Promise<ValidateScopeResult>;
+  getErrors: () => Record<string, string>;
+  isValid: Signal<boolean>;
+  isDirty: Signal<boolean>;
+  unsubscribe: () => void;
+}
+
+export function injectBitScope(scopeName: string): InjectBitScopeResult {
   const store = useBitStore();
   const initialStatus = store.read.getScopeStatus(scopeName);
 
@@ -19,13 +31,11 @@ export function injectBitScope(scopeName: string) {
     },
   );
 
-  try {
-    const destroyRef = inject(DestroyRef);
-    destroyRef.onDestroy(() => unsubscribe());
-  } catch {}
+  const destroyRef = inject(DestroyRef, { optional: true });
+  destroyRef?.onDestroy(() => unsubscribe());
 
   const validate = async (): Promise<ValidateScopeResult> => {
-    const valid = await store.write.validate({ scope: scopeName });
+    const valid = await store.feature.validate({ scope: scopeName });
     const errors = store.read.getScopeErrors(scopeName);
     return { valid, errors };
   };

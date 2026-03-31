@@ -1,4 +1,3 @@
-import type { BitConfig } from "./contracts/types";
 import type {
   BitFrameworkConfig,
   BitStoreFeatureApi,
@@ -6,12 +5,13 @@ import type {
   BitStoreReadSliceApi,
   BitStoreWriteSliceApi,
 } from "./contracts/public/store-api-types";
+import type { BitConfig } from "./contracts/types";
+import { resolveFieldMask } from "./engines/store-field-query-engine";
 import { BIT_FRAMEWORK_STORE_SYMBOL } from "./orchestration/framework-store-brand";
 import { BIT_HOOKS_API_SYMBOL } from "./orchestration/hook-brand";
 import { composeBitStoreRuntime } from "./orchestration/store-composition-root";
-import { resolveFieldMask } from "./engines/store-field-query-engine";
-import { buildStoreSlicesApi } from "./orchestration/store-slices-factory";
 import { createBitStoreDomains } from "./orchestration/store-domains";
+import { buildStoreSlicesApi } from "./orchestration/store-slices-factory";
 import { BitStoreStateReader } from "./shared/store-state-reader";
 
 export class BitStore<T extends object = Record<string, unknown>> {
@@ -28,17 +28,8 @@ export class BitStore<T extends object = Record<string, unknown>> {
   public readonly feature: BitStoreFeatureApi<T>;
 
   constructor(config: BitConfig<T> = {}) {
-    const storeBusPort = {
-      getState: () => this.read.getState(),
-      getHistoryMetadata: () => this.read.getHistoryMetadata(),
-      undo: () => this.feature.undo(),
-      redo: () => this.feature.redo(),
-      reset: () => this.write.reset(),
-    };
-
     const composition = composeBitStoreRuntime<T>({
       rawConfig: config,
-      storeBusPort,
     });
 
     this._config = composition.config;
@@ -88,5 +79,13 @@ export class BitStore<T extends object = Record<string, unknown>> {
     this.observe = slices.observe;
     this.write = slices.write;
     this.feature = slices.feature;
+
+    composition.runtime.effects.attachStorePort({
+      getState: () => this.read.getState(),
+      getHistoryMetadata: () => this.read.getHistoryMetadata(),
+      undo: () => this.feature.undo(),
+      redo: () => this.feature.redo(),
+      reset: () => this.write.reset(),
+    });
   }
 }

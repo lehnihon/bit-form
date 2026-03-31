@@ -63,21 +63,24 @@ export function runAddCommand(args: string[]): void {
   const { adapter: adapterName, components, flags } = parseAddArgs(args);
 
   if (!adapterName) {
-    throw new Error("bit-form add: missing adapter name. Example: bit-form add shadcn input");
+    throw new Error(
+      "bit-form add: missing adapter name. Example: bit-form add shadcn input",
+    );
   }
 
   const adapter = getAdapter(adapterName);
   if (!adapter) {
-    throw new Error(`bit-form add: unknown adapter "${adapterName}". Available: shadcn`);
+    throw new Error(
+      `bit-form add: unknown adapter "${adapterName}". Available: shadcn`,
+    );
   }
 
-  const toAdd =
-    components.length > 0
-      ? components
-      : adapter.components;
+  const toAdd = components.length > 0 ? components : adapter.components;
 
   if (toAdd.length === 0) {
-    throw new Error("bit-form add: specify at least one component or use no arguments to add all.");
+    throw new Error(
+      "bit-form add: specify at least one component or use no arguments to add all.",
+    );
   }
 
   const cwd = process.cwd();
@@ -93,7 +96,13 @@ export function runAddCommand(args: string[]): void {
   try {
     fs.mkdirSync(outDir, { recursive: true });
   } catch (e) {
-    throw new Error(`bit-form add: could not create output directory: ${(e as Error).message}`);
+    const message = e instanceof Error ? e.message : String(e);
+    throw new Error(
+      `bit-form add: could not create output directory: ${message}`,
+      {
+        cause: e,
+      },
+    );
   }
 
   const ctx = {

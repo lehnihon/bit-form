@@ -20,7 +20,7 @@ export class BitStoreCapabilityRegistry<T extends object> {
 
     if (!capability) {
       throw new Error(
-        `BitStore capability \"${String(key)}\" não foi registrada.`,
+        `BitStore capability "${String(key)}" não foi registrada.`,
       );
     }
 

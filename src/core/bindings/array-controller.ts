@@ -1,10 +1,10 @@
-import { getDeepValue } from "../utils";
 import type { BitStoreApi } from "../store/contracts/public/store-api-types";
 import type {
   BitArrayItem,
   BitArrayPath,
   BitPathValue,
 } from "../store/contracts/types";
+import { getDeepValue } from "../utils";
 
 export interface BitArrayBindingField<TItem> {
   key: string;
@@ -12,7 +12,7 @@ export interface BitArrayBindingField<TItem> {
   index: number;
 }
 
-export interface BitArrayBindingController<
+export interface BitArrayBinding<
   TForm extends object,
   P extends BitArrayPath<TForm>,
 > {
@@ -30,10 +30,10 @@ export interface BitArrayBindingController<
   clear(): void;
 }
 
-export function createArrayBindingController<
+export function createArrayBinding<
   TForm extends object,
   P extends BitArrayPath<TForm>,
->(store: BitStoreApi<TForm>, path: P): BitArrayBindingController<TForm, P> {
+>(store: BitStoreApi<TForm>, path: P): BitArrayBinding<TForm, P> {
   type Item = BitArrayItem<BitPathValue<TForm, P>>;
 
   let ids: string[] = [];
