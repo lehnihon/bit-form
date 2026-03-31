@@ -1,6 +1,6 @@
 import { computed, DestroyRef, inject, signal } from "@angular/core";
-import { useBitStore } from "./provider";
 import { observePersistMetaSnapshot } from "../core";
+import { useBitStore } from "./provider";
 import type { InjectBitPersistResult } from "./types";
 
 export function injectBitPersist<
