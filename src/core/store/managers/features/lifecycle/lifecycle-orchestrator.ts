@@ -36,7 +36,7 @@ export class BitLifecycleOrchestrator<
       const result = executor.execute(context);
       if (result && typeof (result as Promise<unknown>).then === "function") {
         throw new Error(
-          `BitLifecycleOrchestrator: executor async em modo sync para kind \"${context.kind}\".`,
+          `BitLifecycleOrchestrator: executor async em modo sync para kind "${context.kind}".`,
         );
       }
     }
