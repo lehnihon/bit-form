@@ -59,10 +59,14 @@ function resolveRelativeImport(
 }
 
 function buildCouplingMetrics(): Record<string, CouplingMetric> {
-  const files = walkTsFiles(CORE_ROOT).map((filePath) => path.normalize(filePath));
+  const files = walkTsFiles(CORE_ROOT).map((filePath) =>
+    path.normalize(filePath),
+  );
   const allFiles = new Set(files);
   const outgoing = new Map<string, Set<string>>();
-  const incoming = new Map<string, number>(files.map((filePath) => [filePath, 0]));
+  const incoming = new Map<string, number>(
+    files.map((filePath) => [filePath, 0]),
+  );
 
   for (const filePath of files) {
     const source = fs.readFileSync(filePath, "utf8");
