@@ -18,6 +18,26 @@ interface BitStoreStateReaderDeps<T extends object> {
 
 type BitStateFlagKey = "isValid" | "isSubmitting" | "isDirty";
 
+export interface BitUserStateLayer<T extends object> {
+  values: T;
+  touched: BitState<T>["touched"];
+}
+
+export interface BitValidationStateLayer<T extends object> {
+  errors: BitState<T>["errors"];
+  isValidating: BitState<T>["isValidating"];
+  isValid: BitState<T>["isValid"];
+}
+
+export interface BitDerivedStateLayer {
+  isDirty: boolean;
+}
+
+export interface BitFeatureStateLayer<T extends object> {
+  persist: BitState<T>["persist"];
+  isSubmitting: BitState<T>["isSubmitting"];
+}
+
 export class BitStoreStateReader<T extends object> {
   private readonly fieldStateCache = new Map<
     string,
@@ -31,6 +51,40 @@ export class BitStoreStateReader<T extends object> {
 
   getState(): Readonly<BitState<T>> {
     return this.deps.getState();
+  }
+
+  getUserLayer(): BitUserStateLayer<T> {
+    const state = this.deps.getState();
+
+    return {
+      values: state.values,
+      touched: state.touched,
+    };
+  }
+
+  getValidationLayer(): BitValidationStateLayer<T> {
+    const state = this.deps.getState();
+
+    return {
+      errors: state.errors,
+      isValidating: state.isValidating,
+      isValid: state.isValid,
+    };
+  }
+
+  getDerivedLayer(): BitDerivedStateLayer {
+    return {
+      isDirty: this.deps.getState().isDirty,
+    };
+  }
+
+  getFeatureLayer(): BitFeatureStateLayer<T> {
+    const state = this.deps.getState();
+
+    return {
+      persist: state.persist,
+      isSubmitting: state.isSubmitting,
+    };
   }
 
   getFlag<TKey extends BitStateFlagKey>(

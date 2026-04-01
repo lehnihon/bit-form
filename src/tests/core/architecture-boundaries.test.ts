@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import { describe, it, expect } from "vitest";
+import { describe, expect, it } from "vitest";
 import { createBitStore } from "../../core";
 
 const SRC_ROOT = path.resolve(__dirname, "..", "..");
@@ -197,5 +197,71 @@ describe("architecture boundaries", () => {
     expect(typeof feature.cleanup).toBe("function");
     expect(typeof feature.pushItem).toBe("function");
     expect(typeof feature.undo).toBe("function");
+  });
+
+  it("engine de efeitos deve ser agnostica e nao importar efeitos concretos", () => {
+    const effectEnginePath = path.join(
+      SRC_ROOT,
+      "core",
+      "store",
+      "engines",
+      "effect-engine.ts",
+    );
+
+    const source = fs.readFileSync(effectEnginePath, "utf8");
+
+    expect(source).not.toMatch(/persist-effects/);
+    expect(source).not.toMatch(/plugin-effects/);
+    expect(source).not.toMatch(/bus-effects/);
+    expect(source).toMatch(/effect-registry/);
+  });
+
+  it("validation manager deve orquestrar via orchestrator e nao importar estagios diretamente", () => {
+    const validationManagerPath = path.join(
+      SRC_ROOT,
+      "core",
+      "store",
+      "managers",
+      "features",
+      "validation-manager.ts",
+    );
+
+    const source = fs.readFileSync(validationManagerPath, "utf8");
+
+    expect(source).toMatch(/validation-pipeline-orchestrator/);
+    expect(source).not.toMatch(/validation-pipeline-stages/);
+  });
+
+  it("composicao de efeitos deve registrar efeitos via registry", () => {
+    const compositionPath = path.join(
+      SRC_ROOT,
+      "core",
+      "store",
+      "orchestration",
+      "store-effects-composition.ts",
+    );
+
+    const source = fs.readFileSync(compositionPath, "utf8");
+
+    expect(source).toMatch(/new BitEffectRegistry/);
+    expect(source).toMatch(/registry\.register/);
+  });
+
+  it("validation effects port nao deve expor validate e manter surface minima", () => {
+    const portTypesPath = path.join(
+      SRC_ROOT,
+      "core",
+      "store",
+      "contracts",
+      "port-types.ts",
+    );
+
+    const source = fs.readFileSync(portTypesPath, "utf8");
+    const effectsPortBlockMatch = source.match(
+      /export interface BitValidationEffectsPort[\s\S]*?\n\}/,
+    );
+
+    expect(effectsPortBlockMatch).toBeTruthy();
+    expect(effectsPortBlockMatch?.[0]).not.toMatch(/\bvalidate\s*:\s*\(/);
   });
 });

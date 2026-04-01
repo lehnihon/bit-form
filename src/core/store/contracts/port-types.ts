@@ -37,7 +37,6 @@ export interface BitValidationFieldPort<T extends object> {
 
 export interface BitValidationEffectsPort<T extends object> {
   setError: (path: string, message: string | undefined) => void;
-  validate: (opts: BitValidationOptions) => Promise<boolean>;
   emitBeforeValidate: (event: BitBeforeValidateEvent<T>) => Promise<void>;
   emitAfterValidate: (event: BitAfterValidateEvent<T>) => Promise<void>;
 }

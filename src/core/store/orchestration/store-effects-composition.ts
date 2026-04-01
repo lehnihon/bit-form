@@ -2,6 +2,10 @@ import type { BitBusStorePort } from "../contracts/bus-types";
 import type { BitFrameworkConfig } from "../contracts/public/store-api-types";
 import type { BitState } from "../contracts/types";
 import { BitStoreEffectEngine } from "../engines/effect-engine";
+import { BitBusEffects } from "../engines/effects/bus-effects";
+import { BitEffectRegistry } from "../engines/effects/effect-registry";
+import { BitPersistEffects } from "../engines/effects/persist-effects";
+import { BitPluginEffects } from "../engines/effects/plugin-effects";
 import { BitPersistManager } from "../managers/features/persist-manager";
 import { BitPluginManager } from "../managers/features/plugin-manager";
 import { bitBus, getNoopBitBus } from "../shared/bus";
@@ -65,14 +69,49 @@ export function createStoreEffects<T extends object>(args: {
     ? (config.bus ?? (isTestEnv ? getNoopBitBus() : bitBus))
     : getNoopBitBus();
 
-  const effects = new BitStoreEffectEngine<T>(
+  const registry = new BitEffectRegistry<T>();
+
+  const persistEffects = new BitPersistEffects<T>(persistManager);
+  registry.register({
+    name: "persist",
+    onStateUpdated: (nextState, valuesChanged) =>
+      persistEffects.onStateUpdated(nextState, valuesChanged),
+    restorePersisted: () => persistEffects.restorePersisted(),
+    savePersistedNow: () => persistEffects.savePersistedNow(),
+    clearPersisted: () => persistEffects.clearPersisted(),
+    destroy: () => persistEffects.destroy(),
+  });
+
+  const pluginEffects = new BitPluginEffects<T>(pluginManager);
+  registry.register({
+    name: "plugins",
+    initialize: () => pluginEffects.initialize(),
+    beforeValidate: (event) => pluginEffects.beforeValidate(event),
+    afterValidate: (event) => pluginEffects.afterValidate(event),
+    beforeSubmit: (event) => pluginEffects.beforeSubmit(event),
+    afterSubmit: (event) => pluginEffects.afterSubmit(event),
+    onFieldChange: (event) => pluginEffects.onFieldChange(event),
+    reportOperationalError: (event) =>
+      pluginEffects.reportOperationalError(event),
+    destroy: () => pluginEffects.destroy(),
+  });
+
+  const busEffects = new BitBusEffects<T>(
     storeId,
     resolvedBus,
-    persistManager,
-    pluginManager,
     enableBusDispatch,
     storeBusPort,
   );
+  registry.register({
+    name: "bus",
+    attachStorePort: (port) => busEffects.attachStorePort(port),
+    initialize: () => busEffects.initialize(),
+    onStateUpdated: (nextState) => busEffects.onStateUpdated(nextState),
+    destroy: () => busEffects.destroy(),
+  });
+
+  const effects = new BitStoreEffectEngine<T>(registry);
+
   effects.initialize();
 
   return effects;

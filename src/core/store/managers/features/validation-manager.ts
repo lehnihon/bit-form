@@ -1,39 +1,27 @@
-import { BitValidationOptions } from "../../contracts/public/meta-types";
-import type { BitErrors } from "../../contracts/types";
-import { BitPipelineRunner } from "../../shared/pipeline";
-import {
-  patchStateOperation,
-  validationCommitOperation,
-} from "../../engines/operation-engine";
-import { hasAnyError } from "../../shared/error-map";
-import { runImmediateAsyncValidationStage } from "./validation/validation-stages";
-import { BitAsyncValidationScheduler } from "./validation/async-validation-scheduler";
-import { BitValidationDebouncer } from "./validation/validation-debouncer";
 import type {
   BitValidationManagerPort,
+  BitValidationPipelinePort,
   BitValidationTriggerOptions,
 } from "../../contracts/port-types";
-import type { ValidationPipelineContext } from "./validation/validation-pipeline-context";
-import {
-  abortIfOutdatedStage,
-  commitValidationStage,
-  mergeAsyncTrackStage,
-  resolveTargetFieldsStage,
-  runAsyncTrackStage,
-  runBeforeValidateHooksStage,
-  runSynchronousTrackStage,
-  type BitValidationPipelineStageDeps,
-} from "./validation/validation-pipeline-stages";
+import { BitValidationOptions } from "../../contracts/public/meta-types";
+import { patchStateOperation } from "../../engines/operation-engine";
+import { BitAsyncValidationScheduler } from "./validation/async-validation-scheduler";
 import { commitSynchronousScopeValidation } from "./validation/scope-validation-commit";
 import { BitValidationCoordinator } from "./validation/validation-coordinator";
+import { BitValidationDebouncer } from "./validation/validation-debouncer";
+import type { ValidationPipelineContext } from "./validation/validation-pipeline-context";
+import {
+  BitValidationPipelineOrchestrator,
+  type BitValidationPipelineOrchestratorDeps,
+} from "./validation/validation-pipeline-orchestrator";
+import { runImmediateAsyncValidationStage } from "./validation/validation-stages";
 
 export class BitValidationManager<T extends object> {
   private validatingCount = 0;
   private readonly asyncErrors = new Map<string, string>();
   private readonly coordinator = new BitValidationCoordinator();
-  private readonly validationPipeline: BitPipelineRunner<
-    ValidationPipelineContext<T>
-  >;
+  private readonly validationPipeline: BitValidationPipelineOrchestrator<T>;
+  private readonly pipelineStore: BitValidationPipelinePort<T>;
   private readonly schedule: (fn: () => void, delayMs: number) => () => void;
   private readonly asyncScheduler: BitAsyncValidationScheduler<T>;
   private readonly debouncer: BitValidationDebouncer;
@@ -52,6 +40,19 @@ export class BitValidationManager<T extends object> {
       validationDelay: store.config.validationDelay ?? 300,
     });
 
+    this.pipelineStore = {
+      getState: () => this.store.getState(),
+      dispatch: (operation) => this.store.dispatch(operation),
+      config: this.store.config,
+      getFieldConfig: (path) => this.store.getFieldConfig(path),
+      forEachFieldConfig: (callback) => this.store.forEachFieldConfig(callback),
+      getScopeFields: (scopeName) => this.store.getScopeFields(scopeName),
+      getRequiredErrors: (values) => this.store.getRequiredErrors(values),
+      getHiddenFields: () => this.store.getHiddenFields(),
+      emitBeforeValidate: (event) => this.store.emitBeforeValidate(event),
+      emitAfterValidate: (event) => this.store.emitAfterValidate(event),
+    };
+
     this.asyncScheduler = new BitAsyncValidationScheduler<T>({
       schedule: (fn, delayMs) => this.schedule(fn, delayMs),
       getValues: () => this.store.getState().values,
@@ -67,57 +68,23 @@ export class BitValidationManager<T extends object> {
       onValidationPassed: async (path) => {
         await commitSynchronousScopeValidation({
           scopeFields: [path],
-          store: this.store,
+          store: this.pipelineStore,
           asyncErrors: this.asyncErrors,
         });
       },
     });
 
-    const stageDeps: BitValidationPipelineStageDeps<T> = {
-      store: this.store,
+    const stageDeps: BitValidationPipelineOrchestratorDeps<T> = {
+      store: this.pipelineStore,
       asyncErrors: this.asyncErrors,
       getCurrentValidationId: () => this.coordinator.getCurrentValidationId(),
       runImmediateAsyncValidation: (path, values, validationId) =>
         this.runImmediateAsyncValidation(path, values, validationId),
     };
 
-    this.validationPipeline = new BitPipelineRunner<
-      ValidationPipelineContext<T>
-    >([
-      {
-        name: "validate:resolve-target-fields",
-        run: (ctx) => resolveTargetFieldsStage({ ctx, deps: stageDeps }),
-      },
-      {
-        name: "validate:before-hooks",
-        run: async (ctx) =>
-          runBeforeValidateHooksStage({ ctx, deps: stageDeps }),
-      },
-      {
-        name: "validate:sync-track",
-        run: async (ctx) => runSynchronousTrackStage({ ctx, deps: stageDeps }),
-      },
-      {
-        name: "validate:abort-check-pre-async",
-        run: async (ctx) => abortIfOutdatedStage({ ctx, deps: stageDeps }),
-      },
-      {
-        name: "validate:async-track",
-        run: async (ctx) => runAsyncTrackStage({ ctx, deps: stageDeps }),
-      },
-      {
-        name: "validate:abort-check",
-        run: async (ctx) => abortIfOutdatedStage({ ctx, deps: stageDeps }),
-      },
-      {
-        name: "validate:async-track-merge",
-        run: (ctx) => mergeAsyncTrackStage({ ctx, deps: stageDeps }),
-      },
-      {
-        name: "validate:commit",
-        run: async (ctx) => commitValidationStage({ ctx, deps: stageDeps }),
-      },
-    ]);
+    this.validationPipeline = new BitValidationPipelineOrchestrator<T>(
+      stageDeps,
+    );
   }
 
   private updateFieldValidating(path: string, isValidating: boolean) {
@@ -183,16 +150,8 @@ export class BitValidationManager<T extends object> {
 
     this.asyncErrors.delete(path);
 
-    if (this.store.validate) {
-      await this.store.validate({ scopeFields: [path] });
-      return;
-    }
-
-    const newErrors = { ...this.store.getState().errors };
-    delete newErrors[path as keyof BitErrors<T>];
-    this.store.dispatch(
-      validationCommitOperation(newErrors, !hasAnyError(newErrors)),
-    );
+    await this.validate({ scopeFields: [path] });
+    return;
   }
 
   handleAsync(path: string, value: unknown) {

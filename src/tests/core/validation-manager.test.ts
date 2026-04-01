@@ -18,7 +18,6 @@ describe("BitValidationManager", () => {
       }),
       dispatch: () => {},
       setError: () => {},
-      validate: async () => true,
       getFieldConfig: () => undefined,
       getScopeFields: () => [],
       forEachFieldConfig: () => {},
@@ -60,7 +59,6 @@ describe("BitValidationManager", () => {
       }),
       dispatch: () => {},
       setError: () => {},
-      validate: async () => true,
       getFieldConfig: () => ({
         validation: {
           asyncValidateDelay: 100,
@@ -104,7 +102,6 @@ describe("BitValidationManager", () => {
       }),
       dispatch,
       setError: () => {},
-      validate: async () => true,
       getFieldConfig: () => undefined,
       getScopeFields: () => [],
       forEachFieldConfig: () => {},
