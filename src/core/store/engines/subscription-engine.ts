@@ -9,6 +9,14 @@ interface SelectorListenerEntry<T extends object> {
   notify(nextState: Readonly<BitState<T>>): void;
 }
 
+export interface BitSubscriptionCacheStats {
+  cacheSize: number;
+  cacheLimit: number;
+  cacheHits: number;
+  cacheMisses: number;
+  cacheEvictions: number;
+}
+
 export class BitSubscriptionEngine<T extends object> {
   private listeners: Set<() => void> = new Set();
   private pathScopedSubscriptions: Map<SelectorListenerEntry<T>, string[]> =
@@ -22,6 +30,9 @@ export class BitSubscriptionEngine<T extends object> {
   >();
   private notifyVersion = 0;
   private readonly MAX_PATH_EXPANSION_CACHE_SIZE: number;
+  private cacheHits = 0;
+  private cacheMisses = 0;
+  private cacheEvictions = 0;
 
   constructor(
     private readonly getState: () => Readonly<BitState<T>>,
@@ -149,6 +160,20 @@ export class BitSubscriptionEngine<T extends object> {
     this.pathSelectorIndex.clear();
     this.pathExpansionCache.clear();
     this.subscriptionSeenVersion.clear();
+  }
+
+  getPathExpansionCacheStats(): BitSubscriptionCacheStats {
+    return {
+      cacheSize: this.pathExpansionCache.size,
+      cacheLimit: this.MAX_PATH_EXPANSION_CACHE_SIZE,
+      cacheHits: this.cacheHits,
+      cacheMisses: this.cacheMisses,
+      cacheEvictions: this.cacheEvictions,
+    };
+  }
+
+  getActiveSubscribersCount(): number {
+    return this.pathScopedSubscriptions.size;
   }
 
   invalidatePathExpansionCache(prefix?: string): void {
@@ -321,8 +346,11 @@ export class BitSubscriptionEngine<T extends object> {
   private expandPathGeneric(path: string): string[] {
     const cached = this.pathExpansionCache.get(path);
     if (cached) {
+      this.cacheHits += 1;
       return cached;
     }
+
+    this.cacheMisses += 1;
 
     const segments = path.split(".");
     const keys: string[] = [];
@@ -348,6 +376,7 @@ export class BitSubscriptionEngine<T extends object> {
       const oldestKey = cache.keys().next().value;
       if (oldestKey !== undefined) {
         cache.delete(oldestKey);
+        this.cacheEvictions += 1;
       }
     }
 

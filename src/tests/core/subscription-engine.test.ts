@@ -1,6 +1,6 @@
-import { describe, it, expect, vi } from "vitest";
-import { BitSubscriptionEngine } from "../../core/store/engines/subscription-engine";
+import { describe, expect, it, vi } from "vitest";
 import type { BitState } from "../../core/store/contracts/types";
+import { BitSubscriptionEngine } from "../../core/store/engines/subscription-engine";
 
 type Values = { user: { name: string; age: number } };
 
@@ -203,5 +203,60 @@ describe("BitSubscriptionEngine", () => {
     expect(internals.pathExpansionCache.has("user.name")).toBe(false);
     expect(internals.pathExpansionCache.has("user.age")).toBe(false);
     expect(internals.pathExpansionCache.has("account.name")).toBe(true);
+  });
+
+  it("expõe métricas de hit/miss/eviction do cache de expansão", () => {
+    const engine = new BitSubscriptionEngine<Values>(
+      () => createState({ user: { name: "Leo", age: 30 } }),
+      2,
+    );
+
+    const internals = engine as unknown as {
+      expandPathForIndexing(path: string): string[];
+    };
+
+    // miss
+    internals.expandPathForIndexing("user.name");
+    // hit
+    internals.expandPathForIndexing("user.name");
+    // miss
+    internals.expandPathForIndexing("user.age");
+    // miss + eviction (capacidade 2)
+    internals.expandPathForIndexing("user.email");
+
+    const stats = engine.getPathExpansionCacheStats();
+
+    expect(stats.cacheLimit).toBe(2);
+    expect(stats.cacheSize).toBeLessThanOrEqual(2);
+    expect(stats.cacheHits).toBeGreaterThanOrEqual(1);
+    expect(stats.cacheMisses).toBeGreaterThanOrEqual(3);
+    expect(stats.cacheEvictions).toBeGreaterThanOrEqual(1);
+  });
+
+  it("expõe quantidade de subscribers ativos", () => {
+    let state = createState({ user: { name: "Leo", age: 30 } });
+    const engine = new BitSubscriptionEngine<Values>(() => state);
+
+    const unsubA = engine.subscribeSelector(
+      (s) => s.values.user.name,
+      () => {},
+      { paths: ["user.name"] },
+      (a, b) => a === b,
+    );
+
+    const unsubB = engine.subscribeSelector(
+      (s) => s.values.user.age,
+      () => {},
+      { paths: ["user.age"] },
+      (a, b) => a === b,
+    );
+
+    expect(engine.getActiveSubscribersCount()).toBe(2);
+
+    unsubA();
+    expect(engine.getActiveSubscribersCount()).toBe(1);
+
+    unsubB();
+    expect(engine.getActiveSubscribersCount()).toBe(0);
   });
 });

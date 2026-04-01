@@ -1,4 +1,4 @@
-import type { BitBusStorePort, BitFormGlobal } from "../contracts/bus-types";
+import type { BitBusStorePort } from "../contracts/bus-types";
 import type {
   BitAfterSubmitEvent,
   BitAfterValidateEvent,
@@ -7,92 +7,128 @@ import type {
   BitFieldChangeEvent,
   BitState,
 } from "../contracts/types";
-import { BitPersistManager } from "../managers/features/persist-manager";
-import { BitPluginManager } from "../managers/features/plugin-manager";
-import { BitBusEffects } from "./effects/bus-effects";
-import { BitPersistEffects } from "./effects/persist-effects";
-import { BitPluginEffects } from "./effects/plugin-effects";
+import {
+  BitEffectRegistry,
+  type BitStoreEffect,
+} from "./effects/effect-registry";
 
 export class BitStoreEffectEngine<T extends object> {
-  private readonly persistEffects: BitPersistEffects<T>;
-  private readonly pluginEffects: BitPluginEffects<T>;
-  private readonly busEffects: BitBusEffects<T>;
+  private readonly effects: BitStoreEffect<T>[];
 
-  constructor(
-    storeId: string,
-    bus: BitFormGlobal,
-    persistManager: BitPersistManager<T>,
-    pluginManager: BitPluginManager<T>,
-    enableBusDispatch = true,
-    storeBusPort?: BitBusStorePort<T>,
-  ) {
-    this.persistEffects = new BitPersistEffects<T>(persistManager);
-    this.pluginEffects = new BitPluginEffects<T>(pluginManager);
-    this.busEffects = new BitBusEffects<T>(
-      storeId,
-      bus,
-      enableBusDispatch,
-      storeBusPort,
-    );
+  constructor(registry: BitEffectRegistry<T>) {
+    this.effects = registry.getAll();
   }
 
   attachStorePort(storeBusPort: BitBusStorePort<T>): void {
-    this.busEffects.attachStorePort(storeBusPort);
+    this.effects.forEach((effect) => effect.attachStorePort?.(storeBusPort));
   }
 
   initialize(): void {
-    this.pluginEffects.initialize();
-    this.busEffects.initialize();
+    this.effects.forEach((effect) => effect.initialize?.());
   }
 
   onStateUpdated(nextState: BitState<T>, valuesChanged: boolean): void {
-    this.persistEffects.onStateUpdated(nextState, valuesChanged);
-    this.busEffects.onStateUpdated(nextState);
+    this.effects.forEach((effect) =>
+      effect.onStateUpdated?.(nextState, valuesChanged),
+    );
   }
 
-  restorePersisted(): Promise<boolean> {
-    return this.persistEffects.restorePersisted();
+  async restorePersisted(): Promise<boolean> {
+    let restored = false;
+
+    for (const effect of this.effects) {
+      if (!effect.restorePersisted) {
+        continue;
+      }
+
+      restored = (await effect.restorePersisted()) || restored;
+    }
+
+    return restored;
   }
 
-  savePersistedNow(): Promise<void> {
-    return this.persistEffects.savePersistedNow();
+  async savePersistedNow(): Promise<void> {
+    for (const effect of this.effects) {
+      if (!effect.savePersistedNow) {
+        continue;
+      }
+
+      await effect.savePersistedNow();
+    }
   }
 
-  clearPersisted(): Promise<void> {
-    return this.persistEffects.clearPersisted();
+  async clearPersisted(): Promise<void> {
+    for (const effect of this.effects) {
+      if (!effect.clearPersisted) {
+        continue;
+      }
+
+      await effect.clearPersisted();
+    }
   }
 
-  beforeValidate(event: BitBeforeValidateEvent<T>): Promise<void> {
-    return this.pluginEffects.beforeValidate(event);
+  async beforeValidate(event: BitBeforeValidateEvent<T>): Promise<void> {
+    for (const effect of this.effects) {
+      if (!effect.beforeValidate) {
+        continue;
+      }
+
+      await effect.beforeValidate(event);
+    }
   }
 
-  afterValidate(event: BitAfterValidateEvent<T>): Promise<void> {
-    return this.pluginEffects.afterValidate(event);
+  async afterValidate(event: BitAfterValidateEvent<T>): Promise<void> {
+    for (const effect of this.effects) {
+      if (!effect.afterValidate) {
+        continue;
+      }
+
+      await effect.afterValidate(event);
+    }
   }
 
-  beforeSubmit(event: BitBeforeSubmitEvent<T>): Promise<void> {
-    return this.pluginEffects.beforeSubmit(event);
+  async beforeSubmit(event: BitBeforeSubmitEvent<T>): Promise<void> {
+    for (const effect of this.effects) {
+      if (!effect.beforeSubmit) {
+        continue;
+      }
+
+      await effect.beforeSubmit(event);
+    }
   }
 
-  afterSubmit(event: BitAfterSubmitEvent<T>): Promise<void> {
-    return this.pluginEffects.afterSubmit(event);
+  async afterSubmit(event: BitAfterSubmitEvent<T>): Promise<void> {
+    for (const effect of this.effects) {
+      if (!effect.afterSubmit) {
+        continue;
+      }
+
+      await effect.afterSubmit(event);
+    }
   }
 
   onFieldChange(event: BitFieldChangeEvent<T>): void {
-    this.pluginEffects.onFieldChange(event);
+    this.effects.forEach((effect) => effect.onFieldChange?.(event));
   }
 
-  reportOperationalError(event: {
+  async reportOperationalError(event: {
     source: "submit";
     error: unknown;
     payload?: unknown;
   }): Promise<void> {
-    return this.pluginEffects.reportOperationalError(event);
+    for (const effect of this.effects) {
+      if (!effect.reportOperationalError) {
+        continue;
+      }
+
+      await effect.reportOperationalError(event);
+    }
   }
 
   destroy(): void {
-    this.persistEffects.destroy();
-    this.pluginEffects.destroy();
-    this.busEffects.destroy();
+    // Tear down in reverse registration order to preserve dependency ordering.
+    for (let index = this.effects.length - 1; index >= 0; index -= 1) {
+      this.effects[index].destroy?.();
+    }
   }
 }

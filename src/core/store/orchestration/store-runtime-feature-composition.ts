@@ -95,7 +95,6 @@ export function composeRuntimeFeatureCapabilities<T extends object>(
     getState: stateAccess.getState,
     dispatch: stateAccess.dispatch,
     setError: actions.setError,
-    validate: actions.validate,
     getFieldConfig: fieldAccess.getFieldConfig,
     getScopeFields: fieldAccess.getScopeFields,
     getEffects: featureAccess.getEffects,

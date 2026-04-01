@@ -44,7 +44,6 @@ export interface BitValidationPortDeps<T extends object> {
   getState(): BitState<T>;
   dispatch(operation: BitStoreOperation<T>): void;
   setError(path: string, message: string | undefined): void;
-  validate(options?: BitValidationOptions): Promise<boolean>;
   getFieldConfig(path: string): BitFieldDefinition<T> | undefined;
   getScopeFields(scopeName: string): string[];
   getEffects(): BitStoreEffectEngine<T>;
@@ -57,7 +56,6 @@ export function createValidationPort<T extends object>(
     getState: deps.getState,
     dispatch: deps.dispatch,
     setError: deps.setError,
-    validate: deps.validate,
     getFieldConfig: deps.getFieldConfig,
     forEachFieldConfig: (callback) =>
       deps.fieldRegistry.forEachFieldConfig((config, path) =>
