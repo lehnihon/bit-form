@@ -1,4 +1,3 @@
-import { executeSubmitHandler } from "./submit-handler";
 import type { BitFormControllerStoreApi } from "./store/contracts/public/store-api-types";
 
 export type BitFormDomEvent = {
@@ -32,7 +31,10 @@ export function createFormController<T extends object>(
   options?: BitFormControllerOptions,
 ) {
   const submit = (
-    onSuccess: (values: T, dirtyValues?: Partial<T>) => void | Promise<void>,
+    onSuccess: (
+      values: T,
+      dirtyValues?: Partial<T>,
+    ) => unknown | Promise<unknown>,
   ) => {
     return async (event?: BitFormDomEvent): Promise<void> => {
       preventFormEvent(event, options);
@@ -47,20 +49,24 @@ export function createFormController<T extends object>(
       preventFormEvent(event, options);
       runtime.setSubmissionError(null);
 
-      await store.submit(async (values, dirtyValues) => {
-        await executeSubmitHandler(handler, values, dirtyValues, {
-          onSuccess: (result) => {
-            runtime.setSubmissionResult(result);
-            runtime.setSubmissionError(null);
-          },
-          onServerErrors: (serverErrors) => {
-            store.setServerErrors(serverErrors);
-          },
-          onUnhandledError: (error) => {
-            runtime.setSubmissionError(error);
-          },
-        });
+      let submissionResult: unknown;
+      const submitResult = await store.submit(async (values, dirtyValues) => {
+        submissionResult = await handler(values, dirtyValues);
       });
+
+      if (submitResult.status === "submitted") {
+        runtime.setSubmissionResult(submissionResult);
+        runtime.setSubmissionError(null);
+        return;
+      }
+
+      if (submitResult.status === "failed") {
+        runtime.setSubmissionError(
+          submitResult.error instanceof Error
+            ? submitResult.error
+            : new Error(String(submitResult.error)),
+        );
+      }
     };
   };
 

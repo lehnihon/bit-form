@@ -110,7 +110,10 @@ export interface UseBitFormResult<T extends object = any> {
   getTouched: () => BitTouched<T>;
   getDirtyValues: () => Partial<T>;
   submit: (
-    onSuccess: (values: T, dirtyValues?: Partial<T>) => void | Promise<void>,
+    onSuccess: (
+      values: T,
+      dirtyValues?: Partial<T>,
+    ) => unknown | Promise<unknown>,
   ) => (e?: Event) => Promise<void>;
   onSubmit: (
     handler: (values: T, dirtyValues?: Partial<T>) => Promise<unknown>,

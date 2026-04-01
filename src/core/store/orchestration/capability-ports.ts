@@ -82,6 +82,7 @@ export interface BitLifecyclePortDeps<T extends object> {
   dirtyManager: BitDirtyManager<T>;
   getState(): BitState<T>;
   dispatch(operation: BitStoreOperation<T>): void;
+  setServerErrors(serverErrors: Record<string, string[] | string>): void;
   saveHistorySnapshot(): void;
   runStateBatch<TResult>(callback: () => TResult): TResult;
   getTransformEntries(): [string, BitTransformFn<T>][];
@@ -150,6 +151,7 @@ export function createLifecyclePort<T extends object>(
     hasValidationsInProgress: (scopeFields) =>
       deps.getValidation().hasValidationsInProgress(scopeFields),
     buildDirtyValues: (values) => deps.dirtyManager.buildDirtyValues(values),
+    setServerErrors: (serverErrors) => deps.setServerErrors(serverErrors),
     emitBeforeSubmit: (event) => deps.getEffects().beforeSubmit(event),
     emitAfterSubmit: (event) => deps.getEffects().afterSubmit(event),
     emitOperationalError: (event) =>
@@ -177,6 +179,7 @@ export interface BitArrayPortDeps<T extends object> {
   ): void;
   unregisterPrefix(prefix: string): void;
   saveHistorySnapshot(): void;
+  createArrayItemId(path: string, index?: number): string;
 }
 
 export function createArrayPort<T extends object>(
@@ -188,5 +191,6 @@ export function createArrayPort<T extends object>(
     dispatch: deps.dispatch,
     internalSaveSnapshot: deps.saveHistorySnapshot,
     unregisterPrefix: deps.unregisterPrefix,
+    createArrayItemId: deps.createArrayItemId,
   };
 }

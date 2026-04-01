@@ -4,13 +4,20 @@ export function isValidationErrorShape(
   if (typeof x !== "object" || x === null || Array.isArray(x)) return false;
 
   const obj = (x as Record<string, unknown>).errors ?? x;
-  if (typeof obj !== "object" || obj === null || Array.isArray(obj))
+  if (typeof obj !== "object" || obj === null || Array.isArray(obj)) {
     return false;
+  }
 
-  return Object.values(obj as Record<string, unknown>).every(
-    (v) =>
-      typeof v === "string" ||
-      (Array.isArray(v) && v.every((i) => typeof i === "string")),
+  const entries = Object.entries(obj as Record<string, unknown>);
+  if (entries.length === 0) {
+    return false;
+  }
+
+  return entries.every(
+    ([key, v]) =>
+      key.length > 0 &&
+      (typeof v === "string" ||
+        (Array.isArray(v) && v.every((i) => typeof i === "string"))),
   );
 }
 

@@ -1,18 +1,18 @@
-import { describe, it, expect } from "vitest";
+import { describe, expect, it } from "vitest";
 import {
+  cleanPrefixedKeys,
+  collectDirtyPaths,
   deepClone,
   deepEqual,
-  valueEqual,
   deepMerge,
+  extractServerErrors,
   getDeepValue,
+  isValidationErrorShape,
+  moveKeys,
   setDeepValue,
-  collectDirtyPaths,
   shiftKeys,
   swapKeys,
-  moveKeys,
-  cleanPrefixedKeys,
-  isValidationErrorShape,
-  extractServerErrors,
+  valueEqual,
 } from "../../core/utils";
 
 // -------------------------------------------------------------------
@@ -244,6 +244,12 @@ describe("utils - isValidationErrorShape", () => {
     expect(isValidationErrorShape(null)).toBe(false);
     expect(isValidationErrorShape([])).toBe(false);
     expect(isValidationErrorShape("error")).toBe(false);
+  });
+
+  it("rejeita Error e objetos vazios", () => {
+    expect(isValidationErrorShape(new Error("boom"))).toBe(false);
+    expect(isValidationErrorShape({})).toBe(false);
+    expect(isValidationErrorShape({ errors: {} })).toBe(false);
   });
 
   it("rejeita objetos com valores não-string", () => {

@@ -119,7 +119,10 @@ export interface BitStoreWriteDomain<T extends object> {
   reset(): void;
   transaction<TResult>(callback: () => TResult): TResult;
   submit(
-    onSuccess: (values: T, dirtyValues?: Partial<T>) => void | Promise<void>,
+    onSuccess: (
+      values: T,
+      dirtyValues?: Partial<T>,
+    ) => unknown | Promise<unknown>,
   ): Promise<BitSubmitResult>;
   pushItem<P extends BitArrayPath<T>>(
     path: P,
@@ -160,6 +163,7 @@ export interface BitStoreFeatureDomain<_T extends object> {
   restorePersisted(): Promise<boolean>;
   forceSave(): Promise<void>;
   clearPersisted(): Promise<void>;
+  getArrayItemIds(path: string, length?: number): string[];
   cleanup(): void;
 }
 
@@ -398,6 +402,8 @@ export function createBitStoreDomains<T extends object>(args: {
         dispatch: (operation) => runtime.dispatch(operation),
         effects: runtime.effects,
       }),
+    getArrayItemIds: (path, length) =>
+      runtime.capabilities.arrays.getItemIds(path, length),
     cleanup: () => runtime.cleanup(),
   };
 

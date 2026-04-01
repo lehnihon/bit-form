@@ -1,3 +1,6 @@
+import type { BitStoreOperation } from "../engines/operation-engine";
+import type { BitValidationOptions } from "./public/meta-types";
+import type { BitFrameworkConfig } from "./public/store-api-types";
 import type {
   BitAfterSubmitEvent,
   BitAfterValidateEvent,
@@ -9,9 +12,6 @@ import type {
   BitState,
   BitTransformFn,
 } from "./types";
-import type { BitStoreOperation } from "../engines/operation-engine";
-import type { BitFrameworkConfig } from "./public/store-api-types";
-import type { BitValidationOptions } from "./public/meta-types";
 
 export interface BitDependencyUpdateDiff {
   affectedFields: string[];
@@ -116,6 +116,7 @@ export interface BitLifecycleSubmitPort<T extends object> {
   validateNow: (options?: BitValidationOptions) => Promise<boolean>;
   hasValidationsInProgress: (scopeFields?: string[]) => boolean;
   buildDirtyValues: (values: T) => Partial<T>;
+  setServerErrors: (serverErrors: Record<string, string[] | string>) => void;
   emitBeforeSubmit: (event: BitBeforeSubmitEvent<T>) => Promise<void>;
   emitAfterSubmit: (event: BitAfterSubmitEvent<T>) => Promise<void>;
   emitOperationalError: (event: {
