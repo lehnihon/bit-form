@@ -73,7 +73,7 @@ export interface BitState<T extends object> {
 }
 
 export interface BitFieldState<
-  T extends object = Record<string, unknown>,
+  _T extends object = Record<string, unknown>,
   TValue = unknown,
 > {
   value: TValue;

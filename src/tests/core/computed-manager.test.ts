@@ -111,7 +111,7 @@ describe("BitComputedManager", () => {
 
     const manager = new BitComputedManager(() => entries);
 
-    const initial = { user: { name: "Leo" }, label: "" };
+    const _initial = { user: { name: "Leo" }, label: "" };
     // "user" é pai de "user.name" — deve propagar via childDepsIndex
     const result = manager.apply({ user: { name: "Ana" }, label: "" }, [
       "user",

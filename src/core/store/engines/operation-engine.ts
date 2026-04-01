@@ -7,7 +7,7 @@ export interface BitStatePatchOperation<T extends object> {
   skipComputed?: boolean;
 }
 
-export interface BitTouchFieldsOperation<T extends object> {
+export interface BitTouchFieldsOperation<_T extends object> {
   kind: "field.touchMany";
   paths: string[];
 }

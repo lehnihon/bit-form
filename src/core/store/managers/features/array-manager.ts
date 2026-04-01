@@ -1,10 +1,10 @@
-import type { BitFieldChangeMeta, BitState } from "../../contracts/types";
 import { getDeepValue, reindexFieldArrayMeta } from "../../../utils";
-import { toPathPrefix } from "../../shared/path-prefix";
+import type { BitFieldChangeMeta, BitState } from "../../contracts/types";
 import {
   BitStoreOperation,
   patchStateOperation,
 } from "../../engines/operation-engine";
+import { toPathPrefix } from "../../shared/path-prefix";
 
 export interface BitArrayStorePort<T extends object> {
   getState: () => BitState<T>;
@@ -56,7 +56,7 @@ export class BitArrayManager<T extends object = Record<string, unknown>> {
     const arr = getDeepValue(state.values, path);
     if (!Array.isArray(arr)) return;
 
-    const previousArray = [...arr];
+    const _previousArray = [...arr];
 
     if (this.store.unregisterPrefix) {
       this.store.unregisterPrefix(toPathPrefix(path, index));

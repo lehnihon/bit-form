@@ -39,14 +39,15 @@ export default [
       "no-unused-vars": "off",
 
       // TypeScript rules
-      "@typescript-eslint/no-explicit-any": [
+      "@typescript-eslint/no-explicit-any": "off",
+      "@typescript-eslint/explicit-module-boundary-types": "off",
+      "@typescript-eslint/use-unknown-in-catch-callback-variable": "off",
+      "no-empty": [
         "warn",
         {
-          ignoreRestArgs: true,
-          fixToUnknown: false,
+          allowEmptyCatch: true,
         },
       ],
-      "@typescript-eslint/explicit-module-boundary-types": "warn",
       "@typescript-eslint/no-unused-vars": [
         "warn",
         {

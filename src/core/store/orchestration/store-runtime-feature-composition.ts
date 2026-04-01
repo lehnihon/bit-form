@@ -1,3 +1,18 @@
+import type { BitValidationTriggerOptions } from "../contracts/port-types";
+import type { BitFrameworkConfig } from "../contracts/public/store-api-types";
+import type {
+  BitFieldChangeMeta,
+  BitFieldDefinition,
+  BitState,
+  BitTransformFn,
+} from "../contracts/types";
+import type { BitStoreEffectEngine } from "../engines/effect-engine";
+import type { BitStoreOperation } from "../engines/operation-engine";
+import type { BitBaselineManager } from "../managers/core/baseline-manager";
+import type { BitDirtyManager } from "../managers/core/dirty-manager";
+import type { BitNormalizerEntry } from "../registry/field-catalog";
+import type { BitFieldRegistry } from "../registry/field-registry";
+import type { BitStoreCapabilities } from "./capabilities";
 import {
   createArrayPort,
   createLifecyclePort,
@@ -7,21 +22,6 @@ import {
   composeStoreCapabilities,
   type BitStoreCapabilityComposition,
 } from "./store-bootstrap";
-import type { BitStoreEffectEngine } from "../engines/effect-engine";
-import type { BitStoreOperation } from "../engines/operation-engine";
-import type { BitValidationTriggerOptions } from "../contracts/port-types";
-import type { BitFrameworkConfig } from "../contracts/public/store-api-types";
-import type {
-  BitFieldChangeMeta,
-  BitFieldDefinition,
-  BitState,
-  BitTransformFn,
-} from "../contracts/types";
-import type { BitFieldRegistry } from "../registry/field-registry";
-import type { BitDirtyManager } from "../managers/core/dirty-manager";
-import type { BitBaselineManager } from "../managers/core/baseline-manager";
-import type { BitNormalizerEntry } from "../registry/field-catalog";
-import type { BitStoreCapabilities } from "./capabilities";
 
 export interface BitStoreRuntimeStateAccess<T extends object> {
   getState(): BitState<T>;
@@ -43,7 +43,7 @@ export interface BitStoreRuntimeFeatureAccess<T extends object> {
   getValidation(): BitStoreCapabilities<T>["validation"];
 }
 
-export interface BitStoreRuntimeActions<T extends object> {
+export interface BitStoreRuntimeActions<_T extends object> {
   setError(path: string, message: string | undefined): void;
   validate(options?: {
     scope?: string;

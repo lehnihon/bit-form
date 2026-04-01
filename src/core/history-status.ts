@@ -23,7 +23,7 @@ export function isHistoryMetaEqual(a: HistoryMeta, b: HistoryMeta): boolean {
   );
 }
 
-export function readHistoryMetaSnapshot<T extends object>(store: {
+export function readHistoryMetaSnapshot<_T extends object>(store: {
   read: {
     getHistoryMetadata(): BitHistoryMetadata;
   };
@@ -38,7 +38,7 @@ export function readHistoryMetaSnapshot<T extends object>(store: {
   };
 }
 
-export function observeHistoryMetaSnapshot<T extends object>(
+export function observeHistoryMetaSnapshot<_T extends object>(
   store: {
     read: {
       getHistoryMetadata(): BitHistoryMetadata;

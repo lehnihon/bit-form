@@ -80,7 +80,9 @@ export interface BitFormReadApi<T extends object = Record<string, unknown>> {
   getScopeFields(scopeName: string): string[];
 }
 
-export interface BitFormObserveApi<T extends object = Record<string, unknown>> {
+export interface BitFormObserveApi<
+  _T extends object = Record<string, unknown>,
+> {
   subscribe(listener: () => void): () => void;
   subscribePersistMeta(
     listener: (meta: BitPersistMetadata) => void,
@@ -339,7 +341,7 @@ export interface BitPersistBindingApi {
 }
 
 export interface BitScopeBindingApi<
-  T extends object = Record<string, unknown>,
+  _T extends object = Record<string, unknown>,
 > {
   hasValidationsInProgress(scopeFields?: string[]): boolean;
   getScopeFields(scopeName: string): string[];

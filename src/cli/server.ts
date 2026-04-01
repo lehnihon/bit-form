@@ -1,5 +1,5 @@
-import http from "node:http";
 import fs from "node:fs";
+import http from "node:http";
 import path from "node:path";
 import { getDevToolsDashboardHtml } from "./devtools-dashboard";
 import { attachDevToolsRelay } from "./devtools-relay";
@@ -38,7 +38,7 @@ export function startDevServer(port = 3000) {
           res.writeHead(404);
           res.end("Not Found");
         }
-      } catch (err) {
+      } catch {
         res.writeHead(500);
         res.end("Internal Error");
       }

@@ -1,5 +1,4 @@
-import { useCallback, useSyncExternalStore, useRef, useEffect } from "react";
-import { useBitStore } from "./context";
+import { useCallback, useEffect, useRef, useSyncExternalStore } from "react";
 import {
   BitFieldSnapshot,
   BitPath,
@@ -7,9 +6,10 @@ import {
   cleanupRegisteredField,
   createFieldStateSnapshot,
 } from "../core";
+import { useBitStore } from "./context";
 
 export function useBitFieldBase<
-  TValue = any,
+  _TValue = any,
   TForm extends object = any,
   P extends BitPath<TForm> = BitPath<TForm>,
 >(path: P) {

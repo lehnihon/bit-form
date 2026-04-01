@@ -1,5 +1,4 @@
-import { inject, DestroyRef, computed, signal } from "@angular/core";
-import { BIT_STORE_TOKEN } from "./provider";
+import { DestroyRef, computed, inject, signal } from "@angular/core";
 import {
   BitPath,
   BitPathValue,
@@ -8,13 +7,11 @@ import {
   deriveFieldMeta,
   isBitFieldInputEventObject,
 } from "../core";
-import type {
-  BitFieldInputEvent,
-  InjectBitFieldResult,
-} from "./types";
+import { BIT_STORE_TOKEN } from "./provider";
+import type { BitFieldInputEvent, InjectBitFieldResult } from "./types";
 
 export function injectBitField<
-  TValue = any,
+  _TValue = any,
   TForm extends object = any,
   P extends BitPath<TForm> = BitPath<TForm>,
 >(path: P): InjectBitFieldResult<TForm, P> {

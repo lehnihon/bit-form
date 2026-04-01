@@ -148,7 +148,7 @@ export interface BitStoreWriteDomain<T extends object> {
   clearItems<P extends BitArrayPath<T>>(path: P): void;
 }
 
-export interface BitStoreFeatureDomain<T extends object> {
+export interface BitStoreFeatureDomain<_T extends object> {
   undo(): void;
   redo(): void;
   validate(options?: BitValidationOptions): Promise<boolean>;

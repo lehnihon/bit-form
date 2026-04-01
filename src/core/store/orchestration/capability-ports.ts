@@ -1,27 +1,27 @@
 import type {
-  BitFieldChangeMeta,
-  BitFieldDefinition,
-  BitState,
-  BitTransformFn,
-} from "../contracts/types";
-import type { BitFrameworkConfig } from "../contracts/public/store-api-types";
-import type { BitValidationOptions } from "../contracts/public/meta-types";
-import type {
-  BitValidationTriggerOptions,
   BitLifecycleFieldUpdatePort,
   BitLifecyclePorts,
   BitLifecycleSubmitPort,
   BitLifecycleValuesPort,
   BitValidationManagerPort,
+  BitValidationTriggerOptions,
 } from "../contracts/port-types";
-import type { BitArrayStorePort } from "../managers/features/array-manager";
-import type { BitStoreOperation } from "../engines/operation-engine";
-import { BitFieldRegistry } from "../registry/field-registry";
-import { BitDirtyManager } from "../managers/core/dirty-manager";
+import type { BitValidationOptions } from "../contracts/public/meta-types";
+import type { BitFrameworkConfig } from "../contracts/public/store-api-types";
+import type {
+  BitFieldChangeMeta,
+  BitFieldDefinition,
+  BitState,
+  BitTransformFn,
+} from "../contracts/types";
 import type { BitStoreEffectEngine } from "../engines/effect-engine";
+import type { BitStoreOperation } from "../engines/operation-engine";
+import { BitDirtyManager } from "../managers/core/dirty-manager";
+import type { BitArrayStorePort } from "../managers/features/array-manager";
+import { BitFieldRegistry } from "../registry/field-registry";
 
 // Interfaces locais usadas pelas deps do lifecycle port
-interface BitValidationAccess<T extends object> {
+interface BitValidationAccess<_T extends object> {
   clear(path: string): void;
   trigger(scopeFields?: string[], options?: BitValidationTriggerOptions): void;
   handleAsync(path: string, value: unknown): void;

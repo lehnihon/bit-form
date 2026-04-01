@@ -7,7 +7,6 @@
  * This replaces the runtime "did not stabilize" error with early, clear feedback during setup.
  */
 
-
 export interface CyclicDependencyError {
   cycle: string[];
   paths: string[];
@@ -32,7 +31,7 @@ export interface CyclicDependencyError {
  * }
  * ```
  */
-export function analyzeCyclicDependencies<T extends object>(
+export function analyzeCyclicDependencies<_T extends object>(
   entries: Array<{
     path: string;
     dependsOn?: readonly string[];
@@ -126,7 +125,7 @@ export function analyzeCyclicDependencies<T extends object>(
  * ```
  */
 export function createComputedValidator() {
-  return function validate<T extends object>(
+  return function validate<_T extends object>(
     entries: Array<{
       path: string;
       dependsOn?: readonly string[];
