@@ -117,6 +117,8 @@ export function buildStoreSlicesApi<T extends object>(
       deps.write.swapItems(path, indexA, indexB),
     replaceItems: (path, items) => deps.write.replaceItems(path, items),
     clearItems: (path) => deps.write.clearItems(path),
+    getArrayItemIds: (path, length) =>
+      deps.feature.getArrayItemIds(path, length),
     get canUndo() {
       return deps.read.getCanUndo();
     },

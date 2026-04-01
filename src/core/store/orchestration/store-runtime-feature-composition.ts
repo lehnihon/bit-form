@@ -45,6 +45,7 @@ export interface BitStoreRuntimeFeatureAccess<T extends object> {
 
 export interface BitStoreRuntimeActions<_T extends object> {
   setError(path: string, message: string | undefined): void;
+  setServerErrors(serverErrors: Record<string, string[] | string>): void;
   validate(options?: {
     scope?: string;
     scopeFields?: string[];
@@ -106,6 +107,7 @@ export function composeRuntimeFeatureCapabilities<T extends object>(
     dirtyManager,
     getState: stateAccess.getState,
     dispatch: stateAccess.dispatch,
+    setServerErrors: actions.setServerErrors,
     saveHistorySnapshot: stateAccess.saveHistorySnapshot,
     runStateBatch: stateAccess.runStateBatch,
     getTransformEntries: fieldAccess.getTransformEntries,
@@ -123,6 +125,8 @@ export function composeRuntimeFeatureCapabilities<T extends object>(
       actions.setFieldWithMeta(path, value, meta),
     unregisterPrefix: actions.unregisterPrefix,
     saveHistorySnapshot: stateAccess.saveHistorySnapshot,
+    createArrayItemId: (path, index) =>
+      config.idFactory({ scope: "array", path, index }),
   });
 
   return composeStoreCapabilities<T>({

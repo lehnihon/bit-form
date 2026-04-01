@@ -147,20 +147,20 @@ Enable it explicitly with `trackedSubscriptions: true` in store config.
 
 Once you've created a store with `createBitStore()`, you can interact with it in two complementary ways:
 
-### Direct Method Access (Convenience)
+### Namespaced Store Access (Official)
 
-Methods are exposed directly on the `BitStore` instance for quick app-level usage:
+The official public contract is namespaced-only:
 
 ```typescript
 const store = createBitStore({ initialValues: { name: "" } });
 
-store.setField("name", "Leo");
-store.config.idFactory;
-store.isValid;
-store.subscribe(listener);
+store.write.setField("name", "Leo");
+store.read.config.idFactory;
+store.read.isValid;
+store.observe.subscribe(listener);
 ```
 
-This style is ideal for **application code** where you control the entire component lifecycle.
+This style is ideal for **application code** and keeps the same capability boundaries used by framework bindings.
 
 ### Namespaced Slice Access (Composition)
 
@@ -194,12 +194,12 @@ useFormMeta(store.read);
 
 ### Choosing Your Style
 
-| Context                | Recommended    | Example                                              |
-| ---------------------- | -------------- | ---------------------------------------------------- |
-| **Direct app code**    | Direct methods | `store.setField()`, `store.config`                   |
-| **Shared utilities**   | Slices         | Pass `store.read`, `store.write` to functions        |
-| **Framework bindings** | Slices         | `useBitForm(store.read, store.write, store.feature)` |
-| **Testing**            | Slices         | Easier to mock and verify capability contracts       |
+| Context                | Recommended      | Example                                              |
+| ---------------------- | ---------------- | ---------------------------------------------------- |
+| **Direct app code**    | Namespaced store | `store.write.setField()`, `store.read.config`        |
+| **Shared utilities**   | Slices           | Pass `store.read`, `store.write` to functions        |
+| **Framework bindings** | Slices           | `useBitForm(store.read, store.write, store.feature)` |
+| **Testing**            | Slices           | Easier to mock and verify capability contracts       |
 
 ---
 

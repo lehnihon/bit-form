@@ -98,6 +98,18 @@ describe("Store Contract (namespaced-only)", () => {
     expect(store.read.getState().values.items).toEqual(["B", "C"]);
   });
 
+  it("feature.getArrayItemIds mantém identidade ao mover itens", () => {
+    const store = createBitStore({ initialValues: { items: ["A", "B"] } });
+
+    const initialIds = store.feature.getArrayItemIds("items");
+    store.feature.moveItem("items", 0, 1);
+    const movedIds = store.feature.getArrayItemIds("items");
+
+    expect(initialIds).toHaveLength(2);
+    expect(movedIds[0]).toBe(initialIds[1]);
+    expect(movedIds[1]).toBe(initialIds[0]);
+  });
+
   it("feature de histórico expõe canUndo/canRedo e opera undo/redo", () => {
     const store = createBitStore({
       initialValues: { name: "Leo" },

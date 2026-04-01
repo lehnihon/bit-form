@@ -36,31 +36,11 @@ export function createArrayBinding<
 >(store: BitStoreApi<TForm>, path: P): BitArrayBinding<TForm, P> {
   type Item = BitArrayItem<BitPathValue<TForm, P>>;
 
-  let ids: string[] = [];
-
-  const createId = (index?: number) =>
-    store.feature.createArrayItemId(path as string, index);
-
   const normalizeItems = (value: unknown): Item[] =>
     Array.isArray(value) ? (value as Item[]) : [];
 
-  const syncIds = (items: Item[]): Item[] => {
-    if (items.length !== ids.length) {
-      if (items.length > ids.length) {
-        const diff = items.length - ids.length;
-        ids = [
-          ...ids,
-          ...Array.from({ length: diff }, (_, offset) =>
-            createId(ids.length + offset),
-          ),
-        ];
-      } else {
-        ids = ids.slice(0, items.length);
-      }
-    }
-
-    return items;
-  };
+  const getIds = (length: number) =>
+    store.feature.getArrayItemIds(path, length);
 
   return {
     readItems() {
@@ -68,10 +48,11 @@ export function createArrayBinding<
         store.read.getState().values,
         path as string,
       ) as BitPathValue<TForm, P> | undefined;
-      return syncIds(normalizeItems(value));
+      return normalizeItems(value);
     },
 
     getFields(items) {
+      const ids = getIds(items.length);
       return items.map((item, index) => ({
         key: ids[index] || `temp-${index}`,
         value: item,
@@ -80,49 +61,34 @@ export function createArrayBinding<
     },
 
     append(value) {
-      ids = [...ids, createId(ids.length)];
       store.feature.pushItem(path, value);
     },
 
     prepend(value) {
-      ids = [createId(0), ...ids];
       store.feature.prependItem(path, value);
     },
 
     insert(index, value) {
-      const nextIds = [...ids];
-      nextIds.splice(index, 0, createId(index));
-      ids = nextIds;
       store.feature.insertItem(path, index, value);
     },
 
     remove(index) {
-      ids = ids.filter((_, currentIndex) => currentIndex !== index);
       store.feature.removeItem(path, index);
     },
 
     move(from, to) {
-      const nextIds = [...ids];
-      const [item] = nextIds.splice(from, 1);
-      nextIds.splice(to, 0, item);
-      ids = nextIds;
       store.feature.moveItem(path, from, to);
     },
 
     swap(indexA, indexB) {
-      const nextIds = [...ids];
-      [nextIds[indexA], nextIds[indexB]] = [nextIds[indexB], nextIds[indexA]];
-      ids = nextIds;
       store.feature.swapItems(path, indexA, indexB);
     },
 
     replace(items) {
-      ids = items.map((_, index) => createId(index));
       store.feature.replaceItems(path, items);
     },
 
     clear() {
-      ids = [];
       store.feature.clearItems(path);
     },
   };

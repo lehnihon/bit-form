@@ -15,13 +15,30 @@ export interface BitArrayStorePort<T extends object> {
   ) => void;
   dispatch: (operation: BitStoreOperation<T>) => void;
   internalSaveSnapshot: () => void;
+  createArrayItemId: (path: string, index?: number) => string;
   unregisterPrefix?: (prefix: string) => void;
 }
 
 export class BitArrayManager<T extends object = Record<string, unknown>> {
+  private readonly pathIds = new Map<string, string[]>();
+
   constructor(private store: BitArrayStorePort<T>) {}
 
+  getItemIds(path: string, length?: number): string[] {
+    const targetLength =
+      typeof length === "number"
+        ? Math.max(0, length)
+        : this.getCurrentArrayLength(path);
+
+    return [...this.ensureIds(path, targetLength)];
+  }
+
   pushItem(path: string, value: unknown) {
+    this.withPathIds(path, (ids) => {
+      ids.push(this.store.createArrayItemId(path, ids.length));
+      return ids;
+    });
+
     this.mutateArrayWithSetField(path, (arr) => [...arr, value], {
       origin: "array",
       operation: "push",
@@ -29,6 +46,11 @@ export class BitArrayManager<T extends object = Record<string, unknown>> {
   }
 
   prependItem(path: string, value: unknown) {
+    this.withPathIds(path, (ids) => {
+      ids.unshift(this.store.createArrayItemId(path, 0));
+      return ids;
+    });
+
     this.mutateArrayWithSetField(path, (arr) => [value, ...arr], {
       origin: "array",
       operation: "prepend",
@@ -36,6 +58,13 @@ export class BitArrayManager<T extends object = Record<string, unknown>> {
   }
 
   insertItem(path: string, index: number, value: unknown) {
+    this.withPathIds(path, (ids) => {
+      const next = [...ids];
+      const safeIndex = Math.max(0, Math.min(index, next.length));
+      next.splice(safeIndex, 0, this.store.createArrayItemId(path, safeIndex));
+      return next;
+    });
+
     this.mutateArrayWithSetField(
       path,
       (arr) => {
@@ -58,6 +87,12 @@ export class BitArrayManager<T extends object = Record<string, unknown>> {
 
     const _previousArray = [...arr];
 
+    this.withPathIds(path, (ids) => {
+      const next = [...ids];
+      next.splice(index, 1);
+      return next;
+    });
+
     if (this.store.unregisterPrefix) {
       this.store.unregisterPrefix(toPathPrefix(path, index));
     }
@@ -79,6 +114,12 @@ export class BitArrayManager<T extends object = Record<string, unknown>> {
   }
 
   swapItems(path: string, indexA: number, indexB: number) {
+    this.withPathIds(path, (ids) => {
+      const next = [...ids];
+      [next[indexA], next[indexB]] = [next[indexB], next[indexA]];
+      return next;
+    });
+
     const state = this.store.getState();
     const arr = [...(getDeepValue(state.values, path) || [])];
     [arr[indexA], arr[indexB]] = [arr[indexB], arr[indexA]];
@@ -107,6 +148,13 @@ export class BitArrayManager<T extends object = Record<string, unknown>> {
   }
 
   moveItem(path: string, from: number, to: number) {
+    this.withPathIds(path, (ids) => {
+      const next = [...ids];
+      const [id] = next.splice(from, 1);
+      next.splice(to, 0, id);
+      return next;
+    });
+
     const state = this.store.getState();
     const arr = [...(getDeepValue(state.values, path) || [])];
     const [item] = arr.splice(from, 1);
@@ -140,6 +188,11 @@ export class BitArrayManager<T extends object = Record<string, unknown>> {
   }
 
   replaceItems(path: string, items: unknown[]) {
+    this.pathIds.set(
+      path,
+      items.map((_, index) => this.store.createArrayItemId(path, index)),
+    );
+
     this.commitArrayMutationWithFieldPipeline({
       path,
       nextArray: items,
@@ -149,6 +202,8 @@ export class BitArrayManager<T extends object = Record<string, unknown>> {
   }
 
   clearItems(path: string) {
+    this.pathIds.set(path, []);
+
     if (this.store.unregisterPrefix) {
       this.store.unregisterPrefix(toPathPrefix(path));
     }
@@ -169,6 +224,38 @@ export class BitArrayManager<T extends object = Record<string, unknown>> {
     const current = getDeepValue(this.store.getState().values, path) || [];
     this.store.setFieldWithMeta(path, mutate(current), meta);
     this.store.internalSaveSnapshot();
+  }
+
+  private withPathIds(path: string, updater: (ids: string[]) => string[]) {
+    const currentLength = this.getCurrentArrayLength(path);
+    const current = this.ensureIds(path, currentLength);
+    this.pathIds.set(path, updater(current));
+  }
+
+  private ensureIds(path: string, length: number): string[] {
+    const current = this.pathIds.get(path) ?? [];
+
+    if (current.length === length) {
+      return current;
+    }
+
+    if (current.length < length) {
+      const next = [...current];
+      for (let index = current.length; index < length; index += 1) {
+        next.push(this.store.createArrayItemId(path, index));
+      }
+      this.pathIds.set(path, next);
+      return next;
+    }
+
+    const next = current.slice(0, length);
+    this.pathIds.set(path, next);
+    return next;
+  }
+
+  private getCurrentArrayLength(path: string): number {
+    const value = getDeepValue(this.store.getState().values, path);
+    return Array.isArray(value) ? value.length : 0;
   }
 
   private commitArrayMutationWithFieldPipeline(args: {

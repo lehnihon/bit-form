@@ -1,15 +1,23 @@
-import { deepClone, setDeepValues } from "../../../../utils";
+import {
+  deepClone,
+  extractServerErrors,
+  isValidationErrorShape,
+  setDeepValues,
+} from "../../../../utils";
+import type { BitLifecycleSubmitPort } from "../../../contracts/port-types";
 import type { BitSubmitResult } from "../../../contracts/types";
-import { applyTransformDerivations } from "../../../shared/value-derivation-pipeline";
+import { patchStateOperation } from "../../../engines/operation-engine";
 import {
   BitPipelineContext,
   BitPipelineRunner,
 } from "../../../shared/pipeline";
-import { patchStateOperation } from "../../../engines/operation-engine";
-import type { BitLifecycleSubmitPort } from "../../../contracts/port-types";
+import { applyTransformDerivations } from "../../../shared/value-derivation-pipeline";
 
 interface SubmitPipelineContext<T extends object> extends BitPipelineContext {
-  onSuccess: (values: T, dirtyValues?: Partial<T>) => void | Promise<void>;
+  onSuccess: (
+    values: T,
+    dirtyValues?: Partial<T>,
+  ) => unknown | Promise<unknown>;
   isValid: boolean;
   valuesToSubmit: T;
   dirtyValues: Partial<T>;
@@ -44,7 +52,10 @@ export class BitSubmitLifecycleManager<T extends object> {
   }
 
   async submit(
-    onSuccess: (values: T, dirtyValues?: Partial<T>) => void | Promise<void>,
+    onSuccess: (
+      values: T,
+      dirtyValues?: Partial<T>,
+    ) => unknown | Promise<unknown>,
   ): Promise<BitSubmitResult> {
     const currentState = this.store.getState();
 
@@ -159,7 +170,27 @@ export class BitSubmitLifecycleManager<T extends object> {
   }
 
   private async runSubmitHandler(ctx: SubmitPipelineContext<T>) {
-    await ctx.onSuccess(ctx.valuesToSubmit, ctx.dirtyValues);
+    try {
+      await ctx.onSuccess(ctx.valuesToSubmit, ctx.dirtyValues);
+    } catch (error) {
+      if (isValidationErrorShape(error)) {
+        this.store.setServerErrors(extractServerErrors(error));
+
+        await this.store.emitAfterSubmit({
+          values: ctx.valuesToSubmit,
+          dirtyValues: ctx.dirtyValues,
+          state: this.store.getState(),
+          success: false,
+          invalid: true,
+        });
+
+        ctx.invalid = true;
+        ctx.halted = true;
+        return;
+      }
+
+      throw error;
+    }
   }
 
   private async runAfterSubmitHooks(ctx: SubmitPipelineContext<T>) {

@@ -2,9 +2,9 @@ import type { Signal } from "@angular/core";
 import type {
   BitErrors,
   BitHistoryMetadata,
-  BitPersistMetadata,
   BitPath,
   BitPathValue,
+  BitPersistMetadata,
   BitTouched,
   ScopeStatus,
   ValidateScopeResult,
@@ -126,7 +126,10 @@ export interface InjectBitFormResult<T extends object = any> {
   getTouched: () => BitTouched<T>;
   getDirtyValues: () => Partial<T>;
   submit: (
-    onSuccess: (values: T, dirtyValues?: Partial<T>) => void | Promise<void>,
+    onSuccess: (
+      values: T,
+      dirtyValues?: Partial<T>,
+    ) => unknown | Promise<unknown>,
   ) => (event?: Event) => Promise<void>;
   onSubmit: (
     handler: (values: T, dirtyValues?: Partial<T>) => Promise<unknown>,

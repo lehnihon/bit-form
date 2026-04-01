@@ -114,7 +114,10 @@ export interface BitFormWriteApi<T extends object = Record<string, unknown>> {
   transaction<TResult>(callback: () => TResult): TResult;
 
   submit(
-    onSuccess: (values: T, dirtyValues?: Partial<T>) => void | Promise<void>,
+    onSuccess: (
+      values: T,
+      dirtyValues?: Partial<T>,
+    ) => unknown | Promise<unknown>,
   ): Promise<BitSubmitResult>;
 }
 
@@ -164,6 +167,10 @@ export interface BitStoreArrayFeatureApi<
     items: BitArrayItem<BitPathValue<T, P>>[],
   ): void;
   clearItems<P extends BitArrayPath<T>>(path: P): void;
+  getArrayItemIds<P extends BitArrayPath<T>>(
+    path: P,
+    length?: number,
+  ): string[];
 }
 
 export interface BitStoreHistoryFeatureApi {
@@ -226,7 +233,10 @@ export interface BitFormActionBindingApi<
   setField<P extends BitPath<T>>(path: P, value: BitPathValue<T, P>): void;
   blurField<P extends BitPath<T>>(path: P): void;
   submit(
-    onSuccess: (values: T, dirtyValues?: Partial<T>) => void | Promise<void>,
+    onSuccess: (
+      values: T,
+      dirtyValues?: Partial<T>,
+    ) => unknown | Promise<unknown>,
   ): Promise<BitSubmitResult>;
   reset(): void;
   validate(options?: BitValidationOptions): Promise<boolean>;
@@ -246,7 +256,10 @@ export interface BitFormControllerStoreApi<
   getState(): Readonly<BitState<T>>;
   getDirtyValues(): Partial<T>;
   submit(
-    onSuccess: (values: T, dirtyValues?: Partial<T>) => void | Promise<void>,
+    onSuccess: (
+      values: T,
+      dirtyValues?: Partial<T>,
+    ) => unknown | Promise<unknown>,
   ): Promise<BitSubmitResult>;
   reset(): void;
   setServerErrors(serverErrors: Record<string, string[] | string>): void;
