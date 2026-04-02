@@ -37,6 +37,7 @@ Sometimes you need to validate a field against a backend API (e.g., checking if 
 
 - `blur` (**default**): runs async validation when the field loses focus, and also during `validate()`/submit flows.
 - `change`: opt-in live validation while typing. Pair it with `asyncValidateDelay` to debounce requests.
+- `asyncValidateTimeout` (optional): max time in ms for each async validation run before it is treated as timed out.
 
 ```tsx
 store.feature.registerField("username", {
@@ -49,11 +50,14 @@ store.feature.registerField("username", {
     },
     asyncValidateOn: "change",
     asyncValidateDelay: 500,
+    asyncValidateTimeout: 3000,
   },
 });
 ```
 
 If you do not set `asyncValidateOn`, the field keeps the cheaper default behavior and validates asynchronously on `blur`.
+
+If `asyncValidateTimeout` is configured and exceeded, Bit-Form ignores that async result and clears `isValidating` for the field. This avoids indefinite loading states when an API hangs.
 
 You can check if a field is currently validating to show a loading spinner in your UI:
 

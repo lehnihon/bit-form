@@ -120,7 +120,7 @@ export async function runImmediateAsyncValidationStage<T extends object>(args: {
   path: string;
   values: T;
   validationId: number;
-  currentValidationId: number;
+  getCurrentValidationId: () => number;
   getFieldConfig: (path: string) => BitFieldDefinition<T> | undefined;
   cancelFieldAsync: (path: string) => void;
   createAbortController: () => AbortController;
@@ -134,7 +134,7 @@ export async function runImmediateAsyncValidationStage<T extends object>(args: {
     path,
     values,
     validationId,
-    currentValidationId,
+    getCurrentValidationId,
     getFieldConfig,
     cancelFieldAsync,
     createAbortController,
@@ -159,12 +159,28 @@ export async function runImmediateAsyncValidationStage<T extends object>(args: {
   setFieldValidating(path, true);
 
   try {
-    const errorMessage = await (asyncValidate as BitAsyncValidateFn<T>)(
-      getDeepValue(values, path),
-      values,
-    );
+    const asyncValidateTimeout =
+      getFieldConfig(path)?.validation?.asyncValidateTimeout;
 
-    if (controller.signal.aborted || validationId !== currentValidationId) {
+    let validationPromise: Promise<string | null | undefined> = (
+      asyncValidate as BitAsyncValidateFn<T>
+    )(getDeepValue(values, path), values);
+
+    if (typeof asyncValidateTimeout === "number" && asyncValidateTimeout > 0) {
+      validationPromise = Promise.race([
+        validationPromise,
+        new Promise<undefined>((resolve) =>
+          setTimeout(() => resolve(undefined), asyncValidateTimeout),
+        ),
+      ]);
+    }
+
+    const errorMessage = await validationPromise;
+
+    if (
+      controller.signal.aborted ||
+      validationId !== getCurrentValidationId()
+    ) {
       return;
     }
 
@@ -174,7 +190,10 @@ export async function runImmediateAsyncValidationStage<T extends object>(args: {
       clearAsyncError(path);
     }
   } finally {
-    if (!controller.signal.aborted && validationId === currentValidationId) {
+    if (
+      !controller.signal.aborted &&
+      validationId === getCurrentValidationId()
+    ) {
       setFieldValidating(path, false);
     }
     clearAbortController(path);

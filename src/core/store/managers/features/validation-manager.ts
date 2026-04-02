@@ -166,7 +166,8 @@ export class BitValidationManager<T extends object> {
     }
 
     const delay = config.validation?.asyncValidateDelay ?? 500;
-    this.asyncScheduler.handle(path, value, asyncValidate, delay);
+    const timeout = config.validation?.asyncValidateTimeout;
+    this.asyncScheduler.handle(path, value, asyncValidate, delay, timeout);
   }
 
   hasValidationsInProgress(scopeFields?: string[]) {
@@ -249,7 +250,7 @@ export class BitValidationManager<T extends object> {
       path,
       values,
       validationId,
-      currentValidationId: this.coordinator.getCurrentValidationId(),
+      getCurrentValidationId: () => this.coordinator.getCurrentValidationId(),
       getFieldConfig: (fieldPath) => this.store.getFieldConfig(fieldPath),
       cancelFieldAsync: (fieldPath) => this.cancelFieldAsync(fieldPath),
       createAbortController: () => new AbortController(),

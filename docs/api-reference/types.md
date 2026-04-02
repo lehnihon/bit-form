@@ -152,6 +152,7 @@ interface BitFieldValidation<T> {
   asyncValidate?: (value: any, values: T) => Promise<string | null | undefined>;
   asyncValidateOn?: "change" | "blur";
   asyncValidateDelay?: number;
+  asyncValidateTimeout?: number;
 }
 
 interface BitFieldDefinition<T> {
@@ -168,6 +169,8 @@ interface BitFieldDefinition<T> {
 
 - **`conditional`** — visibility and dynamic required logic (`dependsOn`, `showIf`, `requiredIf`, `requiredMessage`).
 - **`validation`** — async validation only. `asyncValidateOn` defaults to `"blur"`; use `"change"` for live validation while typing.
+- **`validation.asyncValidateDelay`** — debounce (ms) for `"change"` mode.
+- **`validation.asyncValidateTimeout`** — optional timeout (ms) for async validation. When exceeded, the pending async result is ignored and `isValidating` is cleared for that field.
 - **`normalize`** — applied to runtime state after writes/batches.
 - **`normalizeDependsOn`** — list of paths that, when changed, trigger this normalizer. Defaults to `[path]` (the field's own path). Use this to run a normalizer only when a specific dependency changes instead of on every write. This enables **incremental normalization**: only affected normalizers run per batch, reducing overhead in large forms.
 - **`transform`** — applied only when preparing the submit payload.

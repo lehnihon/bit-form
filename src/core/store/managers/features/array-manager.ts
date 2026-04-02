@@ -58,9 +58,11 @@ export class BitArrayManager<T extends object = Record<string, unknown>> {
   }
 
   insertItem(path: string, index: number, value: unknown) {
+    const currentLength = this.getCurrentArrayLength(path);
+    const safeIndex = Math.max(0, Math.min(index, currentLength));
+
     this.withPathIds(path, (ids) => {
       const next = [...ids];
-      const safeIndex = Math.max(0, Math.min(index, next.length));
       next.splice(safeIndex, 0, this.store.createArrayItemId(path, safeIndex));
       return next;
     });
@@ -69,13 +71,13 @@ export class BitArrayManager<T extends object = Record<string, unknown>> {
       path,
       (arr) => {
         const next = [...arr];
-        next.splice(index, 0, value);
+        next.splice(safeIndex, 0, value);
         return next;
       },
       {
         origin: "array",
         operation: "insert",
-        index,
+        index: safeIndex,
       },
     );
   }
@@ -84,8 +86,7 @@ export class BitArrayManager<T extends object = Record<string, unknown>> {
     const state = this.store.getState();
     const arr = getDeepValue(state.values, path);
     if (!Array.isArray(arr)) return;
-
-    const _previousArray = [...arr];
+    if (index < 0 || index >= arr.length) return;
 
     this.withPathIds(path, (ids) => {
       const next = [...ids];

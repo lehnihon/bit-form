@@ -42,6 +42,7 @@ export interface BitFieldValidation<
     Promise<string | null | undefined>
   >;
   asyncValidateDelay?: number;
+  asyncValidateTimeout?: number;
 }
 
 interface BitFieldDefinitionBase<T extends object = Record<string, unknown>> {
