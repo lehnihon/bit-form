@@ -43,7 +43,11 @@ export function composeBitStoreRuntime<T extends object>(args: {
     overrides?.baselineManager ??
     new BitBaselineManager<T>(config.initialValues);
 
-  const fieldRegistry = overrides?.fieldRegistry ?? new BitFieldRegistry<T>();
+  const fieldRegistry =
+    overrides?.fieldRegistry ??
+    new BitFieldRegistry<T>(({ error }) => {
+      config.onUnhandledError(error, "validation");
+    });
   const computedManager =
     overrides?.computedManager ??
     new BitComputedManager<T>(() => fieldRegistry.getComputedEntries());

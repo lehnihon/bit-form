@@ -44,4 +44,38 @@ describe("effect engine registry", () => {
 
     expect(restored).toBe(true);
   });
+
+  it("deve continuar executando efeitos mesmo quando um hook falha", async () => {
+    const consoleErrorSpy = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+    const registry = new BitEffectRegistry<Record<string, unknown>>();
+    const afterSubmitA = vi.fn(async () => {
+      throw new Error("effect-a-failed");
+    });
+    const afterSubmitB = vi.fn(async () => {});
+
+    registry.register({
+      name: "effect-a",
+      afterSubmit: afterSubmitA,
+    });
+
+    registry.register({
+      name: "effect-b",
+      afterSubmit: afterSubmitB,
+    });
+
+    const engine = new BitStoreEffectEngine(registry);
+
+    await engine.afterSubmit({} as any);
+
+    expect(afterSubmitA).toHaveBeenCalledTimes(1);
+    expect(afterSubmitB).toHaveBeenCalledTimes(1);
+    expect(consoleErrorSpy).toHaveBeenCalledWith(
+      expect.stringContaining('effect "effect-a" failed in hook "afterSubmit"'),
+      expect.any(Error),
+    );
+
+    consoleErrorSpy.mockRestore();
+  });
 });

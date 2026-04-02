@@ -1,6 +1,6 @@
 import { getDeepValue } from "../../utils";
-import type { BitErrors, BitFieldDefinition } from "../contracts/types";
 import type { BitDependencyUpdateDiff } from "../contracts/port-types";
+import type { BitErrors, BitFieldDefinition } from "../contracts/types";
 
 export class BitFieldConditions<T extends object = Record<string, unknown>> {
   private readonly dependencies: Map<string, Set<string>> = new Map();
@@ -23,6 +23,11 @@ export class BitFieldConditions<T extends object = Record<string, unknown>> {
     private readonly getFieldConfig: (
       path: string,
     ) => BitFieldDefinition<T> | undefined,
+    private readonly onConditionError?: (args: {
+      path: string;
+      kind: "showIf" | "requiredIf";
+      error: unknown;
+    }) => void,
   ) {}
 
   getHiddenFields(): ReadonlySet<string> {
@@ -109,7 +114,14 @@ export class BitFieldConditions<T extends object = Record<string, unknown>> {
       return cached.result;
     }
 
-    const result = !!config.conditional.requiredIf(values);
+    let result = false;
+
+    try {
+      result = !!config.conditional.requiredIf(values);
+    } catch (error) {
+      this.onConditionError?.({ path, kind: "requiredIf", error });
+    }
+
     this.requiredEvaluationCache.set(path, {
       version: this.requiredEvaluationVersion,
       valuesRef: values,
@@ -205,10 +217,14 @@ export class BitFieldConditions<T extends object = Record<string, unknown>> {
     const showIf = config?.conditional?.showIf;
     if (!showIf) return;
 
-    if (showIf(values)) {
-      this.hiddenFields.delete(path);
-    } else {
-      this.hiddenFields.add(path);
+    try {
+      if (showIf(values)) {
+        this.hiddenFields.delete(path);
+      } else {
+        this.hiddenFields.add(path);
+      }
+    } catch (error) {
+      this.onConditionError?.({ path, kind: "showIf", error });
     }
   }
 

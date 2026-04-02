@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { BitFieldRegistry } from "../../core/store/registry/field-registry";
 
 describe("BitFieldRegistry", () => {
@@ -122,5 +122,63 @@ describe("BitFieldRegistry", () => {
 
     expect(registry.getScopeFields("pricing")).toEqual(["price"]);
     expect(registry.getComputedEntries()).toHaveLength(0);
+  });
+
+  it("não deve quebrar evaluateAll quando showIf lança erro", () => {
+    const onConditionError = vi.fn();
+    const registry = new BitFieldRegistry<{ toggle: boolean; guarded: string }>(
+      onConditionError,
+    );
+
+    registry.register(
+      "guarded",
+      {
+        conditional: {
+          dependsOn: ["toggle"],
+          showIf: () => {
+            throw new Error("broken-showIf");
+          },
+        },
+      },
+      { toggle: false, guarded: "" },
+    );
+
+    expect(() =>
+      registry.evaluateAll({ toggle: true, guarded: "" }),
+    ).not.toThrow();
+    expect(onConditionError).toHaveBeenCalledWith(
+      expect.objectContaining({
+        path: "guarded",
+        kind: "showIf",
+      }),
+    );
+  });
+
+  it("isRequired deve retornar false quando requiredIf lança erro", () => {
+    const onConditionError = vi.fn();
+    const registry = new BitFieldRegistry<{ mode: string; doc: string }>(
+      onConditionError,
+    );
+
+    registry.register(
+      "doc",
+      {
+        conditional: {
+          dependsOn: ["mode"],
+          requiredIf: () => {
+            throw new Error("broken-requiredIf");
+          },
+        },
+      },
+      { mode: "on", doc: "" },
+    );
+
+    expect(registry.isRequired("doc", { mode: "on", doc: "" })).toBe(false);
+    expect(onConditionError).toHaveBeenCalledWith(
+      expect.objectContaining({
+        path: "doc",
+        kind: "requiredIf",
+      }),
+    );
   });
 });

@@ -1,18 +1,29 @@
-import type { BitFieldDefinition, BitTransformFn } from "../contracts/types";
 import type { BitDependencyUpdateDiff } from "../contracts/port-types";
+import type { BitFieldDefinition, BitTransformFn } from "../contracts/types";
 import type { BitComputedEntry } from "../managers/core/computed-manager";
+import { isPathWithinPrefix, normalizePathPrefix } from "../shared/path-prefix";
 import { BitFieldCatalog, type BitNormalizerEntry } from "./field-catalog";
 import { BitFieldConditions } from "./field-conditions";
 import type { BitFieldMetadataProvider } from "./field-metadata-provider";
-import { isPathWithinPrefix, normalizePathPrefix } from "../shared/path-prefix";
 
 export class BitFieldRegistry<
   T extends object = Record<string, unknown>,
 > implements BitFieldMetadataProvider<T> {
   private readonly catalog = new BitFieldCatalog<T>();
-  private readonly conditions = new BitFieldConditions<T>((path) =>
-    this.catalog.get(path),
-  );
+  private readonly conditions: BitFieldConditions<T>;
+
+  constructor(
+    onConditionError?: (args: {
+      path: string;
+      kind: "showIf" | "requiredIf";
+      error: unknown;
+    }) => void,
+  ) {
+    this.conditions = new BitFieldConditions<T>(
+      (path) => this.catalog.get(path),
+      onConditionError,
+    );
+  }
 
   getFieldConfig(path: string): BitFieldDefinition<T> | undefined {
     return this.catalog.get(path);

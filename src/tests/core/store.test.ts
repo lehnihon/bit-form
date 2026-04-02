@@ -1158,6 +1158,32 @@ describe("BitStore Core", () => {
       expect(store.read.getState().errors["list.0"]).toBeUndefined();
     });
 
+    it("swapItems com índice inválido não altera estado", () => {
+      const store = createBitStore({ initialValues: { list: ["A", "B"] } });
+      store.feature.triggerValidation = vi.fn();
+
+      const before = store.read.getState();
+      store.feature.swapItems("list", -1, 1);
+
+      expect(store.read.getState().values.list).toEqual(before.values.list);
+      expect(store.read.getState().errors).toEqual(before.errors);
+    });
+
+    it("moveItem com índice inválido não altera estado", () => {
+      const store = createBitStore({
+        initialValues: { list: ["A", "B", "C"] },
+      });
+      store.feature.triggerValidation = vi.fn();
+
+      store.write.setError("list.0", "Error on A");
+      const before = store.read.getState();
+
+      store.feature.moveItem("list", 0, 99);
+
+      expect(store.read.getState().values.list).toEqual(before.values.list);
+      expect(store.read.getState().errors).toEqual(before.errors);
+    });
+
     it("should replace array items through native array capability", () => {
       const store = createBitStore({
         initialValues: { list: ["A", "B", "C"] },
