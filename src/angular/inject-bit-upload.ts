@@ -5,15 +5,17 @@
  */
 
 import { computed, inject, signal } from "@angular/core";
-import { BIT_STORE_TOKEN } from "./provider";
+import type { BitDeleteUploadFn, BitUploadFn } from "../core";
+import { createRemoveHandler, createUploadHandler } from "../core/adapters";
 import { injectBitField } from "./inject-bit-field";
-import { BitUploadFn, BitDeleteUploadFn } from "../core";
-import { createUploadHandler, createRemoveHandler } from "../core/adapters";
+import { BIT_STORE_TOKEN } from "./provider";
 import type { InjectBitUploadResult } from "./types";
 
-export function injectBitUpload(
+export function injectBitUpload<
+  TMetadata extends Record<string, unknown> = Record<string, unknown>,
+>(
   fieldPath: string,
-  uploadFn: BitUploadFn,
+  uploadFn: BitUploadFn<TMetadata>,
   deleteFile?: BitDeleteUploadFn,
 ): InjectBitUploadResult {
   const store = inject(BIT_STORE_TOKEN);

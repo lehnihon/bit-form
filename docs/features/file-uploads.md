@@ -9,14 +9,17 @@ Bit-Form upload is backend-first and minimal.
 ## Core contract
 
 ```typescript
-type BitUploadFn = (
-  file: File,
-  context?: Record<string, any>,
-) => Promise<{
+interface BitUploadResult<
+  TMetadata extends Record<string, unknown> = Record<string, unknown>,
+> {
   url: string;
   key: string;
-  metadata?: Record<string, any>;
-}>;
+  metadata?: TMetadata;
+}
+
+type BitUploadFn<
+  TMetadata extends Record<string, unknown> = Record<string, unknown>,
+> = (file: File) => Promise<BitUploadResult<TMetadata>>;
 ```
 
 ## React

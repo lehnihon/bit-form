@@ -6,7 +6,7 @@
  * differ in how they wire reactive state.
  */
 
-import type { BitUploadFn, BitDeleteUploadFn } from "../types/upload";
+import type { BitDeleteUploadFn, BitUploadFn } from "../types/upload";
 
 export interface UploadKernelCallbacks {
   /** Called with `true` when upload starts and `false` when it finishes. */
@@ -35,9 +35,11 @@ export interface UploadKernelCallbacks {
  * });
  * ```
  */
-export function createUploadHandler(
+export function createUploadHandler<
+  TMetadata extends Record<string, unknown> = Record<string, unknown>,
+>(
   fieldPath: string,
-  uploadFn: BitUploadFn,
+  uploadFn: BitUploadFn<TMetadata>,
   callbacks: UploadKernelCallbacks,
 ): (file: File | null | undefined) => Promise<void> {
   return async (file) => {

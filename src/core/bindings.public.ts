@@ -19,10 +19,7 @@ export {
   cleanupRegisteredPrefix,
 } from "./bindings/framework-cleanup";
 
-export type {
-  BitArrayBinding,
-  BitArrayBindingField,
-} from "./bindings/array-controller";
+export type { BitArrayBinding, BitArrayBindingField } from "./types/bindings";
 
 export {
   formatMaskedValue,
@@ -33,7 +30,16 @@ export {
 export type { BitFieldInputEvent } from "./mask/field-binding";
 
 export type {
+  BitHistoryAdapterResult,
+  BitPersistAdapterResult,
+  BitStepsAdapterResult,
+} from "./types/framework-adapters";
+
+export type {
   BitDeleteUploadFn,
+  BitUploadAdapterResult,
   BitUploadFn,
+  BitUploadInput,
   BitUploadResult,
+  BitUploadValue,
 } from "./types/upload";

@@ -2,6 +2,19 @@
 
 Bit-Form is written in TypeScript and ships first-class types for all core primitives. This section documents the main types you will interact with when using the core store.
 
+Core contracts are now organized by domain under `src/core/store/contracts/public/`:
+
+- `config-types.ts` (store config)
+- `field-types.ts` (field definition + validation)
+- `path-types.ts` (type-safe paths)
+- `state-types.ts` (state/errors/touched)
+- `persist-types.ts` (persistence contracts)
+- `runtime-types.ts` (scheduler/id/devtools/scope results)
+- `plugin-event-types.ts` (operational events)
+- `plugin-core-types.ts` (plugin context + hooks)
+
+For compatibility, `src/core/store/contracts/types.ts` continues to re-export these public types.
+
 ---
 
 ## `BitErrors<T>`
@@ -91,7 +104,7 @@ type ValidatorFn<T> = (
 Represents a function that derives a computed value from the current `values`.
 
 ```ts
-type BitComputedFn<T> = (values: T) => any;
+type BitComputedFn<T> = (values: T) => unknown;
 ```
 
 Used in `BitFieldDefinition.computed`.
@@ -103,7 +116,7 @@ Used in `BitFieldDefinition.computed`.
 Represents a transformation applied to a field before submission.
 
 ```ts
-type BitTransformFn<T> = (value: any, allValues: T) => any;
+type BitTransformFn<T> = (value: unknown, allValues: T) => unknown;
 ```
 
 Used in `BitFieldDefinition.transform` (per-field transforms).
@@ -115,7 +128,7 @@ Used in `BitFieldDefinition.transform` (per-field transforms).
 Represents a normalization applied to a field during runtime writes.
 
 ```ts
-type BitNormalizeFn<T> = (value: any, allValues: T) => any;
+type BitNormalizeFn<T> = (value: unknown, allValues: T) => unknown;
 ```
 
 Used in `BitFieldDefinition.normalize` when the store state itself should be normalized after updates.
