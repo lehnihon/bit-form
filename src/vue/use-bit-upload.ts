@@ -5,15 +5,17 @@
  */
 
 import { computed, ComputedRef, ref } from "vue";
-import { useBitField } from "./use-bit-field";
+import type { BitDeleteUploadFn, BitUploadFn } from "../core";
+import { createRemoveHandler, createUploadHandler } from "../core/adapters";
 import { useBitStore } from "./context";
-import { BitUploadFn, BitDeleteUploadFn } from "../core";
-import { createUploadHandler, createRemoveHandler } from "../core/adapters";
 import type { UseBitUploadResult } from "./types";
+import { useBitField } from "./use-bit-field";
 
-export function useBitUpload(
+export function useBitUpload<
+  TMetadata extends Record<string, unknown> = Record<string, unknown>,
+>(
   fieldPath: string,
-  uploadFn: BitUploadFn,
+  uploadFn: BitUploadFn<TMetadata>,
   deleteFile?: BitDeleteUploadFn,
 ): UseBitUploadResult {
   const store = useBitStore<any>();

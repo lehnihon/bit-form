@@ -1,11 +1,15 @@
 import type { Signal } from "@angular/core";
 import type {
   BitErrors,
+  BitHistoryAdapterResult,
   BitHistoryMetadata,
   BitPath,
   BitPathValue,
+  BitPersistAdapterResult,
   BitPersistMetadata,
+  BitStepsAdapterResult,
   BitTouched,
+  BitUploadAdapterResult,
   ScopeStatus,
   ValidateScopeResult,
 } from "../core";
@@ -53,65 +57,46 @@ export interface InjectBitFieldResult<
  * Result from injectBitSteps in Angular.
  * Provides multi-step form navigation and validation using Angular Signals.
  */
-export interface InjectBitStepsResult {
-  step: ReturnType<typeof import("@angular/core").computed<number>>;
-  stepIndex: ReturnType<typeof import("@angular/core").signal<number>>;
-  scope: ReturnType<typeof import("@angular/core").computed<string>>;
-  next: () => Promise<boolean>;
-  prev: () => void;
-  goTo: (step: number) => void;
-  isFirst: ReturnType<typeof import("@angular/core").computed<boolean>>;
-  isLast: ReturnType<typeof import("@angular/core").computed<boolean>>;
-  status: ReturnType<typeof import("@angular/core").signal<ScopeStatus>>;
-  errors: ReturnType<
-    typeof import("@angular/core").computed<Record<string, string>>
-  >;
-  isValid: ReturnType<typeof import("@angular/core").computed<boolean>>;
-  isDirty: ReturnType<typeof import("@angular/core").computed<boolean>>;
-  validate: () => Promise<ValidateScopeResult>;
-  getErrors: () => Record<string, string>;
-}
+export type InjectBitStepsResult = BitStepsAdapterResult<
+  ReturnType<typeof import("@angular/core").computed<number>>,
+  ReturnType<typeof import("@angular/core").signal<number>>,
+  ReturnType<typeof import("@angular/core").computed<string>>,
+  ReturnType<typeof import("@angular/core").computed<boolean>>,
+  ReturnType<typeof import("@angular/core").signal<ScopeStatus>>,
+  ReturnType<typeof import("@angular/core").computed<Record<string, string>>>,
+  ValidateScopeResult
+>;
 
 /**
  * Result from injectBitUpload in Angular.
  * Provides file upload functionality with integrated validation (Angular Signal).
  */
-export interface InjectBitUploadResult {
-  value: Signal<string | File | null>;
-  setValue: (value: string | File | null) => void;
-  error: Signal<string | undefined>;
-  isValidating: Signal<boolean>;
-  upload: (file: File | null | undefined) => Promise<void>;
-  remove: () => Promise<void>;
-}
+export type InjectBitUploadResult = BitUploadAdapterResult<
+  Signal<string | File | null>,
+  Signal<string | undefined>,
+  Signal<boolean>
+>;
 
 /**
  * Result from injectBitHistory in Angular.
  * Provides form history undo/redo capabilities (Angular Signals).
  */
-export interface InjectBitHistoryResult {
-  canUndo: ReturnType<typeof import("@angular/core").computed<boolean>>;
-  canRedo: ReturnType<typeof import("@angular/core").computed<boolean>>;
-  historyIndex: ReturnType<
+export type InjectBitHistoryResult = BitHistoryAdapterResult<
+  ReturnType<typeof import("@angular/core").computed<boolean>>,
+  ReturnType<typeof import("@angular/core").computed<boolean>>,
+  ReturnType<
     typeof import("@angular/core").computed<BitHistoryMetadata["historyIndex"]>
-  >;
-  historySize: ReturnType<
+  >,
+  ReturnType<
     typeof import("@angular/core").computed<BitHistoryMetadata["historySize"]>
-  >;
-  undo: () => void;
-  redo: () => void;
-}
+  >
+>;
 
-export interface InjectBitPersistResult {
-  restore: () => Promise<boolean>;
-  save: () => Promise<void>;
-  clear: () => Promise<void>;
-  meta: {
-    isSaving: Signal<BitPersistMetadata["isSaving"]>;
-    isRestoring: Signal<BitPersistMetadata["isRestoring"]>;
-    error: Signal<BitPersistMetadata["error"]>;
-  };
-}
+export type InjectBitPersistResult = BitPersistAdapterResult<{
+  isSaving: Signal<BitPersistMetadata["isSaving"]>;
+  isRestoring: Signal<BitPersistMetadata["isRestoring"]>;
+  error: Signal<BitPersistMetadata["error"]>;
+}>;
 
 export interface InjectBitFormResult<T extends object = any> {
   meta: {

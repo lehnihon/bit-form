@@ -92,7 +92,7 @@ Return type of `useBitUpload()` hook for file uploads.
 interface UseBitUploadResult {
   value: string | File | null;
   setValue: (value: string | File | null) => void;
-  error?: string;
+  error: string | undefined;
   isValidating: boolean;
   upload: (file: File | null | undefined) => Promise<void>;
   remove: () => Promise<void>;

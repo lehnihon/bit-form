@@ -7,11 +7,15 @@
       "ESNext",
       "DOM"
     ],
+    "types": [
+      "node"
+    ],
     "strict": true,
     "skipLibCheck": true,
     "esModuleInterop": true,
     "isolatedModules": true,
     "noImplicitAny": false,
+    "ignoreDeprecations": "6.0",
     "baseUrl": ".",
     "paths": {
       "bit-form": [

@@ -1,11 +1,17 @@
 import type {
   BitErrors,
   BitFieldInputEvent,
+  BitHistoryAdapterResult,
   BitHistoryMetadata,
   BitPath,
   BitPathValue,
+  BitPersistAdapterResult,
   BitPersistMetadata,
+  BitStepsAdapterResult,
   BitTouched,
+  BitUploadAdapterResult,
+  ScopeStatus,
+  ValidateScopeResult,
 } from "../core";
 export type { BitFieldInputEvent };
 
@@ -59,55 +65,38 @@ export interface UseBitFieldResult<
  * Result from useBitSteps hook.
  * Provides multi-step form navigation and validation.
  */
-export interface UseBitStepsResult {
-  step: number;
-  stepIndex: number;
-  scope: string;
-  next: () => Promise<boolean>;
-  prev: () => void;
-  goTo: (step: number) => void;
-  isFirst: boolean;
-  isLast: boolean;
-  status: import("../core").ScopeStatus;
-  errors: Record<string, string>;
-  isValid: boolean;
-  isDirty: boolean;
-  validate: () => Promise<import("../core").ValidateScopeResult>;
-  getErrors: () => Record<string, string>;
-}
+export type UseBitStepsResult = BitStepsAdapterResult<
+  number,
+  number,
+  string,
+  boolean,
+  ScopeStatus,
+  Record<string, string>,
+  ValidateScopeResult
+>;
 
 /**
  * Result from useBitUpload hook.
  * Provides file upload functionality with integrated validation.
  */
-export interface UseBitUploadResult {
-  value: string | File | null;
-  setValue: (value: string | File | null) => void;
-  error?: string;
-  isValidating: boolean;
-  upload: (file: File | null | undefined) => Promise<void>;
-  remove: () => Promise<void>;
-}
+export type UseBitUploadResult = BitUploadAdapterResult<
+  string | File | null,
+  string | undefined,
+  boolean
+>;
 
 /**
  * Result from useBitHistory hook.
  * Provides form history undo/redo capabilities.
  */
-export interface UseBitHistoryResult {
-  canUndo: BitHistoryMetadata["canUndo"];
-  canRedo: BitHistoryMetadata["canRedo"];
-  historyIndex: BitHistoryMetadata["historyIndex"];
-  historySize: BitHistoryMetadata["historySize"];
-  undo: () => void;
-  redo: () => void;
-}
+export type UseBitHistoryResult = BitHistoryAdapterResult<
+  BitHistoryMetadata["canUndo"],
+  BitHistoryMetadata["canRedo"],
+  BitHistoryMetadata["historyIndex"],
+  BitHistoryMetadata["historySize"]
+>;
 
-export interface UseBitPersistResult {
-  restore: () => Promise<boolean>;
-  save: () => Promise<void>;
-  clear: () => Promise<void>;
-  meta: BitPersistMetadata;
-}
+export type UseBitPersistResult = BitPersistAdapterResult<BitPersistMetadata>;
 
 export interface UseBitFormMeta {
   isValid: boolean;
