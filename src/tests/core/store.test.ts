@@ -1719,6 +1719,47 @@ describe("BitStore Core", () => {
       store.feature.cleanup();
     });
 
+    it("should keep submit payload snapshot stable when beforeSubmit mutates store state", async () => {
+      const submittedValues: Array<Record<string, unknown>> = [];
+      const afterSubmitEvents: Array<Record<string, unknown>> = [];
+
+      const store = createBitStore({
+        initialValues: { name: "Leo" },
+        validation: {
+          resolver: () => ({}),
+          delay: 0,
+        },
+        plugins: [
+          {
+            name: "mutating-before-submit",
+            hooks: {
+              beforeSubmit: () => {
+                store.write.setField("name", "Mutated in hook");
+              },
+              afterSubmit: (event) => {
+                afterSubmitEvents.push(event as unknown as Record<string, unknown>);
+              },
+            },
+          },
+        ],
+      });
+
+      await store.write.submit(async (values) => {
+        submittedValues.push(values as unknown as Record<string, unknown>);
+      });
+
+      expect(submittedValues).toHaveLength(1);
+      expect(submittedValues[0]?.name).toBe("Leo");
+
+      expect(afterSubmitEvents).toHaveLength(1);
+      expect(afterSubmitEvents[0]?.values).toEqual({ name: "Leo" });
+      expect((afterSubmitEvents[0]?.state as any)?.values?.name).toBe(
+        "Mutated in hook",
+      );
+
+      store.feature.cleanup();
+    });
+
     it("should emit onFieldChange for setField, rebase and array operations", async () => {
       const changes: Array<{
         origin: string;
