@@ -1737,7 +1737,9 @@ describe("BitStore Core", () => {
                 store.write.setField("name", "Mutated in hook");
               },
               afterSubmit: (event) => {
-                afterSubmitEvents.push(event as unknown as Record<string, unknown>);
+                afterSubmitEvents.push(
+                  event as unknown as Record<string, unknown>,
+                );
               },
             },
           },
