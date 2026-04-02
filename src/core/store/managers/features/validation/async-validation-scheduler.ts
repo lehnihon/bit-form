@@ -10,6 +10,7 @@ interface PendingAsyncValidationJob<T extends object> {
   dueAt: number;
   validate: BitAsyncValidateFn<T>;
   controller: AbortController;
+  timeoutMs?: number;
 }
 
 export interface BitAsyncValidationSchedulerPort<T extends object> {
@@ -36,6 +37,7 @@ export class BitAsyncValidationScheduler<T extends object> {
     value: unknown,
     validate: BitAsyncValidateFn<T> | undefined,
     delay: number,
+    timeoutMs?: number,
   ): void {
     if (!validate) {
       this.cancel(path);
@@ -53,14 +55,21 @@ export class BitAsyncValidationScheduler<T extends object> {
       dueAt: Date.now() + delay,
       validate,
       controller,
+      timeoutMs,
     });
     this.schedulePendingJobs();
   }
 
   cancel(path: string): void {
+    this.cancelInternal(path, true);
+  }
+
+  private cancelInternal(path: string, shouldReschedule: boolean): void {
     if (this.pendingJobs.has(path)) {
       this.pendingJobs.delete(path);
-      this.schedulePendingJobs();
+      if (shouldReschedule) {
+        this.schedulePendingJobs();
+      }
     }
 
     const controller = this.abortControllers.get(path);
@@ -71,12 +80,19 @@ export class BitAsyncValidationScheduler<T extends object> {
   }
 
   cleanupPrefix(prefix: string): void {
+    let hasPendingChange = false;
+
     for (const path of this.pendingJobs.keys()) {
       if (isPathWithinPrefix(path, prefix)) {
-        this.cancel(path);
+        this.cancelInternal(path, false);
+        hasPendingChange = true;
         this.port.clearAsyncError(path);
         this.port.setFieldValidating(path, false);
       }
+    }
+
+    if (hasPendingChange) {
+      this.schedulePendingJobs();
     }
   }
 
@@ -153,7 +169,21 @@ export class BitAsyncValidationScheduler<T extends object> {
     }
 
     try {
-      const errorMessage = await job.validate(job.value, this.port.getValues());
+      let validationPromise: Promise<string | null | undefined> = job.validate(
+        job.value,
+        this.port.getValues(),
+      );
+
+      if (typeof job.timeoutMs === "number" && job.timeoutMs > 0) {
+        validationPromise = Promise.race([
+          validationPromise,
+          new Promise<undefined>((resolve) =>
+            setTimeout(() => resolve(undefined), job.timeoutMs),
+          ),
+        ]);
+      }
+
+      const errorMessage = await validationPromise;
 
       if (job.controller.signal.aborted) {
         return;

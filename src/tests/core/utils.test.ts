@@ -70,6 +70,21 @@ describe("utils - deepEqual", () => {
       true,
     );
   });
+
+  it("não lança stack overflow com referências circulares", () => {
+    const a: Record<string, unknown> = { x: 1 };
+    a.self = a;
+    const b: Record<string, unknown> = { x: 1 };
+    b.self = b;
+    expect(() => deepEqual(a, b)).not.toThrow();
+  });
+
+  it("retorna false quando um lado tem ciclo e o outro não", () => {
+    const a: Record<string, unknown> = { x: 1 };
+    a.self = a;
+    const b = { x: 1, self: { x: 1, self: null } };
+    expect(deepEqual(a, b)).toBe(false);
+  });
 });
 
 describe("utils - valueEqual", () => {

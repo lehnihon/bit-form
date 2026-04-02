@@ -1184,6 +1184,44 @@ describe("BitStore Core", () => {
       expect(store.read.getState().values.list).toEqual([]);
       expect(store.read.getState().errors["list.0"]).toBeUndefined();
     });
+
+    it("removeItem com índice negativo não altera o estado", () => {
+      const store = createBitStore({
+        initialValues: { list: ["A", "B", "C"] },
+      });
+      store.feature.triggerValidation = vi.fn();
+
+      store.feature.removeItem("list", -1);
+
+      expect(store.read.getState().values.list).toEqual(["A", "B", "C"]);
+    });
+
+    it("removeItem com índice >= length não altera o estado", () => {
+      const store = createBitStore({ initialValues: { list: ["A", "B"] } });
+      store.feature.triggerValidation = vi.fn();
+
+      store.feature.removeItem("list", 5);
+
+      expect(store.read.getState().values.list).toEqual(["A", "B"]);
+    });
+
+    it("insertItem com índice negativo insere no início sem dessincronizar IDs", () => {
+      const store = createBitStore({ initialValues: { list: ["B", "C"] } });
+
+      store.feature.insertItem("list", -5, "A");
+
+      const values = store.read.getState().values.list as string[];
+      expect(values).toEqual(["A", "B", "C"]);
+    });
+
+    it("insertItem com índice além do fim insere no final sem dessincronizar IDs", () => {
+      const store = createBitStore({ initialValues: { list: ["A", "B"] } });
+
+      store.feature.insertItem("list", 99, "C");
+
+      const values = store.read.getState().values.list as string[];
+      expect(values).toEqual(["A", "B", "C"]);
+    });
   });
 
   describe("BitStore - Validação Assíncrona (Async Validation)", () => {
@@ -1314,6 +1352,67 @@ describe("BitStore Core", () => {
       expect(store.read.getState().errors.email).toBeUndefined();
       await vi.advanceTimersByTimeAsync(5);
       expect(store.read.isFieldValidating("email")).toBe(false);
+    });
+
+    it("deve isolar race conditions entre múltiplos campos assíncronos", async () => {
+      const store = createBitStore({
+        initialValues: { email: "", username: "" },
+      });
+
+      let resolveEmailReq1: (msg: string | null) => void;
+      let resolveEmailReq2: (msg: string | null) => void;
+      let emailReqCount = 0;
+
+      const emailApi = vi.fn().mockImplementation(() => {
+        emailReqCount += 1;
+        return new Promise((resolve) => {
+          if (emailReqCount === 1) resolveEmailReq1 = resolve;
+          if (emailReqCount === 2) resolveEmailReq2 = resolve;
+        });
+      });
+
+      const usernameApi = vi.fn().mockResolvedValue("Username indisponível");
+
+      store.feature.registerField("email", {
+        validation: {
+          asyncValidateOn: "change",
+          asyncValidate: emailApi,
+          asyncValidateDelay: 100,
+        },
+      });
+
+      store.feature.registerField("username", {
+        validation: {
+          asyncValidateOn: "change",
+          asyncValidate: usernameApi,
+          asyncValidateDelay: 100,
+        },
+      });
+
+      store.write.setField("email", "old@sample");
+      await vi.advanceTimersByTimeAsync(100);
+
+      store.write.setField("email", "new@sample.com");
+      await vi.advanceTimersByTimeAsync(100);
+
+      store.write.setField("username", "leo");
+      await vi.advanceTimersByTimeAsync(100);
+
+      expect(store.read.getState().errors.username).toBe(
+        "Username indisponível",
+      );
+
+      resolveEmailReq2!(null);
+      await vi.advanceTimersByTimeAsync(1);
+      expect(store.read.getState().errors.email).toBeUndefined();
+
+      resolveEmailReq1!("Email inválido (stale)");
+      await vi.advanceTimersByTimeAsync(1);
+
+      expect(store.read.getState().errors.email).toBeUndefined();
+      expect(store.read.getState().errors.username).toBe(
+        "Username indisponível",
+      );
     });
 
     it("deve acumular scopeFields no debounce de triggerValidation", async () => {
@@ -1466,6 +1565,52 @@ describe("BitStore Core", () => {
 
       expect(mockApi).toHaveBeenCalledTimes(1);
       expect(store.read.getState().errors.username).toBe("Username já existe");
+    });
+
+    it("asyncValidateTimeout deve limpar isValidating e não definir erro quando a Promise demora demais", async () => {
+      const store = createBitStore({ initialValues: { username: "" } });
+
+      const mockApi = vi
+        .fn()
+        .mockImplementation(() => new Promise<string | null>(() => {}));
+
+      store.feature.registerField("username", {
+        validation: {
+          asyncValidateOn: "change",
+          asyncValidate: mockApi,
+          asyncValidateDelay: 0,
+          asyncValidateTimeout: 200,
+        },
+      });
+
+      store.write.setField("username", "leandro");
+      await vi.advanceTimersByTimeAsync(10);
+
+      expect(store.read.isFieldValidating("username")).toBe(true);
+
+      await vi.advanceTimersByTimeAsync(250);
+
+      expect(store.read.isFieldValidating("username")).toBe(false);
+      expect(store.read.getState().errors.username).toBeUndefined();
+    });
+
+    it("asyncValidateTimeout não interrompe validação que termina dentro do prazo", async () => {
+      const store = createBitStore({ initialValues: { email: "" } });
+
+      store.feature.registerField("email", {
+        validation: {
+          asyncValidateOn: "change",
+          asyncValidate: async () => "Email inválido",
+          asyncValidateDelay: 0,
+          asyncValidateTimeout: 500,
+        },
+      });
+
+      store.write.setField("email", "bad");
+      await vi.advanceTimersByTimeAsync(10);
+
+      expect(store.read.getState().errors.email).toBe("Email inválido");
+      expect(store.read.isFieldValidating("email")).toBe(false);
     });
   });
 
