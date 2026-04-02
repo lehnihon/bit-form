@@ -33,7 +33,7 @@ describe("BitPluginManager", () => {
     await Promise.resolve();
     expect(onError).toHaveBeenCalledTimes(1);
 
-    releaseFirst?.();
+    releaseFirst!();
     await Promise.all([first, second]);
 
     expect(onError).toHaveBeenCalledTimes(2);
