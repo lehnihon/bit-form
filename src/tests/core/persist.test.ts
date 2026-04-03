@@ -170,6 +170,69 @@ describe("Persist Feature (BitPersistManager)", () => {
       expect(saved.name).toBe("Leandro");
       store.feature.cleanup();
     });
+
+    it("should set persist.error and reset isSaving when save fails", async () => {
+      const onError = vi.fn();
+      const store = createBitStore<TestForm>({
+        initialValues: { name: "Leo", email: "leo@test.com", age: 30 },
+        persist: {
+          enabled: true,
+          key: "test-form",
+          storage: {
+            getItem: vi.fn(() => null),
+            setItem: vi.fn(() => {
+              throw new Error("quota exceeded");
+            }),
+            removeItem: vi.fn(),
+          },
+          autoSave: false,
+          onError,
+        },
+      });
+
+      await store.feature.forceSave();
+
+      expect(onError).toHaveBeenCalledWith(expect.any(Error));
+      expect(store.read.getState().persist.isSaving).toBe(false);
+      expect(store.read.getState().persist.error).toBeInstanceOf(Error);
+      expect(store.read.getState().persist.error?.message).toContain(
+        "quota exceeded",
+      );
+
+      store.feature.cleanup();
+    });
+
+    it("should still expose persist.error when onError callback is not provided", async () => {
+      const consoleErrorSpy = vi
+        .spyOn(console, "error")
+        .mockImplementation(() => undefined);
+      const store = createBitStore<TestForm>({
+        initialValues: { name: "Leo", email: "leo@test.com", age: 30 },
+        persist: {
+          enabled: true,
+          key: "test-form",
+          storage: {
+            getItem: vi.fn(() => null),
+            setItem: vi.fn(() => {
+              throw new Error("write failed");
+            }),
+            removeItem: vi.fn(),
+          },
+          autoSave: false,
+        },
+      });
+
+      await store.feature.forceSave();
+
+      expect(store.read.getState().persist.isSaving).toBe(false);
+      expect(store.read.getState().persist.error).toBeInstanceOf(Error);
+      expect(store.read.getState().persist.error?.message).toContain(
+        "write failed",
+      );
+
+      consoleErrorSpy.mockRestore();
+      store.feature.cleanup();
+    });
   });
 
   describe("restorePersisted", () => {

@@ -73,7 +73,11 @@ export class BitStoreEffectEngine<T extends object> {
         continue;
       }
 
-      await effect.beforeValidate(event);
+      try {
+        await effect.beforeValidate(event);
+      } catch (error) {
+        this.logEffectHookError(effect.name, "beforeValidate", error);
+      }
     }
   }
 
@@ -83,7 +87,11 @@ export class BitStoreEffectEngine<T extends object> {
         continue;
       }
 
-      await effect.afterValidate(event);
+      try {
+        await effect.afterValidate(event);
+      } catch (error) {
+        this.logEffectHookError(effect.name, "afterValidate", error);
+      }
     }
   }
 
@@ -93,7 +101,11 @@ export class BitStoreEffectEngine<T extends object> {
         continue;
       }
 
-      await effect.beforeSubmit(event);
+      try {
+        await effect.beforeSubmit(event);
+      } catch (error) {
+        this.logEffectHookError(effect.name, "beforeSubmit", error);
+      }
     }
   }
 
@@ -103,7 +115,11 @@ export class BitStoreEffectEngine<T extends object> {
         continue;
       }
 
-      await effect.afterSubmit(event);
+      try {
+        await effect.afterSubmit(event);
+      } catch (error) {
+        this.logEffectHookError(effect.name, "afterSubmit", error);
+      }
     }
   }
 
@@ -123,6 +139,21 @@ export class BitStoreEffectEngine<T extends object> {
 
       await effect.reportOperationalError(event);
     }
+  }
+
+  private logEffectHookError(
+    effectName: string,
+    hookName:
+      | "beforeValidate"
+      | "afterValidate"
+      | "beforeSubmit"
+      | "afterSubmit",
+    error: unknown,
+  ): void {
+    console.error(
+      `BitStoreEffectEngine: effect "${effectName}" failed in hook "${hookName}"`,
+      error,
+    );
   }
 
   destroy(): void {

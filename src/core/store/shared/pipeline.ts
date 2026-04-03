@@ -40,12 +40,10 @@ export class BitSyncPipelineRunner<TContext extends BitPipelineContext> {
       if (
         result !== null &&
         result !== undefined &&
-        typeof (result as Promise<unknown>).then === "function" &&
-        typeof process !== "undefined" &&
-        process.env?.NODE_ENV !== "production"
+        typeof (result as Promise<unknown>).then === "function"
       ) {
-        console.warn(
-          `BitSyncPipelineRunner: step "${step.name}" returned a Promise and will not be awaited.`,
+        throw new Error(
+          `BitSyncPipelineRunner: step "${step.name}" returned a Promise. Use BitPipelineRunner for async steps.`,
         );
       }
     }

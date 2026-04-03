@@ -162,6 +162,8 @@ export class BitSubmitLifecycleManager<T extends object> {
   }
 
   private async runBeforeSubmitHooks(ctx: SubmitPipelineContext<T>) {
+    // Hooks recebem um snapshot de submissão imutável por contrato.
+    // Mudanças no estado global durante o hook não alteram valuesToSubmit.
     await this.store.emitBeforeSubmit({
       values: ctx.valuesToSubmit,
       dirtyValues: ctx.dirtyValues,

@@ -12,6 +12,7 @@ import type {
 export class BitPluginManager<T extends object = Record<string, unknown>> {
   private teardownFns: Array<() => void> = [];
   private notifyingError = false;
+  private pendingErrorQueue: BitPluginErrorEvent<T>[] = [];
   private cachedContext: BitPluginContext<T> | null = null;
 
   constructor(
@@ -74,34 +75,43 @@ export class BitPluginManager<T extends object = Record<string, unknown>> {
     event?: unknown,
     pluginName?: string,
   ) {
-    if (this.notifyingError) {
-      return;
-    }
-
-    this.notifyingError = true;
-
     const context = this.getContext();
-    const payload: BitPluginErrorEvent<T> = {
+    this.pendingErrorQueue.push({
       source,
       pluginName,
       error,
       event,
       values: context.getState().values,
       state: context.getState(),
-    };
+    });
 
-    for (const plugin of this.plugins) {
-      const onError = plugin.hooks?.onError;
-      if (!onError) continue;
-
-      try {
-        await onError(payload, context);
-      } catch {
-        // fail-open: ignore secondary errors from onError handlers
-      }
+    if (this.notifyingError) {
+      return;
     }
 
-    this.notifyingError = false;
+    this.notifyingError = true;
+
+    try {
+      while (this.pendingErrorQueue.length > 0) {
+        const payload = this.pendingErrorQueue.shift();
+        if (!payload) {
+          break;
+        }
+
+        for (const plugin of this.plugins) {
+          const onError = plugin.hooks?.onError;
+          if (!onError) continue;
+
+          try {
+            await onError(payload, context);
+          } catch {
+            // fail-open: ignore secondary errors from onError handlers
+          }
+        }
+      }
+    } finally {
+      this.notifyingError = false;
+    }
   }
 
   destroy() {

@@ -115,14 +115,19 @@ export class BitArrayManager<T extends object = Record<string, unknown>> {
   }
 
   swapItems(path: string, indexA: number, indexB: number) {
+    const state = this.store.getState();
+    const source = getDeepValue(state.values, path);
+    if (!Array.isArray(source)) return;
+    if (indexA < 0 || indexA >= source.length) return;
+    if (indexB < 0 || indexB >= source.length) return;
+
     this.withPathIds(path, (ids) => {
       const next = [...ids];
       [next[indexA], next[indexB]] = [next[indexB], next[indexA]];
       return next;
     });
 
-    const state = this.store.getState();
-    const arr = [...(getDeepValue(state.values, path) || [])];
+    const arr = [...source];
     [arr[indexA], arr[indexB]] = [arr[indexB], arr[indexA]];
 
     this.commitArrayMutationWithFieldPipeline({
@@ -149,6 +154,12 @@ export class BitArrayManager<T extends object = Record<string, unknown>> {
   }
 
   moveItem(path: string, from: number, to: number) {
+    const state = this.store.getState();
+    const source = getDeepValue(state.values, path);
+    if (!Array.isArray(source)) return;
+    if (from < 0 || from >= source.length) return;
+    if (to < 0 || to >= source.length) return;
+
     this.withPathIds(path, (ids) => {
       const next = [...ids];
       const [id] = next.splice(from, 1);
@@ -156,8 +167,7 @@ export class BitArrayManager<T extends object = Record<string, unknown>> {
       return next;
     });
 
-    const state = this.store.getState();
-    const arr = [...(getDeepValue(state.values, path) || [])];
+    const arr = [...source];
     const [item] = arr.splice(from, 1);
     arr.splice(to, 0, item);
 

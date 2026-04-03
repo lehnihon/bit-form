@@ -1158,6 +1158,32 @@ describe("BitStore Core", () => {
       expect(store.read.getState().errors["list.0"]).toBeUndefined();
     });
 
+    it("swapItems com índice inválido não altera estado", () => {
+      const store = createBitStore({ initialValues: { list: ["A", "B"] } });
+      store.feature.triggerValidation = vi.fn();
+
+      const before = store.read.getState();
+      store.feature.swapItems("list", -1, 1);
+
+      expect(store.read.getState().values.list).toEqual(before.values.list);
+      expect(store.read.getState().errors).toEqual(before.errors);
+    });
+
+    it("moveItem com índice inválido não altera estado", () => {
+      const store = createBitStore({
+        initialValues: { list: ["A", "B", "C"] },
+      });
+      store.feature.triggerValidation = vi.fn();
+
+      store.write.setError("list.0", "Error on A");
+      const before = store.read.getState();
+
+      store.feature.moveItem("list", 0, 99);
+
+      expect(store.read.getState().values.list).toEqual(before.values.list);
+      expect(store.read.getState().errors).toEqual(before.errors);
+    });
+
     it("should replace array items through native array capability", () => {
       const store = createBitStore({
         initialValues: { list: ["A", "B", "C"] },
@@ -1690,6 +1716,49 @@ describe("BitStore Core", () => {
       });
 
       expect(calls).toEqual(["beforeSubmit", "onSuccess", "afterSubmit"]);
+      store.feature.cleanup();
+    });
+
+    it("should keep submit payload snapshot stable when beforeSubmit mutates store state", async () => {
+      const submittedValues: Array<Record<string, unknown>> = [];
+      const afterSubmitEvents: Array<Record<string, unknown>> = [];
+
+      const store = createBitStore({
+        initialValues: { name: "Leo" },
+        validation: {
+          resolver: () => ({}),
+          delay: 0,
+        },
+        plugins: [
+          {
+            name: "mutating-before-submit",
+            hooks: {
+              beforeSubmit: () => {
+                store.write.setField("name", "Mutated in hook");
+              },
+              afterSubmit: (event) => {
+                afterSubmitEvents.push(
+                  event as unknown as Record<string, unknown>,
+                );
+              },
+            },
+          },
+        ],
+      });
+
+      await store.write.submit(async (values) => {
+        submittedValues.push(values as unknown as Record<string, unknown>);
+      });
+
+      expect(submittedValues).toHaveLength(1);
+      expect(submittedValues[0]?.name).toBe("Leo");
+
+      expect(afterSubmitEvents).toHaveLength(1);
+      expect(afterSubmitEvents[0]?.values).toEqual({ name: "Leo" });
+      expect((afterSubmitEvents[0]?.state as any)?.values?.name).toBe(
+        "Mutated in hook",
+      );
+
       store.feature.cleanup();
     });
 

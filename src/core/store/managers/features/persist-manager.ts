@@ -53,6 +53,7 @@ export class BitPersistManager<T extends object = Record<string, unknown>> {
       await storage.setItem(this.config.key, serialized);
     } catch (error) {
       this.handleError(error);
+      throw error;
     }
   }
 
@@ -64,7 +65,7 @@ export class BitPersistManager<T extends object = Record<string, unknown>> {
     }
 
     this.timer = setTimeout(() => {
-      void this.saveNow();
+      void this.saveNow().catch(() => undefined);
     }, this.config.debounceMs);
   }
 
