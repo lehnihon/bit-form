@@ -6,7 +6,10 @@ import type {
   BitValidationManagerPort,
   BitValidationTriggerOptions,
 } from "../contracts/port-types";
-import type { BitValidationOptions } from "../contracts/public/meta-types";
+import type {
+  BitServerErrorOptions,
+  BitValidationOptions,
+} from "../contracts/public/meta-types";
 import type { BitFrameworkConfig } from "../contracts/public/store-api-types";
 import type {
   BitFieldChangeMeta,
@@ -80,7 +83,10 @@ export interface BitLifecyclePortDeps<T extends object> {
   dirtyManager: BitDirtyManager<T>;
   getState(): BitState<T>;
   dispatch(operation: BitStoreOperation<T>): void;
-  setServerErrors(serverErrors: Record<string, string[] | string>): void;
+  setServerErrors(
+    serverErrors: Record<string, string[] | string>,
+    options?: BitServerErrorOptions,
+  ): void;
   saveHistorySnapshot(): void;
   runStateBatch<TResult>(callback: () => TResult): TResult;
   getTransformEntries(): [string, BitTransformFn<T>][];
@@ -149,7 +155,8 @@ export function createLifecyclePort<T extends object>(
     hasValidationsInProgress: (scopeFields) =>
       deps.getValidation().hasValidationsInProgress(scopeFields),
     buildDirtyValues: (values) => deps.dirtyManager.buildDirtyValues(values),
-    setServerErrors: (serverErrors) => deps.setServerErrors(serverErrors),
+    setServerErrors: (serverErrors, options) =>
+      deps.setServerErrors(serverErrors, options),
     emitBeforeSubmit: (event) => deps.getEffects().beforeSubmit(event),
     emitAfterSubmit: (event) => deps.getEffects().afterSubmit(event),
     emitOperationalError: (event) =>

@@ -1,30 +1,30 @@
-import { BitValidationManager } from "../managers/features/validation-manager";
-import { BitLifecycleManager } from "../managers/features/lifecycle-manager";
-import { BitHistoryManager } from "../managers/features/history-manager";
+import { deepClone } from "../../utils";
+import type {
+  BitLifecyclePorts,
+  BitValidationManagerPort,
+} from "../contracts/port-types";
+import type { BitFrameworkConfig } from "../contracts/public/store-api-types";
+import type { BitFieldDefinition, BitState } from "../contracts/types";
+import type { BitStoreOperation } from "../engines/operation-engine";
+import { analyzeCyclicDependencies } from "../managers/core/computed-dependency-analyzer";
+import { BitComputedManager } from "../managers/core/computed-manager";
 import {
   BitArrayManager,
   type BitArrayStorePort,
 } from "../managers/features/array-manager";
-import { BitScopeManager } from "../managers/features/scope-manager";
-import { BitFieldQueryManager } from "../managers/features/field-query-manager";
 import { BitErrorManager } from "../managers/features/error-manager";
+import { BitFieldQueryManager } from "../managers/features/field-query-manager";
+import { BitHistoryManager } from "../managers/features/history-manager";
+import { BitLifecycleManager } from "../managers/features/lifecycle-manager";
+import { BitScopeManager } from "../managers/features/scope-manager";
+import { BitValidationManager } from "../managers/features/validation-manager";
 import { BitFieldRegistry } from "../registry/field-registry";
-import { BitComputedManager } from "../managers/core/computed-manager";
-import { analyzeCyclicDependencies } from "../managers/core/computed-dependency-analyzer";
-import type { BitStoreOperation } from "../engines/operation-engine";
-import { deepClone } from "../../utils";
 import { applyValueDerivations } from "../shared/value-derivation-pipeline";
 import type { BitStoreCapabilities } from "./capabilities";
 import {
   createStoreCapabilityRegistry,
   type BitStoreCapabilityRegistry,
 } from "./store-capability-registry";
-import type { BitFrameworkConfig } from "../contracts/public/store-api-types";
-import type {
-  BitLifecyclePorts,
-  BitValidationManagerPort,
-} from "../contracts/port-types";
-import type { BitFieldDefinition, BitState } from "../contracts/types";
 
 export type BitStoreCapabilityPorts<T extends object> = {
   validationPort: BitValidationManagerPort<T>;
@@ -88,6 +88,7 @@ function registerStoreCapabilities<T extends object>(args: {
     new BitErrorManager<T>(
       () => ports.getState(),
       (operation) => ports.dispatch(operation),
+      (error) => ports.config.onUnhandledError(error, "errors"),
     ),
   );
 }

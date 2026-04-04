@@ -1,7 +1,7 @@
 import type { BitValidationPipelinePort } from "../../../contracts/port-types";
-import type { ValidationPipelineContext } from "./validation-pipeline-context";
-import { hasAnyError } from "../../../shared/error-map";
 import { validationCommitOperation } from "../../../engines/operation-engine";
+import { hasAnyError } from "../../../shared/error-map";
+import type { ValidationPipelineContext } from "./validation-pipeline-context";
 import {
   mergeValidationErrors,
   resolveAsyncValidationPaths,
@@ -23,6 +23,24 @@ export function resolveTargetFieldsStage<T extends object>(args: {
   deps: BitValidationPipelineStageDeps<T>;
 }) {
   const { ctx, deps } = args;
+  const rawOptions = ctx.options as
+    | { scope?: string; scopeFields?: string[] }
+    | undefined;
+
+  if (rawOptions?.scope && rawOptions.scopeFields?.length) {
+    deps.store.config.onUnhandledError(
+      new Error(
+        "validate received both 'scope' and 'scopeFields'. 'scopeFields' takes precedence.",
+      ),
+      "validation",
+    );
+    return;
+  }
+
+  if (ctx.options?.scopeFields?.length) {
+    return;
+  }
+
   if (ctx.options?.scope) {
     const scopeFields = deps.store.getScopeFields(ctx.options.scope);
     if (scopeFields.length > 0) {

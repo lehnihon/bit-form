@@ -148,7 +148,9 @@ export class BitValidationManager<T extends object> {
       return;
     }
 
+    this.cancelFieldAsync(path);
     this.asyncErrors.delete(path);
+    this.store.setError(path, undefined);
 
     await this.validate({ scopeFields: [path] });
     return;

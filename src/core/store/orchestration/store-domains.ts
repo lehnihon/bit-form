@@ -2,6 +2,7 @@ import type { BitValidationTriggerOptions } from "../contracts/port-types";
 import type {
   BitFormMeta,
   BitHistoryMetadata,
+  BitServerErrorOptions,
   BitValidationOptions,
 } from "../contracts/public/meta-types";
 import type { BitFrameworkConfig } from "../contracts/public/store-api-types";
@@ -115,7 +116,10 @@ export interface BitStoreWriteDomain<T extends object> {
   ): void;
   setError(path: string, message: string | undefined): void;
   setErrors(errors: BitErrors<T>): void;
-  setServerErrors(serverErrors: Record<string, string[] | string>): void;
+  setServerErrors(
+    serverErrors: Record<string, string[] | string>,
+    options?: BitServerErrorOptions,
+  ): void;
   reset(): void;
   transaction<TResult>(callback: () => TResult): TResult;
   submit(
@@ -340,8 +344,8 @@ export function createBitStoreDomains<T extends object>(args: {
     setErrors: (errors) => {
       runtime.capabilities.error.setErrors(errors);
     },
-    setServerErrors: (serverErrors) => {
-      runtime.capabilities.error.setServerErrors(serverErrors);
+    setServerErrors: (serverErrors, options) => {
+      runtime.capabilities.error.setServerErrors(serverErrors, options);
     },
     reset: () => {
       runtime.runBatch(() => {

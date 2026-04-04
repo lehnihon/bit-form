@@ -23,6 +23,20 @@ import {
   type BitStoreCapabilityComposition,
 } from "./store-bootstrap";
 
+type BitRuntimeValidationOptions =
+  | {
+      scope: string;
+      scopeFields?: never;
+    }
+  | {
+      scope?: never;
+      scopeFields: string[];
+    }
+  | {
+      scope?: undefined;
+      scopeFields?: undefined;
+    };
+
 export interface BitStoreRuntimeStateAccess<T extends object> {
   getState(): BitState<T>;
   dispatch(operation: BitStoreOperation<T>): void;
@@ -45,11 +59,11 @@ export interface BitStoreRuntimeFeatureAccess<T extends object> {
 
 export interface BitStoreRuntimeActions<_T extends object> {
   setError(path: string, message: string | undefined): void;
-  setServerErrors(serverErrors: Record<string, string[] | string>): void;
-  validate(options?: {
-    scope?: string;
-    scopeFields?: string[];
-  }): Promise<boolean>;
+  setServerErrors(
+    serverErrors: Record<string, string[] | string>,
+    options?: { arrayStrategy?: "first" | "join"; joinSeparator?: string },
+  ): void;
+  validate(options?: BitRuntimeValidationOptions): Promise<boolean>;
   setFieldWithMeta(
     path: string,
     value: unknown,

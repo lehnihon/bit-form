@@ -1,5 +1,8 @@
 import type { BitStoreOperation } from "../engines/operation-engine";
-import type { BitValidationOptions } from "./public/meta-types";
+import type {
+  BitServerErrorOptions,
+  BitValidationOptions,
+} from "./public/meta-types";
 import type { BitFrameworkConfig } from "./public/store-api-types";
 import type {
   BitAfterSubmitEvent,
@@ -115,7 +118,10 @@ export interface BitLifecycleSubmitPort<T extends object> {
   validateNow: (options?: BitValidationOptions) => Promise<boolean>;
   hasValidationsInProgress: (scopeFields?: string[]) => boolean;
   buildDirtyValues: (values: T) => Partial<T>;
-  setServerErrors: (serverErrors: Record<string, string[] | string>) => void;
+  setServerErrors: (
+    serverErrors: Record<string, string[] | string>,
+    options?: BitServerErrorOptions,
+  ) => void;
   emitBeforeSubmit: (event: BitBeforeSubmitEvent<T>) => Promise<void>;
   emitAfterSubmit: (event: BitAfterSubmitEvent<T>) => Promise<void>;
   emitOperationalError: (event: {

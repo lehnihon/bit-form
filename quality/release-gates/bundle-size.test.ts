@@ -35,11 +35,11 @@ interface EntrypointBudget {
 }
 
 const BUDGETS: EntrypointBudget[] = [
-  // Medido: 92.4 KB (02/04/2026)  →  orçamento: 93 KB
+  // Medido: 93.6 KB (04/04/2026)  →  orçamento: 94 KB
   {
     name: "core (index)",
     entry: "src/index.ts",
-    maxBytes: 93 * 1024,
+    maxBytes: 94 * 1024,
   },
   // Medido: 69.6 KB  →  orçamento: 100 KB
   {

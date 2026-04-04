@@ -104,10 +104,10 @@ export function composeBitStoreRuntime<T extends object>(args: {
         setError: (path, message) => {
           getRuntimeKernel().getCapability("error").setError(path, message);
         },
-        setServerErrors: (serverErrors) => {
+        setServerErrors: (serverErrors, options) => {
           getRuntimeKernel()
             .getCapability("error")
-            .setServerErrors(serverErrors);
+            .setServerErrors(serverErrors, options);
         },
         validate: (options) => {
           return getRuntimeKernel()

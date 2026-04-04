@@ -1,6 +1,20 @@
-export interface BitValidationOptions {
-  scope?: string;
-  scopeFields?: string[];
+export type BitValidationOptions =
+  | {
+      scope: string;
+      scopeFields?: never;
+    }
+  | {
+      scope?: never;
+      scopeFields: string[];
+    }
+  | {
+      scope?: undefined;
+      scopeFields?: undefined;
+    };
+
+export interface BitServerErrorOptions {
+  arrayStrategy?: "first" | "join";
+  joinSeparator?: string;
 }
 
 export interface BitHistoryMetadata {

@@ -247,4 +247,78 @@ describe("BitLifecycleManager", () => {
     expect(result.status).toBe("invalid");
     expect(setServerErrors).toHaveBeenCalledWith({ email: ["Already taken"] });
   });
+
+  it("should block submit when state is already submitting", async () => {
+    const state: any = {
+      values: { email: "demo@bit.dev" },
+      errors: {},
+      touched: {},
+      isValidating: {},
+      persist: { isSaving: false, isRestoring: false, error: null },
+      isValid: true,
+      isSubmitting: true,
+      isDirty: false,
+    };
+
+    const dispatch = vi.fn((operation: any) => {
+      Object.assign(state, operation.partialState);
+    });
+
+    const manager = new BitLifecycleManager<any>({
+      fieldUpdate: {
+        getState: () => state,
+        dispatch,
+        config: { initialValues: { email: "demo@bit.dev" } } as any,
+        getFieldConfig: () => undefined,
+        hasDependentFields: () => false,
+        updateDependencies: () => ({
+          affectedFields: [],
+          visibilityChanged: [],
+          requiredChanged: [],
+        }),
+        isFieldHidden: () => false,
+        clearFieldValidation: () => {},
+        triggerValidation: () => {},
+        handleFieldAsyncValidation: () => {},
+        updateDirtyForPath: () => false,
+        getBaselineValues: () => ({ email: "demo@bit.dev" }),
+        emitFieldChange: () => {},
+      },
+      values: {
+        getState: () => state,
+        dispatch,
+        internalSaveSnapshot: () => {},
+        evaluateAllDependencies: () => {},
+        cancelAllValidations: () => {},
+        validateNow: async () => true,
+        rebuildDirtyState: () => false,
+        clearDirtyState: () => {},
+        getBaselineValues: () => ({ email: "demo@bit.dev" }),
+        setBaselineValues: () => {},
+        resetHistory: () => {},
+        emitFieldChange: () => {},
+        triggerValidation: () => {},
+      },
+      submit: {
+        getState: () => state,
+        dispatch,
+        batchStateUpdates: (cb) => cb(),
+        config: { initialValues: { email: "demo@bit.dev" } } as any,
+        getTransformEntries: () => [],
+        getHiddenFields: () => new Set<string>(),
+        cancelAllValidations: () => {},
+        validateNow: async () => true,
+        hasValidationsInProgress: () => false,
+        buildDirtyValues: () => ({}),
+        setServerErrors: () => {},
+        emitBeforeSubmit: async () => {},
+        emitAfterSubmit: async () => {},
+        emitOperationalError: async () => {},
+      },
+    });
+
+    const result = await manager.submit(async () => undefined);
+
+    expect(result).toEqual({ status: "blocked", reason: "isSubmitting" });
+  });
 });

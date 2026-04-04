@@ -1,5 +1,5 @@
-import type { BitValidationOptions } from "../../../contracts/public/meta-types";
 import type { BitValidationTriggerOptions } from "../../../contracts/port-types";
+import type { BitValidationOptions } from "../../../contracts/public/meta-types";
 
 export interface BitValidationDebouncerPort {
   schedule(fn: () => void, delayMs: number): () => void;
@@ -50,12 +50,20 @@ export class BitValidationDebouncer {
       this.cancelTimeout = this.port.schedule(() => {
         this.pendingScopeFields = null;
         this.cancelTimeout = undefined;
-        void this.port.validate({ scopeFields: resolvedScopeFields });
+        void this.validateWithOptionalScopeFields(resolvedScopeFields);
       }, delay);
     } else {
       this.pendingScopeFields = null;
-      void this.port.validate({ scopeFields });
+      void this.validateWithOptionalScopeFields(scopeFields);
     }
+  }
+
+  private validateWithOptionalScopeFields(scopeFields?: string[]) {
+    if (scopeFields && scopeFields.length > 0) {
+      return this.port.validate({ scopeFields });
+    }
+
+    return this.port.validate();
   }
 
   cancelPending(): void {
