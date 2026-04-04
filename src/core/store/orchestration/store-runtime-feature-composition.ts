@@ -1,4 +1,5 @@
 import type { BitValidationTriggerOptions } from "../contracts/port-types";
+import type { BitValidationOptions } from "../contracts/public/meta-types";
 import type { BitFrameworkConfig } from "../contracts/public/store-api-types";
 import type {
   BitFieldChangeMeta,
@@ -49,10 +50,7 @@ export interface BitStoreRuntimeActions<_T extends object> {
     serverErrors: Record<string, string[] | string>,
     options?: { arrayStrategy?: "first" | "join"; joinSeparator?: string },
   ): void;
-  validate(options?: {
-    scope?: string;
-    scopeFields?: string[];
-  }): Promise<boolean>;
+  validate(options?: BitValidationOptions): Promise<boolean>;
   setFieldWithMeta(
     path: string,
     value: unknown,

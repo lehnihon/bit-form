@@ -23,8 +23,11 @@ export function resolveTargetFieldsStage<T extends object>(args: {
   deps: BitValidationPipelineStageDeps<T>;
 }) {
   const { ctx, deps } = args;
+  const rawOptions = ctx.options as
+    | { scope?: string; scopeFields?: string[] }
+    | undefined;
 
-  if (ctx.options?.scope && ctx.options?.scopeFields?.length) {
+  if (rawOptions?.scope && rawOptions.scopeFields?.length) {
     deps.store.config.onUnhandledError(
       new Error(
         "validate received both 'scope' and 'scopeFields'. 'scopeFields' takes precedence.",
