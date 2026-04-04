@@ -123,4 +123,90 @@ describe("BitValidationManager", () => {
 
     expect(validationCommits).toHaveLength(1);
   });
+
+  it("should prioritize scopeFields over scope when both are provided", async () => {
+    const resolver = vi.fn().mockResolvedValue({});
+    const onUnhandledError = vi.fn();
+
+    const manager = new BitValidationManager<any>({
+      getState: () => ({
+        values: { direct: "value", scopedField: "value" },
+        errors: {},
+        touched: {},
+        isValidating: {},
+        persist: { isSaving: false, isRestoring: false, error: null },
+        isValid: true,
+        isSubmitting: false,
+        isDirty: false,
+      }),
+      dispatch: () => {},
+      setError: () => {},
+      getFieldConfig: () => undefined,
+      getScopeFields: () => ["scopedField"],
+      forEachFieldConfig: () => {},
+      config: {
+        validationDelay: 0,
+        resolver,
+        onUnhandledError,
+      } as any,
+      getRequiredErrors: () => ({}),
+      getHiddenFields: () => new Set<string>(),
+      emitBeforeValidate: async () => {},
+      emitAfterValidate: async () => {},
+    });
+
+    await manager.validate({
+      scope: "step-1",
+      scopeFields: ["direct"],
+    } as any);
+
+    expect(resolver).toHaveBeenCalledWith(
+      expect.any(Object),
+      expect.objectContaining({ scopeFields: ["direct"] }),
+    );
+    expect(onUnhandledError).toHaveBeenCalledTimes(1);
+  });
+
+  it("should clear external error state before awaiting scoped revalidation", async () => {
+    const setError = vi.fn();
+
+    const manager = new BitValidationManager<any>({
+      getState: () => ({
+        values: { email: "a@b.com" },
+        errors: { email: "invalid" },
+        touched: {},
+        isValidating: {},
+        persist: { isSaving: false, isRestoring: false, error: null },
+        isValid: false,
+        isSubmitting: false,
+        isDirty: false,
+      }),
+      dispatch: () => {},
+      setError,
+      getFieldConfig: () => undefined,
+      getScopeFields: () => [],
+      forEachFieldConfig: () => {},
+      config: { validationDelay: 0 } as any,
+      getRequiredErrors: () => ({}),
+      getHiddenFields: () => new Set<string>(),
+      emitBeforeValidate: async () => {},
+      emitAfterValidate: async () => {},
+    });
+
+    let resolveValidation: ((value: boolean) => void) | undefined;
+    const validateSpy = vi.spyOn(manager, "validate").mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveValidation = resolve;
+        }),
+    );
+
+    const pending = manager.setExternalError("email", undefined);
+
+    expect(setError).toHaveBeenCalledWith("email", undefined);
+    expect(validateSpy).toHaveBeenCalledWith({ scopeFields: ["email"] });
+
+    resolveValidation?.(true);
+    await pending;
+  });
 });

@@ -15,8 +15,33 @@ export function createArrayBinding<
 >(store: BitStoreApi<TForm>, path: P): BitArrayBinding<TForm, P> {
   type Item = BitArrayItem<BitPathValue<TForm, P>>;
 
-  const normalizeItems = (value: unknown): Item[] =>
-    Array.isArray(value) ? (value as Item[]) : [];
+  let warnedTypeMismatch = false;
+
+  const normalizeItems = (value: unknown): Item[] => {
+    if (Array.isArray(value)) {
+      return value as Item[];
+    }
+
+    if (value == null) {
+      return [];
+    }
+
+    const isDev =
+      typeof process !== "undefined"
+        ? process.env.NODE_ENV !== "production"
+        : true;
+
+    if (isDev && !warnedTypeMismatch) {
+      warnedTypeMismatch = true;
+      console.warn(
+        `[bit-form] createArrayBinding expected an array at path "${String(
+          path,
+        )}" but received ${typeof value}. Returning an empty array.`,
+      );
+    }
+
+    return [];
+  };
 
   const getIds = (length: number) =>
     store.feature.getArrayItemIds(path, length);

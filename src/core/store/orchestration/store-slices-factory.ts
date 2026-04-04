@@ -90,7 +90,8 @@ export function buildStoreSlicesApi<T extends object>(
     setValues: (values, options) => deps.write.setValues(values, options),
     setError: (path, message) => deps.write.setError(path, message),
     setErrors: (errors) => deps.write.setErrors(errors),
-    setServerErrors: (serverErrors) => deps.write.setServerErrors(serverErrors),
+    setServerErrors: (serverErrors, options) =>
+      deps.write.setServerErrors(serverErrors, options),
     reset: () => deps.write.reset(),
     transaction: (callback) => deps.write.transaction(callback),
     submit: (onSuccess) => deps.write.submit(onSuccess),

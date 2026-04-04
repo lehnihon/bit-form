@@ -41,6 +41,7 @@ export function analyzeCyclicDependencies<_T extends object>(
 
   // Build adjacency list from dependencies
   const graph = new Map<string, Set<string>>();
+  const computedPaths = new Set(entries.map((entry) => entry.path));
 
   for (const entry of entries) {
     if (!graph.has(entry.path)) {
@@ -51,8 +52,7 @@ export function analyzeCyclicDependencies<_T extends object>(
       for (const dep of entry.dependsOn) {
         // Only track dependencies between computed fields
         // Ignore dependencies on form values (not computed fields)
-        const depEntry = entries.find((e) => e.path === dep);
-        if (depEntry) {
+        if (computedPaths.has(dep)) {
           graph.get(entry.path)!.add(dep);
         }
       }

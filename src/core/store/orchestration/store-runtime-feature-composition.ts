@@ -45,7 +45,10 @@ export interface BitStoreRuntimeFeatureAccess<T extends object> {
 
 export interface BitStoreRuntimeActions<_T extends object> {
   setError(path: string, message: string | undefined): void;
-  setServerErrors(serverErrors: Record<string, string[] | string>): void;
+  setServerErrors(
+    serverErrors: Record<string, string[] | string>,
+    options?: { arrayStrategy?: "first" | "join"; joinSeparator?: string },
+  ): void;
   validate(options?: {
     scope?: string;
     scopeFields?: string[];

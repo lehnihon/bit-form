@@ -26,6 +26,7 @@ import {
 import type {
   BitFormMeta,
   BitHistoryMetadata,
+  BitServerErrorOptions,
   BitValidationOptions,
 } from "./meta-types";
 import type {
@@ -107,7 +108,10 @@ export interface BitFormWriteApi<T extends object = Record<string, unknown>> {
 
   setError(path: string, message: string | undefined): void;
   setErrors(errors: BitErrors<T>): void;
-  setServerErrors(serverErrors: Record<string, string[] | string>): void;
+  setServerErrors(
+    serverErrors: Record<string, string[] | string>,
+    options?: BitServerErrorOptions,
+  ): void;
 
   reset(): void;
 
@@ -242,7 +246,10 @@ export interface BitFormActionBindingApi<
   validate(options?: BitValidationOptions): Promise<boolean>;
   setError(path: string, message: string | undefined): void;
   setErrors(errors: BitErrors<T>): void;
-  setServerErrors(serverErrors: Record<string, string[] | string>): void;
+  setServerErrors(
+    serverErrors: Record<string, string[] | string>,
+    options?: BitServerErrorOptions,
+  ): void;
   setValues(
     values: T | DeepPartial<T>,
     options?: { partial?: boolean; rebase?: boolean },
@@ -262,7 +269,10 @@ export interface BitFormControllerStoreApi<
     ) => unknown | Promise<unknown>,
   ): Promise<BitSubmitResult>;
   reset(): void;
-  setServerErrors(serverErrors: Record<string, string[] | string>): void;
+  setServerErrors(
+    serverErrors: Record<string, string[] | string>,
+    options?: BitServerErrorOptions,
+  ): void;
 }
 
 export interface BitFrameworkFormBindingApi<

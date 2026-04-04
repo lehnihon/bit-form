@@ -781,6 +781,31 @@ describe("BitStore Core", () => {
       expect(store.read.getState().isValid).toBe(false);
     });
 
+    it("should keep first server error message by default", () => {
+      const store = createBitStore({ initialValues: { email: "" } });
+
+      store.write.setServerErrors({
+        email: ["Already taken", "Invalid format"],
+      });
+
+      expect(store.read.getState().errors.email).toBe("Already taken");
+    });
+
+    it("should join server error messages when arrayStrategy is join", () => {
+      const store = createBitStore({ initialValues: { email: "" } });
+
+      store.write.setServerErrors(
+        {
+          email: ["Already taken", "Invalid format"],
+        },
+        { arrayStrategy: "join", joinSeparator: " | " },
+      );
+
+      expect(store.read.getState().errors.email).toBe(
+        "Already taken | Invalid format",
+      );
+    });
+
     it("should trigger requiredIf validation dynamically", async () => {
       const store = createBitStore({
         initialValues: { hasLicense: true, licenseNumber: "" },
