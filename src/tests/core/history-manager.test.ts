@@ -37,4 +37,25 @@ describe("BitHistoryManager", () => {
     expect(history.undo()).toEqual({ v: 1 });
     expect(history.undo()).toBeNull();
   });
+
+  it("should save circular snapshots without stack overflow", () => {
+    const history = new BitHistoryManager<Record<string, unknown>>(true, 10);
+    const initial = { profile: { name: "A" } };
+    const circular: Record<string, unknown> = { profile: { name: "B" } };
+
+    circular.self = circular;
+
+    history.reset(initial);
+
+    expect(() => history.saveSnapshot(circular)).not.toThrow();
+    expect(history.getMetadata()).toMatchObject({
+      historyIndex: 1,
+      historySize: 2,
+      canUndo: true,
+    });
+
+    const previous = history.undo();
+
+    expect(previous).toEqual(initial);
+  });
 });

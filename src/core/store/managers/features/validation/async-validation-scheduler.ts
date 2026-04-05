@@ -20,6 +20,7 @@ export interface BitAsyncValidationSchedulerPort<T extends object> {
   setAsyncError(path: string, message: string): void;
   clearAsyncError(path: string): void;
   onValidationPassed(path: string): Promise<void>;
+  onError(error: unknown): void;
 }
 
 export class BitAsyncValidationScheduler<T extends object> {
@@ -128,7 +129,9 @@ export class BitAsyncValidationScheduler<T extends object> {
     this.cancelSchedulerTimeout = this.port.schedule(
       () => {
         this.cancelSchedulerTimeout = undefined;
-        void this.flushPendingJobs();
+        void this.flushPendingJobs().catch((error) => {
+          this.port.onError(error);
+        });
       },
       Math.max(0, nextDueAt - Date.now()),
     );
@@ -155,7 +158,15 @@ export class BitAsyncValidationScheduler<T extends object> {
       this.pendingJobs.delete(path);
     });
 
-    await Promise.all(dueJobs.map(([path, job]) => this.runJob(path, job)));
+    const results = await Promise.allSettled(
+      dueJobs.map(([path, job]) => this.runJob(path, job)),
+    );
+
+    for (const result of results) {
+      if (result.status === "rejected") {
+        this.port.onError(result.reason);
+      }
+    }
 
     this.schedulePendingJobs();
   }

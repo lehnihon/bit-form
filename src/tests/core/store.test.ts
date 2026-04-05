@@ -954,6 +954,29 @@ describe("BitStore Core", () => {
       expect(store.read.getState().isDirty).toBe(true);
     });
 
+    it("should not crash when setValues receives circular references", () => {
+      const store = createBitStore({
+        initialValues: { profile: { name: "Leo" } },
+      });
+      const circular: {
+        profile: { name: string };
+        self?: unknown;
+      } = {
+        profile: { name: "Leandro" },
+      };
+
+      circular.self = circular;
+
+      expect(() => {
+        store.write.setValues(
+          circular as unknown as { profile: { name: string } },
+        );
+      }).not.toThrow();
+
+      expect(store.read.getState().values.profile.name).toBe("Leandro");
+      expect(store.read.getState().isDirty).toBe(true);
+    });
+
     it("should hydrate current values with deep merge semantics", () => {
       const store = createBitStore({
         initialValues: { user: { name: "Leo", profile: { city: "Tokyo" } } },

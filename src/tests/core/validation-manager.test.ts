@@ -209,4 +209,76 @@ describe("BitValidationManager", () => {
     resolveValidation?.(true);
     await pending;
   });
+
+  it("should report async validation rejections and continue processing later jobs", async () => {
+    vi.useFakeTimers();
+
+    const onUnhandledError = vi.fn();
+    const state = {
+      values: { username: "", email: "" },
+      errors: {},
+      touched: {},
+      isValidating: {},
+      persist: { isSaving: false, isRestoring: false, error: null },
+      isValid: true,
+      isSubmitting: false,
+      isDirty: false,
+    } as any;
+    const setError = vi.fn();
+    const dispatch = vi.fn((operation: any) => {
+      if (
+        operation.kind === "state.patch" &&
+        operation.partialState.isValidating
+      ) {
+        state.isValidating = operation.partialState.isValidating;
+      }
+    });
+    const validators = {
+      username: vi.fn(async () => {
+        throw new Error("validation backend down");
+      }),
+      email: vi.fn(async () => "email inválido"),
+    } as const;
+
+    const manager = new BitValidationManager<any>({
+      getState: () => state,
+      dispatch,
+      setError,
+      getFieldConfig: (path) => ({
+        validation: {
+          asyncValidateOn: "change",
+          asyncValidateDelay: 0,
+          asyncValidate: validators[path as keyof typeof validators],
+        },
+      }),
+      getScopeFields: () => [],
+      forEachFieldConfig: () => {},
+      config: { validationDelay: 0, onUnhandledError } as any,
+      getRequiredErrors: () => ({}),
+      getHiddenFields: () => new Set<string>(),
+      emitBeforeValidate: async () => {},
+      emitAfterValidate: async () => {},
+    });
+
+    manager.handleAsync("username", "leo");
+    await vi.advanceTimersByTimeAsync(0);
+    await Promise.resolve();
+
+    expect(onUnhandledError).toHaveBeenCalledTimes(1);
+    expect(onUnhandledError).toHaveBeenCalledWith(
+      expect.objectContaining({ message: "validation backend down" }),
+      "validation",
+    );
+    expect(state.isValidating.username).toBeUndefined();
+
+    manager.handleAsync("email", "leo@example.com");
+    await vi.advanceTimersByTimeAsync(0);
+    await Promise.resolve();
+
+    expect(validators.email).toHaveBeenCalledTimes(1);
+    expect(setError).toHaveBeenCalledWith("email", "email inválido");
+    expect(state.isValidating.email).toBeUndefined();
+
+    vi.useRealTimers();
+  });
 });
