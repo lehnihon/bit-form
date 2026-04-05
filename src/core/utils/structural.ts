@@ -106,6 +106,7 @@ export function collectDirtyPaths(
   initial: any,
   prefix = "",
   result: Set<string> = new Set(),
+  visitedPairs: WeakMap<object, WeakSet<object>> = new WeakMap(),
 ): Set<string> {
   if (valueEqual(obj, initial)) return result;
   if (
@@ -117,6 +118,18 @@ export function collectDirtyPaths(
     if (prefix) result.add(prefix);
     return result;
   }
+
+  const visitedInitials = visitedPairs.get(obj as object);
+  if (visitedInitials?.has(initial as object)) {
+    return result;
+  }
+
+  if (visitedInitials) {
+    visitedInitials.add(initial as object);
+  } else {
+    visitedPairs.set(obj as object, new WeakSet([initial as object]));
+  }
+
   if (Array.isArray(obj) || Array.isArray(initial)) {
     if (!valueEqual(obj, initial) && prefix) result.add(prefix);
     return result;
@@ -130,7 +143,13 @@ export function collectDirtyPaths(
   }
   for (const k of allKeys) {
     const p = prefix ? `${prefix}.${k}` : k;
-    collectDirtyPaths((obj as any)?.[k], (initial as any)?.[k], p, result);
+    collectDirtyPaths(
+      (obj as any)?.[k],
+      (initial as any)?.[k],
+      p,
+      result,
+      visitedPairs,
+    );
   }
   return result;
 }

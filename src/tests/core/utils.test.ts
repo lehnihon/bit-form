@@ -45,6 +45,36 @@ describe("utils - deepClone", () => {
     expect(cloned).not.toBe(d);
     expect(cloned.getTime()).toBe(d.getTime());
   });
+
+  it("clona referência circular no fallback sem structuredClone", () => {
+    const globalScope = globalThis as {
+      structuredClone?: <V>(value: V) => V;
+    };
+    const originalStructuredClone = globalScope.structuredClone;
+
+    Object.defineProperty(globalScope, "structuredClone", {
+      value: undefined,
+      writable: true,
+      configurable: true,
+    });
+
+    try {
+      const original: { id: number; self?: unknown } = { id: 1 };
+      original.self = original;
+
+      const cloned = deepClone(original) as { id: number; self?: unknown };
+
+      expect(cloned).not.toBe(original);
+      expect(cloned.id).toBe(1);
+      expect(cloned.self).toBe(cloned);
+    } finally {
+      Object.defineProperty(globalScope, "structuredClone", {
+        value: originalStructuredClone,
+        writable: true,
+        configurable: true,
+      });
+    }
+  });
 });
 
 // -------------------------------------------------------------------

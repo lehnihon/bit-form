@@ -72,6 +72,9 @@ export class BitValidationManager<T extends object> {
           asyncErrors: this.asyncErrors,
         });
       },
+      onError: (error) => {
+        this.store.config.onUnhandledError(error, "validation");
+      },
     });
 
     const stageDeps: BitValidationPipelineOrchestratorDeps<T> = {

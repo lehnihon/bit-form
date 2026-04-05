@@ -35,6 +35,7 @@ export function createHistoryPatch<T extends object>(
   nextValue: T,
 ): BitHistoryPatch<T> {
   const operations: BitHistoryPatchOperation[] = [];
+  const visitedPairs = new WeakMap<object, WeakSet<object>>();
 
   const visit = (
     previousNode: unknown,
@@ -45,6 +46,27 @@ export function createHistoryPatch<T extends object>(
   ) => {
     if (hadPreviousValue && hasNextValue && deepEqual(previousNode, nextNode)) {
       return;
+    }
+
+    if (
+      previousNode !== null &&
+      typeof previousNode === "object" &&
+      nextNode !== null &&
+      typeof nextNode === "object"
+    ) {
+      const visitedNextNodes = visitedPairs.get(previousNode as object);
+      if (visitedNextNodes?.has(nextNode as object)) {
+        return;
+      }
+
+      if (visitedNextNodes) {
+        visitedNextNodes.add(nextNode as object);
+      } else {
+        visitedPairs.set(
+          previousNode as object,
+          new WeakSet([nextNode as object]),
+        );
+      }
     }
 
     if (
