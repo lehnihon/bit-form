@@ -977,6 +977,24 @@ describe("BitStore Core", () => {
       expect(store.read.getState().isDirty).toBe(true);
     });
 
+    it("should not crash when setValues receives values with function properties", () => {
+      const store = createBitStore({
+        initialValues: { profile: { name: "Leo", formatter: undefined } },
+      });
+
+      const formatter = () => "LEANDRO";
+
+      expect(() => {
+        store.write.setValues({
+          profile: { name: "Leandro", formatter },
+        });
+      }).not.toThrow();
+
+      expect(store.read.getState().values.profile.name).toBe("Leandro");
+      expect(store.read.getState().values.profile.formatter).toBe(formatter);
+      expect(store.read.getState().isDirty).toBe(true);
+    });
+
     it("should hydrate current values with deep merge semantics", () => {
       const store = createBitStore({
         initialValues: { user: { name: "Leo", profile: { city: "Tokyo" } } },
@@ -1085,6 +1103,34 @@ describe("BitStore Core", () => {
 
       expect(submittedData.email).toBeUndefined();
       expect(submittedData.price).toBe(20);
+      expect(store.read.getState().isSubmitting).toBe(false);
+    });
+
+    it("should submit successfully when values contain function properties", async () => {
+      const formatter = () => "LEANDRO";
+      const store = createBitStore({
+        initialValues: {
+          profile: { name: "Leo", formatter: undefined },
+        },
+      });
+
+      store.write.setValues({
+        profile: { name: "Leandro", formatter },
+      });
+
+      const onSuccess = vi.fn();
+
+      const result = await store.write.submit(onSuccess);
+
+      expect(result).toEqual({ status: "submitted" });
+      expect(onSuccess).toHaveBeenCalledWith(
+        {
+          profile: { name: "Leandro", formatter },
+        },
+        {
+          profile: { name: "Leandro", formatter },
+        },
+      );
       expect(store.read.getState().isSubmitting).toBe(false);
     });
 

@@ -1,10 +1,21 @@
-import { describe, it, expect } from "vitest";
-import { normalizeConfig } from "../../core/store/shared/config";
-import { BitFieldRegistry } from "../../core/store/registry/field-registry";
+import { describe, expect, it } from "vitest";
 import { BitComputedManager } from "../../core/store/managers/core/computed-manager";
 import { createInitialStoreState } from "../../core/store/orchestration/store-bootstrap";
+import { BitFieldRegistry } from "../../core/store/registry/field-registry";
+import { normalizeConfig } from "../../core/store/shared/config";
 
 describe("createInitialStoreState", () => {
+  it("não quebra quando initialValues contém função não clonável via structuredClone", () => {
+    expect(() =>
+      normalizeConfig({
+        initialValues: {
+          amount: 10,
+          formatter: () => "$10.00",
+        },
+      }),
+    ).not.toThrow();
+  });
+
   it("registra fields iniciais e aplica computeds", () => {
     const config = normalizeConfig({
       initialValues: {
