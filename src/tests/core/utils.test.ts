@@ -75,6 +75,39 @@ describe("utils - deepClone", () => {
       });
     }
   });
+
+  it("faz fallback quando structuredClone lança erro", () => {
+    const globalScope = globalThis as {
+      structuredClone?: <V>(value: V) => V;
+    };
+    const originalStructuredClone = globalScope.structuredClone;
+
+    Object.defineProperty(globalScope, "structuredClone", {
+      value: () => {
+        throw new TypeError("Cannot clone value");
+      },
+      writable: true,
+      configurable: true,
+    });
+
+    try {
+      const fn = () => "ok";
+      const original = { nested: { value: 1 }, fn };
+
+      const cloned = deepClone(original);
+
+      expect(cloned).not.toBe(original);
+      expect(cloned.nested).not.toBe(original.nested);
+      expect(cloned.nested.value).toBe(1);
+      expect(cloned.fn).toBe(fn);
+    } finally {
+      Object.defineProperty(globalScope, "structuredClone", {
+        value: originalStructuredClone,
+        writable: true,
+        configurable: true,
+      });
+    }
+  });
 });
 
 // -------------------------------------------------------------------

@@ -7,7 +7,12 @@ export function cloneValue<T>(
   }
 
   if (typeof structuredClone === "function") {
-    return structuredClone(obj);
+    try {
+      return structuredClone(obj);
+    } catch {
+      // Alguns runtimes lançam para payloads não suportados (ex.: funções).
+      // Nesses casos, seguimos para o clone recursivo para manter fail-open.
+    }
   }
 
   if (obj instanceof Date) {
