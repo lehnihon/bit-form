@@ -45,17 +45,18 @@ function withCiHeadroom(baseMs: number): number {
 }
 
 describe("quality perf baseline", () => {
-  // Budgets recalibrados com medições locais de 31/03/2026:
-  // - updates 300 fields: ~39-45ms
-  // - transaction 1000 fields + history: ~190-213ms
-  // - hydrate parcial 400 fields: ~6-7ms
-  // - scoped subscribers: ~22-25ms
-  // - async burst: ~25-28ms
-  // - computed chain: ~44-45ms
-  // - notify fanout: ~24-29ms
-  // - deep-path burst 500 updates: ~25ms
-  // - computed sparse (120/1 affected): ~40-76ms (picos observados em CI/local)
-  // Budgets mantidos com folga para variação de hardware/CI.
+  // Budgets recalibrados com medições local + CI de 05/04/2026 (3 runs local + 2 runs CI):
+  // - updates 300 fields: ~25-35ms
+  // - transaction 1000 fields + history: ~70-133ms (pico isolado)
+  // - hydrate parcial 400 fields: ~5-19ms
+  // - scoped subscribers: ~10-23ms
+  // - async burst: ~21-29ms
+  // - computed chain: ~58-86ms
+  // - notify fanout: ~24-133ms (pico em CI observado)
+  // - deep-path burst 500 updates: ~11-18ms
+  // - computed sparse (120/1 affected): ~33-57ms
+  // - history undo/redo (200 ciclos): ~13-23ms
+  // Budgets mantidos com margem para variação de hardware/CI sem mascarar regressões grosseiras.
   it("updates 300 fields under baseline budget", () => {
     const store = createBitStore<BigForm>({
       initialValues: createBigValues(300),
@@ -78,7 +79,7 @@ describe("quality perf baseline", () => {
     }
 
     const duration = performance.now() - start;
-    expect(duration).toBeLessThan(withCiHeadroom(60));
+    expect(duration).toBeLessThan(withCiHeadroom(55));
   });
 
   it("updates 1000 fields in transaction with history under budget", () => {
@@ -106,7 +107,8 @@ describe("quality perf baseline", () => {
     });
 
     const duration = performance.now() - start;
-    expect(duration).toBeLessThan(withCiHeadroom(600));
+    // Mantemos no máximo ~3.3x do budget de 300 fields (180ms vs 55ms base).
+    expect(duration).toBeLessThan(withCiHeadroom(180));
   });
 
   it("hydrates 400 partial fields under baseline budget", () => {
@@ -122,7 +124,7 @@ describe("quality perf baseline", () => {
     store.write.setValues(payload, { partial: true });
 
     const duration = performance.now() - start;
-    expect(duration).toBeLessThan(withCiHeadroom(80));
+    expect(duration).toBeLessThan(withCiHeadroom(30));
   });
 
   it("handles 400 scoped subscribers under baseline budget", () => {
@@ -145,7 +147,7 @@ describe("quality perf baseline", () => {
 
     const duration = performance.now() - start;
     unsubs.forEach((unsubscribe) => unsubscribe());
-    expect(duration).toBeLessThan(withCiHeadroom(30));
+    expect(duration).toBeLessThan(withCiHeadroom(35));
   });
 
   it("handles async validation burst under baseline budget", async () => {
@@ -186,7 +188,7 @@ describe("quality perf baseline", () => {
     await store.feature.validate();
 
     const duration = performance.now() - start;
-    expect(duration).toBeLessThan(withCiHeadroom(40));
+    expect(duration).toBeLessThan(withCiHeadroom(45));
   });
 
   it("computed fanout: 50 computed com dependências em cadeia sob budget", () => {
@@ -223,7 +225,7 @@ describe("quality perf baseline", () => {
     }
 
     const duration = performance.now() - start;
-    expect(duration).toBeLessThan(withCiHeadroom(140));
+    expect(duration).toBeLessThan(withCiHeadroom(130));
   });
 
   it("subscription notify fanout: 200 subscribers path-scoped sob budget", () => {
@@ -252,7 +254,7 @@ describe("quality perf baseline", () => {
 
     const duration = performance.now() - start;
     unsubs.forEach((u) => u());
-    expect(duration).toBeLessThan(withCiHeadroom(60));
+    expect(duration).toBeLessThan(withCiHeadroom(90));
   });
 
   it("p95 setField latency: 1000 updates sob budget", () => {
@@ -303,7 +305,7 @@ describe("quality perf baseline", () => {
     }
 
     const duration = performance.now() - start;
-    expect(duration).toBeLessThan(withCiHeadroom(55));
+    expect(duration).toBeLessThan(withCiHeadroom(30));
   });
 
   it("computed sparse impact: 120 computeds com 1 afetado sob budget", () => {
@@ -335,7 +337,7 @@ describe("quality perf baseline", () => {
     }
 
     const duration = performance.now() - start;
-    expect(duration).toBeLessThan(withCiHeadroom(85));
+    expect(duration).toBeLessThan(withCiHeadroom(90));
   });
 
   it("history undo/redo throughput: 200 ciclos sob budget", () => {
@@ -371,6 +373,6 @@ describe("quality perf baseline", () => {
     }
 
     const duration = performance.now() - start;
-    expect(duration).toBeLessThan(withCiHeadroom(120));
+    expect(duration).toBeLessThan(withCiHeadroom(35));
   });
 });
