@@ -108,6 +108,45 @@ describe("utils - deepClone", () => {
       });
     }
   });
+
+  it("preserva Map e Set no fallback sem structuredClone", () => {
+    const globalScope = globalThis as {
+      structuredClone?: <V>(value: V) => V;
+    };
+    const originalStructuredClone = globalScope.structuredClone;
+
+    Object.defineProperty(globalScope, "structuredClone", {
+      value: undefined,
+      writable: true,
+      configurable: true,
+    });
+
+    try {
+      const original = {
+        metadata: new Map<string, unknown>([
+          ["attempts", 2],
+          ["nested", { active: true }],
+        ]),
+        tags: new Set(["core", "persist"]),
+      };
+
+      const cloned = deepClone(original);
+
+      expect(cloned.metadata).toBeInstanceOf(Map);
+      expect(cloned.metadata).not.toBe(original.metadata);
+      expect(cloned.metadata.get("attempts")).toBe(2);
+      expect(cloned.metadata.get("nested")).toEqual({ active: true });
+      expect(cloned.tags).toBeInstanceOf(Set);
+      expect(cloned.tags).not.toBe(original.tags);
+      expect([...cloned.tags]).toEqual(["core", "persist"]);
+    } finally {
+      Object.defineProperty(globalScope, "structuredClone", {
+        value: originalStructuredClone,
+        writable: true,
+        configurable: true,
+      });
+    }
+  });
 });
 
 // -------------------------------------------------------------------
@@ -140,6 +179,16 @@ describe("utils - deepEqual", () => {
     const b: Record<string, unknown> = { x: 1 };
     b.self = b;
     expect(() => deepEqual(a, b)).not.toThrow();
+  });
+
+  it("retorna true para grafos cíclicos estruturalmente equivalentes", () => {
+    const a: Record<string, unknown> = { profile: { name: "Leo" } };
+    a.self = a;
+
+    const b: Record<string, unknown> = { profile: { name: "Leo" } };
+    b.self = b;
+
+    expect(deepEqual(a, b)).toBe(true);
   });
 
   it("retorna false quando um lado tem ciclo e o outro não", () => {
@@ -253,6 +302,18 @@ describe("utils - collectDirtyPaths", () => {
       { a: { b: { c: 99 } } },
     );
     expect(paths.has("a.b.c")).toBe(true);
+  });
+
+  it("não marca dirty para grafos cíclicos equivalentes", () => {
+    const current: Record<string, unknown> = { profile: { name: "Leo" } };
+    current.self = current;
+
+    const initial: Record<string, unknown> = { profile: { name: "Leo" } };
+    initial.self = initial;
+
+    const paths = collectDirtyPaths(current, initial);
+
+    expect(paths.size).toBe(0);
   });
 });
 

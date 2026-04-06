@@ -1,6 +1,6 @@
 import type { BitBusStorePort } from "../contracts/bus-types";
 import type { BitFrameworkConfig } from "../contracts/public/store-api-types";
-import type { BitState } from "../contracts/types";
+import type { BitPersistMetadata, BitState } from "../contracts/types";
 import { BitStoreEffectEngine } from "../engines/effect-engine";
 import { BitBusEffects } from "../engines/effects/bus-effects";
 import { BitEffectRegistry } from "../engines/effects/effect-registry";
@@ -35,6 +35,7 @@ export function createStoreEffects<T extends object>(args: {
   getValues: () => T;
   getDirtyValues: () => Partial<T>;
   applyPersistedValues: (values: Partial<T>) => void;
+  setPersistMetadata?: (patch: Partial<BitPersistMetadata>) => void;
 }): BitStoreEffectEngine<T> {
   const {
     storeId,
@@ -45,6 +46,7 @@ export function createStoreEffects<T extends object>(args: {
     getValues,
     getDirtyValues,
     applyPersistedValues,
+    setPersistMetadata,
   } = args;
 
   const persistManager = new BitPersistManager<T>(
@@ -52,6 +54,17 @@ export function createStoreEffects<T extends object>(args: {
     getValues,
     getDirtyValues,
     applyPersistedValues,
+    {
+      onAutoSaveStart: () =>
+        setPersistMetadata?.({ isSaving: true, error: null }),
+      onAutoSaveSuccess: () =>
+        setPersistMetadata?.({ isSaving: false, error: null }),
+      onAutoSaveError: (error) =>
+        setPersistMetadata?.({
+          isSaving: false,
+          error: error instanceof Error ? error : new Error(String(error)),
+        }),
+    },
   );
 
   const pluginManager = new BitPluginManager<T>([...config.plugins], () => ({

@@ -62,10 +62,14 @@ export function valueEqual(a: any, b: any): boolean {
 }
 
 export function deepEqual(a: any, b: any): boolean {
-  return deepEqualInner(a, b, new WeakSet());
+  return deepEqualInner(a, b, new WeakMap());
 }
 
-function deepEqualInner(a: any, b: any, visited: WeakSet<object>): boolean {
+function deepEqualInner(
+  a: any,
+  b: any,
+  visitedPairs: WeakMap<object, WeakSet<object>>,
+): boolean {
   if (a === b) return true;
   if (
     a === null ||
@@ -76,8 +80,16 @@ function deepEqualInner(a: any, b: any, visited: WeakSet<object>): boolean {
     return false;
   }
 
-  if (visited.has(a)) return false;
-  visited.add(a);
+  const visitedTargets = visitedPairs.get(a);
+  if (visitedTargets?.has(b)) return true;
+
+  if (visitedTargets) {
+    visitedTargets.add(b);
+  } else {
+    visitedPairs.set(a, new WeakSet([b]));
+  }
+
+  if (Array.isArray(a) !== Array.isArray(b)) return false;
 
   if (a instanceof Date && b instanceof Date)
     return a.getTime() === b.getTime();
@@ -92,7 +104,7 @@ function deepEqualInner(a: any, b: any, visited: WeakSet<object>): boolean {
   for (const key of keysA) {
     if (
       !Object.prototype.hasOwnProperty.call(b, key) ||
-      !deepEqualInner(a[key], b[key], visited)
+      !deepEqualInner(a[key], b[key], visitedPairs)
     ) {
       return false;
     }

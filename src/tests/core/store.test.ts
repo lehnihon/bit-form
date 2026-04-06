@@ -995,6 +995,84 @@ describe("BitStore Core", () => {
       expect(store.read.getState().isDirty).toBe(true);
     });
 
+    it("should preserve Map and Set values when fallback clone is used", async () => {
+      const globalScope = globalThis as {
+        structuredClone?: <V>(value: V) => V;
+      };
+      const originalStructuredClone = globalScope.structuredClone;
+
+      Object.defineProperty(globalScope, "structuredClone", {
+        value: undefined,
+        writable: true,
+        configurable: true,
+      });
+
+      try {
+        const store = createBitStore({
+          initialValues: {
+            profile: {
+              metadata: new Map([["version", 1]]),
+              tags: new Set(["initial"]),
+            },
+          },
+        });
+
+        store.write.setValues({
+          profile: {
+            metadata: new Map([["version", 2]]),
+            tags: new Set(["core", "persist"]),
+          },
+        });
+
+        expect(store.read.getState().values.profile.metadata).toBeInstanceOf(
+          Map,
+        );
+        expect(store.read.getState().values.profile.tags).toBeInstanceOf(Set);
+        expect(
+          store.read.getState().values.profile.metadata.get("version"),
+        ).toBe(2);
+        expect([...store.read.getState().values.profile.tags]).toEqual([
+          "core",
+          "persist",
+        ]);
+
+        const onSuccess = vi.fn();
+        await store.write.submit(onSuccess);
+
+        const submittedValues = onSuccess.mock.calls[0]?.[0];
+        expect(submittedValues.profile.metadata).toBeInstanceOf(Map);
+        expect(submittedValues.profile.tags).toBeInstanceOf(Set);
+      } finally {
+        Object.defineProperty(globalScope, "structuredClone", {
+          value: originalStructuredClone,
+          writable: true,
+          configurable: true,
+        });
+      }
+    });
+
+    it("should keep dirty and history clean for structurally equal circular values", () => {
+      const initial: Record<string, unknown> = { profile: { name: "Leo" } };
+      initial.self = initial;
+
+      const next: Record<string, unknown> = { profile: { name: "Leo" } };
+      next.self = next;
+
+      const store = createBitStore({
+        initialValues: initial,
+        history: { enabled: true },
+      });
+
+      store.write.setValues(next);
+
+      expect(store.read.getState().isDirty).toBe(false);
+      expect(store.read.getHistoryMetadata()).toMatchObject({
+        canUndo: false,
+        historyIndex: 0,
+        historySize: 1,
+      });
+    });
+
     it("should hydrate current values with deep merge semantics", () => {
       const store = createBitStore({
         initialValues: { user: { name: "Leo", profile: { city: "Tokyo" } } },

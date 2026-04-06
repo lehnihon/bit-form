@@ -16,6 +16,39 @@ describe("createInitialStoreState", () => {
     ).not.toThrow();
   });
 
+  it("preserva Map e Set em initialValues quando structuredClone não existe", () => {
+    const globalScope = globalThis as {
+      structuredClone?: <V>(value: V) => V;
+    };
+    const originalStructuredClone = globalScope.structuredClone;
+
+    Object.defineProperty(globalScope, "structuredClone", {
+      value: undefined,
+      writable: true,
+      configurable: true,
+    });
+
+    try {
+      const config = normalizeConfig({
+        initialValues: {
+          metadata: new Map([["version", 1]]),
+          tags: new Set(["core"]),
+        },
+      });
+
+      expect(config.initialValues.metadata).toBeInstanceOf(Map);
+      expect(config.initialValues.tags).toBeInstanceOf(Set);
+      expect(config.initialValues.metadata.get("version")).toBe(1);
+      expect([...config.initialValues.tags]).toEqual(["core"]);
+    } finally {
+      Object.defineProperty(globalScope, "structuredClone", {
+        value: originalStructuredClone,
+        writable: true,
+        configurable: true,
+      });
+    }
+  });
+
   it("registra fields iniciais e aplica computeds", () => {
     const config = normalizeConfig({
       initialValues: {
