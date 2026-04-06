@@ -260,6 +260,7 @@ describe("BitValidationManager", () => {
       emitAfterValidate: async () => {},
     });
 
+    state.values.username = "leo";
     manager.handleAsync("username", "leo");
     await vi.advanceTimersByTimeAsync(0);
     await Promise.resolve();
@@ -271,6 +272,7 @@ describe("BitValidationManager", () => {
     );
     expect(state.isValidating.username).toBeUndefined();
 
+    state.values.email = "leo@example.com";
     manager.handleAsync("email", "leo@example.com");
     await vi.advanceTimersByTimeAsync(0);
     await Promise.resolve();

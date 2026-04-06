@@ -287,7 +287,10 @@ export class BitArrayManager<T extends object = Record<string, unknown>> {
         {
           errors: reindexedMeta.errors,
           touched: reindexedMeta.touched,
-          isValidating: reindexedMeta.isValidating,
+          // Não reindexa isValidating em mutações estruturais de array.
+          // Jobs assíncronos ainda em voo finalizam/cancelam no path original,
+          // evitando flags órfãs após shift de índice.
+          isValidating: previousState.isValidating,
         },
         [path],
       ),

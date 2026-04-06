@@ -1552,6 +1552,74 @@ describe("BitStore Core", () => {
       expect(store.read.isFieldValidating("email")).toBe(false);
     });
 
+    it("deve descartar resultado async quando o item validado é removido durante a requisição", async () => {
+      const store = createBitStore({ initialValues: { list: ["A", "B"] } });
+
+      let resolveApi: (msg: string | null) => void;
+      const mockApi = vi.fn().mockImplementation(() => {
+        return new Promise((resolve) => {
+          resolveApi = resolve;
+        });
+      });
+
+      store.feature.registerField("list.1", {
+        validation: {
+          asyncValidateOn: "change",
+          asyncValidate: mockApi,
+          asyncValidateDelay: 0,
+        },
+      });
+
+      store.write.setField("list.1", "B*");
+      await vi.advanceTimersByTimeAsync(1);
+      expect(store.read.isFieldValidating("list.1")).toBe(true);
+
+      store.feature.removeItem("list", 1);
+      expect(store.read.getState().values.list).toEqual(["A"]);
+
+      resolveApi!("erro stale");
+      await vi.advanceTimersByTimeAsync(1);
+
+      expect(store.read.getState().errors["list.1"]).toBeUndefined();
+      expect(store.read.isFieldValidating("list.1")).toBe(false);
+      expect(store.feature.hasValidationsInProgress()).toBe(false);
+    });
+
+    it("deve descartar resultado async stale após reindexação por removeItem", async () => {
+      const store = createBitStore({
+        initialValues: { list: ["A", "B", "C"] },
+      });
+
+      let resolveApi: (msg: string | null) => void;
+      const mockApi = vi.fn().mockImplementation(() => {
+        return new Promise((resolve) => {
+          resolveApi = resolve;
+        });
+      });
+
+      store.feature.registerField("list.1", {
+        validation: {
+          asyncValidateOn: "change",
+          asyncValidate: mockApi,
+          asyncValidateDelay: 0,
+        },
+      });
+
+      store.write.setField("list.1", "B*");
+      await vi.advanceTimersByTimeAsync(1);
+      expect(store.read.isFieldValidating("list.1")).toBe(true);
+
+      store.feature.removeItem("list", 0);
+      expect(store.read.getState().values.list).toEqual(["B*", "C"]);
+
+      resolveApi!("erro stale da posição antiga");
+      await vi.advanceTimersByTimeAsync(1);
+
+      expect(store.read.getState().errors["list.1"]).toBeUndefined();
+      expect(store.read.getState().errors["list.0"]).toBeUndefined();
+      expect(store.feature.hasValidationsInProgress()).toBe(false);
+    });
+
     it("deve isolar race conditions entre múltiplos campos assíncronos", async () => {
       const store = createBitStore({
         initialValues: { email: "", username: "" },

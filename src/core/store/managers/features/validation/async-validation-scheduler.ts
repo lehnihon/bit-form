@@ -1,3 +1,4 @@
+import { getDeepValue, valueEqual } from "../../../../utils";
 import type { BitFieldDefinition } from "../../../contracts/types";
 import { isPathWithinPrefix } from "../../../shared/path-prefix";
 
@@ -83,7 +84,12 @@ export class BitAsyncValidationScheduler<T extends object> {
   cleanupPrefix(prefix: string): void {
     let hasPendingChange = false;
 
-    for (const path of this.pendingJobs.keys()) {
+    const paths = new Set<string>([
+      ...this.pendingJobs.keys(),
+      ...this.abortControllers.keys(),
+    ]);
+
+    for (const path of paths) {
       if (isPathWithinPrefix(path, prefix)) {
         this.cancelInternal(path, false);
         hasPendingChange = true;
@@ -197,6 +203,11 @@ export class BitAsyncValidationScheduler<T extends object> {
       const errorMessage = await validationPromise;
 
       if (job.controller.signal.aborted) {
+        return;
+      }
+
+      const currentValue = getDeepValue(this.port.getValues(), path);
+      if (!valueEqual(currentValue, job.value)) {
         return;
       }
 
