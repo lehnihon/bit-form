@@ -176,6 +176,8 @@ export function composeBitStoreRuntime<T extends object>(args: {
     getValues: () => getRuntimeKernel().getState().values,
     getDirtyValues,
     applyPersistedValues,
+    setPersistMetadata: (patch) =>
+      getRuntimeKernel().dispatch({ kind: "form.persistMeta", patch }),
   });
 
   runtimeKernel = new BitStoreRuntimeKernel<T>({

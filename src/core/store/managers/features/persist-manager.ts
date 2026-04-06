@@ -3,6 +3,12 @@ import type {
   BitPersistStorageAdapter,
 } from "../../contracts/types";
 
+interface BitPersistManagerCallbacks {
+  onAutoSaveStart?: () => void;
+  onAutoSaveSuccess?: () => void;
+  onAutoSaveError?: (error: unknown) => void;
+}
+
 function getDefaultStorage(): BitPersistStorageAdapter | undefined {
   if (typeof globalThis === "undefined") return undefined;
 
@@ -24,6 +30,7 @@ export class BitPersistManager<T extends object = Record<string, unknown>> {
     private getValues: () => T,
     private getDirtyValues: () => Partial<T>,
     private applyRestoredValues: (values: Partial<T>) => void,
+    private callbacks: BitPersistManagerCallbacks = {},
   ) {}
 
   private getStorage(): BitPersistStorageAdapter | undefined {
@@ -38,19 +45,23 @@ export class BitPersistManager<T extends object = Record<string, unknown>> {
     this.config.onError?.(error);
   }
 
-  async saveNow() {
-    if (!this.canPersist()) return;
-
+  private async persistPayload() {
     const storage = this.getStorage();
     if (!storage) return;
 
+    const payload =
+      this.config.mode === "dirtyValues"
+        ? this.getDirtyValues()
+        : this.getValues();
+    const serialized = this.config.serialize(payload);
+    await storage.setItem(this.config.key, serialized);
+  }
+
+  async saveNow() {
+    if (!this.canPersist()) return;
+
     try {
-      const payload =
-        this.config.mode === "dirtyValues"
-          ? this.getDirtyValues()
-          : this.getValues();
-      const serialized = this.config.serialize(payload);
-      await storage.setItem(this.config.key, serialized);
+      await this.persistPayload();
     } catch (error) {
       this.handleError(error);
       throw error;
@@ -65,7 +76,16 @@ export class BitPersistManager<T extends object = Record<string, unknown>> {
     }
 
     this.timer = setTimeout(() => {
-      void this.saveNow().catch(() => undefined);
+      this.timer = undefined;
+      this.callbacks.onAutoSaveStart?.();
+
+      void this.saveNow()
+        .then(() => {
+          this.callbacks.onAutoSaveSuccess?.();
+        })
+        .catch((error) => {
+          this.callbacks.onAutoSaveError?.(error);
+        });
     }, this.config.debounceMs);
   }
 

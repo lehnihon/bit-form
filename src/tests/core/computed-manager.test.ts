@@ -140,6 +140,29 @@ describe("BitComputedManager", () => {
     expect(result.out).toBe(50);
   });
 
+  it("não reescreve computed quando o próximo valor cíclico é estruturalmente equivalente", () => {
+    const entries: BitComputedEntry<any>[] = [
+      {
+        path: "computed",
+        dependsOn: ["source"],
+        compute: () => {
+          const next: Record<string, unknown> = { label: "stable" };
+          next.self = next;
+          return next;
+        },
+      },
+    ];
+
+    const manager = new BitComputedManager(() => entries);
+    const computed: Record<string, unknown> = { label: "stable" };
+    computed.self = computed;
+    const values = { source: 1, computed };
+
+    const result = manager.apply(values, ["source"]);
+
+    expect(result).toBe(values);
+  });
+
   it("reusa ordenação quando configuração não muda e invalida ao mudar entries", () => {
     const entriesA: BitComputedEntry<any>[] = [
       {

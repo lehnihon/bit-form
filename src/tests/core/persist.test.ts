@@ -144,6 +144,38 @@ describe("Persist Feature (BitPersistManager)", () => {
       expect(storage.setItem).toHaveBeenCalledTimes(1);
       store.feature.cleanup();
     });
+
+    it("should expose persist.error when autosave fails", async () => {
+      const onError = vi.fn();
+      const store = createBitStore<TestForm>({
+        initialValues: { name: "Leo", email: "leo@test.com", age: 30 },
+        persist: {
+          enabled: true,
+          key: "test-form",
+          debounceMs: 300,
+          storage: {
+            getItem: vi.fn(() => null),
+            setItem: vi.fn(() => {
+              throw new Error("autosave failed");
+            }),
+            removeItem: vi.fn(),
+          },
+          onError,
+        },
+      });
+
+      store.write.setField("name", "Leandro");
+      await vi.advanceTimersByTimeAsync(300);
+
+      expect(onError).toHaveBeenCalledWith(expect.any(Error));
+      expect(store.read.getState().persist.isSaving).toBe(false);
+      expect(store.read.getState().persist.error).toBeInstanceOf(Error);
+      expect(store.read.getState().persist.error?.message).toContain(
+        "autosave failed",
+      );
+
+      store.feature.cleanup();
+    });
   });
 
   describe("forceSave", () => {

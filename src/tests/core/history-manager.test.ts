@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { createHistoryPatch } from "../../core/store/engines/snapshot-diff-engine";
 import { BitHistoryManager } from "../../core/store/managers/features/history-manager";
 
 describe("BitHistoryManager", () => {
@@ -57,5 +58,17 @@ describe("BitHistoryManager", () => {
     const previous = history.undo();
 
     expect(previous).toEqual(initial);
+  });
+
+  it("should not generate patch operations for equivalent circular graphs", () => {
+    const previous: Record<string, unknown> = { profile: { name: "Leo" } };
+    previous.self = previous;
+
+    const next: Record<string, unknown> = { profile: { name: "Leo" } };
+    next.self = next;
+
+    const patch = createHistoryPatch(previous, next);
+
+    expect(patch.operations).toHaveLength(0);
   });
 });
