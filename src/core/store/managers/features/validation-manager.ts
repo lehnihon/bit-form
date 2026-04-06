@@ -182,7 +182,7 @@ export class BitValidationManager<T extends object> {
       return scopeFields.some((field) => !!state.isValidating[field]);
     }
 
-    return this.validatingCount > 0;
+    return Object.keys(state.isValidating).length > 0;
   }
 
   trigger(scopeFields?: string[], options?: BitValidationTriggerOptions) {
