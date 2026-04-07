@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   BitComputedManager,
   type BitComputedEntry,
@@ -199,5 +199,133 @@ describe("BitComputedManager", () => {
       "x",
     ]);
     expect(third.triple).toBe(30);
+  });
+
+  // ── Regressão BUG-3 ──────────────────────────────────────────────────────
+  it("BUG-3: compute() que lança não deve propagar exceção; onError é chamado e campo mantém valor anterior", () => {
+    const onError = vi.fn();
+    const entries: BitComputedEntry<any>[] = [
+      {
+        path: "safe",
+        dependsOn: ["x"],
+        compute: (values) => values.x * 10,
+      },
+      {
+        path: "throwing",
+        dependsOn: ["x"],
+        compute: () => {
+          throw new Error("compute exploded");
+        },
+      },
+      {
+        path: "afterThrowing",
+        dependsOn: ["throwing"],
+        compute: (values) => String(values.throwing ?? "fallback"),
+      },
+    ];
+
+    const manager = new BitComputedManager(() => entries, onError);
+
+    const initial = { x: 1, safe: 0, throwing: "prior", afterThrowing: "" };
+
+    let result: any;
+    expect(() => {
+      result = manager.apply(initial, ["x"]);
+    }).not.toThrow();
+
+    // onError deve ter sido chamado com o erro e o path
+    expect(onError).toHaveBeenCalledTimes(1);
+    expect(onError).toHaveBeenCalledWith(
+      expect.objectContaining({ message: "compute exploded" }),
+      "throwing",
+    );
+
+    // campo "safe" deve ter executado normalmente
+    expect(result.safe).toBe(10);
+
+    // campo "throwing" deve manter o valor anterior (skip)
+    expect(result.throwing).toBe("prior");
+  });
+
+  it("BUG-3: sem onError registrado, compute() que lança ainda não propaga — continua silenciosamente", () => {
+    const entries: BitComputedEntry<any>[] = [
+      {
+        path: "boom",
+        dependsOn: ["x"],
+        compute: () => {
+          throw new RangeError("boom");
+        },
+      },
+    ];
+
+    const manager = new BitComputedManager(() => entries); // sem onError
+
+    expect(() => manager.apply({ x: 1, boom: 0 }, ["x"])).not.toThrow();
+  });
+
+  // ── Regressão BUG-computed-skip-deps ─────────────────────────────────────
+  it("BUG-computed-skip-deps: downstream de upstream falho não deve executar na mesma rodada", () => {
+    const onError = vi.fn();
+    const downstreamSpy = vi.fn((values: any) => `${values.a}:derived`);
+
+    const entries: BitComputedEntry<any>[] = [
+      {
+        path: "a",
+        dependsOn: ["x"],
+        compute: () => {
+          throw new Error("upstream exploded");
+        },
+      },
+      {
+        path: "b",
+        dependsOn: ["a"],
+        compute: downstreamSpy,
+      },
+    ];
+
+    const manager = new BitComputedManager(() => entries, onError);
+    const initial = { x: 1, a: "old-a", b: "old-b" };
+
+    const result = manager.apply(initial, ["x"]);
+
+    // upstream falhou → onError chamado
+    expect(onError).toHaveBeenCalledTimes(1);
+    expect(onError).toHaveBeenCalledWith(
+      expect.objectContaining({ message: "upstream exploded" }),
+      "a",
+    );
+
+    // downstream NÃO deve ter sido chamado
+    expect(downstreamSpy).not.toHaveBeenCalled();
+
+    // valores antigos preservados
+    expect(result.a).toBe("old-a");
+    expect(result.b).toBe("old-b");
+  });
+
+  it("BUG-computed-skip-deps: computed sem dependência de falho ainda executa normalmente", () => {
+    const onError = vi.fn();
+    const entries: BitComputedEntry<any>[] = [
+      {
+        path: "a",
+        dependsOn: ["x"],
+        compute: () => {
+          throw new Error("explode");
+        },
+      },
+      {
+        path: "independent",
+        dependsOn: ["x"],
+        compute: (values: any) => values.x * 99,
+      },
+    ];
+
+    const manager = new BitComputedManager(() => entries, onError);
+    const result = manager.apply({ x: 2, a: "old", independent: 0 }, ["x"]);
+
+    // "independent" não depende de "a" — deve executar
+    expect(result.independent).toBe(198);
+    // "a" preserva valor antigo
+    expect(result.a).toBe("old");
   });
 });

@@ -321,4 +321,191 @@ describe("BitLifecycleManager", () => {
 
     expect(result).toEqual({ status: "blocked", reason: "isSubmitting" });
   });
+
+  it("should cancel validations before applying history snapshot", () => {
+    const state: any = {
+      values: { name: "current" },
+      errors: {},
+      touched: {},
+      isValidating: { name: true },
+      persist: { isSaving: false, isRestoring: false, error: null },
+      isValid: true,
+      isSubmitting: false,
+      isDirty: true,
+    };
+
+    const dispatch = vi.fn((operation: any) => {
+      Object.assign(state, operation.partialState);
+    });
+    const cancelAllValidations = vi.fn();
+    const triggerValidation = vi.fn();
+
+    const manager = new BitLifecycleManager<any>({
+      fieldUpdate: {
+        getState: () => state,
+        dispatch,
+        config: { initialValues: { name: "initial" } } as any,
+        getFieldConfig: () => undefined,
+        hasDependentFields: () => false,
+        updateDependencies: () => ({
+          affectedFields: [],
+          visibilityChanged: [],
+          requiredChanged: [],
+        }),
+        isFieldHidden: () => false,
+        clearFieldValidation: () => {},
+        triggerValidation: () => {},
+        handleFieldAsyncValidation: () => {},
+        updateDirtyForPath: () => false,
+        getBaselineValues: () => ({ name: "initial" }),
+        emitFieldChange: () => {},
+      },
+      values: {
+        getState: () => state,
+        dispatch,
+        internalSaveSnapshot: () => {},
+        evaluateAllDependencies: () => {},
+        cancelAllValidations,
+        validateNow: async () => true,
+        rebuildDirtyState: () => true,
+        clearDirtyState: () => {},
+        getBaselineValues: () => ({ name: "initial" }),
+        setBaselineValues: () => {},
+        resetHistory: () => {},
+        emitFieldChange: () => {},
+        triggerValidation,
+      },
+      submit: {
+        getState: () => state,
+        dispatch,
+        batchStateUpdates: (cb) => cb(),
+        config: { initialValues: { name: "initial" } } as any,
+        getTransformEntries: () => [],
+        getHiddenFields: () => new Set<string>(),
+        cancelAllValidations: () => {},
+        validateNow: async () => true,
+        hasValidationsInProgress: () => false,
+        buildDirtyValues: () => ({}),
+        setServerErrors: () => {},
+        emitBeforeSubmit: async () => {},
+        emitAfterSubmit: async () => {},
+        emitOperationalError: async () => {},
+      },
+    });
+
+    manager.applyHistoryState({ name: "restored" });
+
+    expect(cancelAllValidations).toHaveBeenCalledTimes(1);
+    expect(dispatch).toHaveBeenCalledTimes(1);
+    expect(triggerValidation).toHaveBeenCalledWith(undefined, {
+      forceDebounce: true,
+    });
+
+    const cancelCall = cancelAllValidations.mock.invocationCallOrder[0];
+    const dispatchCall = dispatch.mock.invocationCallOrder[0];
+    expect(cancelCall).toBeLessThan(dispatchCall);
+  });
+
+  it("should keep submit lock when setValues runs during in-flight submit", async () => {
+    const state: any = {
+      values: { email: "demo@bit.dev" },
+      errors: {},
+      touched: {},
+      isValidating: {},
+      persist: { isSaving: false, isRestoring: false, error: null },
+      isValid: true,
+      isSubmitting: false,
+      isDirty: false,
+    };
+
+    const dispatch = vi.fn((operation: any) => {
+      Object.assign(state, operation.partialState);
+    });
+
+    let releaseBeforeSubmit: (() => void) | undefined;
+    let markBeforeSubmitStarted: (() => void) | undefined;
+    const beforeSubmitStarted = new Promise<void>((resolve) => {
+      markBeforeSubmitStarted = resolve;
+    });
+    const emitBeforeSubmit = vi.fn(
+      () =>
+        new Promise<void>((resolve) => {
+          markBeforeSubmitStarted?.();
+          releaseBeforeSubmit = resolve;
+        }),
+    );
+
+    const onSuccess = vi.fn(async () => undefined);
+
+    const manager = new BitLifecycleManager<any>({
+      fieldUpdate: {
+        getState: () => state,
+        dispatch,
+        config: { initialValues: { email: "demo@bit.dev" } } as any,
+        getFieldConfig: () => undefined,
+        hasDependentFields: () => false,
+        updateDependencies: () => ({
+          affectedFields: [],
+          visibilityChanged: [],
+          requiredChanged: [],
+        }),
+        isFieldHidden: () => false,
+        clearFieldValidation: () => {},
+        triggerValidation: () => {},
+        handleFieldAsyncValidation: () => {},
+        updateDirtyForPath: () => false,
+        getBaselineValues: () => ({ email: "demo@bit.dev" }),
+        emitFieldChange: () => {},
+      },
+      values: {
+        getState: () => state,
+        dispatch,
+        internalSaveSnapshot: () => {},
+        evaluateAllDependencies: () => {},
+        cancelAllValidations: () => {},
+        validateNow: async () => true,
+        rebuildDirtyState: () => true,
+        clearDirtyState: () => {},
+        getBaselineValues: () => ({ email: "demo@bit.dev" }),
+        setBaselineValues: () => {},
+        resetHistory: () => {},
+        emitFieldChange: () => {},
+        triggerValidation: () => {},
+      },
+      submit: {
+        getState: () => state,
+        dispatch,
+        batchStateUpdates: (cb) => cb(),
+        config: { initialValues: { email: "demo@bit.dev" } } as any,
+        getTransformEntries: () => [],
+        getHiddenFields: () => new Set<string>(),
+        cancelAllValidations: () => {},
+        validateNow: async () => true,
+        hasValidationsInProgress: () => false,
+        buildDirtyValues: () => ({}),
+        setServerErrors: () => {},
+        emitBeforeSubmit,
+        emitAfterSubmit: async () => {},
+        emitOperationalError: async () => {},
+      },
+    });
+
+    const firstSubmitPromise = manager.submit(onSuccess);
+    await beforeSubmitStarted;
+
+    manager.setValues({ email: "updated@bit.dev" });
+
+    const secondSubmitResult = await manager.submit(onSuccess);
+    expect(secondSubmitResult).toEqual({
+      status: "blocked",
+      reason: "isSubmitting",
+    });
+
+    releaseBeforeSubmit?.();
+    const firstSubmitResult = await firstSubmitPromise;
+
+    expect(firstSubmitResult).toEqual({ status: "submitted" });
+    expect(onSuccess).toHaveBeenCalledTimes(1);
+    expect(state.isSubmitting).toBe(false);
+  });
 });

@@ -117,7 +117,10 @@ function remapIndexedPath(
 
   const remaining = key.substring(prefix.length);
   const parts = remaining.split(".");
-  const currentIdx = parseInt(parts[0], 10);
+  const currentIdx = Number(parts[0]);
+  if (!Number.isInteger(currentIdx) || currentIdx < 0) {
+    return key;
+  }
   const nextIdx = remapIndex(currentIdx);
 
   if (nextIdx === null) {
@@ -144,7 +147,11 @@ function reindexObjectKeys(
 
     const remaining = key.substring(prefix.length);
     const parts = remaining.split(".");
-    const currentIdx = parseInt(parts[0], 10);
+    const currentIdx = Number(parts[0]);
+    if (!Number.isInteger(currentIdx) || currentIdx < 0) {
+      nextObject[key] = obj[key];
+      continue;
+    }
     const nextIdx = remapIndex(currentIdx);
 
     if (nextIdx === null) {

@@ -283,4 +283,261 @@ describe("BitValidationManager", () => {
 
     vi.useRealTimers();
   });
+
+  // ── Regressão BUG-1 ──────────────────────────────────────────────────────
+  it("BUG-1: cancelAll after rapid re-schedule should not reach a job whose controller was stolen", async () => {
+    vi.useFakeTimers();
+
+    let resolveFirstJob!: (v: string | null) => void;
+
+    const firstValidator = vi.fn(
+      () =>
+        new Promise<string | null>((resolve) => {
+          resolveFirstJob = resolve;
+        }),
+    );
+    const secondValidator = vi.fn(() => new Promise<string | null>(() => {})); // never resolves
+
+    const state = {
+      values: { email: "a" },
+      errors: {},
+      touched: {},
+      isValidating: {} as Record<string, boolean>,
+      persist: { isSaving: false, isRestoring: false, error: null },
+      isValid: true,
+      isSubmitting: false,
+      isDirty: false,
+    } as any;
+
+    let pickValidator = firstValidator as any;
+    const setValidatingCalls: Array<{ path: string; value: boolean }> = [];
+    const dispatch = vi.fn((op: any) => {
+      if (op.kind === "state.patch" && op.partialState.isValidating) {
+        Object.entries(
+          op.partialState.isValidating as Record<string, boolean>,
+        ).forEach(([p, v]) => setValidatingCalls.push({ path: p, value: v }));
+        state.isValidating = op.partialState.isValidating;
+      }
+    });
+
+    const manager = new BitValidationManager<any>({
+      getState: () => state,
+      dispatch,
+      setError: vi.fn(),
+      getFieldConfig: () => ({
+        validation: {
+          asyncValidateOn: "change",
+          asyncValidateDelay: 0,
+          asyncValidate: pickValidator,
+        },
+      }),
+      getScopeFields: () => [],
+      forEachFieldConfig: () => {},
+      config: { validationDelay: 0, onUnhandledError: vi.fn() } as any,
+      getRequiredErrors: () => ({}),
+      getHiddenFields: () => new Set<string>(),
+      emitBeforeValidate: async () => {},
+      emitAfterValidate: async () => {},
+    });
+
+    // Job 1 starts
+    manager.handleAsync("email", "a");
+    await vi.advanceTimersByTimeAsync(0);
+    await Promise.resolve();
+
+    // Job 2 scheduled while job 1 awaits (cancel job1, register new controller for job2)
+    pickValidator = secondValidator;
+    manager.handleAsync("email", "ab");
+    await vi.advanceTimersByTimeAsync(0);
+
+    // Job 1 finishes — its finally block must NOT delete job 2's controller
+    resolveFirstJob(null);
+    await Promise.resolve();
+    await Promise.resolve();
+
+    // Even after job 1 cleaned up, cancelAll must abort job 2
+    manager.cancelAll();
+
+    // Advance time: job 2 (never-resolving) would eventually escape if controller was stolen
+    const callsSnapshot = dispatch.mock.calls.length;
+    await vi.advanceTimersByTimeAsync(2000);
+    await Promise.resolve();
+
+    // No extra dispatch should have happened after cancelAll
+    expect(dispatch.mock.calls.length).toBe(callsSnapshot);
+    expect(secondValidator).toHaveBeenCalledTimes(1);
+
+    vi.useRealTimers();
+  });
+
+  // ── Regressão BUG-2 ──────────────────────────────────────────────────────
+  it("BUG-2: immediate async stage finally must not clear a newer controller registered for the same path", async () => {
+    vi.useFakeTimers();
+
+    let resolveFirst!: (v: null) => void;
+
+    const state = {
+      values: { email: "a" },
+      errors: {},
+      touched: {},
+      isValidating: {} as Record<string, boolean>,
+      persist: { isSaving: false, isRestoring: false, error: null },
+      isValid: true,
+      isSubmitting: false,
+      isDirty: false,
+    } as any;
+
+    let callIndex = 0;
+    const validators = [
+      vi.fn(
+        () =>
+          new Promise<null>((resolve) => {
+            resolveFirst = resolve;
+          }),
+      ),
+      vi.fn(() => new Promise<null>(() => {})), // never resolves
+    ];
+
+    const dispatch = vi.fn((op: any) => {
+      if (op.kind === "state.patch" && op.partialState.isValidating) {
+        state.isValidating = op.partialState.isValidating;
+      }
+    });
+
+    const manager = new BitValidationManager<any>({
+      getState: () => state,
+      dispatch,
+      setError: vi.fn(),
+      getFieldConfig: () => ({
+        validation: {
+          asyncValidate: validators[callIndex],
+        },
+      }),
+      getScopeFields: () => [],
+      forEachFieldConfig: (cb: any) =>
+        cb({ validation: { asyncValidate: validators[callIndex] } }, "email"),
+      config: { validationDelay: 0, onUnhandledError: vi.fn() } as any,
+      getRequiredErrors: () => ({}),
+      getHiddenFields: () => new Set<string>(),
+      emitBeforeValidate: async () => {},
+      emitAfterValidate: async () => {},
+    });
+
+    // First validate — kicks off immediate async with validators[0]
+    callIndex = 0;
+    const p1 = manager.validate({ scopeFields: ["email"] });
+    await vi.advanceTimersByTimeAsync(0);
+    await Promise.resolve();
+
+    // Second validate — cancels first, registers new controller, starts validators[1]
+    callIndex = 1;
+    const p2 = manager.validate({ scopeFields: ["email"] });
+    await vi.advanceTimersByTimeAsync(0);
+    await Promise.resolve();
+
+    // Finish the first validator — its finally must NOT delete validators[1]'s controller
+    resolveFirst(null);
+    await p1.catch(() => {});
+    await Promise.resolve();
+    await Promise.resolve();
+
+    // cancelAll should still be able to stop validators[1]'s job
+    manager.cancelAll();
+
+    const callsSnapshot = dispatch.mock.calls.length;
+    await vi.advanceTimersByTimeAsync(2000);
+    await Promise.resolve();
+
+    // validators[1] should have been called exactly once and produce no output after cancelAll
+    expect(validators[1]).toHaveBeenCalledTimes(1);
+    expect(dispatch.mock.calls.length).toBe(callsSnapshot);
+
+    vi.useRealTimers();
+  });
+
+  // ── Regressão BUG-abort-result ────────────────────────────────────────
+  it("BUG-abort-result: aborted validate() must return live isValid and emit correct result in afterValidate", async () => {
+    vi.useFakeTimers();
+
+    // State starts valid; second validation will commit errors making it invalid.
+    const state: any = {
+      values: { email: "" },
+      errors: {} as Record<string, string>,
+      touched: {},
+      isValidating: {},
+      persist: { isSaving: false, isRestoring: false, error: null },
+      isValid: true,
+      isSubmitting: false,
+      isDirty: false,
+    };
+
+    const afterValidateEvents: Array<{ result: boolean; aborted?: boolean }> =
+      [];
+    let resolveFirstBeforeHook!: () => void;
+
+    const manager = new BitValidationManager<any>({
+      getState: () => state,
+      dispatch: vi.fn((op: any) => {
+        if (op.kind === "validation.commit") {
+          state.isValid = op.isValid;
+          state.errors = op.errors;
+        }
+      }),
+      setError: vi.fn(),
+      getFieldConfig: () => undefined,
+      getScopeFields: () => [],
+      forEachFieldConfig: () => {},
+      config: {
+        validationDelay: 0,
+        resolver: async () => ({ email: "required" }),
+        onUnhandledError: vi.fn(),
+      } as any,
+      getRequiredErrors: () => ({}),
+      getHiddenFields: () => new Set<string>(),
+      emitBeforeValidate: async (_event: any) => {
+        // First call: stall until we start the second validate.
+        if (!resolveFirstBeforeHook) {
+          await new Promise<void>((resolve) => {
+            resolveFirstBeforeHook = resolve;
+          });
+        }
+      },
+      emitAfterValidate: async (event: any) => {
+        afterValidateEvents.push({
+          result: event.result,
+          aborted: event.aborted,
+        });
+      },
+    });
+
+    // Start first validate — it will stall inside emitBeforeValidate.
+    const p1 = manager.validate();
+    await vi.advanceTimersByTimeAsync(0);
+    await Promise.resolve();
+
+    // Start second validate — it will advance to completion and commit isValid=false.
+    const p2 = manager.validate();
+    await vi.advanceTimersByTimeAsync(0);
+    await Promise.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    // p2 should be done now and state must be invalid.
+    expect(state.isValid).toBe(false);
+
+    // Unblock and finish p1 (which will be aborted because validationId advanced).
+    resolveFirstBeforeHook();
+    const [r1, r2] = await Promise.all([p1, p2]);
+
+    // p1 was aborted — must reflect live isValid (false), NOT the stale snapshot (true).
+    expect(r1).toBe(false);
+    expect(r2).toBe(false);
+
+    // The afterValidate event for the aborted p1 must also carry result=false.
+    const abortedEvent = afterValidateEvents.find((e) => e.aborted);
+    expect(abortedEvent).toBeDefined();
+    expect(abortedEvent!.result).toBe(false);
+
+    vi.useRealTimers();
+  });
 });

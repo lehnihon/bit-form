@@ -108,7 +108,6 @@ export class BitValuesLifecycleManager<T extends object> {
           isValidating: {},
           isValid: true,
           isDirty: false,
-          isSubmitting: false,
         },
         ["*"],
       ),
@@ -128,6 +127,8 @@ export class BitValuesLifecycleManager<T extends object> {
   }
 
   applyHistoryState(snapshot: T) {
+    this.store.cancelAllValidations();
+
     const isDirty = this.store.rebuildDirtyState(
       snapshot,
       this.store.getBaselineValues(),
@@ -164,7 +165,6 @@ export class BitValuesLifecycleManager<T extends object> {
           isValidating: {},
           isValid: true,
           isDirty: false,
-          isSubmitting: false,
         },
         ["*"],
       ),
@@ -197,7 +197,6 @@ export class BitValuesLifecycleManager<T extends object> {
           isValidating: {},
           isValid: true,
           isDirty,
-          isSubmitting: false,
         },
         changedPaths,
       ),

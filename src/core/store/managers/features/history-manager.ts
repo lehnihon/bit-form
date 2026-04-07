@@ -25,14 +25,14 @@ export class BitHistoryManager<T extends object = Record<string, unknown>> {
       return;
     }
 
-    if (this.historyIndex < this.historySize - 1) {
-      this.patches.splice(this.historyIndex);
-      this.historySize = this.historyIndex + 1;
-    }
-
     const patch = createHistoryPatch(this.currentSnapshot, values);
     if (patch.operations.length === 0) {
       return;
+    }
+
+    if (this.historyIndex < this.historySize - 1) {
+      this.patches.splice(this.historyIndex);
+      this.historySize = this.historyIndex + 1;
     }
 
     this.patches.push(patch);

@@ -1,11 +1,11 @@
 import { deepClone, deepMerge } from "../../utils";
 import type { BitState } from "../contracts/types";
+import type { BitStoreEffectEngine } from "../engines/effect-engine";
 import {
   patchStateOperation,
   persistMetaOperation,
   type BitStoreOperation,
 } from "../engines/operation-engine";
-import type { BitStoreEffectEngine } from "../engines/effect-engine";
 import type { BitDirtyManager } from "../managers/core/dirty-manager";
 import type { BitFieldRegistry } from "../registry/field-registry";
 
@@ -116,7 +116,6 @@ export function applyStorePersistedValues<T extends object>(args: {
       persist: { ...state.persist, error: null },
       isValid: true,
       isDirty,
-      isSubmitting: false,
     }),
   );
 

@@ -221,7 +221,9 @@ export class BitAsyncValidationScheduler<T extends object> {
       if (!job.controller.signal.aborted) {
         this.port.setFieldValidating(path, false);
       }
-      this.abortControllers.delete(path);
+      if (this.abortControllers.get(path) === job.controller) {
+        this.abortControllers.delete(path);
+      }
     }
   }
 }

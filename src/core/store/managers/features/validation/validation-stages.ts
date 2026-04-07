@@ -125,7 +125,7 @@ export async function runImmediateAsyncValidationStage<T extends object>(args: {
   cancelFieldAsync: (path: string) => void;
   createAbortController: () => AbortController;
   setAbortController: (path: string, controller: AbortController) => void;
-  clearAbortController: (path: string) => void;
+  clearAbortController: (path: string, controller: AbortController) => void;
   setFieldValidating: (path: string, isValidating: boolean) => void;
   setAsyncError: (path: string, message: string) => void;
   clearAsyncError: (path: string) => void;
@@ -196,6 +196,6 @@ export async function runImmediateAsyncValidationStage<T extends object>(args: {
     ) {
       setFieldValidating(path, false);
     }
-    clearAbortController(path);
+    clearAbortController(path, controller);
   }
 }

@@ -24,8 +24,10 @@ export class BitValidationCoordinator {
     this.immediateAbortControllers.set(path, controller);
   }
 
-  clearImmediateController(path: string): void {
-    this.immediateAbortControllers.delete(path);
+  clearImmediateController(path: string, controller: AbortController): void {
+    if (this.immediateAbortControllers.get(path) === controller) {
+      this.immediateAbortControllers.delete(path);
+    }
   }
 
   cancelImmediate(path: string): void {

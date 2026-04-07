@@ -51,6 +51,8 @@ export class BitArrayManager<T extends object = Record<string, unknown>> {
       return ids;
     });
 
+    this.store.unregisterPrefix?.(toPathPrefix(path));
+
     this.mutateArrayWithSetField(path, (arr) => [value, ...arr], {
       origin: "array",
       operation: "prepend",
@@ -66,6 +68,12 @@ export class BitArrayManager<T extends object = Record<string, unknown>> {
       next.splice(safeIndex, 0, this.store.createArrayItemId(path, safeIndex));
       return next;
     });
+
+    if (this.store.unregisterPrefix) {
+      for (let i = safeIndex; i < currentLength; i++) {
+        this.store.unregisterPrefix(toPathPrefix(path, i));
+      }
+    }
 
     this.mutateArrayWithSetField(
       path,
@@ -130,6 +138,11 @@ export class BitArrayManager<T extends object = Record<string, unknown>> {
     const arr = [...source];
     [arr[indexA], arr[indexB]] = [arr[indexB], arr[indexA]];
 
+    if (this.store.unregisterPrefix) {
+      this.store.unregisterPrefix(toPathPrefix(path, indexA));
+      this.store.unregisterPrefix(toPathPrefix(path, indexB));
+    }
+
     this.commitArrayMutationWithFieldPipeline({
       path,
       nextArray: arr,
@@ -171,6 +184,15 @@ export class BitArrayManager<T extends object = Record<string, unknown>> {
     const [item] = arr.splice(from, 1);
     arr.splice(to, 0, item);
 
+    if (this.store.unregisterPrefix) {
+      const minIndex = Math.min(from, to);
+      const maxIndex = Math.max(from, to);
+
+      for (let index = minIndex; index <= maxIndex; index += 1) {
+        this.store.unregisterPrefix(toPathPrefix(path, index));
+      }
+    }
+
     this.commitArrayMutationWithFieldPipeline({
       path,
       nextArray: arr,
@@ -199,6 +221,8 @@ export class BitArrayManager<T extends object = Record<string, unknown>> {
   }
 
   replaceItems(path: string, items: unknown[]) {
+    this.store.unregisterPrefix?.(toPathPrefix(path));
+
     this.pathIds.set(
       path,
       items.map((_, index) => this.store.createArrayItemId(path, index)),

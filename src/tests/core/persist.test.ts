@@ -537,4 +537,81 @@ describe("Persist Feature (BitPersistManager)", () => {
       expect(typeof store.feature.clearPersisted).toBe("function");
     });
   });
+
+  // ── Regressão: localStorage getter que lança (Safari Private Mode) ───────
+  describe("resilience when localStorage access throws", () => {
+    afterEach(() => {
+      try {
+        Object.defineProperty(globalThis, "localStorage", {
+          configurable: true,
+          get: () => undefined,
+        });
+      } catch {}
+    });
+
+    it("should be a no-op for setField when localStorage getter throws", async () => {
+      Object.defineProperty(globalThis, "localStorage", {
+        configurable: true,
+        get() {
+          throw new DOMException("storage unavailable", "SecurityError");
+        },
+      });
+
+      const store = createBitStore({
+        initialValues: { name: "Leo" },
+        persist: { enabled: true, key: "test-throw", onError: vi.fn() },
+      });
+
+      expect(() => {
+        store.write.setField("name", "X");
+      }).not.toThrow();
+
+      await vi.advanceTimersByTimeAsync(1000);
+      await Promise.resolve();
+
+      store.feature.cleanup();
+    });
+
+    it("should return false from restorePersisted when localStorage getter throws", async () => {
+      Object.defineProperty(globalThis, "localStorage", {
+        configurable: true,
+        get() {
+          throw new DOMException("storage unavailable", "SecurityError");
+        },
+      });
+
+      const store = createBitStore({
+        initialValues: { name: "Leo" },
+        persist: { enabled: true, key: "test-throw-restore", onError: vi.fn() },
+      });
+
+      const result = await store.feature.restorePersisted();
+      expect(result).toBe(false);
+
+      store.feature.cleanup();
+    });
+
+    it("should not throw from forceSave when localStorage getter throws", async () => {
+      Object.defineProperty(globalThis, "localStorage", {
+        configurable: true,
+        get() {
+          throw new DOMException("storage unavailable", "SecurityError");
+        },
+      });
+
+      const store = createBitStore({
+        initialValues: { name: "Leo" },
+        persist: {
+          enabled: true,
+          key: "test-throw-force",
+          autoSave: false,
+          onError: vi.fn(),
+        },
+      });
+
+      await expect(store.feature.forceSave()).resolves.toBeUndefined();
+
+      store.feature.cleanup();
+    });
+  });
 });
