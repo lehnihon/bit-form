@@ -1,8 +1,15 @@
-import { useCallback, useEffect, useMemo, useSyncExternalStore } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useSyncExternalStore,
+} from "react";
 import {
   BitArrayPath,
   cleanupRegisteredPrefix,
   createArrayBinding,
+  valueEqual,
 } from "../core";
 import { useBitStore } from "./context";
 
@@ -11,13 +18,24 @@ export function useBitArray<
   P extends BitArrayPath<TForm> = BitArrayPath<TForm>,
 >(path: P) {
   const store = useBitStore<TForm>();
+  const lastSnapshotRef = useRef<unknown[] | null>(null);
   const controller = useMemo(
     () => createArrayBinding<TForm, P>(store, path),
     [store, path],
   );
 
   const getSnapshot = useCallback(() => {
-    return controller.readItems();
+    const next = controller.readItems() as unknown[];
+
+    if (
+      lastSnapshotRef.current &&
+      valueEqual(lastSnapshotRef.current, next)
+    ) {
+      return lastSnapshotRef.current;
+    }
+
+    lastSnapshotRef.current = next;
+    return next;
   }, [controller]);
 
   const subscribeArray = useCallback(

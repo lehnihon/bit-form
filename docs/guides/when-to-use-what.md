@@ -74,6 +74,7 @@ Use UI-only hide only if you have very custom rendering logic and are comfortabl
 
 ## Architecture and release references
 
-- Compatibility targets: `docs/guides/compatibility-matrix.md`
-- Major migration recipes: `docs/guides/major-v3-migration.md`
-- Release gate policy: `docs/guides/release-gates.md`
+- Compatibility targets: `./compatibility-matrix.md`
+- Migration guide: `./migration.md`
+- Release gate policy: `./release-gates.md`
+- Troubleshooting: `./troubleshooting.md`

@@ -135,5 +135,64 @@ const store = createBitStore({
 });
 ```
 
+### Date Masks
+
+```tsx
+import { createDateMask } from "@lehnihon/bit-form";
+
+const isoDateMask = createDateMask({
+  input: "DD/MM/YYYY",
+  output: "YYYY-MM-DD",
+});
+
+const store = createBitStore({
+  initialValues: { birthday: "" },
+  fields: { birthday: { mask: isoDateMask } },
+});
+```
+
+### Credit Card Creator
+
+If you need direct control over card formatting behavior, use `createCreditCardMask`.
+
+```tsx
+import { createCreditCardMask } from "@lehnihon/bit-form";
+
+const customCardMask = createCreditCardMask();
+
+const store = createBitStore({
+  initialValues: { cardNumber: "" },
+  fields: { cardNumber: { mask: customCardMask } },
+});
+```
+
+## Mask Utilities
+
+### `unmask` and `unmaskCurrency`
+
+Use utility helpers when you need to sanitize arbitrary values outside field bindings.
+
+```tsx
+import { unmask, unmaskCurrency } from "@lehnihon/bit-form";
+
+const rawDoc = unmask("123.456.789-00"); // "12345678900"
+const rawMoney = unmaskCurrency("R$ 1.500,25", { decimal: "," });
+```
+
+### `bitMasks` Preset Registry
+
+`bitMasks` gives direct access to built-in mask instances.
+
+```tsx
+import { bitMasks, createBitStore } from "@lehnihon/bit-form";
+
+const store = createBitStore({
+  initialValues: { iban: "" },
+  fields: {
+    iban: { mask: bitMasks.iban },
+  },
+});
+```
+
 > **`precision: 0`** (e.g. `jpy` or `integer`) produces whole-number output only — no decimal separator is appended.
 > See the [Masks Example](../examples/masks-example.md) for a full working sample.

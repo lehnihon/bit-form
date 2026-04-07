@@ -2,6 +2,12 @@
 
 To truly master Bit-Form, it is important to understand how it works under the hood. Unlike many form libraries that are deeply tied to a specific framework's reactivity system (like React state or Vue refs), Bit-Form relies on an agnostic core engine called the `BitStore`.
 
+## Version Status
+
+- **Current stable runtime**: V4 architecture and APIs documented in this page.
+- **V5 sections**: planning and development notes for upcoming architecture evolution.
+- For production adoption, prioritize stable APIs documented in feature/framework/API reference pages.
+
 ## 🧠 The `BitStore`
 
 The `BitStore` is a plain TypeScript class that acts as the single source of truth for your form. It manages the state, validations, formatting, and dependencies completely independently of the UI layer.

@@ -83,6 +83,27 @@ interface BitPersistMetadata {
 
 ---
 
+## `BitDerivedFieldMeta`
+
+Represents normalized field metadata derived by core utilities.
+
+```ts
+type BitDerivedFieldMeta = {
+  error: string | undefined;
+  touched: boolean;
+  invalid: boolean;
+  isValidating: boolean;
+  isDirty: boolean;
+  isHidden: boolean;
+  isRequired: boolean;
+  hasError: boolean;
+};
+```
+
+Use `deriveFieldMeta` from core utils when building advanced adapters or custom bindings over store slices.
+
+---
+
 ## `ValidatorFn<T>`
 
 Signature for custom resolvers used in `BitConfig.resolver`.
@@ -369,3 +390,7 @@ interface BitFrameworkConfig<T extends object = any> extends BitConfig<T> {
 ```
 
 `BitResolvedConfig<T>` remains internal to the core store implementation.
+
+---
+
+For advanced adapter/binding/store helper exports, see [Advanced Core API](./advanced-core.md).

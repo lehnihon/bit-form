@@ -172,6 +172,8 @@ npm install @lehnihon/bit-form
 
 The complete documentation is available in the `/docs` folder. Explore the guides below to get started:
 
+- **[Documentation Hub](./docs/README.md)**: Start here to navigate by goal (onboarding, troubleshooting, API).
+
 ### 🚀 Getting Started
 
 - **[Introduction & Installation](./docs/01-getting-started.md)**: Overview and basic setup.
@@ -202,8 +204,22 @@ The complete documentation is available in the `/docs` folder. Explore the guide
 ### 📖 Guides & Examples
 
 - **[When to Use What](./docs/guides/when-to-use-what.md)**: Quick reference for resolver vs asyncValidate vs setServerErrors, computed vs transform, and conditional fields.
+- **[Troubleshooting](./docs/guides/troubleshooting.md)**: Debug common form setup, validation, and devtools issues.
+- **[Migration Guide](./docs/guides/migration.md)**: Plan upgrades and breaking-change checks safely.
+- **[Testing Guide](./docs/guides/testing.md)**: Unit, integration, and e2e testing strategies.
+- **[Performance Guide](./docs/guides/performance.md)**: Optimize large forms and subscription patterns.
+- **[Accessibility Guide](./docs/guides/accessibility.md)**: Build accessible form experiences across frameworks.
+- **[Compatibility Matrix](./docs/guides/compatibility-matrix.md)**: Runtime and framework target baseline.
+- **[Release Gates](./docs/guides/release-gates.md)**: Pre-release quality and docs synchronization checks.
+- **[FAQ](./docs/guides/faq.md)**: Quick answers for common implementation questions.
+- **[Example Template](./docs/guides/example-template.md)**: Editorial template for consistent, copy-paste-ready examples.
 - **[Complete Form Example](./docs/examples/complete-form-example.md)**: End-to-end example with masks, asyncValidate, conditional logic, scopes, history, and DevTools.
+- **[Conditional + Server Validation Example](./docs/examples/conditional-server-validation-example.md)**: Dynamic fields with 422/server mapping workflow.
+- **[Multi-Step + Draft Example](./docs/examples/multi-step-draft-example.md)**: Scope-based wizard with persistence controls.
+- **[Array Reorder Example](./docs/examples/array-reorder-example.md)**: Stable keys and automatic error reallocation during reorder/remove.
+- **[Plugin + DevTools Example](./docs/examples/plugin-devtools-lifecycle-example.md)**: Lifecycle audit logs with local timeline inspection.
 - **[Upload Integration Example](./docs/examples/upload-integration-example.md)**: Backend-first upload example using `useBitUpload`/`injectBitUpload`.
+- **[E-commerce Checkout Example](./docs/examples/ecommerce-checkout-example.md)**: Advanced nested + arrays + computed + async shipping quote flow.
 - **[Server Errors](./docs/examples/server-errors.md)**: Client validation (resolver/asyncValidate) vs API 422 handling (setServerErrors, onSubmit).
 
 ### 🔍 DevTools & CLI
@@ -217,6 +233,7 @@ The complete documentation is available in the `/docs` folder. Explore the guide
 
 - **[API Reference](./docs/api-reference/bit-store.md)**: Full `BitStore` class documentation.
 - **[Type Definitions](./docs/api-reference/types.md)**: Core TypeScript interfaces and types.
+- **[Advanced Core API](./docs/api-reference/advanced-core.md)**: Public advanced exports for custom adapters and tooling.
 
 ## ⚠️ Breaking Changes (dev branch)
 

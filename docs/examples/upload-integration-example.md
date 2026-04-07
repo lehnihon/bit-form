@@ -6,8 +6,8 @@ This example demonstrates upload integration using the simplified hook API.
 
 ```typescript
 import React from "react";
-import { useBitForm, useBitField } from "bit-form";
-import { useBitUpload } from "bit-form/react";
+import { useBitForm, useBitField } from "@lehnihon/bit-form/react";
+import { useBitUpload } from "@lehnihon/bit-form/react";
 
 const uploadAvatar = async (file: File) => {
   const formData = new FormData();
@@ -59,8 +59,8 @@ export function UserProfileForm() {
 
 ```typescript
 import { Component } from "@angular/core";
-import { injectBitForm } from "bit-form";
-import { injectBitUpload } from "bit-form/angular";
+import { injectBitForm } from "@lehnihon/bit-form/angular";
+import { injectBitUpload } from "@lehnihon/bit-form/angular";
 
 @Component({
   selector: "app-user-profile",
@@ -111,8 +111,8 @@ export class UserProfileComponent {
 
 ```typescript
 <script setup lang="ts">
-import { useBitForm } from "bit-form";
-import { useBitUpload } from "bit-form/vue";
+import { useBitForm } from "@lehnihon/bit-form/vue";
+import { useBitUpload } from "@lehnihon/bit-form/vue";
 
 const form = useBitForm({
   initialValues: {
