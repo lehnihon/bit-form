@@ -1,10 +1,17 @@
 import { useCallback, useRef, useSyncExternalStore } from "react";
-import { readHistoryMetaSnapshot, type HistoryMeta } from "../core";
-import { useBitStore } from "./context";
+import {
+  BitFrameworkStoreApi,
+  BitStoreApi,
+  readHistoryMetaSnapshot,
+  type HistoryMeta,
+} from "../core";
+import { resolveReactStore } from "./store";
 import type { UseBitHistoryResult } from "./types";
 
-export function useBitHistory<T extends object = any>(): UseBitHistoryResult {
-  const store = useBitStore<T>();
+export function useBitHistory<T extends object = any>(
+  storeInput: BitFrameworkStoreApi<T> | BitStoreApi<T>,
+): UseBitHistoryResult {
+  const store = resolveReactStore(storeInput);
   const lastMeta = useRef<HistoryMeta | null>(null);
 
   const getSnapshot = useCallback(() => {

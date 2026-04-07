@@ -51,9 +51,9 @@ Recommended for:
 
 Example patterns:
 
-- React: Testing Library + `BitFormProvider`
-- Vue: Vue Test Utils + provider setup
-- Angular: TestBed + standalone providers
+- React: Testing Library + `createBitReactBindings(store)` or `createBitReactForm(config)`
+- Vue: Vue Test Utils + `createBitVueBindings(store)` or `createBitVueForm(config)`
+- Angular: TestBed + `createBitAngularBindings(store)` or `createBitAngularForm(config)`
 
 ## End-to-End Testing
 

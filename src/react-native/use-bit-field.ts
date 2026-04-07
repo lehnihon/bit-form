@@ -1,22 +1,27 @@
-import { useMemo, useCallback } from "react";
-import { useBitFieldBase } from "../react/use-bit-field-base";
+import { useCallback, useMemo } from "react";
 import {
+  BitFrameworkStoreApi,
   BitPath,
   BitPathValue,
+  BitStoreApi,
   createFrameworkMaskedFieldBinding,
   deriveFieldMeta,
 } from "../core";
+import { useBitFieldBase } from "../react/use-bit-field-base";
 import type { UseBitFieldNativeResult } from "./types";
 
 export function useBitField<
   TForm extends object = any,
   P extends BitPath<TForm> = BitPath<TForm>,
->(path: P): UseBitFieldNativeResult<TForm, P> {
+>(
+  storeInput: BitFrameworkStoreApi<TForm> | BitStoreApi<TForm>,
+  path: P,
+): UseBitFieldNativeResult<TForm, P> {
   const { fieldState, setBlur, store } = useBitFieldBase<
     BitPathValue<TForm, P>,
     TForm,
     P
-  >(path);
+  >(storeInput, path);
 
   const { fieldController } = useMemo(() => {
     return createFrameworkMaskedFieldBinding(store, path);

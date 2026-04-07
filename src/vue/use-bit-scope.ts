@@ -1,12 +1,20 @@
 import { computed, onMounted, onUnmounted, ref } from "vue";
-import type { ScopeStatus, ValidateScopeResult } from "../core";
+import type {
+  BitFrameworkStoreApi,
+  BitStoreApi,
+  ScopeStatus,
+  ValidateScopeResult,
+} from "../core";
 import { observeScopeStatusSnapshot } from "../core";
-import { useBitStore } from "./context";
+import { resolveVueStore } from "./store";
 
 export type { ScopeStatus, ValidateScopeResult };
 
-export function useBitScope(scopeName: string) {
-  const store = useBitStore();
+export function useBitScope<T extends object = any>(
+  storeInput: BitFrameworkStoreApi<T> | BitStoreApi<T>,
+  scopeName: string,
+) {
+  const store = resolveVueStore(storeInput);
   const status = ref<ScopeStatus>(store.read.getScopeStatus(scopeName));
   let unsubscribe: () => void;
 

@@ -1,17 +1,7 @@
 // @vitest-environment jsdom
 
 import { act, renderHook } from "@testing-library/react";
-import {
-  BitFormProvider,
-  useBitArray,
-  useBitField,
-  useBitForm,
-  useBitHistory,
-  useBitPersist,
-  useBitScope,
-  useBitSteps,
-  useBitWatch,
-} from "bit-form/react";
+import { createBitReactBindings } from "bit-form/react";
 import { describe, expect, it, vi } from "vitest";
 import { createBitStore as createBitStoreRuntime } from "../../../core";
 import { maskBRL } from "../../../mask";
@@ -53,20 +43,14 @@ describe("React Integration (Context + Hooks)", () => {
       validation: { delay: 0 },
     });
 
-  const wrapper = ({ children, store }: any) => (
-    <BitFormProvider store={store}>{children}</BitFormProvider>
-  );
-
   describe("Basic Field Logic & Lifecycle", () => {
     it("deve sincronizar useBitField, rastrear isDirty e invalid", async () => {
       const store = createTestStore();
-      const { result } = renderHook(
-        () => ({
-          field: useBitField("user.firstName"),
-          form: useBitForm(),
-        }),
-        { wrapper: (props) => wrapper({ ...props, store }) },
-      );
+      const bit = createBitReactBindings<any>(store);
+      const { result } = renderHook(() => ({
+        field: bit.useBitField("user.firstName"),
+        form: bit.useBitForm(),
+      }));
 
       expect(result.current.form.meta.isDirty).toBe(false);
 
@@ -90,11 +74,10 @@ describe("React Integration (Context + Hooks)", () => {
 
     it("deve chamar unregisterField ao desmontar o componente", () => {
       const store = createTestStore();
+      const bit = createBitReactBindings<any>(store);
       const spy = vi.spyOn(store.feature, "unregisterField");
 
-      const { unmount } = renderHook(() => useBitField("user.firstName"), {
-        wrapper: (props) => wrapper({ ...props, store }),
-      });
+      const { unmount } = renderHook(() => bit.useBitField("user.firstName"));
 
       unmount();
       expect(spy).toHaveBeenCalledWith("user.firstName");
@@ -104,6 +87,7 @@ describe("React Integration (Context + Hooks)", () => {
   describe("Reactivity & Conditional Logic", () => {
     it("deve reagir a mudanças de isHidden e isRequired via DependencyManager", async () => {
       const store = createTestStore();
+      const bit = createBitReactBindings<any>(store);
 
       store.feature.registerField("bonusValue", {
         conditional: {
@@ -113,15 +97,10 @@ describe("React Integration (Context + Hooks)", () => {
         },
       });
 
-      const { result } = renderHook(
-        () => ({
-          bonus: useBitField("hasBonus"),
-          value: useBitField("bonusValue"),
-        }),
-        {
-          wrapper: (props) => wrapper({ ...props, store }),
-        },
-      );
+      const { result } = renderHook(() => ({
+        bonus: bit.useBitField("hasBonus"),
+        value: bit.useBitField("bonusValue"),
+      }));
 
       expect(result.current.value.meta.isHidden).toBe(true);
       expect(result.current.value.meta.isRequired).toBe(false);
@@ -141,9 +120,8 @@ describe("React Integration (Context + Hooks)", () => {
         { salary: 10 },
         { salary: { mask: "brl" } },
       );
-      const { result } = renderHook(() => useBitField("salary"), {
-        wrapper: (props) => wrapper({ ...props, store }),
-      });
+      const bit = createBitReactBindings<any>(store);
+      const { result } = renderHook(() => bit.useBitField("salary"));
 
       expect(result.current.props.value).toBe("R$ 10,00");
 
@@ -167,10 +145,9 @@ describe("React Integration (Context + Hooks)", () => {
         { "user.lastName": { mask: "cpf" } }, // fields
         { cpf: cpfMask }, // masks
       );
+      const bit = createBitReactBindings<any>(store);
 
-      const { result } = renderHook(() => useBitField("user.lastName"), {
-        wrapper: (props) => wrapper({ ...props, store }),
-      });
+      const { result } = renderHook(() => bit.useBitField("user.lastName"));
 
       await act(() => {
         result.current.setValue("12345678901");
@@ -184,11 +161,10 @@ describe("React Integration (Context + Hooks)", () => {
   describe("Arrays & Iteration", () => {
     it("deve gerenciar listas dinâmicas e remapear erros ao mover itens", async () => {
       const store = createTestStore({ skills: ["React", "Vue"] });
+      const bit = createBitReactBindings<any>(store);
       (store as any).triggerValidation = vi.fn();
 
-      const { result } = renderHook(() => useBitArray("skills"), {
-        wrapper: (props) => wrapper({ ...props, store }),
-      });
+      const { result } = renderHook(() => bit.useBitArray("skills"));
 
       await act(() => {
         store.write.setError("skills.0", "Erro no React");
@@ -208,11 +184,10 @@ describe("React Integration (Context + Hooks)", () => {
 
     it("deve limpar erros residuais ao remover um item do array", async () => {
       const store = createTestStore({ skills: ["React", "Vue"] });
+      const bit = createBitReactBindings<any>(store);
       (store as any).triggerValidation = vi.fn();
 
-      const { result } = renderHook(() => useBitArray("skills"), {
-        wrapper: (props) => wrapper({ ...props, store }),
-      });
+      const { result } = renderHook(() => bit.useBitArray("skills"));
 
       await act(() => {
         store.write.setError("skills.1", "Erro no Vue");
@@ -225,11 +200,10 @@ describe("React Integration (Context + Hooks)", () => {
 
     it("deve chamar unregisterPrefix ao desmontar useBitArray", () => {
       const store = createTestStore({ skills: [] });
+      const bit = createBitReactBindings<any>(store);
       const spy = vi.spyOn(store.feature, "unregisterPrefix");
 
-      const { unmount } = renderHook(() => useBitArray("skills"), {
-        wrapper: (props) => wrapper({ ...props, store }),
-      });
+      const { unmount } = renderHook(() => bit.useBitArray("skills"));
 
       unmount();
 
@@ -240,18 +214,16 @@ describe("React Integration (Context + Hooks)", () => {
   describe("Watchers & Helpers", () => {
     it("não deve expor registerMask no useBitForm", () => {
       const store = createTestStore();
-      const { result } = renderHook(() => useBitForm<MyForm>(), {
-        wrapper: (props) => wrapper({ ...props, store }),
-      });
+      const bit = createBitReactBindings<any>(store);
+      const { result } = renderHook(() => bit.useBitForm());
 
       expect("registerMask" in result.current).toBe(false);
     });
 
     it("deve observar campos específicos com useBitWatch", async () => {
       const store = createTestStore();
-      const { result } = renderHook(() => useBitWatch("user.firstName"), {
-        wrapper: (props) => wrapper({ ...props, store }),
-      });
+      const bit = createBitReactBindings<any>(store);
+      const { result } = renderHook(() => bit.useBitWatch("user.firstName"));
 
       expect(result.current).toBe("Leandro");
 
@@ -273,14 +245,12 @@ describe("React Integration (Context + Hooks)", () => {
         },
         history: { enabled: true },
       });
+      const bit = createBitReactBindings<any>(store);
 
-      const { result } = renderHook(
-        () => ({
-          history: useBitHistory<MyForm>(),
-          field: useBitField("user.firstName"),
-        }),
-        { wrapper: (props) => wrapper({ ...props, store }) },
-      );
+      const { result } = renderHook(() => ({
+        history: bit.useBitHistory(),
+        field: bit.useBitField("user.firstName"),
+      }));
 
       expect(result.current.history.historySize).toBe(1);
       expect(result.current.history.historyIndex).toBe(0);
@@ -307,13 +277,11 @@ describe("React Integration (Context + Hooks)", () => {
 
     it("deve resetar o formulário e limpar estados", async () => {
       const store = createTestStore();
-      const { result } = renderHook(
-        () => ({
-          field: useBitField("user.firstName"),
-          form: useBitForm(),
-        }),
-        { wrapper: (props) => wrapper({ ...props, store }) },
-      );
+      const bit = createBitReactBindings<any>(store);
+      const { result } = renderHook(() => ({
+        field: bit.useBitField("user.firstName"),
+        form: bit.useBitForm(),
+      }));
 
       await act(() => {
         result.current.field.setValue("Novo Nome");
@@ -336,9 +304,8 @@ describe("React Integration (Context + Hooks)", () => {
     it("deve lidar com submissão e preventDefault", async () => {
       const store = createTestStore();
       const onSubmit = vi.fn();
-      const { result } = renderHook(() => useBitForm<MyForm>(), {
-        wrapper: (props) => wrapper({ ...props, store }),
-      });
+      const bit = createBitReactBindings<any>(store);
+      const { result } = renderHook(() => bit.useBitForm());
 
       const mockEvent = { preventDefault: vi.fn() } as any;
 
@@ -352,9 +319,8 @@ describe("React Integration (Context + Hooks)", () => {
 
     it("deve expor getDirtyValues e retornar apenas valores alterados", async () => {
       const store = createTestStore();
-      const { result } = renderHook(() => useBitForm<MyForm>(), {
-        wrapper: (props) => wrapper({ ...props, store }),
-      });
+      const bit = createBitReactBindings<any>(store);
+      const { result } = renderHook(() => bit.useBitForm());
 
       expect(result.current.getDirtyValues()).toEqual({});
 
@@ -370,9 +336,8 @@ describe("React Integration (Context + Hooks)", () => {
     it("deve passar dirtyValues como segundo parâmetro no submit", async () => {
       const store = createTestStore();
       const submitHandler = vi.fn();
-      const { result } = renderHook(() => useBitForm<MyForm>(), {
-        wrapper: (props) => wrapper({ ...props, store }),
-      });
+      const bit = createBitReactBindings<any>(store);
+      const { result } = renderHook(() => bit.useBitForm());
 
       await act(() => {
         store.write.setField("user.firstName", "Updated");
@@ -391,9 +356,8 @@ describe("React Integration (Context + Hooks)", () => {
     it("deve passar dirtyValues como segundo parâmetro no onSubmit", async () => {
       const store = createTestStore();
       const apiHandler = vi.fn().mockResolvedValue({ success: true });
-      const { result } = renderHook(() => useBitForm<MyForm>(), {
-        wrapper: (props) => wrapper({ ...props, store }),
-      });
+      const bit = createBitReactBindings<any>(store);
+      const { result } = renderHook(() => bit.useBitForm());
 
       await act(() => {
         store.write.setField("salary", 5000);
@@ -430,10 +394,9 @@ describe("React Integration (Context + Hooks)", () => {
             !vals.user?.firstName ? { "user.firstName": "Erro no nome" } : {},
         },
       });
+      const bit = createBitReactBindings<any>(store);
 
-      const { result } = renderHook(() => useBitScope("step1"), {
-        wrapper: (props) => wrapper({ ...props, store }),
-      });
+      const { result } = renderHook(() => bit.useBitScope("step1"));
 
       expect(result.current.status.hasErrors).toBe(false);
       expect(result.current.status.isDirty).toBe(false);
@@ -490,10 +453,9 @@ describe("React Integration (Context + Hooks)", () => {
               : {},
         },
       });
+      const bit = createBitReactBindings<any>(store);
 
-      const { result } = renderHook(() => useBitSteps(["step1", "step2"]), {
-        wrapper: (props) => wrapper({ ...props, store }),
-      });
+      const { result } = renderHook(() => bit.useBitSteps(["step1", "step2"]));
 
       expect(result.current.step).toBe(1);
       expect(result.current.scope).toBe("step1");
@@ -546,10 +508,9 @@ describe("React Integration (Context + Hooks)", () => {
         },
         validation: { delay: 0 },
       });
+      const bit = createBitReactBindings<any>(store);
 
-      const { result } = renderHook(() => useBitSteps(["step1", "step2"]), {
-        wrapper: (props) => wrapper({ ...props, store }),
-      });
+      const { result } = renderHook(() => bit.useBitSteps(["step1", "step2"]));
 
       await act(() => {
         store.write.setField("name", "Leo");
@@ -608,10 +569,9 @@ describe("React Integration (Context + Hooks)", () => {
         },
         persist: { enabled: true, key: "react-test", storage, autoSave: false },
       });
+      const bit = createBitReactBindings(store);
 
-      const { result } = renderHook(() => useBitPersist(), {
-        wrapper: (props) => wrapper({ ...props, store }),
-      });
+      const { result } = renderHook(() => bit.useBitPersist());
 
       expect(typeof result.current.restore).toBe("function");
       expect(typeof result.current.save).toBe("function");
@@ -633,10 +593,9 @@ describe("React Integration (Context + Hooks)", () => {
         },
         persist: { enabled: true, key: "react-test", storage, autoSave: false },
       });
+      const bit = createBitReactBindings(store);
 
-      const { result } = renderHook(() => useBitPersist(), {
-        wrapper: (props) => wrapper({ ...props, store }),
-      });
+      const { result } = renderHook(() => bit.useBitPersist());
 
       await act(() => result.current.save());
       expect(storage.setItem).toHaveBeenCalled();
@@ -661,10 +620,9 @@ describe("React Integration (Context + Hooks)", () => {
         },
         persist: { enabled: true, key: "react-test", storage },
       });
+      const bit = createBitReactBindings(store);
 
-      const { result } = renderHook(() => useBitPersist(), {
-        wrapper: (props) => wrapper({ ...props, store }),
-      });
+      const { result } = renderHook(() => bit.useBitPersist());
 
       await act(() => result.current.clear());
       expect(storage.removeItem).toHaveBeenCalledWith("react-test");

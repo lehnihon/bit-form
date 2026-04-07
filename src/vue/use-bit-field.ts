@@ -1,18 +1,26 @@
 import { computed, onUnmounted, shallowRef } from "vue";
-import { useBitStore } from "./context";
-import type { UseBitFieldVueResult } from "./types";
-import type { BitPath, BitPathValue } from "../core";
+import type {
+  BitFrameworkStoreApi,
+  BitPath,
+  BitPathValue,
+  BitStoreApi,
+} from "../core";
 import {
   cleanupRegisteredField,
   createFrameworkMaskedFieldBinding,
   deriveFieldMeta,
 } from "../core";
+import { resolveVueStore } from "./store";
+import type { UseBitFieldVueResult } from "./types";
 
 export function useBitField<
   TForm extends object = any,
   P extends BitPath<TForm> = BitPath<TForm>,
->(path: P): UseBitFieldVueResult<BitPathValue<TForm, P>> {
-  const store = useBitStore<TForm>();
+>(
+  storeInput: BitFrameworkStoreApi<TForm> | BitStoreApi<TForm>,
+  path: P,
+): UseBitFieldVueResult<BitPathValue<TForm, P>> {
+  const store = resolveVueStore(storeInput);
 
   const { fieldController } = createFrameworkMaskedFieldBinding(store, path);
 

@@ -1,16 +1,18 @@
 import { computed, onUnmounted, shallowRef } from "vue";
 import {
   BitArrayPath,
+  BitFrameworkStoreApi,
+  BitStoreApi,
   cleanupRegisteredPrefix,
   createArrayBinding,
 } from "../core";
-import { useBitStore } from "./context";
+import { resolveVueStore } from "./store";
 
 export function useBitArray<
   TForm extends object = any,
   P extends BitArrayPath<TForm> = BitArrayPath<TForm>,
->(path: P) {
-  const store = useBitStore<TForm>();
+>(storeInput: BitFrameworkStoreApi<TForm> | BitStoreApi<TForm>, path: P) {
+  const store = resolveVueStore(storeInput);
   const controller = createArrayBinding<TForm, P>(store, path);
   const values = shallowRef(controller.readItems());
 

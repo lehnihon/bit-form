@@ -12,43 +12,30 @@ npm install @lehnihon/bit-form
 
 ## 2. App Router Setup (recommended)
 
-Create a client wrapper with `BitFormProvider`.
+Create bindings in a Client Component and pass them to your form components.
 
 ```tsx
 "use client";
 
-import { createBitStore } from "@lehnihon/bit-form";
-import { BitFormProvider } from "@lehnihon/bit-form/react";
+import { createBitReactForm } from "@lehnihon/bit-form/react";
 
-const store = createBitStore({
+export const bit = createBitReactForm({
   name: "signup",
   initialValues: {
     name: "",
     email: "",
   },
 });
-
-export function SignupFormProvider({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  return <BitFormProvider store={store}>{children}</BitFormProvider>;
-}
 ```
 
 Use it in a page/layout client boundary:
 
 ```tsx
-import { SignupFormProvider } from "./signup-form-provider";
+import { bit } from "./signup-form-bindings";
 import { SignupForm } from "./signup-form";
 
 export default function Page() {
-  return (
-    <SignupFormProvider>
-      <SignupForm />
-    </SignupFormProvider>
-  );
+  return <SignupForm bit={bit} />;
 }
 ```
 
@@ -57,12 +44,12 @@ export default function Page() {
 ```tsx
 "use client";
 
-import { useBitForm, useBitField } from "@lehnihon/bit-form/react";
+import type { BitReactBindings } from "@lehnihon/bit-form/react";
 
-export function SignupForm() {
-  const form = useBitForm();
-  const name = useBitField("name");
-  const email = useBitField("email");
+export function SignupForm({ bit }: { bit: BitReactBindings<any> }) {
+  const form = bit.useBitForm();
+  const name = bit.useBitField("name");
+  const email = bit.useBitField("email");
 
   const onSubmit = form.onSubmit(async (_values, dirtyValues) => {
     await fetch("/api/signup", {

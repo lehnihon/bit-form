@@ -1,12 +1,19 @@
-import { ref, onUnmounted, readonly } from "vue";
-import { useBitStore } from "./context";
-import { getDeepValue, valueEqual, BitPath, BitPathValue } from "../core";
+import { onUnmounted, readonly, ref } from "vue";
+import {
+  BitFrameworkStoreApi,
+  BitPath,
+  BitPathValue,
+  BitStoreApi,
+  getDeepValue,
+  valueEqual,
+} from "../core";
+import { resolveVueStore } from "./store";
 
 export function useBitWatch<
   TForm extends object = any,
   P extends BitPath<TForm> = BitPath<TForm>,
->(path: P) {
-  const store = useBitStore<TForm>();
+>(storeInput: BitFrameworkStoreApi<TForm> | BitStoreApi<TForm>, path: P) {
+  const store = resolveVueStore(storeInput);
   const initialValue = getDeepValue(
     store.read.getState().values,
     path as string,

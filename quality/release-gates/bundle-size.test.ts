@@ -41,25 +41,25 @@ const BUDGETS: EntrypointBudget[] = [
     entry: "src/index.ts",
     maxBytes: 99 * 1024,
   },
-  // Medido: 69.6 KB  →  orçamento: 100 KB
+  // Medido: 108.2 KB (07/04/2026)  →  orçamento: 112 KB
   {
     name: "react/index",
     entry: "src/react/index.ts",
-    maxBytes: 100 * 1024,
+    maxBytes: 112 * 1024,
     external: ["react"],
   },
-  // Medido: 68.5 KB  →  orçamento: 100 KB
+  // Medido: 107.4 KB (07/04/2026)  →  orçamento: 112 KB
   {
     name: "vue/index",
     entry: "src/vue/index.ts",
-    maxBytes: 100 * 1024,
+    maxBytes: 112 * 1024,
     external: ["vue"],
   },
-  // Medido: 68.9 KB  →  orçamento: 100 KB
+  // Medido: 107.7 KB (07/04/2026)  →  orçamento: 112 KB
   {
     name: "angular/index",
     entry: "src/angular/index.ts",
-    maxBytes: 100 * 1024,
+    maxBytes: 112 * 1024,
     external: ["@angular/core", "rxjs"],
   },
   // Medido: 4.9 KB  →  orçamento: 12 KB

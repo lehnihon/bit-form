@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { act, renderHook, waitFor } from "@testing-library/react";
-import { BitFormProvider, useBitUpload } from "bit-form/react";
+import { createBitReactBindings } from "bit-form/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createBitStore as createBitStoreRuntime } from "../../../core";
 import type { BitUploadFn } from "../../../core/types/upload";
@@ -16,10 +16,6 @@ describe("useBitUpload (React)", () => {
   let mockUpload: ReturnType<typeof vi.fn> & BitUploadFn;
   let mockDelete: ReturnType<typeof vi.fn>;
   let store: ReturnType<typeof createBitStore<any>>;
-
-  const wrapper = ({ children, testStore }: any) => (
-    <BitFormProvider store={testStore}>{children}</BitFormProvider>
-  );
 
   beforeEach(() => {
     store = createBitStore({
@@ -37,9 +33,8 @@ describe("useBitUpload (React)", () => {
   });
 
   it("should initialize with empty state", () => {
-    const { result } = renderHook(() => useBitUpload("avatar", mockUpload), {
-      wrapper: (props) => wrapper({ ...props, testStore: store }),
-    });
+    const bit = createBitReactBindings<any>(store);
+    const { result } = renderHook(() => bit.useBitUpload("avatar", mockUpload));
 
     expect(result.current.value).toBeUndefined();
     expect(result.current.error).toBeUndefined();
@@ -47,9 +42,8 @@ describe("useBitUpload (React)", () => {
   });
 
   it("should upload file and set field value", async () => {
-    const { result } = renderHook(() => useBitUpload("avatar", mockUpload), {
-      wrapper: (props) => wrapper({ ...props, testStore: store }),
-    });
+    const bit = createBitReactBindings<any>(store);
+    const { result } = renderHook(() => bit.useBitUpload("avatar", mockUpload));
 
     const file = new File(["content"], "avatar.jpg", { type: "image/jpeg" });
 
@@ -66,9 +60,8 @@ describe("useBitUpload (React)", () => {
       throw new Error("Network error");
     }) as any;
 
-    const { result } = renderHook(() => useBitUpload("avatar", mockUpload), {
-      wrapper: (props) => wrapper({ ...props, testStore: store }),
-    });
+    const bit = createBitReactBindings<any>(store);
+    const { result } = renderHook(() => bit.useBitUpload("avatar", mockUpload));
     const file = new File(["content"], "avatar.jpg", { type: "image/jpeg" });
 
     await act(() => result.current.upload(file));
@@ -79,11 +72,9 @@ describe("useBitUpload (React)", () => {
   });
 
   it("should remove uploaded file and call deleteFile", async () => {
-    const { result } = renderHook(
-      () => useBitUpload("avatar", mockUpload, mockDelete),
-      {
-        wrapper: (props) => wrapper({ ...props, testStore: store }),
-      },
+    const bit = createBitReactBindings<any>(store);
+    const { result } = renderHook(() =>
+      bit.useBitUpload("avatar", mockUpload, mockDelete),
     );
 
     const file = new File(["content"], "avatar.jpg", { type: "image/jpeg" });
@@ -96,9 +87,8 @@ describe("useBitUpload (React)", () => {
   });
 
   it("should clear field value without deleteFile", async () => {
-    const { result } = renderHook(() => useBitUpload("avatar", mockUpload), {
-      wrapper: (props) => wrapper({ ...props, testStore: store }),
-    });
+    const bit = createBitReactBindings<any>(store);
+    const { result } = renderHook(() => bit.useBitUpload("avatar", mockUpload));
 
     const file = new File(["content"], "avatar.jpg", { type: "image/jpeg" });
     await act(() => result.current.upload(file));
@@ -117,9 +107,8 @@ describe("useBitUpload (React)", () => {
         }),
     ) as any;
 
-    const { result } = renderHook(() => useBitUpload("avatar", mockUpload), {
-      wrapper: (props) => wrapper({ ...props, testStore: store }),
-    });
+    const bit = createBitReactBindings<any>(store);
+    const { result } = renderHook(() => bit.useBitUpload("avatar", mockUpload));
     const file = new File(["content"], "avatar.jpg", { type: "image/jpeg" });
 
     let uploadPromise: Promise<void>;
@@ -147,9 +136,8 @@ describe("useBitUpload (React)", () => {
   });
 
   it("should support setValue method for field", () => {
-    const { result } = renderHook(() => useBitUpload("avatar", mockUpload), {
-      wrapper: (props) => wrapper({ ...props, testStore: store }),
-    });
+    const bit = createBitReactBindings<any>(store);
+    const { result } = renderHook(() => bit.useBitUpload("avatar", mockUpload));
 
     act(() => {
       result.current.setValue("https://external-cdn.com/avatar.jpg");

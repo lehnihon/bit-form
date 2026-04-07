@@ -1,10 +1,17 @@
 import { useCallback, useMemo, useSyncExternalStore } from "react";
-import { useBitStore } from "./context";
-import { readPersistMetaSnapshot, subscribePersistMetaSnapshot } from "../core";
+import {
+  BitFrameworkStoreApi,
+  BitStoreApi,
+  readPersistMetaSnapshot,
+  subscribePersistMetaSnapshot,
+} from "../core";
+import { resolveReactStore } from "./store";
 import type { UseBitPersistResult } from "./types";
 
-export function useBitPersist(): UseBitPersistResult {
-  const store = useBitStore<any>();
+export function useBitPersist<T extends object = any>(
+  storeInput: BitFrameworkStoreApi<T> | BitStoreApi<T>,
+): UseBitPersistResult {
+  const store = resolveReactStore(storeInput);
 
   const persistMeta = useSyncExternalStore(
     (cb) => subscribePersistMetaSnapshot(store, cb),

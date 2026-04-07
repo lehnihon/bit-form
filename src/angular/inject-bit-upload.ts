@@ -4,22 +4,29 @@
  * Minimal upload API integrated with global field validation lifecycle.
  */
 
-import { computed, inject, signal } from "@angular/core";
-import type { BitDeleteUploadFn, BitUploadFn } from "../core";
+import { computed, signal } from "@angular/core";
+import type {
+  BitDeleteUploadFn,
+  BitFrameworkStoreApi,
+  BitStoreApi,
+  BitUploadFn,
+} from "../core";
 import { createRemoveHandler, createUploadHandler } from "../core/adapters";
 import { injectBitField } from "./inject-bit-field";
-import { BIT_STORE_TOKEN } from "./provider";
+import { resolveAngularStore } from "./store";
 import type { InjectBitUploadResult } from "./types";
 
 export function injectBitUpload<
+  TForm extends object = any,
   TMetadata extends Record<string, unknown> = Record<string, unknown>,
 >(
+  storeInput: BitFrameworkStoreApi<TForm> | BitStoreApi<TForm>,
   fieldPath: string,
   uploadFn: BitUploadFn<TMetadata>,
   deleteFile?: BitDeleteUploadFn,
 ): InjectBitUploadResult {
-  const store = inject(BIT_STORE_TOKEN);
-  const field = injectBitField(fieldPath);
+  const store = resolveAngularStore(storeInput);
+  const field = injectBitField(store, fieldPath as any);
   let uploadKey: string | null = null;
   const isUploading = signal(false);
 
@@ -38,8 +45,8 @@ export function injectBitUpload<
   const remove = createRemoveHandler(fieldPath, deleteFile, kernelCallbacks);
 
   return {
-    value: computed(() => field.value()),
-    setValue: field.setValue,
+    value: computed(() => field.value()) as any,
+    setValue: field.setValue as any,
     error: computed(() => field.meta.error()),
     isValidating: computed(() => !!field.meta.isValidating() || isUploading()),
     upload,

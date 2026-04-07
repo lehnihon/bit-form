@@ -106,14 +106,13 @@ const store = createBitStore({
 
 ```tsx
 import { useState } from "react";
-import { useBitForm, useBitField, useBitSteps } from "@lehnihon/bit-form/react";
-import { useBitHistory } from "@lehnihon/bit-form/react";
+import type { BitReactBindings } from "@lehnihon/bit-form/react";
 
-// Assumes store is created and provided via BitFormProvider
-export function RegistrationWizard() {
-  const form = useBitForm();
-  const history = useBitHistory();
-  const steps = useBitSteps(["step1", "step2"]);
+// Assumes `bit` comes from createBitReactForm(...) or createBitReactBindings(store)
+export function RegistrationWizard({ bit }: { bit: BitReactBindings<any> }) {
+  const form = bit.useBitForm();
+  const history = bit.useBitHistory();
+  const steps = bit.useBitSteps(["step1", "step2"]);
   const [isValidatingNext, setIsValidatingNext] = useState(false);
 
   const handleNext = async () => {
@@ -122,12 +121,12 @@ export function RegistrationWizard() {
     setIsValidatingNext(false);
   };
 
-  const companyType = useBitField("companyType");
-  const cnpj = useBitField("cnpj");
-  const email = useBitField("email");
-  const salary = useBitField("salary");
-  const hasBonus = useBitField("hasBonus");
-  const bonusValue = useBitField("bonusValue");
+  const companyType = bit.useBitField("companyType");
+  const cnpj = bit.useBitField("cnpj");
+  const email = bit.useBitField("email");
+  const salary = bit.useBitField("salary");
+  const hasBonus = bit.useBitField("hasBonus");
+  const bonusValue = bit.useBitField("bonusValue");
 
   const handleSubmit = form.onSubmit(async (values) => {
     await api.register(values);

@@ -20,21 +20,18 @@ pnpm add @lehnihon/bit-form
 
 ## Quick Start (React Example)
 
-Since Bit-Form separates the state management (Core) from the UI layer (Framework integrations), setting up a form generally involves three simple steps: creating the store, providing it to your app, and connecting your fields.
+Since Bit-Form separates state management (Core) from framework integrations, setup is straightforward: create bindings and connect your fields.
 
 Here is a quick example using React:
 
-### 1. Create the Store
+### 1. Create the Form Bindings
 
-First, create the store with `createBitStore` and your initial values. You can define this outside of your component lifecycle or inside a stable reference to prevent unnecessary re-renders.
-
-The returned value is the official store facade shared by the core API and all framework adapters.
+Use `createBitReactForm` with your initial values. This creates the store internally and returns React bindings.
 
 ```tsx
-import { createBitStore } from "@lehnihon/bit-form";
+import { createBitReactForm } from "@lehnihon/bit-form/react";
 
-// Define your initial state
-const myStore = createBitStore({
+const bit = createBitReactForm({
   initialValues: {
     name: "",
     email: "",
@@ -42,20 +39,13 @@ const myStore = createBitStore({
 });
 ```
 
-### 2. Provide the Store
-
-Wrap your form component with the `BitFormProvider` to make the store context available to all nested hooks.
+### 2. Use Bindings in Components
 
 ```tsx
-import { BitFormProvider } from "@lehnihon/bit-form/react";
 import MyFormContent from "./MyFormContent";
 
 export default function App() {
-  return (
-    <BitFormProvider store={myStore}>
-      <MyFormContent />
-    </BitFormProvider>
-  );
+  return <MyFormContent bit={bit} />;
 }
 ```
 
@@ -64,15 +54,15 @@ export default function App() {
 Inside your components, use the `useBitField` hook to bind inputs to the store state seamlessly. The hook provides a `props` helper for native inputs and a `meta` object for validation/UI state.
 
 ```tsx
-import { useBitField, useBitForm } from "@lehnihon/bit-form/react";
+import type { BitReactBindings } from "@lehnihon/bit-form/react";
 
-export default function MyFormContent() {
+export default function MyFormContent({ bit }: { bit: BitReactBindings<any> }) {
   // Connect the fields using their paths
-  const nameField = useBitField("name");
-  const emailField = useBitField("email");
+  const nameField = bit.useBitField("name");
+  const emailField = bit.useBitField("email");
 
   // Access form-level actions and metadata
-  const form = useBitForm();
+  const form = bit.useBitForm();
 
   // The submit wrapper automatically calls preventDefault()
   const onSubmit = form.submit((values) => {

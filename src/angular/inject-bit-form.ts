@@ -1,10 +1,17 @@
-import { signal, computed, inject, DestroyRef } from "@angular/core";
-import { useBitStore } from "./provider";
-import { createFrameworkFormBinding, observeFormMetaSnapshot } from "../core";
+import { computed, DestroyRef, inject, signal } from "@angular/core";
+import {
+  BitFrameworkStoreApi,
+  BitStoreApi,
+  createFrameworkFormBinding,
+  observeFormMetaSnapshot,
+} from "../core";
+import { resolveAngularStore } from "./store";
 import type { InjectBitFormResult } from "./types";
 
-export function injectBitForm<T extends object>(): InjectBitFormResult<T> {
-  const store = useBitStore<T>();
+export function injectBitForm<T extends object>(
+  storeInput: BitFrameworkStoreApi<T> | BitStoreApi<T>,
+): InjectBitFormResult<T> {
+  const store = resolveAngularStore(storeInput);
   const destroyRef = inject(DestroyRef);
   const stateSignal = signal({
     isValid: true,

@@ -1,20 +1,24 @@
 import {
   useCallback,
-  useSyncExternalStore,
   useMemo,
   useRef,
   useState,
+  useSyncExternalStore,
 } from "react";
-import { useBitStore } from "./context";
 import {
+  BitFrameworkStoreApi,
+  BitStoreApi,
   createFrameworkFormBinding,
   readFormMetaSnapshot,
   subscribeFormMetaSnapshot,
 } from "../core";
+import { resolveReactStore } from "./store";
 import type { UseBitFormResult } from "./types";
 
-export function useBitForm<T extends object>(): UseBitFormResult<T> {
-  const store = useBitStore<T>();
+export function useBitForm<T extends object>(
+  storeInput: BitFrameworkStoreApi<T> | BitStoreApi<T>,
+): UseBitFormResult<T> {
+  const store = resolveReactStore(storeInput);
 
   const [submitError, setSubmitError] = useState<Error | null>(null);
   const [lastResponse, setLastResponse] = useState<unknown>(null);

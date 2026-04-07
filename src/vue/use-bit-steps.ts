@@ -1,11 +1,19 @@
 import { computed, onMounted, onUnmounted, ref, watch } from "vue";
-import type { ScopeStatus, ValidateScopeResult } from "../core";
+import type {
+  BitFrameworkStoreApi,
+  BitStoreApi,
+  ScopeStatus,
+  ValidateScopeResult,
+} from "../core";
 import { isScopeStatusEqual } from "../core";
-import { useBitStore } from "./context";
+import { resolveVueStore } from "./store";
 import type { UseBitStepsResult } from "./types";
 
-export function useBitSteps(scopeNames: string[]): UseBitStepsResult {
-  const store = useBitStore();
+export function useBitSteps<T extends object = any>(
+  storeInput: BitFrameworkStoreApi<T> | BitStoreApi<T>,
+  scopeNames: string[],
+): UseBitStepsResult {
+  const store = resolveVueStore(storeInput);
   const stepIndex = ref(0);
 
   const scope = computed(() => scopeNames[stepIndex.value] ?? "");

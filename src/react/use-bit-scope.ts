@@ -1,12 +1,20 @@
 import { useCallback, useRef, useSyncExternalStore } from "react";
-import type { ScopeStatus, ValidateScopeResult } from "../core";
+import type {
+  BitFrameworkStoreApi,
+  BitStoreApi,
+  ScopeStatus,
+  ValidateScopeResult,
+} from "../core";
 import { isScopeStatusEqual } from "../core";
-import { useBitStore } from "./context";
+import { resolveReactStore } from "./store";
 
 export type { ScopeStatus, ValidateScopeResult };
 
-export function useBitScope(scopeName: string) {
-  const store = useBitStore();
+export function useBitScope<T extends object = any>(
+  storeInput: BitFrameworkStoreApi<T> | BitStoreApi<T>,
+  scopeName: string,
+) {
+  const store = resolveReactStore(storeInput);
 
   const lastStatus = useRef<ScopeStatus | null>(null);
 

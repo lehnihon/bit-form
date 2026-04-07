@@ -1,12 +1,17 @@
 import { computed, DestroyRef, inject, signal } from "@angular/core";
-import { observeHistoryMetaSnapshot, readHistoryMetaSnapshot } from "../core";
-import { useBitStore } from "./provider";
+import {
+  BitFrameworkStoreApi,
+  BitStoreApi,
+  observeHistoryMetaSnapshot,
+  readHistoryMetaSnapshot,
+} from "../core";
+import { resolveAngularStore } from "./store";
 import type { InjectBitHistoryResult } from "./types";
 
-export function injectBitHistory<
-  T extends object = any,
->(): InjectBitHistoryResult {
-  const store = useBitStore<T>();
+export function injectBitHistory<T extends object = any>(
+  storeInput: BitFrameworkStoreApi<T> | BitStoreApi<T>,
+): InjectBitHistoryResult {
+  const store = resolveAngularStore(storeInput);
   const destroyRef = inject(DestroyRef);
 
   const meta = signal(readHistoryMetaSnapshot(store));

@@ -1,22 +1,22 @@
 # Angular Integration
 
-Bit-Form provides a modern, Signal-based integration for Angular. It leverages Angular's native Dependency Injection and Signals (`@angular/core`) for high-performance reactivity.
+Bit-Form provides a modern, Signal-based integration for Angular through store-bound bindings.
 
-Internally, Angular bindings are typed against `BitFrameworkStoreApi<T>` (stable adapter contract), while applications should keep using `createBitStore()` for store creation.
+There are two usage layers:
 
-For advanced wiring scenarios, `createFrameworkStoreAdapter(store)` is the explicit way to obtain a framework-compatible binding API, as long as `store` comes from `createBitStore()` (or is already symbol-branded).
+- Recommended (basic DX): `createBitAngularForm(config)`
+- Advanced (explicit store control): `createBitStore(config)` + `createBitAngularBindings(store)`
 
-## 1. Provide the Store
+## 1. Quick Setup (Recommended)
 
-Create your `BitStore` instance and provide it to your component or application using `provideBitStore`.
+Create bindings once and consume them inside components.
 
 ```typescript
 import { Component } from "@angular/core";
-import { createBitStore } from "@lehnihon/bit-form";
-import { provideBitStore } from "@lehnihon/bit-form/angular";
+import { createBitAngularForm } from "@lehnihon/bit-form/angular";
 import { FormContentComponent } from "./form-content.component";
 
-const myStore = createBitStore({
+const bit = createBitAngularForm({
   initialValues: { name: "", document: "" },
 });
 
@@ -24,15 +24,24 @@ const myStore = createBitStore({
   selector: "app-root",
   standalone: true,
   imports: [FormContentComponent],
-  providers: [provideBitStore(myStore)],
   template: `<app-form-content></app-form-content>`,
 })
 export class AppComponent {}
 ```
 
+## 2. Advanced Setup (Explicit Store)
+
+```typescript
+import { createBitStore } from "@lehnihon/bit-form";
+import { createBitAngularBindings } from "@lehnihon/bit-form/angular";
+
+const store = createBitStore({ initialValues: { name: "", document: "" } });
+const bit = createBitAngularBindings(store);
+```
+
 ## 2. Connect Fields and Form Logic
 
-Use `injectBitForm` and `injectBitField` inside your child components.
+Use `injectBitForm` and `injectBitField` from a bindings object.
 
 ### Form Structure
 
@@ -64,7 +73,11 @@ Since they are Signals, execute them like functions `()` in templates.
 
 ```typescript
 import { Component } from "@angular/core";
-import { injectBitForm, injectBitField } from "@lehnihon/bit-form/angular";
+import { createBitAngularForm } from "@lehnihon/bit-form/angular";
+
+const bit = createBitAngularForm({
+  initialValues: { name: "", document: "" },
+});
 
 @Component({
   selector: "app-form-content",
@@ -93,8 +106,8 @@ import { injectBitForm, injectBitField } from "@lehnihon/bit-form/angular";
   `,
 })
 export class FormContentComponent {
-  form = injectBitForm();
-  nameField = injectBitField("name");
+  form = bit.injectBitForm();
+  nameField = bit.injectBitField("name");
 
   onSubmit = this.form.submit((values, dirtyValues) => {
     console.log("Angular Data:", values);
@@ -109,7 +122,9 @@ For dynamic array fields, use `injectBitArray`. The `fields()` signal automatica
 
 ```typescript
 import { Component } from "@angular/core";
-import { injectBitArray } from "@lehnihon/bit-form/angular";
+import { createBitAngularForm } from "@lehnihon/bit-form/angular";
+
+const bit = createBitAngularForm({ initialValues: { tags: [] } });
 
 @Component({
   selector: "app-tags",
@@ -129,7 +144,7 @@ import { injectBitArray } from "@lehnihon/bit-form/angular";
   `,
 })
 export class TagsComponent {
-  tags = injectBitArray<string>("tags");
+  tags = bit.injectBitArray("tags");
 }
 ```
 
@@ -138,7 +153,11 @@ export class TagsComponent {
 For multi-step or wizard forms, define `scope` per field in `fields` and use `injectBitScope` to validate and track status per step.
 
 ```typescript
-import { injectBitScope } from "@lehnihon/bit-form/angular";
+import { createBitAngularForm } from "@lehnihon/bit-form/angular";
+
+const bit = createBitAngularForm({
+  initialValues: { name: "", email: "", address: "" },
+});
 
 @Component({...})
 export class WizardStep1Component {
@@ -148,7 +167,7 @@ export class WizardStep1Component {
   //   email: { scope: "step1" },
   //   address: { scope: "step2" },
   // }
-  step1 = injectBitScope("step1");
+  step1 = bit.injectBitScope("step1");
 
   async handleNext() {
     const { valid } = await this.step1.validate();
@@ -171,7 +190,9 @@ Use `injectBitPersist` for explicit draft actions in Angular with Signals.
 
 ```typescript
 import { Component } from "@angular/core";
-import { injectBitPersist } from "@lehnihon/bit-form/angular";
+import { createBitAngularForm } from "@lehnihon/bit-form/angular";
+
+const bit = createBitAngularForm({ initialValues: { draft: "" } });
 
 @Component({
   selector: "app-draft-actions",
@@ -186,7 +207,7 @@ import { injectBitPersist } from "@lehnihon/bit-form/angular";
   `,
 })
 export class DraftActionsComponent {
-  persist = injectBitPersist();
+  persist = bit.injectBitPersist();
 }
 ```
 

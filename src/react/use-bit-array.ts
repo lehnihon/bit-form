@@ -7,17 +7,19 @@ import {
 } from "react";
 import {
   BitArrayPath,
+  BitFrameworkStoreApi,
+  BitStoreApi,
   cleanupRegisteredPrefix,
   createArrayBinding,
   valueEqual,
 } from "../core";
-import { useBitStore } from "./context";
+import { resolveReactStore } from "./store";
 
 export function useBitArray<
   TForm extends object = any,
   P extends BitArrayPath<TForm> = BitArrayPath<TForm>,
->(path: P) {
-  const store = useBitStore<TForm>();
+>(storeInput: BitFrameworkStoreApi<TForm> | BitStoreApi<TForm>, path: P) {
+  const store = resolveReactStore(storeInput);
   const controller = useMemo(
     () => createArrayBinding<TForm, P>(store, path),
     [store, path],

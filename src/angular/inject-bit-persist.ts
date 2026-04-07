@@ -1,12 +1,16 @@
 import { computed, DestroyRef, inject, signal } from "@angular/core";
-import { observePersistMetaSnapshot } from "../core";
-import { useBitStore } from "./provider";
+import {
+  BitFrameworkStoreApi,
+  BitStoreApi,
+  observePersistMetaSnapshot,
+} from "../core";
+import { resolveAngularStore } from "./store";
 import type { InjectBitPersistResult } from "./types";
 
-export function injectBitPersist<
-  T extends object = any,
->(): InjectBitPersistResult {
-  const store = useBitStore<T>();
+export function injectBitPersist<T extends object = any>(
+  storeInput: BitFrameworkStoreApi<T> | BitStoreApi<T>,
+): InjectBitPersistResult {
+  const store = resolveAngularStore(storeInput);
   const persist = signal(store.read.getPersistMetadata());
 
   const unsubscribe = observePersistMetaSnapshot(store, (nextPersist) => {

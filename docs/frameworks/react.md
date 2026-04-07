@@ -1,41 +1,49 @@
 # React Integration
 
-Bit-Form provides first-class support for React through custom hooks and a Context Provider. It ensures your components only re-render when absolutely necessary by subscribing directly to the agnostic `BitStore`.
+Bit-Form provides first-class support for React through store-bound bindings. Components only re-render when subscribed slices change, while core state remains framework-agnostic.
 
-Internally, React bindings are typed against `BitFrameworkStoreApi<T>` (the stable framework adapter contract), while applications still create stores via `createBitStore()`.
+There are two usage layers:
 
-For custom integrations (outside `BitFormProvider`), use `createFrameworkStoreAdapter(store)` only with stores created by `createBitStore()` (or already symbol-branded as framework-compatible).
+- Recommended (basic DX): `createBitReactForm(config)`
+- Advanced (explicit store control): `createBitStore(config)` + `createBitReactBindings(store)`
 
-## 1. Setup the Provider
+## 1. Quick Setup (Recommended)
 
-Wrap your application or form component with `BitFormProvider`. This allows any nested components to access the store via hooks.
+Create bindings once and use them directly in components.
 
 ```tsx
-import { createBitStore } from "@lehnihon/bit-form";
-import { BitFormProvider } from "@lehnihon/bit-form/react";
+import { createBitReactForm } from "@lehnihon/bit-form/react";
 import MyForm from "./MyForm";
 
-const store = createBitStore({
+const bit = createBitReactForm({
   initialValues: { username: "", password: "" },
 });
 
 export default function App() {
-  return (
-    <BitFormProvider store={store}>
-      <MyForm />
-    </BitFormProvider>
-  );
+  return <MyForm bit={bit} />;
 }
 ```
 
-## 2. Using `useBitForm`
+## 2. Advanced Setup (Explicit Store)
+
+Use this when you need direct access to store APIs outside React hooks.
+
+```tsx
+import { createBitStore } from "@lehnihon/bit-form";
+import { createBitReactBindings } from "@lehnihon/bit-form/react";
+
+const store = createBitStore({ initialValues: { username: "", password: "" } });
+const bit = createBitReactBindings(store);
+```
+
+## 3. Using `useBitForm`
 
 The `useBitForm` hook gives you access to the form's metadata and actions. All readonly state is grouped under `meta`, main actions are flat, and secondary actions are grouped.
 
 ### Form Structure
 
 ```tsx
-const form = useBitForm();
+const form = bit.useBitForm();
 
 // Readonly state under meta
 form.meta.isValid; // boolean
@@ -58,12 +66,12 @@ form.setField();
 // ... etc
 
 // Array operations are handled by useBitArray
-const skills = useBitArray("skills");
+const skills = bit.useBitArray("skills");
 skills.append("React");
 skills.remove(0);
 
 // History is now separated
-const history = useBitHistory();
+const history = bit.useBitHistory();
 history.undo();
 history.redo();
 history.canUndo; // boolean
@@ -75,11 +83,11 @@ history.historySize; // number
 ### Basic `submit`
 
 ```tsx
-import { useBitForm, useBitHistory } from "@lehnihon/bit-form/react";
+import type { BitReactBindings } from "@lehnihon/bit-form/react";
 
-export function SubmitButton() {
-  const form = useBitForm();
-  const history = useBitHistory();
+export function SubmitButton({ bit }: { bit: BitReactBindings<any> }) {
+  const form = bit.useBitForm();
+  const history = bit.useBitHistory();
 
   const onSubmit = form.submit((values, dirtyValues) => {
     console.log("Full payload:", values);
@@ -106,7 +114,7 @@ export function SubmitButton() {
 Use `onSubmit` when your form calls an API. It handles `preventDefault`, calls the API, maps 422 validation errors to fields via `setServerErrors`, and exposes `submitError` and `lastResponse` for UI feedback.
 
 ```tsx
-const form = useBitForm();
+const form = bit.useBitForm();
 
 const handleSubmit = form.onSubmit(async (values, dirtyValues) => {
   // Use dirtyValues for PATCH requests
@@ -133,25 +141,11 @@ The `useBitField` hook binds an input to a specific path in your store. It now r
 Field configuration now lives in the store (`fields[path]`). The hook accepts only the field path.
 
 ```tsx
-import { useBitField } from "@lehnihon/bit-form/react";
-import { createBitStore } from "@lehnihon/bit-form";
+import type { BitReactBindings } from "@lehnihon/bit-form/react";
 
-const store = createBitStore({
-  initialValues: { username: "", age: 0 },
-  fields: {
-    age: {
-      validation: {
-        asyncValidate: async (value) =>
-          Number(value) < 18 ? "Must be 18+" : undefined,
-      },
-      mask: "integer",
-    },
-  },
-});
-
-export function UsernameInput() {
-  const username = useBitField("username");
-  const age = useBitField("age");
+export function UsernameInput({ bit }: { bit: BitReactBindings<any> }) {
+  const username = bit.useBitField("username");
+  const age = bit.useBitField("age");
 
   return (
     <div>
@@ -175,10 +169,10 @@ For dynamic lists, use `useBitArray`. It provides array manipulation methods (`a
 Array item keys are generated by the store `idFactory` strategy, so tests and SSR can use deterministic ids when needed.
 
 ```tsx
-import { useBitArray } from "@lehnihon/bit-form/react";
+import type { BitReactBindings } from "@lehnihon/bit-form/react";
 
-export function TagsList() {
-  const { fields, append, remove } = useBitArray("tags");
+export function TagsList({ bit }: { bit: BitReactBindings<any> }) {
+  const { fields, append, remove } = bit.useBitArray("tags");
 
   return (
     <div>
@@ -203,7 +197,7 @@ export function TagsList() {
 For multi-step or wizard forms, define `scope` per field in `fields` and use `useBitScope` to validate and track status per step.
 
 ```tsx
-import { useBitScope } from "@lehnihon/bit-form/react";
+import type { BitReactBindings } from "@lehnihon/bit-form/react";
 
 // Store config:
 // fields: {
@@ -211,7 +205,7 @@ import { useBitScope } from "@lehnihon/bit-form/react";
 //   email: { scope: "step1" },
 //   address: { scope: "step2" },
 // }
-const step1 = useBitScope("step1");
+const step1 = bit.useBitScope("step1");
 
 const handleNext = async () => {
   const { valid } = await step1.validate();
@@ -235,10 +229,10 @@ Use `useBitPersist` when you want to save and restore local drafts explicitly.
 - `meta` exposes `isSaving`, `isRestoring`, and `error`.
 
 ```tsx
-import { useBitPersist } from "@lehnihon/bit-form/react";
+import type { BitReactBindings } from "@lehnihon/bit-form/react";
 
-function DraftActions() {
-  const persist = useBitPersist();
+function DraftActions({ bit }: { bit: BitReactBindings<any> }) {
+  const persist = bit.useBitPersist();
 
   return (
     <>

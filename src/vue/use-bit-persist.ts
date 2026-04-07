@@ -1,10 +1,16 @@
 import { computed, onUnmounted, ref } from "vue";
-import { useBitStore } from "./context";
-import { observePersistMetaSnapshot } from "../core";
+import {
+  BitFrameworkStoreApi,
+  BitStoreApi,
+  observePersistMetaSnapshot,
+} from "../core";
+import { resolveVueStore } from "./store";
 import type { UseBitPersistResult } from "./types";
 
-export function useBitPersist<T extends object = any>(): UseBitPersistResult {
-  const store = useBitStore<T>();
+export function useBitPersist<T extends object = any>(
+  storeInput: BitFrameworkStoreApi<T> | BitStoreApi<T>,
+): UseBitPersistResult {
+  const store = resolveVueStore(storeInput);
   const meta = ref(store.read.getPersistMetadata());
 
   const unsubscribe = observePersistMetaSnapshot(store, (nextMeta) => {

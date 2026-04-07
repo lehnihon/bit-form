@@ -21,21 +21,28 @@
  */
 
 import { useCallback, useRef, useState } from "react";
-import type { BitDeleteUploadFn, BitUploadFn } from "../core";
+import type {
+  BitDeleteUploadFn,
+  BitFrameworkStoreApi,
+  BitStoreApi,
+  BitUploadFn,
+} from "../core";
 import { createRemoveHandler, createUploadHandler } from "../core/adapters";
-import { useBitStore } from "./context";
+import { resolveReactStore } from "./store";
 import type { UseBitUploadResult } from "./types";
 import { useBitField } from "./use-bit-field";
 
 export function useBitUpload<
+  TForm extends object = any,
   TMetadata extends Record<string, unknown> = Record<string, unknown>,
 >(
+  storeInput: BitFrameworkStoreApi<TForm> | BitStoreApi<TForm>,
   fieldPath: string,
   uploadFn: BitUploadFn<TMetadata>,
   deleteFile?: BitDeleteUploadFn,
 ): UseBitUploadResult {
-  const store = useBitStore<any>();
-  const field = useBitField(fieldPath);
+  const store = resolveReactStore(storeInput);
+  const field = useBitField(store, fieldPath as any);
   const uploadKeyRef = useRef<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
 
@@ -61,8 +68,8 @@ export function useBitUpload<
   );
 
   return {
-    value: field.value,
-    setValue: field.setValue,
+    value: field.value as any,
+    setValue: field.setValue as any,
     error: field.meta?.error,
     isValidating: !!field.meta?.isValidating || isUploading,
     upload,

@@ -2,16 +2,7 @@
 
 import { Component } from "@angular/core";
 import { TestBed } from "@angular/core/testing";
-import {
-  injectBitArray,
-  injectBitField,
-  injectBitForm,
-  injectBitHistory,
-  injectBitPersist,
-  injectBitScope,
-  injectBitSteps,
-  provideBitStore,
-} from "bit-form/angular";
+import { createBitAngularBindings } from "bit-form/angular";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createBitStore as createBitStoreRuntime } from "../../../core";
 import { maskBRL } from "../../../mask";
@@ -30,14 +21,16 @@ function createBitStore<T extends object = Record<string, unknown>>(
   return createBitStoreRuntime<T>(config) as any;
 }
 
+let bindings: ReturnType<typeof createBitAngularBindings<any>>;
+
 @Component({ standalone: true, template: "" })
 class HostComponent {
-  form = injectBitForm<MyForm>();
-  history = injectBitHistory<MyForm>();
-  userName = injectBitField<string>("user.name");
-  salary = injectBitField<number>("salary");
-  list = injectBitArray<MyForm, "items">("items");
-  bonusValue = injectBitField<number>("bonusValue");
+  form = bindings.injectBitForm();
+  history = bindings.injectBitHistory();
+  userName = bindings.injectBitField("user.name");
+  salary = bindings.injectBitField("salary");
+  list = bindings.injectBitArray("items");
+  bonusValue = bindings.injectBitField("bonusValue");
 }
 
 describe("Angular Integration (Signals)", () => {
@@ -60,9 +53,10 @@ describe("Angular Integration (Signals)", () => {
       validation: { delay: 0 },
     });
 
+    bindings = createBitAngularBindings<any>(store);
+
     TestBed.configureTestingModule({
       imports: [HostComponent],
-      providers: [provideBitStore(store)],
     });
   });
 
@@ -252,10 +246,21 @@ describe("Angular Integration (Signals)", () => {
     TestBed.resetTestingModule();
     TestBed.configureTestingModule({
       imports: [HostComponent],
-      providers: [provideBitStore(storeWithResolver)],
     });
 
-    const fixture = TestBed.createComponent(HostComponent);
+    const resolverBindings = createBitAngularBindings<any>(storeWithResolver);
+
+    @Component({ standalone: true, template: "" })
+    class ResolverHostComponent {
+      form = resolverBindings.injectBitForm();
+      history = resolverBindings.injectBitHistory();
+      userName = resolverBindings.injectBitField("user.name");
+      salary = resolverBindings.injectBitField("salary");
+      list = resolverBindings.injectBitArray("items");
+      bonusValue = resolverBindings.injectBitField("bonusValue");
+    }
+
+    const fixture = TestBed.createComponent(ResolverHostComponent);
     const app = fixture.componentInstance;
 
     await storeWithResolver.feature.validate();
@@ -280,13 +285,14 @@ describe("Angular Integration (Signals)", () => {
 
     @Component({ standalone: true, template: "" })
     class StepHostComponent {
-      step = injectBitScope("step1");
+      step = scopedBindings.injectBitScope("step1");
     }
+
+    const scopedBindings = createBitAngularBindings<any>(storeWithScopes);
 
     TestBed.resetTestingModule();
     TestBed.configureTestingModule({
       imports: [StepHostComponent],
-      providers: [provideBitStore(storeWithScopes)],
     });
 
     const fixture = TestBed.createComponent(StepHostComponent);
@@ -328,13 +334,14 @@ describe("Angular Integration (Signals)", () => {
 
     @Component({ standalone: true, template: "" })
     class StepsHostComponent {
-      steps = injectBitSteps(["step1", "step2"]);
+      steps = scopedBindings.injectBitSteps(["step1", "step2"]);
     }
+
+    const scopedBindings = createBitAngularBindings<any>(storeWithScopes);
 
     TestBed.resetTestingModule();
     TestBed.configureTestingModule({
       imports: [StepsHostComponent],
-      providers: [provideBitStore(storeWithScopes)],
     });
 
     const fixture = TestBed.createComponent(StepsHostComponent);
@@ -375,8 +382,10 @@ describe("Angular Integration (Signals)", () => {
 
     @Component({ standalone: true, template: "" })
     class PersistHostComponent {
-      persist = injectBitPersist<MyForm>();
+      persist = persistBindings.injectBitPersist();
     }
+
+    let persistBindings: ReturnType<typeof createBitAngularBindings<any>>;
 
     it("deve expor restore, save, clear e meta como signals", async () => {
       const storage = createMockStorage();
@@ -391,9 +400,10 @@ describe("Angular Integration (Signals)", () => {
         persist: { enabled: true, key: "ng-test", storage, autoSave: false },
       });
 
+      persistBindings = createBitAngularBindings<any>(persistStore);
+
       TestBed.configureTestingModule({
         imports: [PersistHostComponent],
-        providers: [provideBitStore(persistStore)],
       });
 
       const fixture = TestBed.createComponent(PersistHostComponent);
@@ -421,9 +431,10 @@ describe("Angular Integration (Signals)", () => {
         persist: { enabled: true, key: "ng-test", storage, autoSave: false },
       });
 
+      persistBindings = createBitAngularBindings<any>(persistStore);
+
       TestBed.configureTestingModule({
         imports: [PersistHostComponent],
-        providers: [provideBitStore(persistStore)],
       });
 
       const fixture = TestBed.createComponent(PersistHostComponent);

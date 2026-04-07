@@ -200,12 +200,12 @@ useFormMeta(store.read);
 
 ### Choosing Your Style
 
-| Context                | Recommended      | Example                                              |
-| ---------------------- | ---------------- | ---------------------------------------------------- |
-| **Direct app code**    | Namespaced store | `store.write.setField()`, `store.read.config`        |
-| **Shared utilities**   | Slices           | Pass `store.read`, `store.write` to functions        |
-| **Framework bindings** | Slices           | `useBitForm(store.read, store.write, store.feature)` |
-| **Testing**            | Slices           | Easier to mock and verify capability contracts       |
+| Context                | Recommended      | Example                                        |
+| ---------------------- | ---------------- | ---------------------------------------------- |
+| **Direct app code**    | Namespaced store | `store.write.setField()`, `store.read.config`  |
+| **Shared utilities**   | Slices           | Pass `store.read`, `store.write` to functions  |
+| **Framework bindings** | Bound helpers    | `const bit = createBitReactBindings(store)`    |
+| **Testing**            | Slices           | Easier to mock and verify capability contracts |
 
 ---
 

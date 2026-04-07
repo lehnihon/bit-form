@@ -1,21 +1,26 @@
 import { DestroyRef, computed, inject, signal } from "@angular/core";
 import {
+  BitFrameworkStoreApi,
   BitPath,
   BitPathValue,
+  BitStoreApi,
   cleanupRegisteredField,
   createFrameworkMaskedFieldBinding,
   deriveFieldMeta,
   isBitFieldInputEventObject,
 } from "../core";
-import { BIT_STORE_TOKEN } from "./provider";
+import { resolveAngularStore } from "./store";
 import type { BitFieldInputEvent, InjectBitFieldResult } from "./types";
 
 export function injectBitField<
   _TValue = any,
   TForm extends object = any,
   P extends BitPath<TForm> = BitPath<TForm>,
->(path: P): InjectBitFieldResult<TForm, P> {
-  const store = inject(BIT_STORE_TOKEN);
+>(
+  storeInput: BitFrameworkStoreApi<TForm> | BitStoreApi<TForm>,
+  path: P,
+): InjectBitFieldResult<TForm, P> {
+  const store = resolveAngularStore(storeInput);
 
   const stateSignal = signal(store.read.getFieldState(path));
 

@@ -3,7 +3,7 @@
 import { act, renderHook } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { createBitStore as createBitStoreRuntime } from "../../../core";
-import { BitFormProvider, useBitField } from "../../../react-native";
+import { createBitReactNativeBindings } from "../../../react-native";
 
 function createBitStore<T extends object = Record<string, unknown>>(
   config?: any,
@@ -18,15 +18,10 @@ describe("React Native Integration (bit-form/react-native)", () => {
       validation: { delay: 0 },
     });
 
-  const wrapper = ({ children, store }: any) => (
-    <BitFormProvider store={store}>{children}</BitFormProvider>
-  );
-
   it("deve retornar props específicas para React Native (onChangeText)", () => {
     const store = createTestStore({ name: "Leandro" });
-    const { result } = renderHook(() => useBitField("name"), {
-      wrapper: (props) => wrapper({ ...props, store }),
-    });
+    const bit = createBitReactNativeBindings<any>(store);
+    const { result } = renderHook(() => bit.useBitField("name"));
 
     expect((result.current.props as any).onChange).toBeUndefined();
     expect(result.current.props.onChangeText).toBeDefined();
@@ -34,17 +29,15 @@ describe("React Native Integration (bit-form/react-native)", () => {
 
   it("deve garantir que o value seja SEMPRE uma string (requisito do TextInput)", () => {
     const store = createTestStore({ age: 25, price: null });
-    const { result: ageField } = renderHook(() => useBitField("age"), {
-      wrapper: (props) => wrapper({ ...props, store }),
-    });
+    const bit = createBitReactNativeBindings<any>(store);
+    const { result: ageField } = renderHook(() => bit.useBitField("age"));
     expect(ageField.current.props.value).toBe("25");
   });
 
   it("deve atualizar a store corretamente via onChangeText", () => {
     const store = createTestStore({ bio: "" });
-    const { result } = renderHook(() => useBitField("bio"), {
-      wrapper: (props) => wrapper({ ...props, store }),
-    });
+    const bit = createBitReactNativeBindings<any>(store);
+    const { result } = renderHook(() => bit.useBitField("bio"));
 
     act(() => {
       result.current.props.onChangeText("Desenvolvedor BitForm");
@@ -56,9 +49,8 @@ describe("React Native Integration (bit-form/react-native)", () => {
 
   it("deve disparar onBlur corretamente no mobile", () => {
     const store = createTestStore({ email: "" });
-    const { result } = renderHook(() => useBitField("email"), {
-      wrapper: (props) => wrapper({ ...props, store }),
-    });
+    const bit = createBitReactNativeBindings<any>(store);
+    const { result } = renderHook(() => bit.useBitField("email"));
 
     act(() => {
       result.current.props.onBlur();
@@ -69,6 +61,7 @@ describe("React Native Integration (bit-form/react-native)", () => {
 
   it("deve reagir a isHidden e isRequired no mobile", () => {
     const store = createTestStore({ type: "PF", cnpj: "" });
+    const bit = createBitReactNativeBindings<any>(store);
     store.feature.registerField("cnpj", {
       conditional: {
         dependsOn: ["type"],
@@ -76,15 +69,10 @@ describe("React Native Integration (bit-form/react-native)", () => {
       },
     });
 
-    const { result } = renderHook(
-      () => ({
-        type: useBitField("type"),
-        cnpj: useBitField("cnpj"),
-      }),
-      {
-        wrapper: (props) => wrapper({ ...props, store }),
-      },
-    );
+    const { result } = renderHook(() => ({
+      type: bit.useBitField("type"),
+      cnpj: bit.useBitField("cnpj"),
+    }));
 
     expect(result.current.cnpj.meta.isHidden).toBe(true);
 
@@ -97,11 +85,10 @@ describe("React Native Integration (bit-form/react-native)", () => {
 
   it("deve limpar config ao desmontar o hook no mobile", () => {
     const store = createTestStore({ name: "" });
+    const bit = createBitReactNativeBindings<any>(store);
     const spy = vi.spyOn(store.feature, "unregisterField");
 
-    const { unmount } = renderHook(() => useBitField("name"), {
-      wrapper: (props) => wrapper({ ...props, store }),
-    });
+    const { unmount } = renderHook(() => bit.useBitField("name"));
 
     unmount();
     expect(spy).toHaveBeenCalledWith("name");

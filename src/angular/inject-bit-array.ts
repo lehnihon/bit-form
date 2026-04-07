@@ -2,17 +2,19 @@ import { computed, DestroyRef, inject, signal } from "@angular/core";
 import {
   BitArrayItem,
   BitArrayPath,
+  BitFrameworkStoreApi,
   BitPathValue,
+  BitStoreApi,
   cleanupRegisteredPrefix,
   createArrayBinding,
 } from "../core";
-import { BIT_STORE_TOKEN } from "./provider";
+import { resolveAngularStore } from "./store";
 
 export function injectBitArray<
   TForm extends object = any,
   P extends BitArrayPath<TForm> = BitArrayPath<TForm>,
->(path: P) {
-  const store = inject(BIT_STORE_TOKEN);
+>(storeInput: BitFrameworkStoreApi<TForm> | BitStoreApi<TForm>, path: P) {
+  const store = resolveAngularStore(storeInput);
   const destroyRef = inject(DestroyRef);
   const controller = createArrayBinding<TForm, P>(store, path);
 

@@ -1,12 +1,11 @@
 // @vitest-environment jsdom
 
 import { mount } from "@vue/test-utils";
-import { useBitUpload, type UseBitUploadResult } from "bit-form/vue";
+import { createBitVueBindings, type UseBitUploadResult } from "bit-form/vue";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { defineComponent, nextTick } from "vue";
 import { createBitStore as createBitStoreRuntime } from "../../../core";
 import type { BitUploadFn } from "../../../core/types/upload";
-import { BIT_STORE_KEY } from "../../../vue/context";
 
 function createBitStore<T extends object = Record<string, unknown>>(
   config?: any,
@@ -20,25 +19,22 @@ describe("useBitUpload (Vue)", () => {
   let store: ReturnType<typeof createBitStore<any>>;
 
   const mountUpload = (
-    factory: () => UseBitUploadResult,
+    factory: (
+      bit: ReturnType<typeof createBitVueBindings>,
+    ) => UseBitUploadResult,
   ): { upload: UseBitUploadResult; wrapper: ReturnType<typeof mount> } => {
     let upload!: UseBitUploadResult;
 
     const TestComponent = defineComponent({
       setup() {
-        upload = factory();
+        const bit = createBitVueBindings(store);
+        upload = factory(bit);
         return {};
       },
       template: "<div></div>",
     });
 
-    const wrapper = mount(TestComponent, {
-      global: {
-        provide: {
-          [BIT_STORE_KEY as symbol]: store,
-        },
-      },
-    });
+    const wrapper = mount(TestComponent);
 
     return { upload, wrapper };
   };
@@ -59,7 +55,9 @@ describe("useBitUpload (Vue)", () => {
   });
 
   it("should initialize with default state", () => {
-    const { upload } = mountUpload(() => useBitUpload("avatar", mockUpload));
+    const { upload } = mountUpload((bit) =>
+      bit.useBitUpload("avatar", mockUpload),
+    );
 
     expect(upload.value.value).toBeUndefined();
     expect(upload.error.value).toBeUndefined();
@@ -67,7 +65,9 @@ describe("useBitUpload (Vue)", () => {
   });
 
   it("should upload file and set field value", async () => {
-    const { upload } = mountUpload(() => useBitUpload("avatar", mockUpload));
+    const { upload } = mountUpload((bit) =>
+      bit.useBitUpload("avatar", mockUpload),
+    );
     const file = new File(["content"], "avatar.jpg", { type: "image/jpeg" });
 
     await upload.upload(file);
@@ -84,7 +84,9 @@ describe("useBitUpload (Vue)", () => {
       throw new Error("Network error");
     }) as any;
 
-    const { upload } = mountUpload(() => useBitUpload("avatar", mockUpload));
+    const { upload } = mountUpload((bit) =>
+      bit.useBitUpload("avatar", mockUpload),
+    );
     const file = new File(["content"], "avatar.jpg", { type: "image/jpeg" });
 
     await upload.upload(file);
@@ -96,8 +98,8 @@ describe("useBitUpload (Vue)", () => {
   });
 
   it("should remove uploaded file", async () => {
-    const { upload } = mountUpload(() =>
-      useBitUpload("avatar", mockUpload, mockDelete),
+    const { upload } = mountUpload((bit) =>
+      bit.useBitUpload("avatar", mockUpload, mockDelete),
     );
 
     const file = new File(["content"], "avatar.jpg", { type: "image/jpeg" });
@@ -112,7 +114,9 @@ describe("useBitUpload (Vue)", () => {
   });
 
   it("should clear state without deleteFile", async () => {
-    const { upload } = mountUpload(() => useBitUpload("avatar", mockUpload));
+    const { upload } = mountUpload((bit) =>
+      bit.useBitUpload("avatar", mockUpload),
+    );
 
     const file = new File(["content"], "avatar.jpg", { type: "image/jpeg" });
     await upload.upload(file);
@@ -133,7 +137,9 @@ describe("useBitUpload (Vue)", () => {
         }),
     ) as any;
 
-    const { upload } = mountUpload(() => useBitUpload("avatar", mockUpload));
+    const { upload } = mountUpload((bit) =>
+      bit.useBitUpload("avatar", mockUpload),
+    );
     const file = new File(["content"], "avatar.jpg", { type: "image/jpeg" });
 
     const uploadPromise = upload.upload(file);
@@ -155,7 +161,9 @@ describe("useBitUpload (Vue)", () => {
   });
 
   it("should support setValue method for field", async () => {
-    const { upload } = mountUpload(() => useBitUpload("avatar", mockUpload));
+    const { upload } = mountUpload((bit) =>
+      bit.useBitUpload("avatar", mockUpload),
+    );
 
     upload.setValue("https://external-cdn.com/avatar.jpg");
     await nextTick();

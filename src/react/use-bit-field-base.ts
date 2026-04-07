@@ -1,19 +1,21 @@
 import { useCallback, useEffect, useRef, useSyncExternalStore } from "react";
 import {
   BitFieldSnapshot,
+  BitFrameworkStoreApi,
   BitPath,
   BitPathValue,
+  BitStoreApi,
   cleanupRegisteredField,
   createFieldStateSnapshot,
 } from "../core";
-import { useBitStore } from "./context";
+import { resolveReactStore } from "./store";
 
 export function useBitFieldBase<
   _TValue = any,
   TForm extends object = any,
   P extends BitPath<TForm> = BitPath<TForm>,
->(path: P) {
-  const store = useBitStore<TForm>();
+>(storeInput: BitFrameworkStoreApi<TForm> | BitStoreApi<TForm>, path: P) {
+  const store = resolveReactStore(storeInput);
   const lastSnapshot = useRef<BitFieldSnapshot<BitPathValue<TForm, P>> | null>(
     null,
   );

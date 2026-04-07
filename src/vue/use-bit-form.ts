@@ -1,10 +1,17 @@
-import { computed, onUnmounted, shallowRef, ref } from "vue";
-import { useBitStore } from "./context";
-import { createFrameworkFormBinding, observeFormMetaSnapshot } from "../core";
+import { computed, onUnmounted, ref, shallowRef } from "vue";
+import {
+  BitFrameworkStoreApi,
+  BitStoreApi,
+  createFrameworkFormBinding,
+  observeFormMetaSnapshot,
+} from "../core";
+import { resolveVueStore } from "./store";
 import type { UseBitFormResult } from "./types";
 
-export function useBitForm<T extends object>(): UseBitFormResult<T> {
-  const store = useBitStore<T>();
+export function useBitForm<T extends object>(
+  storeInput: BitFrameworkStoreApi<T> | BitStoreApi<T>,
+): UseBitFormResult<T> {
+  const store = resolveVueStore(storeInput);
   const state = shallowRef({
     isValid: true,
     isDirty: false,

@@ -11,7 +11,7 @@ This guide helps you diagnose common Bit-Form issues quickly.
 
 ### Checks
 
-1. Confirm your component is under `BitFormProvider` (React/React Native) or framework provider setup.
+1. Confirm your component is using the correct bindings object for the target store instance.
 2. Confirm the field path is correct and matches `initialValues` shape.
 3. Confirm you are reading state from hooks/composables/injectors and not from a stale closure.
 4. Confirm the field is registered (for dynamic fields, registration can be conditional).
@@ -93,7 +93,7 @@ This guide helps you diagnose common Bit-Form issues quickly.
 
 ## Diagnostic Checklist
 
-1. Confirm provider/injection setup.
+1. Confirm bindings are created from the intended store instance.
 2. Confirm field path names and schema shape.
 3. Confirm async validators are stable and timeout-safe.
 4. Confirm conditional logic is configured in store, not only in UI.

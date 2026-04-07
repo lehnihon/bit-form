@@ -1,20 +1,11 @@
 // @vitest-environment jsdom
 
 import { mount } from "@vue/test-utils";
-import {
-  useBitArray,
-  useBitField,
-  useBitForm,
-  useBitHistory,
-  useBitPersist,
-  useBitScope,
-  useBitSteps,
-} from "bit-form/vue";
+import { createBitVueBindings } from "bit-form/vue";
 import { describe, expect, it, vi } from "vitest";
 import { defineComponent, nextTick } from "vue";
 import { createBitStore as createBitStoreRuntime } from "../../../core";
 import { maskBRL } from "../../../mask";
-import { BIT_STORE_KEY } from "../../../vue/context";
 
 function createBitStore<T extends object = Record<string, unknown>>(
   config?: any,
@@ -23,17 +14,16 @@ function createBitStore<T extends object = Record<string, unknown>>(
 }
 
 describe("Vue Integration", () => {
-  const createWrapper = (store: any, setupFn: () => any) => {
+  const createWrapper = (store: any, setupFn: (bit: any) => any) => {
+    const bit = createBitVueBindings(store);
     const TestComponent = defineComponent({
       setup() {
-        return setupFn();
+        return setupFn(bit);
       },
       template: "<div></div>",
     });
 
-    return mount(TestComponent, {
-      global: { provide: { [BIT_STORE_KEY as any]: store } },
-    });
+    return mount(TestComponent);
   };
 
   it("should handle deep nested updates and isDirty state", async () => {
@@ -41,9 +31,9 @@ describe("Vue Integration", () => {
       initialValues: { user: { info: { name: "Leo" } } },
     });
 
-    const wrapper = createWrapper(store, () => ({
-      field: useBitField("user.info.name"),
-      form: useBitForm(),
+    const wrapper = createWrapper(store, (bit) => ({
+      field: bit.useBitField("user.info.name"),
+      form: bit.useBitForm(),
     }));
 
     expect(wrapper.vm.form.meta.isDirty.value).toBe(false);
@@ -65,9 +55,9 @@ describe("Vue Integration", () => {
       },
     });
 
-    const wrapper = createWrapper(store, () => ({
-      type: useBitField("type"),
-      cnpj: useBitField("cnpj"),
+    const wrapper = createWrapper(store, (bit) => ({
+      type: bit.useBitField("type"),
+      cnpj: bit.useBitField("cnpj"),
     }));
 
     expect(wrapper.vm.cnpj.meta.isHidden.value).toBe(true);
@@ -82,8 +72,8 @@ describe("Vue Integration", () => {
     const store = createBitStore({ initialValues: { name: "" } });
     const spy = vi.spyOn(store.feature, "unregisterField");
 
-    const wrapper = createWrapper(store, () => ({
-      field: useBitField("name"),
+    const wrapper = createWrapper(store, (bit) => ({
+      field: bit.useBitField("name"),
     }));
     wrapper.unmount();
     expect(spy).toHaveBeenCalledWith("name");
@@ -95,8 +85,8 @@ describe("Vue Integration", () => {
       masks: { brl: maskBRL },
       fields: { salary: { mask: "brl" } },
     });
-    const wrapper = createWrapper(store, () => ({
-      salary: useBitField("salary"),
+    const wrapper = createWrapper(store, (bit) => ({
+      salary: bit.useBitField("salary"),
     }));
 
     expect(wrapper.vm.salary.displayValue.value).toBe("R$ 10,00");
@@ -111,9 +101,9 @@ describe("Vue Integration", () => {
     const store = createBitStore({ initialValues: { tags: ["A", "B", "C"] } });
     (store as any).triggerValidation = vi.fn();
 
-    const wrapper = createWrapper(store, () => ({
-      list: useBitArray("tags"),
-      form: useBitForm(),
+    const wrapper = createWrapper(store, (bit) => ({
+      list: bit.useBitArray("tags"),
+      form: bit.useBitForm(),
     }));
 
     store.write.setError("tags.2", "Error on C");
@@ -131,8 +121,8 @@ describe("Vue Integration", () => {
     const store = createBitStore({ initialValues: { tags: ["A", "B"] } });
     (store as any).triggerValidation = vi.fn();
 
-    const wrapper = createWrapper(store, () => ({
-      list: useBitArray("tags"),
+    const wrapper = createWrapper(store, (bit) => ({
+      list: bit.useBitArray("tags"),
     }));
 
     store.write.setError("tags.0", "Error on A");
@@ -147,8 +137,8 @@ describe("Vue Integration", () => {
     const store = createBitStore({ initialValues: { tags: [] } });
     const spy = vi.spyOn(store.feature, "unregisterPrefix");
 
-    const wrapper = createWrapper(store, () => ({
-      list: useBitArray("tags"),
+    const wrapper = createWrapper(store, (bit) => ({
+      list: bit.useBitArray("tags"),
     }));
     wrapper.unmount();
     expect(spy).toHaveBeenCalledWith("tags.");
@@ -164,7 +154,7 @@ describe("Vue Integration", () => {
     });
 
     const onSubmit = vi.fn();
-    const wrapper = createWrapper(store, () => ({ form: useBitForm() }));
+    const wrapper = createWrapper(store, (bit) => ({ form: bit.useBitForm() }));
 
     const submitFn = wrapper.vm.form.submit(onSubmit);
     const promise = submitFn();
@@ -176,7 +166,7 @@ describe("Vue Integration", () => {
 
   it("should reset form to initial values", async () => {
     const store = createBitStore({ initialValues: { count: 0 } });
-    const wrapper = createWrapper(store, () => ({ form: useBitForm() }));
+    const wrapper = createWrapper(store, (bit) => ({ form: bit.useBitForm() }));
 
     store.write.setField("count", 10);
     await nextTick();
@@ -193,9 +183,9 @@ describe("Vue Integration", () => {
       history: { enabled: true },
     });
 
-    const wrapper = createWrapper(store, () => ({
-      field: useBitField("name"),
-      history: useBitHistory(),
+    const wrapper = createWrapper(store, (bit) => ({
+      field: bit.useBitField("name"),
+      history: bit.useBitHistory(),
     }));
 
     expect(wrapper.vm.history.historySize.value).toBe(1);
@@ -219,14 +209,14 @@ describe("Vue Integration", () => {
 
   it("should not expose registerMask on useBitForm", () => {
     const store = createBitStore({ initialValues: { name: "" } });
-    const wrapper = createWrapper(store, () => ({ form: useBitForm() }));
+    const wrapper = createWrapper(store, (bit) => ({ form: bit.useBitForm() }));
 
     expect("registerMask" in wrapper.vm.form).toBe(false);
   });
 
   it("should expose getDirtyValues and return only changed values", async () => {
     const store = createBitStore({ initialValues: { name: "Leo", age: 30 } });
-    const wrapper = createWrapper(store, () => ({ form: useBitForm() }));
+    const wrapper = createWrapper(store, (bit) => ({ form: bit.useBitForm() }));
 
     expect(wrapper.vm.form.getDirtyValues()).toEqual({});
 
@@ -239,7 +229,7 @@ describe("Vue Integration", () => {
   it("should pass dirtyValues as second parameter in submit", async () => {
     const store = createBitStore({ initialValues: { name: "Leo", age: 30 } });
     const submitHandler = vi.fn();
-    const wrapper = createWrapper(store, () => ({ form: useBitForm() }));
+    const wrapper = createWrapper(store, (bit) => ({ form: bit.useBitForm() }));
 
     store.write.setField("name", "Updated");
     await nextTick();
@@ -256,7 +246,7 @@ describe("Vue Integration", () => {
   it("should pass dirtyValues as second parameter in onSubmit", async () => {
     const store = createBitStore({ initialValues: { email: "old@test.com" } });
     const apiHandler = vi.fn().mockResolvedValue({ success: true });
-    const wrapper = createWrapper(store, () => ({ form: useBitForm() }));
+    const wrapper = createWrapper(store, (bit) => ({ form: bit.useBitForm() }));
 
     store.write.setField("email", "new@test.com");
     await nextTick();
@@ -279,8 +269,8 @@ describe("Vue Integration", () => {
       },
     });
 
-    const wrapper = createWrapper(store, () => ({
-      step: useBitScope("step1"),
+    const wrapper = createWrapper(store, (bit) => ({
+      step: bit.useBitScope("step1"),
     }));
 
     expect(wrapper.vm.step.status.value.hasErrors).toBe(false);
@@ -310,8 +300,8 @@ describe("Vue Integration", () => {
       validation: { delay: 0 },
     });
 
-    const wrapper = createWrapper(store, () => ({
-      steps: useBitSteps(["step1", "step2"]),
+    const wrapper = createWrapper(store, (bit) => ({
+      steps: bit.useBitSteps(["step1", "step2"]),
     }));
 
     expect(wrapper.vm.steps.step.value).toBe(1);
@@ -353,8 +343,8 @@ describe("Vue Integration", () => {
         persist: { enabled: true, key: "vue-test", storage, autoSave: false },
       });
 
-      const wrapper = createWrapper(store, () => ({
-        persist: useBitPersist(),
+      const wrapper = createWrapper(store, (bit) => ({
+        persist: bit.useBitPersist(),
       }));
 
       expect(typeof wrapper.vm.persist.save).toBe("function");
@@ -372,8 +362,8 @@ describe("Vue Integration", () => {
         persist: { enabled: true, key: "vue-test", storage, autoSave: false },
       });
 
-      const wrapper = createWrapper(store, () => ({
-        persist: useBitPersist(),
+      const wrapper = createWrapper(store, (bit) => ({
+        persist: bit.useBitPersist(),
       }));
 
       await wrapper.vm.persist.save();

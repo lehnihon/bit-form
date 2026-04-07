@@ -1,8 +1,13 @@
 import type { Signal } from "@angular/core";
 import { computed, DestroyRef, inject, signal } from "@angular/core";
-import type { ScopeStatus, ValidateScopeResult } from "../core";
+import type {
+  BitFrameworkStoreApi,
+  BitStoreApi,
+  ScopeStatus,
+  ValidateScopeResult,
+} from "../core";
 import { observeScopeStatusSnapshot } from "../core";
-import { useBitStore } from "./provider";
+import { resolveAngularStore } from "./store";
 
 export type { ScopeStatus, ValidateScopeResult };
 
@@ -17,8 +22,11 @@ interface InjectBitScopeResult {
   unsubscribe: () => void;
 }
 
-export function injectBitScope(scopeName: string): InjectBitScopeResult {
-  const store = useBitStore();
+export function injectBitScope<T extends object = any>(
+  storeInput: BitFrameworkStoreApi<T> | BitStoreApi<T>,
+  scopeName: string,
+): InjectBitScopeResult {
+  const store = resolveAngularStore(storeInput);
   const initialStatus = store.read.getScopeStatus(scopeName);
 
   const status = signal<ScopeStatus>(initialStatus);

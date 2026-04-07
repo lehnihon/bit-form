@@ -1,10 +1,17 @@
 import { computed, onUnmounted, shallowRef } from "vue";
-import { observeHistoryMetaSnapshot, readHistoryMetaSnapshot } from "../core";
-import { useBitStore } from "./context";
+import {
+  BitFrameworkStoreApi,
+  BitStoreApi,
+  observeHistoryMetaSnapshot,
+  readHistoryMetaSnapshot,
+} from "../core";
+import { resolveVueStore } from "./store";
 import type { UseBitHistoryResult } from "./types";
 
-export function useBitHistory<T extends object = any>(): UseBitHistoryResult {
-  const store = useBitStore<T>();
+export function useBitHistory<T extends object = any>(
+  storeInput: BitFrameworkStoreApi<T> | BitStoreApi<T>,
+): UseBitHistoryResult {
+  const store = resolveVueStore(storeInput);
 
   const meta = shallowRef(readHistoryMetaSnapshot(store));
 

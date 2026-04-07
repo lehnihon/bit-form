@@ -1,32 +1,39 @@
 # Vue Integration
 
-Bit-Form embraces Vue's Composition API. It utilizes `provide` and `inject` to pass the store through your component tree, and wraps the store state in Vue's `computed` and `ref` to ensure deep reactivity.
+Bit-Form embraces Vue's Composition API with store-bound bindings, without requiring provide/inject wiring in application code.
 
-Internally, Vue bindings are typed against `BitFrameworkStoreApi<T>` (stable adapter contract), while app code should continue creating stores with `createBitStore()`.
+There are two usage layers:
 
-For custom integrations, use `createFrameworkStoreAdapter(store)` with stores from `createBitStore()` (or already symbol-branded) to obtain the framework binding contract.
+- Recommended (basic DX): `createBitVueForm(config)`
+- Advanced (explicit store control): `createBitStore(config)` + `createBitVueBindings(store)`
 
-## 1. Provide the Store
+## 1. Quick Setup (Recommended)
 
-In your parent component, instantiate the `BitStore` and provide it using `provideBitStore`.
+Create bindings once and consume them inside setup functions.
 
 ```vue
 <script setup lang="ts">
-import { createBitStore } from "@lehnihon/bit-form";
-import { provideBitStore } from "@lehnihon/bit-form/vue";
+import { createBitVueForm } from "@lehnihon/bit-form/vue";
 import UserForm from "./UserForm.vue";
 
-const store = createBitStore({
+const bit = createBitVueForm({
   initialValues: { email: "", age: 18 },
 });
-
-// Provide the store to all child components
-provideBitStore(store);
 </script>
 
 <template>
-  <UserForm />
+  <UserForm :bit="bit" />
 </template>
+```
+
+## 2. Advanced Setup (Explicit Store)
+
+```ts
+import { createBitStore } from "@lehnihon/bit-form";
+import { createBitVueBindings } from "@lehnihon/bit-form/vue";
+
+const store = createBitStore({ initialValues: { email: "", age: 18 } });
+const bit = createBitVueBindings(store);
 ```
 
 ## 2. Using `useBitField`
@@ -40,10 +47,11 @@ For native inputs, bind `v-model` to `modelValue`.
 
 ```vue
 <script setup lang="ts">
-import { useBitField } from "@lehnihon/bit-form/vue";
+import type { BitVueBindings } from "@lehnihon/bit-form/vue";
 
-const emailField = useBitField("email");
-const ageField = useBitField("age");
+const props = defineProps<{ bit: BitVueBindings<any> }>();
+const emailField = props.bit.useBitField("email");
+const ageField = props.bit.useBitField("age");
 </script>
 
 <template>
@@ -75,7 +83,7 @@ Use `useBitForm` to access form metadata and actions. All readonly state is grou
 ### Form Structure
 
 ```ts
-const form = useBitForm();
+const form = bit.useBitForm();
 
 // Readonly state under meta (all ComputedRef or Ref)
 form.meta.isValid; // ComputedRef<boolean>
@@ -97,13 +105,13 @@ form.reset();
 // ... etc
 
 // Array operations are handled by useBitArray
-const skills = useBitArray("skills");
+const skills = bit.useBitArray("skills");
 // Keys come from store idFactory (deterministic when customized)
 skills.append("React");
 skills.remove(0);
 
 // History is now separated
-const history = useBitHistory();
+const history = bit.useBitHistory();
 history.undo();
 history.redo();
 history.canUndo.value; // boolean
@@ -116,9 +124,10 @@ history.historySize.value; // number
 
 ```vue
 <script setup lang="ts">
-import { useBitForm } from "@lehnihon/bit-form/vue";
+import type { BitVueBindings } from "@lehnihon/bit-form/vue";
 
-const form = useBitForm();
+const props = defineProps<{ bit: BitVueBindings<any> }>();
+const form = props.bit.useBitForm();
 
 // Simple submit
 const handleSubmit = form.submit((values, dirtyValues) => {
@@ -155,7 +164,7 @@ For multi-step or wizard forms, define `scope` per field in `fields` and use `us
 
 ```vue
 <script setup lang="ts">
-import { useBitScope } from "@lehnihon/bit-form/vue";
+import type { BitVueBindings } from "@lehnihon/bit-form/vue";
 
 // Store config:
 // fields: {
@@ -163,7 +172,8 @@ import { useBitScope } from "@lehnihon/bit-form/vue";
 //   email: { scope: "step1" },
 //   address: { scope: "step2" },
 // }
-const step1 = useBitScope("step1");
+const props = defineProps<{ bit: BitVueBindings<any> }>();
+const step1 = props.bit.useBitScope("step1");
 
 const handleNext = async () => {
   const { valid } = await step1.validate();
@@ -186,9 +196,10 @@ Its `meta` refs are sourced from the core persistence metadata (`state.persist`)
 
 ```vue
 <script setup lang="ts">
-import { useBitPersist } from "@lehnihon/bit-form/vue";
+import type { BitVueBindings } from "@lehnihon/bit-form/vue";
 
-const persist = useBitPersist();
+const props = defineProps<{ bit: BitVueBindings<any> }>();
+const persist = props.bit.useBitPersist();
 
 async function saveDraft() {
   await persist.save();

@@ -1,12 +1,22 @@
-import { DestroyRef, signal, Signal, inject } from "@angular/core";
-import { useBitStore } from "./provider";
-import { getDeepValue, valueEqual, BitPath, BitPathValue } from "../core";
+import { DestroyRef, inject, signal, Signal } from "@angular/core";
+import {
+  BitFrameworkStoreApi,
+  BitPath,
+  BitPathValue,
+  BitStoreApi,
+  getDeepValue,
+  valueEqual,
+} from "../core";
+import { resolveAngularStore } from "./store";
 
 export function injectBitWatch<
   TForm extends object = any,
   P extends BitPath<TForm> = BitPath<TForm>,
->(path: P): Signal<BitPathValue<TForm, P>> {
-  const store = useBitStore<TForm>();
+>(
+  storeInput: BitFrameworkStoreApi<TForm> | BitStoreApi<TForm>,
+  path: P,
+): Signal<BitPathValue<TForm, P>> {
+  const store = resolveAngularStore(storeInput);
   const destroyRef = inject(DestroyRef);
   const valueSig = signal<BitPathValue<TForm, P>>(
     getDeepValue(store.read.getState().values, path as string) as BitPathValue<

@@ -52,13 +52,12 @@ npx shadcn@latest add input textarea select checkbox switch radio-group
 Example with `BitFormInput`, `BitFormTextarea`, and `BitFormSelect`:
 
 ```tsx
-import { createBitStore } from "@lehnihon/bit-form";
-import { BitFormProvider } from "@lehnihon/bit-form/react";
+import { createBitReactForm } from "@lehnihon/bit-form/react";
 import { BitFormInput } from "./bit-form-input";
 import { BitFormTextarea } from "./bit-form-textarea";
 import { BitFormSelect } from "./bit-form-select";
 
-const store = createBitStore({
+const bit = createBitReactForm({
   initialValues: {
     name: "",
     bio: "",
@@ -68,28 +67,32 @@ const store = createBitStore({
 
 export function MyForm() {
   return (
-    <BitFormProvider store={store}>
-      <form className="space-y-4">
-        <BitFormInput path="name" label="Name" placeholder="Your name" />
-        <BitFormTextarea path="bio" label="Bio" rows={4} />
-        <BitFormSelect
-          path="role"
-          label="Role"
-          placeholder="Select a role"
-          options={[
-            { value: "admin", label: "Admin" },
-            { value: "user", label: "User" },
-          ]}
-        />
-      </form>
-    </BitFormProvider>
+    <form className="space-y-4">
+      <BitFormInput
+        bit={bit}
+        path="name"
+        label="Name"
+        placeholder="Your name"
+      />
+      <BitFormTextarea bit={bit} path="bio" label="Bio" rows={4} />
+      <BitFormSelect
+        bit={bit}
+        path="role"
+        label="Role"
+        placeholder="Select a role"
+        options={[
+          { value: "admin", label: "Admin" },
+          { value: "user", label: "User" },
+        ]}
+      />
+    </form>
   );
 }
 ```
 
 Each wrapper:
 
-- Uses `useBitField(path)` with `field` handlers and `meta` state.
+- Uses `bit.useBitField(path)` with `field` handlers and `meta` state.
 - Supports optional `label` and `description`.
 - Sets `aria-invalid` and `data-invalid` when the field is invalid.
 - Renders the validation error message when present.

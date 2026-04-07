@@ -1,11 +1,19 @@
 import { computed, DestroyRef, inject, signal } from "@angular/core";
-import type { ScopeStatus, ValidateScopeResult } from "../core";
+import type {
+  BitFrameworkStoreApi,
+  BitStoreApi,
+  ScopeStatus,
+  ValidateScopeResult,
+} from "../core";
 import { isScopeStatusEqual } from "../core";
-import { useBitStore } from "./provider";
+import { resolveAngularStore } from "./store";
 import type { InjectBitStepsResult } from "./types";
 
-export function injectBitSteps(scopeNames: string[]): InjectBitStepsResult {
-  const store = useBitStore();
+export function injectBitSteps<T extends object = any>(
+  storeInput: BitFrameworkStoreApi<T> | BitStoreApi<T>,
+  scopeNames: string[],
+): InjectBitStepsResult {
+  const store = resolveAngularStore(storeInput);
   const stepIndex = signal(0);
 
   const scope = computed(() => scopeNames[stepIndex()] ?? "");

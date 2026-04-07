@@ -17,6 +17,7 @@
     "src/react/**/*"
   ],
   "exclude": [
+    "src/react/create-bit-react-bindings.ts",
     "src/react/use-bit-field.ts",
     "src/react/use-bit-upload.ts",
     "src/react/index.ts",

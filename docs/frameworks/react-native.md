@@ -11,7 +11,7 @@ Make sure to import your hooks from `@lehnihon/bit-form/react-native` instead of
 import { useBitField } from "@lehnihon/bit-form/react";
 
 // ✅ Correct for Mobile
-import { useBitField, BitFormProvider } from "@lehnihon/bit-form/react-native";
+import { createBitReactNativeForm } from "@lehnihon/bit-form/react-native";
 ```
 
 ## `useBitField` and `TextInput`
@@ -27,12 +27,16 @@ The hook returns:
 ```tsx
 import React from "react";
 import { View, TextInput, Text, Button } from "react-native";
-import { useBitField, useBitForm } from "@lehnihon/bit-form/react-native";
+import { createBitReactNativeForm } from "@lehnihon/bit-form/react-native";
+
+const bit = createBitReactNativeForm({
+  initialValues: { name: "" },
+});
 
 export function ProfileForm() {
   // Connect field to store
-  const nameField = useBitField("name");
-  const { submit } = useBitForm();
+  const nameField = bit.useBitField("name");
+  const { submit } = bit.useBitForm();
 
   const handleSave = submit((values) => {
     console.log("Saved Data:", values);
@@ -59,17 +63,19 @@ export function ProfileForm() {
 }
 ```
 
-Everything else, including `useBitArray`, `useBitScope`, `useBitStore`, and `BitFormProvider`, works exactly the same as in the standard React integration.
+Everything else, including `useBitArray`, `useBitScope`, and `useBitPersist`, follows the same bindings pattern as the standard React integration.
 
 ## Draft Persistence with `useBitPersist`
 
 React Native also exports `useBitPersist` from `@lehnihon/bit-form/react-native`.
 
 ```tsx
-import { useBitPersist } from "@lehnihon/bit-form/react-native";
+import { createBitReactNativeForm } from "@lehnihon/bit-form/react-native";
+
+const bit = createBitReactNativeForm({ initialValues: { draft: "" } });
 
 function DraftActions() {
-  const persist = useBitPersist();
+  const persist = bit.useBitPersist();
 
   return (
     <>

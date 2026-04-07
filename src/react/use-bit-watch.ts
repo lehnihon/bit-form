@@ -1,12 +1,22 @@
-import { useCallback, useSyncExternalStore, useRef } from "react";
-import { useBitStore } from "./context";
-import { getDeepValue, valueEqual, BitPath, BitPathValue } from "../core";
+import { useCallback, useRef, useSyncExternalStore } from "react";
+import {
+  BitFrameworkStoreApi,
+  BitPath,
+  BitPathValue,
+  BitStoreApi,
+  getDeepValue,
+  valueEqual,
+} from "../core";
+import { resolveReactStore } from "./store";
 
 export function useBitWatch<
   TForm extends object = any,
   P extends BitPath<TForm> = BitPath<TForm>,
->(path: P): BitPathValue<TForm, P> {
-  const store = useBitStore<TForm>();
+>(
+  storeInput: BitFrameworkStoreApi<TForm> | BitStoreApi<TForm>,
+  path: P,
+): BitPathValue<TForm, P> {
+  const store = resolveReactStore(storeInput);
   const lastValue = useRef<BitPathValue<TForm, P> | null>(null);
 
   const getSnapshot = useCallback(() => {
