@@ -6,6 +6,14 @@ Internally, React, Vue and Angular now share a small binding-core layer for form
 
 All framework types are **publicly exported** via their respective sub-packages.
 
+## Naming Convention Across Frameworks
+
+- React hooks use `Use*` prefixes (`UseBitFieldMeta`, `UseBitUploadResult`).
+- Vue composable types also use `Use*` prefixes but wrap values in Vue refs/computed types.
+- Angular injector types use `Inject*` prefixes and expose signal/getter-based APIs.
+
+When comparing docs across frameworks, map concepts by suffix (`FieldMeta`, `UploadResult`, `StepsResult`) first, then apply the framework prefix style.
+
 ---
 
 ## React (`@lehnihon/bit-form/react`)
