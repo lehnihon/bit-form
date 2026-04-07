@@ -18,19 +18,17 @@ export function useBitArray<
   P extends BitArrayPath<TForm> = BitArrayPath<TForm>,
 >(path: P) {
   const store = useBitStore<TForm>();
-  const lastSnapshotRef = useRef<unknown[] | null>(null);
   const controller = useMemo(
     () => createArrayBinding<TForm, P>(store, path),
     [store, path],
   );
+  type ArraySnapshot = ReturnType<typeof controller.readItems>;
+  const lastSnapshotRef = useRef<ArraySnapshot | null>(null);
 
   const getSnapshot = useCallback(() => {
-    const next = controller.readItems() as unknown[];
+    const next = controller.readItems();
 
-    if (
-      lastSnapshotRef.current &&
-      valueEqual(lastSnapshotRef.current, next)
-    ) {
+    if (lastSnapshotRef.current && valueEqual(lastSnapshotRef.current, next)) {
       return lastSnapshotRef.current;
     }
 
