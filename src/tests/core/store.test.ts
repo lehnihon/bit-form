@@ -1730,6 +1730,151 @@ describe("BitStore Core", () => {
       expect(store.feature.hasValidationsInProgress()).toBe(false);
     });
 
+    it("deve descartar resultado async stale após prependItem reindexar posições", async () => {
+      const store = createBitStore({
+        initialValues: { list: ["A", "B"] },
+      });
+
+      let resolveApi: (msg: string | null) => void;
+      const mockApi = vi.fn().mockImplementation(() => {
+        return new Promise((resolve) => {
+          resolveApi = resolve;
+        });
+      });
+
+      store.feature.registerField("list.0", {
+        validation: {
+          asyncValidateOn: "change",
+          asyncValidate: mockApi,
+          asyncValidateDelay: 0,
+        },
+      });
+
+      store.write.setField("list.0", "A*");
+      await vi.advanceTimersByTimeAsync(1);
+      expect(store.read.isFieldValidating("list.0")).toBe(true);
+
+      store.feature.prependItem("list", "novo");
+      expect(store.read.getState().values.list).toEqual(["novo", "A*", "B"]);
+
+      resolveApi!("erro stale da posição antiga");
+      await vi.advanceTimersByTimeAsync(1);
+
+      expect(store.read.getState().errors["list.0"]).toBeUndefined();
+      expect(store.read.getState().errors["list.1"]).toBeUndefined();
+      expect(store.feature.hasValidationsInProgress()).toBe(false);
+    });
+
+    it("deve descartar resultado async stale após insertItem deslocar índices", async () => {
+      const store = createBitStore({
+        initialValues: { list: ["A", "B", "C"] },
+      });
+
+      let resolveApi: (msg: string | null) => void;
+      const mockApi = vi.fn().mockImplementation(() => {
+        return new Promise((resolve) => {
+          resolveApi = resolve;
+        });
+      });
+
+      store.feature.registerField("list.1", {
+        validation: {
+          asyncValidateOn: "change",
+          asyncValidate: mockApi,
+          asyncValidateDelay: 0,
+        },
+      });
+
+      store.write.setField("list.1", "B*");
+      await vi.advanceTimersByTimeAsync(1);
+      expect(store.read.isFieldValidating("list.1")).toBe(true);
+
+      // inserir em index 1 desloca list.1 para list.2
+      store.feature.insertItem("list", 1, "novo");
+      expect(store.read.getState().values.list).toEqual([
+        "A",
+        "novo",
+        "B*",
+        "C",
+      ]);
+
+      resolveApi!("erro stale da posição antiga");
+      await vi.advanceTimersByTimeAsync(1);
+
+      expect(store.read.getState().errors["list.1"]).toBeUndefined();
+      expect(store.read.getState().errors["list.2"]).toBeUndefined();
+      expect(store.feature.hasValidationsInProgress()).toBe(false);
+    });
+
+    it("deve descartar resultado async stale após swapItems trocar posições", async () => {
+      const store = createBitStore({
+        initialValues: { list: ["A", "B"] },
+      });
+
+      let resolveApi: (msg: string | null) => void;
+      const mockApi = vi.fn().mockImplementation(() => {
+        return new Promise((resolve) => {
+          resolveApi = resolve;
+        });
+      });
+
+      store.feature.registerField("list.0", {
+        validation: {
+          asyncValidateOn: "change",
+          asyncValidate: mockApi,
+          asyncValidateDelay: 0,
+        },
+      });
+
+      store.write.setField("list.0", "A*");
+      await vi.advanceTimersByTimeAsync(1);
+      expect(store.read.isFieldValidating("list.0")).toBe(true);
+
+      store.feature.swapItems("list", 0, 1);
+      expect(store.read.getState().values.list).toEqual(["B", "A*"]);
+
+      resolveApi!("erro stale da posição antiga");
+      await vi.advanceTimersByTimeAsync(1);
+
+      expect(store.read.getState().errors["list.0"]).toBeUndefined();
+      expect(store.read.getState().errors["list.1"]).toBeUndefined();
+      expect(store.feature.hasValidationsInProgress()).toBe(false);
+    });
+
+    it("deve descartar resultado async stale após replaceItems remover paths antigos", async () => {
+      const store = createBitStore({
+        initialValues: { list: ["A", "B", "C"] },
+      });
+
+      let resolveApi: (msg: string | null) => void;
+      const mockApi = vi.fn().mockImplementation(() => {
+        return new Promise((resolve) => {
+          resolveApi = resolve;
+        });
+      });
+
+      store.feature.registerField("list.2", {
+        validation: {
+          asyncValidateOn: "change",
+          asyncValidate: mockApi,
+          asyncValidateDelay: 0,
+        },
+      });
+
+      store.write.setField("list.2", "C*");
+      await vi.advanceTimersByTimeAsync(1);
+      expect(store.read.isFieldValidating("list.2")).toBe(true);
+
+      store.feature.replaceItems("list", ["X"]);
+      expect(store.read.getState().values.list).toEqual(["X"]);
+
+      resolveApi!("erro stale da posição removida");
+      await vi.advanceTimersByTimeAsync(1);
+
+      expect(store.read.getState().errors["list.2"]).toBeUndefined();
+      expect(store.feature.hasValidationsInProgress()).toBe(false);
+    });
+
     it("deve isolar race conditions entre múltiplos campos assíncronos", async () => {
       const store = createBitStore({
         initialValues: { email: "", username: "" },

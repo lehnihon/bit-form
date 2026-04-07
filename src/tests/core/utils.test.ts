@@ -329,6 +329,36 @@ describe("utils - shiftKeys", () => {
     expect(shifted["items.1.name"]).toBe("C");
     expect(shifted["items.2.name"]).toBeUndefined();
   });
+
+  it("preserva chaves não numéricas sem gerar paths com NaN", () => {
+    const shifted = shiftKeys(
+      {
+        "items.foo": "X",
+        "items.1.name": "B",
+      },
+      "items",
+      0,
+    );
+
+    expect(shifted["items.foo"]).toBe("X");
+    expect(shifted["items.NaN"]).toBeUndefined();
+    expect(shifted["items.0.name"]).toBe("B");
+  });
+
+  it("não remapeia índice com truncamento como '5x'", () => {
+    const shifted = shiftKeys(
+      {
+        "items.5x.name": "X",
+        "items.1.name": "B",
+      },
+      "items",
+      0,
+    );
+
+    expect(shifted["items.5x.name"]).toBe("X");
+    expect(shifted["items.NaN"]).toBeUndefined();
+    expect(shifted["items.0.name"]).toBe("B");
+  });
 });
 
 describe("utils - swapKeys", () => {
@@ -349,6 +379,22 @@ describe("utils - moveKeys", () => {
     expect(moved["items.0"]).toBe("B");
     expect(moved["items.1"]).toBe("C");
     expect(moved["items.2"]).toBe("A");
+  });
+
+  it("não corrompe chaves não numéricas ao mover índices", () => {
+    const moved = moveKeys(
+      {
+        "items.foo": "X",
+        "items.0": "A",
+        "items.1": "B",
+      },
+      "items",
+      0,
+      1,
+    );
+
+    expect(moved["items.foo"]).toBe("X");
+    expect(moved["items.NaN"]).toBeUndefined();
   });
 });
 

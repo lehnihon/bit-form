@@ -71,4 +71,20 @@ describe("BitHistoryManager", () => {
 
     expect(patch.operations).toHaveLength(0);
   });
+
+  it("should preserve redo timeline when saveSnapshot is a noop after undo", () => {
+    const history = new BitHistoryManager<{ step: string }>(true, 10);
+
+    history.reset({ step: "A" });
+    history.saveSnapshot({ step: "B" });
+    history.saveSnapshot({ step: "C" });
+
+    expect(history.undo()).toEqual({ step: "B" });
+    expect(history.canRedo).toBe(true);
+
+    history.saveSnapshot({ step: "B" });
+
+    expect(history.canRedo).toBe(true);
+    expect(history.redo()).toEqual({ step: "C" });
+  });
 });

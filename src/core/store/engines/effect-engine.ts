@@ -137,7 +137,11 @@ export class BitStoreEffectEngine<T extends object> {
         continue;
       }
 
-      await effect.reportOperationalError(event);
+      try {
+        await effect.reportOperationalError(event);
+      } catch (error) {
+        this.logEffectHookError(effect.name, "reportOperationalError", error);
+      }
     }
   }
 
@@ -147,7 +151,8 @@ export class BitStoreEffectEngine<T extends object> {
       | "beforeValidate"
       | "afterValidate"
       | "beforeSubmit"
-      | "afterSubmit",
+      | "afterSubmit"
+      | "reportOperationalError",
     error: unknown,
   ): void {
     console.error(

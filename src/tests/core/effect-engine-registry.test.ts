@@ -78,4 +78,45 @@ describe("effect engine registry", () => {
 
     consoleErrorSpy.mockRestore();
   });
+
+  it("deve isolar falhas em reportOperationalError e continuar para o proximo efeito", async () => {
+    const consoleErrorSpy = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+    const registry = new BitEffectRegistry<Record<string, unknown>>();
+    const reportA = vi.fn(async () => {
+      throw new Error("effect-report-failed");
+    });
+    const reportB = vi.fn(async () => {});
+
+    registry.register({
+      name: "effect-a",
+      reportOperationalError: reportA,
+    });
+
+    registry.register({
+      name: "effect-b",
+      reportOperationalError: reportB,
+    });
+
+    const engine = new BitStoreEffectEngine(registry);
+
+    await expect(
+      engine.reportOperationalError({
+        source: "submit",
+        error: new Error("submit-failed"),
+      }),
+    ).resolves.toBeUndefined();
+
+    expect(reportA).toHaveBeenCalledTimes(1);
+    expect(reportB).toHaveBeenCalledTimes(1);
+    expect(consoleErrorSpy).toHaveBeenCalledWith(
+      expect.stringContaining(
+        'effect "effect-a" failed in hook "reportOperationalError"',
+      ),
+      expect.any(Error),
+    );
+
+    consoleErrorSpy.mockRestore();
+  });
 });

@@ -25,7 +25,10 @@ export class BitComputedManager<T extends object> {
     indexByPath: Map<string, number>;
   } | null = null;
 
-  constructor(private getComputedEntries: () => BitComputedEntry<T>[]) {}
+  constructor(
+    private getComputedEntries: () => BitComputedEntry<T>[],
+    private onError?: (error: unknown, path: string) => void,
+  ) {}
 
   private isCacheableScalar(value: unknown): boolean {
     return (
@@ -60,9 +63,23 @@ export class BitComputedManager<T extends object> {
     }
 
     let nextValues = values;
+    const failedPaths = new Set<string>();
 
     for (const entry of entriesToRun) {
-      const newValue = entry.compute(nextValues);
+      // Skip this entry if any of its declared dependencies failed in this run.
+      if (entry.dependsOn.some((dep) => failedPaths.has(dep))) {
+        failedPaths.add(entry.path);
+        continue;
+      }
+
+      let newValue: unknown;
+      try {
+        newValue = entry.compute(nextValues);
+      } catch (error) {
+        this.onError?.(error, entry.path);
+        failedPaths.add(entry.path);
+        continue;
+      }
       const currentValue = getDeepValue(nextValues, entry.path);
 
       const cached = this.equalityCache.get(entry.path);

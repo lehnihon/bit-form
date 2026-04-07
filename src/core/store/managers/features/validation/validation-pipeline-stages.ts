@@ -143,7 +143,7 @@ export async function abortIfOutdatedStage<T extends object>(args: {
   }
 
   ctx.aborted = true;
-  ctx.result = ctx.currentState.isValid;
+  ctx.result = deps.store.getState().isValid;
   ctx.halted = true;
 }
 

@@ -50,7 +50,10 @@ export function composeBitStoreRuntime<T extends object>(args: {
     });
   const computedManager =
     overrides?.computedManager ??
-    new BitComputedManager<T>(() => fieldRegistry.getComputedEntries());
+    new BitComputedManager<T>(
+      () => fieldRegistry.getComputedEntries(),
+      (error) => config.onUnhandledError(error, "computed"),
+    );
   const dirtyManager = overrides?.dirtyManager ?? new BitDirtyManager<T>();
   const maskManager = overrides?.maskManager ?? new BitMaskManager();
 

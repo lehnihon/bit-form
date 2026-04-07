@@ -12,13 +12,22 @@ interface BitPersistManagerCallbacks {
 function getDefaultStorage(): BitPersistStorageAdapter | undefined {
   if (typeof globalThis === "undefined") return undefined;
 
-  const storageLike = (globalThis as { localStorage?: Storage }).localStorage;
+  let storageLike: Storage | undefined;
+  try {
+    storageLike =
+      (globalThis as { localStorage?: Storage }).localStorage ?? undefined;
+  } catch {
+    // Safari Private Mode and some restricted WebViews throw a SecurityError
+    // when the localStorage getter is accessed. Treat as unavailable.
+    return undefined;
+  }
+
   if (!storageLike) return undefined;
 
   return {
-    getItem: (key: string) => storageLike.getItem(key),
-    setItem: (key: string, value: string) => storageLike.setItem(key, value),
-    removeItem: (key: string) => storageLike.removeItem(key),
+    getItem: (key: string) => storageLike!.getItem(key),
+    setItem: (key: string, value: string) => storageLike!.setItem(key, value),
+    removeItem: (key: string) => storageLike!.removeItem(key),
   };
 }
 

@@ -212,13 +212,14 @@ export class BitValidationManager<T extends object> {
       await this.validationPipeline.run(context);
 
       if (context.aborted) {
+        const liveState = this.store.getState();
         await this.store.emitAfterValidate({
-          values: this.store.getState().values,
-          state: this.store.getState(),
+          values: liveState.values,
+          state: liveState,
           scope: context.options?.scope,
           scopeFields: context.targetFields,
-          errors: this.store.getState().errors,
-          result: context.currentState.isValid,
+          errors: liveState.errors,
+          result: liveState.isValid,
           aborted: true,
         });
       }
@@ -262,8 +263,8 @@ export class BitValidationManager<T extends object> {
       setAbortController: (fieldPath, controller) => {
         this.coordinator.setImmediateController(fieldPath, controller);
       },
-      clearAbortController: (fieldPath) => {
-        this.coordinator.clearImmediateController(fieldPath);
+      clearAbortController: (fieldPath, ctrl) => {
+        this.coordinator.clearImmediateController(fieldPath, ctrl);
       },
       setFieldValidating: (fieldPath, isValidating) =>
         this.updateFieldValidating(fieldPath, isValidating),
