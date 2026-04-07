@@ -181,4 +181,164 @@ describe("BitFieldRegistry", () => {
       }),
     );
   });
+
+  it("re-register deve substituir dependências antigas do mesmo path", () => {
+    const registry = new BitFieldRegistry<{
+      a: boolean;
+      b: boolean;
+      x: string;
+    }>();
+
+    const currentValues = { a: false, b: false, x: "" };
+
+    registry.register(
+      "x",
+      {
+        conditional: {
+          dependsOn: ["a"],
+          showIf: (values) => values.a,
+        },
+      },
+      currentValues,
+    );
+
+    registry.register(
+      "x",
+      {
+        conditional: {
+          dependsOn: ["b"],
+          showIf: (values) => values.b,
+        },
+      },
+      currentValues,
+    );
+
+    const diffFromA = registry.updateDependencies("a", currentValues, {
+      ...currentValues,
+      a: true,
+    });
+    expect(diffFromA.affectedFields).not.toContain("x");
+
+    const diffFromB = registry.updateDependencies("b", currentValues, {
+      ...currentValues,
+      b: true,
+    });
+    expect(diffFromB.affectedFields).toContain("x");
+  });
+
+  it("re-register de dependency key deve preservar campos que dependem dela", () => {
+    const registry = new BitFieldRegistry<{
+      trigger: boolean;
+      dep: boolean;
+      sink: string;
+    }>();
+
+    const currentValues = { trigger: false, dep: false, sink: "" };
+
+    registry.register(
+      "sink",
+      {
+        conditional: {
+          dependsOn: ["dep"],
+          showIf: (values) => values.dep,
+        },
+      },
+      currentValues,
+    );
+
+    registry.register(
+      "dep",
+      {
+        conditional: {
+          dependsOn: ["trigger"],
+          showIf: (values) => values.trigger,
+        },
+      },
+      currentValues,
+    );
+
+    // Re-register dependency key with a different config.
+    registry.register(
+      "dep",
+      {
+        conditional: {
+          dependsOn: ["trigger"],
+          showIf: (values) => !values.trigger,
+        },
+      },
+      currentValues,
+    );
+
+    const diffFromDep = registry.updateDependencies("dep", currentValues, {
+      ...currentValues,
+      dep: true,
+    });
+
+    expect(diffFromDep.affectedFields).toContain("sink");
+  });
+
+  it("re-register com ciclo deve manter comportamento anterior via rollback", () => {
+    const onConditionError = vi.fn();
+    const registry = new BitFieldRegistry<{
+      gate: boolean;
+      peer: boolean;
+      target: string;
+    }>(onConditionError);
+
+    const currentValues = { gate: false, peer: false, target: "" };
+
+    registry.register(
+      "target",
+      {
+        conditional: {
+          dependsOn: ["gate"],
+          showIf: (values) => values.gate,
+        },
+      },
+      currentValues,
+    );
+
+    // Valid re-register first.
+    registry.register(
+      "target",
+      {
+        conditional: {
+          dependsOn: ["peer"],
+          showIf: (values) => values.peer,
+        },
+      },
+      currentValues,
+    );
+
+    // This re-register would create cycle (target -> peer, peer -> target).
+    registry.register(
+      "peer",
+      {
+        conditional: {
+          dependsOn: ["target"],
+          showIf: (values) => values.target.length > 0,
+        },
+      },
+      currentValues,
+    );
+
+    registry.register(
+      "target",
+      {
+        conditional: {
+          dependsOn: ["peer"],
+          showIf: (values) => values.peer,
+        },
+      },
+      currentValues,
+    );
+
+    const diffFromPeer = registry.updateDependencies("peer", currentValues, {
+      ...currentValues,
+      peer: true,
+    });
+
+    expect(onConditionError).toHaveBeenCalled();
+    expect(diffFromPeer.affectedFields).toContain("target");
+  });
 });

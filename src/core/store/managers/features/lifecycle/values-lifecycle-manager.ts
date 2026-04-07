@@ -114,7 +114,9 @@ export class BitValuesLifecycleManager<T extends object> {
     );
 
     this.store.resetHistory(clonedValues);
-    this.store.validateNow();
+    void this.store.validateNow().catch((error) => {
+      this.store.config?.onUnhandledError(error, "rebaseValues");
+    });
 
     this.store.emitFieldChange({
       path: "*",
@@ -203,7 +205,9 @@ export class BitValuesLifecycleManager<T extends object> {
     );
 
     this.store.internalSaveSnapshot();
-    this.store.validateNow();
+    void this.store.validateNow().catch((error) => {
+      this.store.config?.onUnhandledError(error, "replaceValuesInternal");
+    });
 
     this.store.emitFieldChange({
       path: "*",

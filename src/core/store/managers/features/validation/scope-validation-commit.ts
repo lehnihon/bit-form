@@ -1,5 +1,5 @@
-import type { BitErrors } from "../../../contracts/types";
 import type { BitValidationPipelinePort } from "../../../contracts/port-types";
+import type { BitErrors } from "../../../contracts/types";
 import { validationCommitOperation } from "../../../engines/operation-engine";
 import { hasAnyError } from "../../../shared/error-map";
 
@@ -9,12 +9,23 @@ export async function commitSynchronousScopeValidation<T extends object>(args: {
   asyncErrors: Map<string, string>;
 }) {
   const { scopeFields, store, asyncErrors } = args;
-  const currentState = store.getState();
+  const initialState = store.getState();
   const resolverErrors = store.config.resolver
-    ? await store.config.resolver(currentState.values, {
+    ? await store.config.resolver(initialState.values, {
         scopeFields,
       })
     : {};
+
+  // Capture current state AFTER async operations to avoid stale state
+  const currentState = store.getState();
+
+  // Guard: if values changed significantly, abort to prevent overwriting newer validation
+  const valuesStale = !Object.is(initialState.values, currentState.values);
+  if (valuesStale) {
+    // Values changed during resolver execution; newer validations may be in flight
+    // Skip this commit to avoid race condition
+    return;
+  }
 
   const dynamicRequiredErrors = store.getRequiredErrors(currentState.values);
   const allErrors = { ...resolverErrors, ...dynamicRequiredErrors };

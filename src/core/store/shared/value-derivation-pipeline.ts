@@ -15,13 +15,21 @@ function collectChangedValueUpdates<
   values: T;
   entries: readonly TEntry[];
   deriveValue: (entry: TEntry, currentValue: unknown) => unknown;
+  onError?: (error: unknown, path: string) => void;
 }): Array<[string, unknown]> {
-  const { values, entries, deriveValue } = args;
+  const { values, entries, deriveValue, onError } = args;
   const updates: Array<[string, unknown]> = [];
 
   for (const entry of entries) {
     const currentValue = getDeepValue(values, entry.path);
-    const derivedValue = deriveValue(entry, currentValue);
+    let derivedValue: unknown;
+
+    try {
+      derivedValue = deriveValue(entry, currentValue);
+    } catch (error) {
+      onError?.(error, entry.path);
+      continue; // Skip this entry, continue with next
+    }
 
     if (!valueEqual(currentValue, derivedValue)) {
       updates.push([entry.path, derivedValue]);
@@ -99,8 +107,10 @@ export function applyValueDerivations<T extends object>(args: {
   changedPaths?: readonly string[];
   normalizerEntries: readonly BitNormalizerEntry<T>[];
   applyComputed: (values: T, changedPaths?: readonly string[]) => T;
+  onError?: (error: unknown, path: string) => void;
 }): T {
-  const { values, changedPaths, normalizerEntries, applyComputed } = args;
+  const { values, changedPaths, normalizerEntries, applyComputed, onError } =
+    args;
 
   const targetedNormalizers = filterDependencyEntries(
     normalizerEntries,
@@ -115,6 +125,7 @@ export function applyValueDerivations<T extends object>(args: {
     values,
     entries: targetedNormalizers,
     deriveValue: (entry, currentValue) => entry.normalize(currentValue, values),
+    onError,
   });
 
   const normalizedValues =
@@ -133,8 +144,9 @@ export function applyTransformDerivations<T extends object>(args: {
   values: T;
   sourceValues: T;
   transformEntries: readonly [string, BitTransformFn<T>][];
+  onError?: (error: unknown, path: string) => void;
 }): T {
-  const { values, sourceValues, transformEntries } = args;
+  const { values, sourceValues, transformEntries, onError } = args;
   if (transformEntries.length === 0) {
     return values;
   }
@@ -144,6 +156,7 @@ export function applyTransformDerivations<T extends object>(args: {
     entries: transformEntries.map(([path, transform]) => ({ path, transform })),
     deriveValue: (entry, currentValue) =>
       entry.transform(currentValue, sourceValues),
+    onError,
   });
 
   if (updates.length === 0) {

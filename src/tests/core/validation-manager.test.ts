@@ -402,6 +402,10 @@ describe("BitValidationManager", () => {
       if (op.kind === "state.patch" && op.partialState.isValidating) {
         state.isValidating = op.partialState.isValidating;
       }
+      if (op.kind === "validation.commit") {
+        state.errors = op.errors;
+        state.isValid = op.isValid;
+      }
     });
 
     const manager = new BitValidationManager<any>({
@@ -451,6 +455,337 @@ describe("BitValidationManager", () => {
     // validators[1] should have been called exactly once and produce no output after cancelAll
     expect(validators[1]).toHaveBeenCalledTimes(1);
     expect(dispatch.mock.calls.length).toBe(callsSnapshot);
+
+    vi.useRealTimers();
+  });
+
+  it("BUG-3: async validation timeout should be inconclusive and not force success", async () => {
+    vi.useFakeTimers();
+
+    const state = {
+      values: { email: "leo" },
+      errors: {},
+      touched: {},
+      isValidating: {} as Record<string, boolean>,
+      persist: { isSaving: false, isRestoring: false, error: null },
+      isValid: true,
+      isSubmitting: false,
+      isDirty: false,
+    } as any;
+
+    const setError = vi.fn();
+    const dispatch = vi.fn((op: any) => {
+      if (op.kind === "state.patch" && op.partialState.isValidating) {
+        state.isValidating = op.partialState.isValidating;
+      }
+    });
+
+    const manager = new BitValidationManager<any>({
+      getState: () => state,
+      dispatch,
+      setError,
+      getFieldConfig: () => ({
+        validation: {
+          asyncValidateOn: "change",
+          asyncValidateDelay: 0,
+          asyncValidateTimeout: 20,
+          asyncValidate: async () =>
+            new Promise<string | null>((resolve) => {
+              setTimeout(() => resolve("backend says invalid"), 200);
+            }),
+        },
+      }),
+      getScopeFields: () => [],
+      forEachFieldConfig: () => {},
+      config: { validationDelay: 0, onUnhandledError: vi.fn() } as any,
+      getRequiredErrors: () => ({}),
+      getHiddenFields: () => new Set<string>(),
+      emitBeforeValidate: async () => {},
+      emitAfterValidate: async () => {},
+    });
+
+    manager.handleAsync("email", "leo");
+    await vi.advanceTimersByTimeAsync(25);
+    await Promise.resolve();
+
+    expect(setError).not.toHaveBeenCalled();
+    expect(state.isValidating.email).toBeUndefined();
+
+    vi.useRealTimers();
+  });
+
+  it("BUG-4: timeout race should clear timeout handles after async resolve", async () => {
+    vi.useFakeTimers();
+
+    const state = {
+      values: { email: "leo@example.com" },
+      errors: {},
+      touched: {},
+      isValidating: {} as Record<string, boolean>,
+      persist: { isSaving: false, isRestoring: false, error: null },
+      isValid: true,
+      isSubmitting: false,
+      isDirty: false,
+    } as any;
+
+    const manager = new BitValidationManager<any>({
+      getState: () => state,
+      dispatch: vi.fn((op: any) => {
+        if (op.kind === "state.patch" && op.partialState.isValidating) {
+          state.isValidating = op.partialState.isValidating;
+        }
+      }),
+      setError: vi.fn(),
+      getFieldConfig: () => ({
+        validation: {
+          asyncValidateOn: "change",
+          asyncValidateDelay: 0,
+          asyncValidateTimeout: 1000,
+          asyncValidate: async () => null,
+        },
+      }),
+      getScopeFields: () => [],
+      forEachFieldConfig: () => {},
+      config: { validationDelay: 0, onUnhandledError: vi.fn() } as any,
+      getRequiredErrors: () => ({}),
+      getHiddenFields: () => new Set<string>(),
+      emitBeforeValidate: async () => {},
+      emitAfterValidate: async () => {},
+    });
+
+    for (let i = 0; i < 10; i += 1) {
+      manager.handleAsync("email", `leo${i}@example.com`);
+    }
+
+    await vi.advanceTimersByTimeAsync(0);
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(vi.getTimerCount()).toBe(0);
+
+    vi.useRealTimers();
+  });
+
+  it("BUG-5: stale async error must be cleared when new timed-out validation starts", async () => {
+    vi.useFakeTimers();
+
+    const state = {
+      values: { email: "first" },
+      errors: {} as Record<string, string>,
+      touched: {},
+      isValidating: {} as Record<string, boolean>,
+      persist: { isSaving: false, isRestoring: false, error: null },
+      isValid: true,
+      isSubmitting: false,
+      isDirty: false,
+    } as any;
+
+    const dispatch = vi.fn((op: any) => {
+      if (op.kind === "state.patch" && op.partialState.isValidating) {
+        state.isValidating = op.partialState.isValidating;
+      }
+    });
+
+    const setError = vi.fn((path: string, message: string | undefined) => {
+      if (message === undefined) {
+        delete state.errors[path];
+      } else {
+        state.errors[path] = message;
+      }
+    });
+
+    const manager = new BitValidationManager<any>({
+      getState: () => state,
+      dispatch,
+      setError,
+      getFieldConfig: () => ({
+        validation: {
+          asyncValidateOn: "change",
+          asyncValidateDelay: 0,
+          asyncValidateTimeout: 20,
+          asyncValidate: async (value: string) => {
+            if (value === "first") {
+              return "taken";
+            }
+
+            return new Promise<string | null>((resolve) => {
+              setTimeout(() => resolve(null), 200);
+            });
+          },
+        },
+      }),
+      getScopeFields: () => [],
+      forEachFieldConfig: () => {},
+      config: { validationDelay: 0, onUnhandledError: vi.fn() } as any,
+      getRequiredErrors: () => ({}),
+      getHiddenFields: () => new Set<string>(),
+      emitBeforeValidate: async () => {},
+      emitAfterValidate: async () => {},
+    });
+
+    manager.handleAsync("email", "first");
+    await vi.advanceTimersByTimeAsync(0);
+    await Promise.resolve();
+
+    expect(state.errors.email).toBe("taken");
+
+    state.values.email = "second";
+    manager.handleAsync("email", "second");
+    await vi.advanceTimersByTimeAsync(25);
+    await Promise.resolve();
+
+    expect(state.errors.email).toBeUndefined();
+    expect(state.isValidating.email).toBeUndefined();
+
+    vi.useRealTimers();
+  });
+
+  it("BUG-7: clearing async state must not remove resolver error with same message", async () => {
+    vi.useFakeTimers();
+
+    const state = {
+      values: { email: "first" },
+      errors: { email: "required" } as Record<string, string>,
+      touched: {},
+      isValidating: {} as Record<string, boolean>,
+      persist: { isSaving: false, isRestoring: false, error: null },
+      isValid: false,
+      isSubmitting: false,
+      isDirty: false,
+    } as any;
+
+    const dispatch = vi.fn((op: any) => {
+      if (op.kind === "state.patch" && op.partialState.isValidating) {
+        state.isValidating = op.partialState.isValidating;
+      }
+      if (op.kind === "validation.commit") {
+        state.errors = op.errors;
+        state.isValid = op.isValid;
+      }
+    });
+
+    const setError = vi.fn((path: string, message: string | undefined) => {
+      if (message === undefined) {
+        delete state.errors[path];
+      } else {
+        state.errors[path] = message;
+      }
+    });
+
+    const manager = new BitValidationManager<any>({
+      getState: () => state,
+      dispatch,
+      setError,
+      getFieldConfig: () => ({
+        validation: {
+          asyncValidateOn: "change",
+          asyncValidateDelay: 0,
+          asyncValidateTimeout: 20,
+          asyncValidate: async () =>
+            new Promise<string | null>((resolve) => {
+              setTimeout(() => resolve(null), 200);
+            }),
+        },
+      }),
+      getScopeFields: () => [],
+      forEachFieldConfig: () => {},
+      config: {
+        validationDelay: 0,
+        resolver: async () => ({ email: "required" }),
+        onUnhandledError: vi.fn(),
+      } as any,
+      getRequiredErrors: () => ({}),
+      getHiddenFields: () => new Set<string>(),
+      emitBeforeValidate: async () => {},
+      emitAfterValidate: async () => {},
+    });
+
+    manager.handleAsync("email", "second");
+    await vi.advanceTimersByTimeAsync(25);
+    await Promise.resolve();
+
+    // Resolver error should remain despite async cleanup/timeout.
+    const validatePromise = manager.validate({ scopeFields: ["email"] });
+    await vi.advanceTimersByTimeAsync(25);
+    await validatePromise;
+    expect(state.errors.email).toBe("required");
+
+    vi.useRealTimers();
+  });
+
+  it("BUG-6: immediate validate with timeout must not reuse stale async error", async () => {
+    vi.useFakeTimers();
+
+    const state = {
+      values: { email: "first" },
+      errors: {} as Record<string, string>,
+      touched: {},
+      isValidating: {} as Record<string, boolean>,
+      persist: { isSaving: false, isRestoring: false, error: null },
+      isValid: true,
+      isSubmitting: false,
+      isDirty: false,
+    } as any;
+
+    const dispatch = vi.fn((op: any) => {
+      if (op.kind === "state.patch" && op.partialState.isValidating) {
+        state.isValidating = op.partialState.isValidating;
+      }
+      if (op.kind === "validation.commit") {
+        state.errors = op.errors;
+        state.isValid = op.isValid;
+      }
+    });
+
+    const setError = vi.fn((path: string, message: string | undefined) => {
+      if (message === undefined) {
+        delete state.errors[path];
+      } else {
+        state.errors[path] = message;
+      }
+    });
+
+    const manager = new BitValidationManager<any>({
+      getState: () => state,
+      dispatch,
+      setError,
+      getFieldConfig: () => ({
+        validation: {
+          asyncValidateOn: "change",
+          asyncValidateDelay: 0,
+          asyncValidateTimeout: 20,
+          asyncValidate: async (value: string) => {
+            if (value === "first") {
+              return "taken";
+            }
+            return new Promise<string | null>((resolve) => {
+              setTimeout(() => resolve(null), 200);
+            });
+          },
+        },
+      }),
+      getScopeFields: () => [],
+      forEachFieldConfig: () => {},
+      config: { validationDelay: 0, onUnhandledError: vi.fn() } as any,
+      getRequiredErrors: () => ({}),
+      getHiddenFields: () => new Set<string>(),
+      emitBeforeValidate: async () => {},
+      emitAfterValidate: async () => {},
+    });
+
+    manager.handleAsync("email", "first");
+    await vi.advanceTimersByTimeAsync(0);
+    await Promise.resolve();
+    expect(state.errors.email).toBe("taken");
+
+    state.values.email = "second";
+    const pendingValidation = manager.validate({ scopeFields: ["email"] });
+    await vi.advanceTimersByTimeAsync(25);
+    await Promise.resolve();
+    const result = await pendingValidation;
+
+    expect(result).toBe(true);
+    expect(state.errors.email).toBeUndefined();
 
     vi.useRealTimers();
   });

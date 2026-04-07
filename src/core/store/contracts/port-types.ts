@@ -91,6 +91,7 @@ export interface BitLifecycleFieldUpdatePort<T extends object> {
 export interface BitLifecycleValuesPort<T extends object> {
   getState: () => BitState<T>;
   dispatch: (operation: BitStoreOperation<T>) => void;
+  config?: BitFrameworkConfig<T>;
   internalSaveSnapshot: () => void;
   evaluateAllDependencies: (values: T) => void;
   cancelAllValidations: () => void;

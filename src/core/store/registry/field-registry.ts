@@ -44,8 +44,23 @@ export class BitFieldRegistry<
   }
 
   register(path: string, config: BitFieldDefinition<T>, currentValues: T) {
+    const previousConfig = this.catalog.get(path);
+    if (previousConfig) {
+      this.conditions.onUnregister(path, previousConfig, {
+        preserveIncomingDependents: true,
+      });
+    }
+
     this.catalog.set(path, config);
-    this.conditions.onRegister(path, config, currentValues);
+    const didRegister = this.conditions.onRegister(path, config, currentValues);
+
+    if (didRegister || !previousConfig) {
+      return;
+    }
+
+    // Rollback to previous field config when re-register fails (e.g. cycle).
+    this.catalog.set(path, previousConfig);
+    this.conditions.onRegister(path, previousConfig, currentValues);
   }
 
   unregister(path: string) {

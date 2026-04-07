@@ -195,6 +195,9 @@ export function composeBitStoreRuntime<T extends object>(args: {
         normalizerEntries: fieldRegistry.getNormalizerEntries(),
         applyComputed: (nextValues, nextChangedPaths) =>
           computedManager.apply(nextValues, nextChangedPaths),
+        onError: (error, path) => {
+          config.onUnhandledError(error, "derivation");
+        },
       }),
   });
 
