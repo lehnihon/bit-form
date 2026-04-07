@@ -124,7 +124,13 @@ export class BitStoreEffectEngine<T extends object> {
   }
 
   onFieldChange(event: BitFieldChangeEvent<T>): void {
-    this.effects.forEach((effect) => effect.onFieldChange?.(event));
+    this.effects.forEach((effect) => {
+      try {
+        effect.onFieldChange?.(event);
+      } catch (error) {
+        this.logEffectHookError(effect.name, "onFieldChange", error);
+      }
+    });
   }
 
   async reportOperationalError(event: {
@@ -152,6 +158,7 @@ export class BitStoreEffectEngine<T extends object> {
       | "afterValidate"
       | "beforeSubmit"
       | "afterSubmit"
+      | "onFieldChange"
       | "reportOperationalError",
     error: unknown,
   ): void {

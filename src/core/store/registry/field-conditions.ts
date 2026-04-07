@@ -34,19 +34,39 @@ export class BitFieldConditions<T extends object = Record<string, unknown>> {
     return this.hiddenFields;
   }
 
-  onRegister(path: string, config: BitFieldDefinition<T>, currentValues: T) {
-    if (config.conditional?.showIf) {
-      this.conditionalVisibilityPaths.add(path);
-    }
-
+  onRegister(
+    path: string,
+    config: BitFieldDefinition<T>,
+    currentValues: T,
+  ): boolean {
+    const hasShowIf = !!config.conditional?.showIf;
     const dependsOn = config.conditional?.dependsOn;
     if (dependsOn) {
+      // CRITICAL: Detect circular dependencies early to prevent O(n²) complexity in updateDependencies
+      if (this.wouldCreateCycle(path, dependsOn)) {
+        const error = new Error(
+          `Circular dependency detected: "${path}" → [${dependsOn.join(", ")}]`,
+        );
+        this.onConditionError?.({ path, kind: "showIf", error });
+        // Fail-safe for production: only visibility-driven fields become hidden on cycle.
+        if (hasShowIf) {
+          this.hiddenFields.add(path);
+        }
+        this.conditionalVisibilityPaths.delete(path);
+        this.requiredConditionalPaths.delete(path);
+        return false;
+      }
+
       dependsOn.forEach((dep) => {
         if (!this.dependencies.has(dep)) {
           this.dependencies.set(dep, new Set());
         }
         this.dependencies.get(dep)!.add(path);
       });
+    }
+
+    if (hasShowIf) {
+      this.conditionalVisibilityPaths.add(path);
     }
 
     if (dependsOn && config.conditional?.requiredIf) {
@@ -62,12 +82,20 @@ export class BitFieldConditions<T extends object = Record<string, unknown>> {
     this.requiredEvaluationVersion += 1;
     this.requiredEvaluationCache.clear();
     this.evaluateFieldCondition(path, currentValues);
+
+    return true;
   }
 
-  onUnregister(path: string, config?: BitFieldDefinition<T>) {
+  onUnregister(
+    path: string,
+    config?: BitFieldDefinition<T>,
+    options?: { preserveIncomingDependents?: boolean },
+  ) {
     this.hiddenFields.delete(path);
     this.conditionalVisibilityPaths.delete(path);
-    this.dependencies.delete(path);
+    if (!options?.preserveIncomingDependents) {
+      this.dependencies.delete(path);
+    }
     this.requiredEvaluationVersion += 1;
     this.requiredEvaluationCache.clear();
     this.requiredConditionalPaths.delete(path);
@@ -136,6 +164,11 @@ export class BitFieldConditions<T extends object = Record<string, unknown>> {
     this.requiredConditionalPaths.forEach((path) => {
       const config = this.getFieldConfig(path);
       if (!config) {
+        return;
+      }
+
+      // CRITICAL: Do not set error for hidden fields - prevents invisible validation errors
+      if (this.isHidden(path)) {
         return;
       }
 
@@ -226,6 +259,36 @@ export class BitFieldConditions<T extends object = Record<string, unknown>> {
     } catch (error) {
       this.onConditionError?.({ path, kind: "showIf", error });
     }
+  }
+
+  private wouldCreateCycle(newPath: string, dependsOn: string[]): boolean {
+    // The dependencies map is reversed (dependency -> dependents).
+    // Adding new edges (dep -> newPath) creates a cycle if newPath can already reach dep.
+    for (const targetDependency of dependsOn) {
+      const queue = [newPath];
+      const visited = new Set<string>();
+
+      while (queue.length > 0) {
+        const current = queue.shift()!;
+
+        if (current === targetDependency) {
+          return true;
+        }
+
+        if (visited.has(current)) {
+          continue;
+        }
+
+        visited.add(current);
+
+        const dependents = this.dependencies.get(current);
+        if (dependents) {
+          queue.push(...dependents);
+        }
+      }
+    }
+
+    return false;
   }
 
   private isEmpty(value: unknown): boolean {

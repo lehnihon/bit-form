@@ -14,6 +14,8 @@ interface PendingAsyncValidationJob<T extends object> {
   timeoutMs?: number;
 }
 
+const BIT_ASYNC_VALIDATION_TIMEOUT = Symbol("bit.async.validation.timeout");
+
 export interface BitAsyncValidationSchedulerPort<T extends object> {
   schedule(fn: () => void, delayMs: number): () => void;
   getValues(): T;
@@ -48,6 +50,7 @@ export class BitAsyncValidationScheduler<T extends object> {
     }
 
     this.cancel(path);
+    this.port.clearAsyncError(path);
     this.port.setFieldValidating(path, true);
 
     const controller = new AbortController();
@@ -105,12 +108,24 @@ export class BitAsyncValidationScheduler<T extends object> {
 
   cancelAll(): void {
     if (this.cancelSchedulerTimeout) {
-      this.cancelSchedulerTimeout();
-      this.cancelSchedulerTimeout = undefined;
+      try {
+        this.cancelSchedulerTimeout();
+      } catch (e) {
+        // Ignore: may fail if cancellation already happened
+      } finally {
+        this.cancelSchedulerTimeout = undefined;
+      }
     }
 
+    this.abortControllers.forEach((controller) => {
+      try {
+        controller.abort();
+      } catch (e) {
+        // Already aborted or invalid
+      }
+    });
+
     this.pendingJobs.clear();
-    this.abortControllers.forEach((controller) => controller.abort());
     this.abortControllers.clear();
   }
 
@@ -186,18 +201,25 @@ export class BitAsyncValidationScheduler<T extends object> {
     }
 
     try {
-      let validationPromise: Promise<string | null | undefined> = job.validate(
-        job.value,
-        this.port.getValues(),
-      );
+      let validationPromise: Promise<
+        string | null | undefined | typeof BIT_ASYNC_VALIDATION_TIMEOUT
+      > = job.validate(job.value, this.port.getValues());
 
       if (typeof job.timeoutMs === "number" && job.timeoutMs > 0) {
+        let timeoutId: ReturnType<typeof setTimeout> | undefined;
         validationPromise = Promise.race([
           validationPromise,
-          new Promise<undefined>((resolve) =>
-            setTimeout(() => resolve(undefined), job.timeoutMs),
-          ),
-        ]);
+          new Promise<typeof BIT_ASYNC_VALIDATION_TIMEOUT>((resolve) => {
+            timeoutId = setTimeout(
+              () => resolve(BIT_ASYNC_VALIDATION_TIMEOUT),
+              job.timeoutMs,
+            );
+          }),
+        ]).finally(() => {
+          if (timeoutId) {
+            clearTimeout(timeoutId);
+          }
+        });
       }
 
       const errorMessage = await validationPromise;
@@ -208,6 +230,11 @@ export class BitAsyncValidationScheduler<T extends object> {
 
       const currentValue = getDeepValue(this.port.getValues(), path);
       if (!valueEqual(currentValue, job.value)) {
+        return;
+      }
+
+      if (errorMessage === BIT_ASYNC_VALIDATION_TIMEOUT) {
+        // Timeout is inconclusive: do not clear/set error and do not report validation success.
         return;
       }
 

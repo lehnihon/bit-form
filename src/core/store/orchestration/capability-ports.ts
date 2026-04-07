@@ -127,6 +127,7 @@ export function createLifecyclePort<T extends object>(
   const values: BitLifecycleValuesPort<T> = {
     getState: deps.getState,
     dispatch: deps.dispatch,
+    config: deps.config,
     internalSaveSnapshot: deps.saveHistorySnapshot,
     evaluateAllDependencies: (newValues) =>
       deps.fieldRegistry.evaluateAll(newValues),

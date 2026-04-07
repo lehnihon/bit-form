@@ -144,6 +144,8 @@ export function createTrackedSubscription<T extends object, TSlice>(args: {
   let isResubscribeQueued = false;
 
   const subscribeWithPaths = (paths: string[]) => {
+    const previousUnsubscribe = activeUnsubscribe;
+
     activeUnsubscribe = subscribeSelector(
       selector,
       (slice) => {
@@ -173,6 +175,9 @@ export function createTrackedSubscription<T extends object, TSlice>(args: {
       },
       withTrackedSelectorPaths(paths, options),
     );
+
+    // Cleanup previous subscription if it exists (CRITICAL: prevents orphaned listeners)
+    previousUnsubscribe?.();
   };
 
   subscribeWithPaths(activePaths);

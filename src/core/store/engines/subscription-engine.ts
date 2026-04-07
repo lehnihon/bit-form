@@ -113,7 +113,13 @@ export class BitSubscriptionEngine<T extends object> {
     nextState: Readonly<BitState<T>>,
     changedPaths?: Iterable<string>,
   ): void {
-    this.listeners.forEach((listener) => listener());
+    this.listeners.forEach((listener) => {
+      try {
+        listener();
+      } catch (error) {
+        console.error("Subscription listener error:", error);
+      }
+    });
 
     if (this.pathScopedSubscriptions.size === 0) {
       return;
@@ -127,7 +133,11 @@ export class BitSubscriptionEngine<T extends object> {
       normalizedChangedPaths.includes("*")
     ) {
       this.pathScopedSubscriptions.forEach((_paths, subscription) => {
-        subscription.notify(nextState);
+        try {
+          subscription.notify(nextState);
+        } catch (error) {
+          console.error("Path subscription notify error:", error);
+        }
       });
       return;
     }
@@ -140,7 +150,11 @@ export class BitSubscriptionEngine<T extends object> {
         this.collectSubscribersForSingleChangedPath(normalizedChangedPaths[0]);
 
       singleScopedSubscribers.forEach((subscription) => {
-        subscription.notify(nextState);
+        try {
+          subscription.notify(nextState);
+        } catch (error) {
+          console.error("Path subscription notify error:", error);
+        }
       });
       return;
     }
@@ -150,7 +164,11 @@ export class BitSubscriptionEngine<T extends object> {
     );
 
     scopedSubscribers.forEach((subscription) => {
-      subscription.notify(nextState);
+      try {
+        subscription.notify(nextState);
+      } catch (error) {
+        console.error("Path subscription notify error:", error);
+      }
     });
   }
 

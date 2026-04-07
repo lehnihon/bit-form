@@ -5,6 +5,8 @@ type BitAsyncValidateFn<T extends object> = NonNullable<
   NonNullable<BitFieldDefinition<T>["validation"]>["asyncValidate"]
 >;
 
+const BIT_ASYNC_VALIDATION_TIMEOUT = Symbol("bit.async.validation.timeout");
+
 export function mergeValidationErrors<T extends object>(args: {
   targetFields?: string[];
   currentErrors: BitErrors<T>;
@@ -153,6 +155,7 @@ export async function runImmediateAsyncValidationStage<T extends object>(args: {
   }
 
   cancelFieldAsync(path);
+  clearAsyncError(path);
 
   const controller = createAbortController();
   setAbortController(path, controller);
@@ -162,17 +165,28 @@ export async function runImmediateAsyncValidationStage<T extends object>(args: {
     const asyncValidateTimeout =
       getFieldConfig(path)?.validation?.asyncValidateTimeout;
 
-    let validationPromise: Promise<string | null | undefined> = (
-      asyncValidate as BitAsyncValidateFn<T>
-    )(getDeepValue(values, path), values);
+    let validationPromise: Promise<
+      string | null | undefined | typeof BIT_ASYNC_VALIDATION_TIMEOUT
+    > = (asyncValidate as BitAsyncValidateFn<T>)(
+      getDeepValue(values, path),
+      values,
+    );
 
     if (typeof asyncValidateTimeout === "number" && asyncValidateTimeout > 0) {
+      let timeoutId: ReturnType<typeof setTimeout> | undefined;
       validationPromise = Promise.race([
         validationPromise,
-        new Promise<undefined>((resolve) =>
-          setTimeout(() => resolve(undefined), asyncValidateTimeout),
-        ),
-      ]);
+        new Promise<typeof BIT_ASYNC_VALIDATION_TIMEOUT>((resolve) => {
+          timeoutId = setTimeout(
+            () => resolve(BIT_ASYNC_VALIDATION_TIMEOUT),
+            asyncValidateTimeout,
+          );
+        }),
+      ]).finally(() => {
+        if (timeoutId) {
+          clearTimeout(timeoutId);
+        }
+      });
     }
 
     const errorMessage = await validationPromise;
@@ -184,7 +198,9 @@ export async function runImmediateAsyncValidationStage<T extends object>(args: {
       return;
     }
 
-    if (errorMessage) {
+    if (errorMessage === BIT_ASYNC_VALIDATION_TIMEOUT) {
+      // Timeout is inconclusive: preserve current async error state.
+    } else if (errorMessage) {
       setAsyncError(path, errorMessage);
     } else {
       clearAsyncError(path);

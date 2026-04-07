@@ -81,12 +81,25 @@ function executeStatePatchOperation<T extends object>(args: {
   const effectiveChangedPaths =
     operation.changedPaths ?? (hasValuesPatch ? ["*"] : undefined);
 
-  return applyStateUpdate({
-    currentState,
-    partialState: operation.partialState,
-    changedPaths: effectiveChangedPaths,
-    applyValueDerivations,
-  });
+  let result;
+  try {
+    result = applyStateUpdate({
+      currentState,
+      partialState: operation.partialState,
+      changedPaths: effectiveChangedPaths,
+      applyValueDerivations,
+    });
+  } catch (error) {
+    // If derivation fails, return state with original values (fail-open)
+    console.error("Derivation error during state patch:", error);
+    result = applyStateUpdate({
+      currentState,
+      partialState: operation.partialState,
+      changedPaths: effectiveChangedPaths,
+      applyValueDerivations: (values) => values, // No derivation fallback
+    });
+  }
+  return result;
 }
 
 function executeStoreOperation<T extends object>(args: {

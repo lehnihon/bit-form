@@ -63,7 +63,23 @@ export class BitValidationManager<T extends object> {
         this.store.setError(path, message);
       },
       clearAsyncError: (path) => {
+        const previousAsyncMessage = this.asyncErrors.get(path);
         this.asyncErrors.delete(path);
+
+        if (previousAsyncMessage && !this.store.config.resolver) {
+          const currentMessage = this.store.getState().errors[path];
+          if (currentMessage === previousAsyncMessage) {
+            this.store.setError(path, undefined);
+          }
+        }
+
+        void commitSynchronousScopeValidation({
+          scopeFields: [path],
+          store: this.pipelineStore,
+          asyncErrors: this.asyncErrors,
+        }).catch((error) => {
+          this.store.config.onUnhandledError(error, "validation");
+        });
       },
       onValidationPassed: async (path) => {
         await commitSynchronousScopeValidation({
