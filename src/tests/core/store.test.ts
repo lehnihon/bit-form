@@ -8,6 +8,13 @@ import {
 const createBitStore = ((config?: any) =>
   createFrameworkStoreAdapter(createBitStoreRuntime(config))) as any;
 
+class CustomProfile {
+  constructor(
+    public name: string,
+    public city: string,
+  ) {}
+}
+
 describe("BitStore Core", () => {
   beforeEach(() => {
     vi.useRealTimers();
@@ -136,6 +143,51 @@ describe("BitStore Core", () => {
       expect(store.read.getState().isDirty).toBe(false);
       expect(store.read.getState().isSubmitting).toBe(false);
       expect(store.read.config.initialValues).toEqual({ name: "Leo" });
+    });
+
+    it("should return a defensive state snapshot", () => {
+      const store = createBitStore({
+        initialValues: { profile: { name: "Leo" } },
+      });
+
+      const snapshot = store.read.getState() as any;
+      snapshot.values.profile.name = "Mutated Externally";
+      snapshot.errors.profile = "external-error";
+
+      const stateAfterExternalMutation = store.read.getState();
+
+      expect(stateAfterExternalMutation.values.profile.name).toBe("Leo");
+      expect(
+        stateAfterExternalMutation.errors.profile as unknown as string,
+      ).toBeUndefined();
+    });
+
+    it("should return a defensive state snapshot for class instances", () => {
+      const store = createBitStore({
+        initialValues: {
+          profile: new CustomProfile("Leo", "Tokyo"),
+        },
+      });
+
+      const snapshot = store.read.getState() as any;
+      snapshot.values.profile.name = "Mutated Externally";
+
+      const stateAfterExternalMutation = store.read.getState() as any;
+      expect(stateAfterExternalMutation.values.profile.name).toBe("Leo");
+    });
+
+    it("should return a defensive field state snapshot", () => {
+      const store = createBitStore({
+        initialValues: {
+          profile: { name: "Leo", city: "Tokyo" },
+        },
+      });
+
+      const fieldState = store.read.getFieldState("profile") as any;
+      fieldState.value.name = "Mutated Externally";
+
+      const stateAfterExternalMutation = store.read.getState() as any;
+      expect(stateAfterExternalMutation.values.profile.name).toBe("Leo");
     });
 
     it("should update field and notify listeners", () => {
@@ -975,6 +1027,64 @@ describe("BitStore Core", () => {
 
       expect(store.read.getState().values.profile.name).toBe("Leandro");
       expect(store.read.getState().isDirty).toBe(true);
+    });
+
+    it("should not crash when partial setValues receives circular references", () => {
+      const store = createBitStore({
+        initialValues: {
+          profile: { name: "Leo", city: "Tokyo" },
+          meta: { version: 1 },
+        },
+      });
+
+      const partial: {
+        profile: { name: string; self?: unknown };
+      } = {
+        profile: { name: "Leandro" },
+      };
+
+      partial.profile.self = partial.profile;
+
+      expect(() => {
+        store.write.setValues(
+          partial as unknown as { profile: { name: string } },
+          {
+            partial: true,
+          },
+        );
+      }).not.toThrow();
+
+      expect(store.read.getState().values.profile.name).toBe("Leandro");
+      expect(store.read.getState().values.profile.city).toBe("Tokyo");
+      expect(store.read.getState().values.meta.version).toBe(1);
+      expect(store.read.getState().isDirty).toBe(true);
+    });
+
+    it("should apply all partial branches that share the same object reference", () => {
+      const store = createBitStore({
+        initialValues: {
+          billing: { city: "Tokyo", zip: "100-0001" },
+          shipping: { city: "Kyoto", zip: "600-0001" },
+        },
+      });
+
+      const shared = { city: "Osaka" };
+
+      store.write.setValues(
+        {
+          billing: shared,
+          shipping: shared,
+        } as unknown as {
+          billing: { city: string };
+          shipping: { city: string };
+        },
+        { partial: true },
+      );
+
+      expect(store.read.getState().values.billing.city).toBe("Osaka");
+      expect(store.read.getState().values.shipping.city).toBe("Osaka");
+      expect(store.read.getState().values.billing.zip).toBe("100-0001");
+      expect(store.read.getState().values.shipping.zip).toBe("600-0001");
     });
 
     it("should not crash when setValues receives values with function properties", () => {

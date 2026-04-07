@@ -358,6 +358,82 @@ describe("Persist Feature (BitPersistManager)", () => {
 
       store.feature.cleanup();
     });
+
+    it("should not crash when persisted payload contains circular references", async () => {
+      const storage = createMockStorage();
+      storage._data["cyclic-form"] = "ignored-by-custom-deserialize";
+
+      const store = createBitStore({
+        initialValues: {
+          profile: { city: "Tokyo", zip: "100-0001" },
+          preferences: { theme: "light" },
+        },
+        persist: {
+          enabled: true,
+          key: "cyclic-form",
+          storage,
+          deserialize: () => {
+            const restored: {
+              profile: { city: string; self?: unknown };
+            } = {
+              profile: { city: "Osaka" },
+            };
+
+            restored.profile.self = restored.profile;
+            return restored as unknown as {
+              profile: { city: string };
+              preferences: { theme: string };
+            };
+          },
+        },
+      });
+
+      const restored = await store.feature.restorePersisted();
+
+      expect(restored).toBe(true);
+      expect(store.read.getState().values.profile.city).toBe("Osaka");
+      expect(store.read.getState().values.profile.zip).toBe("100-0001");
+      expect(store.read.getState().values.preferences.theme).toBe("light");
+
+      store.feature.cleanup();
+    });
+
+    it("should restore shared references without collapsing baseline branches", async () => {
+      const storage = createMockStorage();
+      storage._data["shared-form"] = "ignored-by-custom-deserialize";
+
+      const store = createBitStore({
+        initialValues: {
+          billing: { city: "Tokyo", zip: "100-0001" },
+          shipping: { city: "Kyoto", zip: "600-0001" },
+        },
+        persist: {
+          enabled: true,
+          key: "shared-form",
+          storage,
+          deserialize: () => {
+            const shared = { city: "Osaka" };
+            return {
+              billing: shared,
+              shipping: shared,
+            } as unknown as {
+              billing: { city: string };
+              shipping: { city: string };
+            };
+          },
+        },
+      });
+
+      const restored = await store.feature.restorePersisted();
+
+      expect(restored).toBe(true);
+      expect(store.read.getState().values.billing.city).toBe("Osaka");
+      expect(store.read.getState().values.shipping.city).toBe("Osaka");
+      expect(store.read.getState().values.billing.zip).toBe("100-0001");
+      expect(store.read.getState().values.shipping.zip).toBe("600-0001");
+
+      store.feature.cleanup();
+    });
   });
 
   describe("clearPersisted", () => {

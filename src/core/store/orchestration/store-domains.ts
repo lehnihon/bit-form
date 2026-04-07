@@ -1,3 +1,4 @@
+import { deepClone } from "../../utils";
 import type { BitValidationTriggerOptions } from "../contracts/port-types";
 import type {
   BitFormMeta,
@@ -188,8 +189,8 @@ export function createBitStoreDomains<T extends object>(args: {
   const { runtime, config, fieldRegistry, dirtyManager, stateReader } = args;
 
   const readDomain: BitStoreReadDomain<T> = {
-    getState: () => stateReader.getState(),
-    getFieldState: (path) => stateReader.getFieldState(path),
+    getState: () => deepClone(stateReader.getState()),
+    getFieldState: (path) => deepClone(stateReader.getFieldState(path)),
     getIsValid: () => stateReader.getFlag("isValid"),
     getIsSubmitting: () => stateReader.getFlag("isSubmitting"),
     getIsDirty: () => stateReader.getFlag("isDirty"),
