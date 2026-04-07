@@ -4,7 +4,11 @@ export function deepClone<T>(obj: T): T {
   return cloneValue(obj);
 }
 
-export function deepMerge<T>(target: T, source: any): T {
+export function deepMerge<T>(
+  target: T,
+  source: any,
+  activeMerges: WeakMap<object, unknown> = new WeakMap(),
+): T {
   if (source === undefined) {
     return deepClone(target);
   }
@@ -19,30 +23,42 @@ export function deepMerge<T>(target: T, source: any): T {
     return deepClone(source as T);
   }
 
+  const sourceObject = source as object;
+  if (activeMerges.has(sourceObject)) {
+    return activeMerges.get(sourceObject) as T;
+  }
+
   const base =
     target && typeof target === "object" && !Array.isArray(target)
       ? deepClone(target as any)
       : ({} as Record<string, unknown>);
 
-  for (const key of Object.keys(source)) {
-    const sourceValue = source[key];
-    const baseValue = (base as Record<string, unknown>)[key];
+  activeMerges.set(sourceObject, base);
 
-    if (
-      sourceValue !== null &&
-      typeof sourceValue === "object" &&
-      !Array.isArray(sourceValue) &&
-      !(sourceValue instanceof Date) &&
-      !(sourceValue instanceof RegExp)
-    ) {
-      (base as Record<string, unknown>)[key] = deepMerge(
-        baseValue,
-        sourceValue,
-      );
-      continue;
+  try {
+    for (const key of Object.keys(source)) {
+      const sourceValue = source[key];
+      const baseValue = (base as Record<string, unknown>)[key];
+
+      if (
+        sourceValue !== null &&
+        typeof sourceValue === "object" &&
+        !Array.isArray(sourceValue) &&
+        !(sourceValue instanceof Date) &&
+        !(sourceValue instanceof RegExp)
+      ) {
+        (base as Record<string, unknown>)[key] = deepMerge(
+          baseValue,
+          sourceValue,
+          activeMerges,
+        );
+        continue;
+      }
+
+      (base as Record<string, unknown>)[key] = deepClone(sourceValue);
     }
-
-    (base as Record<string, unknown>)[key] = deepClone(sourceValue);
+  } finally {
+    activeMerges.delete(sourceObject);
   }
 
   return base as T;

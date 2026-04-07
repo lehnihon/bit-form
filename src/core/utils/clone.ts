@@ -64,7 +64,23 @@ export function cloneValue<T>(
   const isPlainObject = prototype === Object.prototype || prototype === null;
 
   if (!isPlainObject) {
-    return obj;
+    const clone = Object.create(prototype) as Record<PropertyKey, unknown>;
+    visited.set(obj as object, clone);
+
+    for (const key of Reflect.ownKeys(obj as object)) {
+      const descriptor = Object.getOwnPropertyDescriptor(obj as object, key);
+      if (!descriptor) {
+        continue;
+      }
+
+      if ("value" in descriptor) {
+        descriptor.value = cloneValue(descriptor.value, visited);
+      }
+
+      Object.defineProperty(clone, key, descriptor);
+    }
+
+    return clone as T;
   }
 
   const clone: any = {};

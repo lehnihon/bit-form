@@ -10,28 +10,48 @@ export class BitValuesLifecycleManager<T extends object> {
     values: DeepPartial<T>,
     prefix = "",
     updates: Array<readonly [string, unknown]> = [],
+    activeBranch: WeakSet<object> = new WeakSet(),
   ): Array<readonly [string, unknown]> {
-    Object.entries(values as Record<string, unknown>).forEach(
-      ([key, value]) => {
-        const nextPath = prefix ? `${prefix}.${key}` : key;
+    if (values && typeof values === "object") {
+      if (activeBranch.has(values as object)) {
+        return updates;
+      }
 
-        if (
-          value &&
-          typeof value === "object" &&
-          !Array.isArray(value) &&
-          Object.keys(value as Record<string, unknown>).length > 0
-        ) {
-          this.collectChangedUpdates(
-            value as DeepPartial<T>,
-            nextPath,
-            updates,
-          );
-          return;
-        }
+      activeBranch.add(values as object);
+    }
 
-        updates.push([nextPath, value]);
-      },
-    );
+    try {
+      Object.entries(values as Record<string, unknown>).forEach(
+        ([key, value]) => {
+          const nextPath = prefix ? `${prefix}.${key}` : key;
+
+          if (
+            value &&
+            typeof value === "object" &&
+            !Array.isArray(value) &&
+            Object.keys(value as Record<string, unknown>).length > 0
+          ) {
+            if (activeBranch.has(value as object)) {
+              return;
+            }
+
+            this.collectChangedUpdates(
+              value as DeepPartial<T>,
+              nextPath,
+              updates,
+              activeBranch,
+            );
+            return;
+          }
+
+          updates.push([nextPath, value]);
+        },
+      );
+    } finally {
+      if (values && typeof values === "object") {
+        activeBranch.delete(values as object);
+      }
+    }
 
     return updates;
   }
