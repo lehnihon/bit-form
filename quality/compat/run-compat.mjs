@@ -92,7 +92,7 @@ try {
   };
 
   const reactDir = createConsumer("react", {
-    "src/main.tsx": `import React from "react";\nimport { createBitStore } from "@lehnihon/bit-form";\nimport { BitFormProvider, useBitField } from "@lehnihon/bit-form/react";\n\nconst store = createBitStore({ initialValues: { name: "" } });\n\nfunction Field() {\n  const field = useBitField("name");\n  return React.createElement("input", field.props);\n}\n\nexport const app = React.createElement(BitFormProvider, {\n  store,\n  children: React.createElement(Field),\n});\n`,
+    "src/main.tsx": `import React from "react";\nimport { createBitStore } from "@lehnihon/bit-form";\nimport { createBitReactBindings } from "@lehnihon/bit-form/react";\n\nconst store = createBitStore({ initialValues: { name: "" } });\nconst { useBitField } = createBitReactBindings(store);\n\nfunction Field() {\n  const field = useBitField("name");\n  return React.createElement("input", field.props);\n}\n\nexport const app = React.createElement(Field);\n`,
   });
 
   writeJson(path.join(reactDir, "package.json"), {
@@ -110,7 +110,7 @@ try {
   });
 
   const vueDir = createConsumer("vue", {
-    "src/main.ts": `import { createBitStore } from "@lehnihon/bit-form";\nimport { provideBitStore, useBitField } from "@lehnihon/bit-form/vue";\n\nconst store = createBitStore({ initialValues: { email: "" } });\nprovideBitStore(store);\nconst field = useBitField("email");\nexport const value = field.value.value;\n`,
+    "src/main.ts": `import { createBitStore } from "@lehnihon/bit-form";\nimport { createBitVueBindings } from "@lehnihon/bit-form/vue";\n\nconst store = createBitStore({ initialValues: { email: "" } });\nconst { useBitField } = createBitVueBindings(store);\nconst field = useBitField("email");\nexport const value = field.value.value;\n`,
   });
 
   writeJson(path.join(vueDir, "package.json"), {
@@ -122,7 +122,7 @@ try {
   });
 
   const angularDir = createConsumer("angular", {
-    "src/main.ts": `import { createBitStore } from "@lehnihon/bit-form";\nimport { provideBitStore, injectBitField } from "@lehnihon/bit-form/angular";\n\nconst store = createBitStore({ initialValues: { age: "" } });\nexport const providers = [provideBitStore(store)];\nexport const field = injectBitField("age");\n`,
+    "src/main.ts": `import { createBitStore } from "@lehnihon/bit-form";\nimport { createBitAngularBindings } from "@lehnihon/bit-form/angular";\n\nconst store = createBitStore({ initialValues: { age: "" } });\nconst { injectBitField } = createBitAngularBindings(store);\nexport const field = injectBitField("age");\n`,
   });
 
   writeJson(path.join(angularDir, "package.json"), {
