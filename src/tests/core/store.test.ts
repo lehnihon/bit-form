@@ -1380,6 +1380,114 @@ describe("BitStore Core", () => {
 
       expect(store.read.getState().values.name).toBe("leandro");
     });
+
+    it("should fail submit when a transform throws instead of silently sending raw payload", async () => {
+      const onUnhandledError = vi.fn();
+      const onSuccess = vi.fn();
+      const store = createBitStore({
+        initialValues: { salary: "R$ 1.500,00" },
+        fields: {
+          salary: {
+            transform: () => {
+              throw new Error("transform crash");
+            },
+          },
+        },
+        onUnhandledError,
+      });
+
+      const result = await store.write.submit(onSuccess);
+
+      expect(result).toMatchObject({ status: "failed" });
+      expect(onSuccess).not.toHaveBeenCalled();
+      expect(onUnhandledError).toHaveBeenCalledWith(
+        expect.objectContaining({ message: "transform crash" }),
+        "submit",
+      );
+      expect(store.read.getState().isSubmitting).toBe(false);
+    });
+
+    it("should not leak hidden field value through transform dependencies on submit", async () => {
+      const store = createBitStore({
+        initialValues: {
+          showSecret: false,
+          secret: "TOKEN",
+          derived: "",
+        },
+        fields: {
+          secret: {
+            conditional: {
+              dependsOn: ["showSecret"],
+              showIf: (values) => values.showSecret === true,
+            },
+          },
+          derived: {
+            transform: (_value, allValues: any) => allValues.secret,
+          },
+        },
+      });
+
+      let submittedData: any;
+      await store.write.submit((values) => {
+        submittedData = values;
+      });
+
+      expect(store.read.isHidden("secret")).toBe(true);
+      expect(submittedData.secret).toBeUndefined();
+      expect(submittedData.derived).toBeUndefined();
+    });
+
+    it("should not reintroduce hidden field when hidden field has its own transform", async () => {
+      const store = createBitStore({
+        initialValues: {
+          showSecret: false,
+          secret: "TOKEN",
+        },
+        fields: {
+          secret: {
+            conditional: {
+              dependsOn: ["showSecret"],
+              showIf: (values) => values.showSecret === true,
+            },
+            transform: (value) => (value == null ? "fallback" : value),
+          },
+        },
+      });
+
+      let submittedData: any;
+      await store.write.submit((values) => {
+        submittedData = values;
+      });
+
+      expect(store.read.isHidden("secret")).toBe(true);
+      expect(submittedData.secret).toBeUndefined();
+    });
+
+    it("should apply transforms incrementally when one transform depends on another", async () => {
+      const store = createBitStore({
+        initialValues: {
+          amount: "10",
+          total: "",
+        },
+        fields: {
+          amount: {
+            transform: (value) => Number(value),
+          },
+          total: {
+            transform: (_value, allValues: any) =>
+              (allValues.amount as number) * 2,
+          },
+        },
+      });
+
+      let submittedData: any;
+      await store.write.submit((values) => {
+        submittedData = values;
+      });
+
+      expect(submittedData.amount).toBe(10);
+      expect(submittedData.total).toBe(20);
+    });
   });
 
   describe("Array Operations", () => {

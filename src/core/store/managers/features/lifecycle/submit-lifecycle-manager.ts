@@ -143,20 +143,26 @@ export class BitSubmitLifecycleManager<T extends object> {
 
   private prepareSubmitValues(ctx: SubmitPipelineContext<T>) {
     const updates: Array<[string, unknown]> = [];
+    const hiddenFields = this.store.getHiddenFields();
 
-    this.store.getHiddenFields().forEach((hiddenPath) => {
+    hiddenFields.forEach((hiddenPath) => {
       updates.push([hiddenPath, undefined]);
-    });
-
-    ctx.valuesToSubmit = applyTransformDerivations({
-      values: ctx.valuesToSubmit,
-      sourceValues: this.store.getState().values,
-      transformEntries: this.store.getTransformEntries(),
     });
 
     if (updates.length > 0) {
       ctx.valuesToSubmit = setDeepValues(ctx.valuesToSubmit, updates);
     }
+
+    ctx.valuesToSubmit = applyTransformDerivations({
+      values: ctx.valuesToSubmit,
+      sourceValues: ctx.valuesToSubmit,
+      transformEntries: this.store
+        .getTransformEntries()
+        .filter(([path]) => !hiddenFields.has(path)),
+      onError: (error) => {
+        throw error;
+      },
+    });
 
     ctx.dirtyValues = this.store.buildDirtyValues(ctx.valuesToSubmit);
   }

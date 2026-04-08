@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { createBitStore as createBitStoreRuntime } from "../../core";
 
 const createBitStore = ((config?: any) => createBitStoreRuntime(config)) as any;
@@ -184,5 +184,27 @@ describe("Incremental Normalization (normalizeDependsOn)", () => {
 
     expect(store.read.getState().values.name).toBe("Ana");
     expect(store.read.getState().values.greeting).toBe("Olá, Ana");
+  });
+
+  it("normalizer downstream lê o valor já normalizado do upstream na mesma rodada", () => {
+    const store = createBitStore({
+      initialValues: { firstName: "", fullName: "" },
+      fields: {
+        firstName: {
+          normalize: (value) => String(value).trim(),
+        },
+        fullName: {
+          normalize: (_value, values: any) => String(values.firstName),
+          normalizeDependsOn: ["firstName"],
+        },
+      },
+    });
+
+    store.write.setField("firstName", "  Ana  ");
+
+    expect(store.read.getState().values).toEqual({
+      firstName: "Ana",
+      fullName: "Ana",
+    });
   });
 });

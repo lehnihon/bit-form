@@ -1,4 +1,4 @@
-import { getDeepValue, setDeepValues, valueEqual } from "../../utils";
+import { getDeepValue, setDeepValue, valueEqual } from "../../utils";
 import { mergePaths } from "../../utils/path-utils";
 import type { BitTransformFn } from "../contracts/types";
 import type { BitNormalizerEntry } from "../registry/field-catalog";
@@ -6,37 +6,6 @@ import type { BitNormalizerEntry } from "../registry/field-catalog";
 interface BitDependencyAwareEntry {
   path: string;
   dependsOn: readonly string[];
-}
-
-function collectChangedValueUpdates<
-  T extends object,
-  TEntry extends { path: string },
->(args: {
-  values: T;
-  entries: readonly TEntry[];
-  deriveValue: (entry: TEntry, currentValue: unknown) => unknown;
-  onError?: (error: unknown, path: string) => void;
-}): Array<[string, unknown]> {
-  const { values, entries, deriveValue, onError } = args;
-  const updates: Array<[string, unknown]> = [];
-
-  for (const entry of entries) {
-    const currentValue = getDeepValue(values, entry.path);
-    let derivedValue: unknown;
-
-    try {
-      derivedValue = deriveValue(entry, currentValue);
-    } catch (error) {
-      onError?.(error, entry.path);
-      continue; // Skip this entry, continue with next
-    }
-
-    if (!valueEqual(currentValue, derivedValue)) {
-      updates.push([entry.path, derivedValue]);
-    }
-  }
-
-  return updates;
 }
 
 export function createDependencyImpactChecker(
@@ -121,17 +90,28 @@ export function applyValueDerivations<T extends object>(args: {
     return applyComputed(values, changedPaths);
   }
 
-  const normalizerUpdates = collectChangedValueUpdates({
-    values,
-    entries: targetedNormalizers,
-    deriveValue: (entry, currentValue) => entry.normalize(currentValue, values),
-    onError,
-  });
+  const normalizerUpdates: Array<[string, unknown]> = [];
+  let normalizedValues = values;
 
-  const normalizedValues =
-    normalizerUpdates.length > 0
-      ? setDeepValues(values, normalizerUpdates)
-      : values;
+  for (const entry of targetedNormalizers) {
+    const currentValue = getDeepValue(normalizedValues, entry.path);
+    let derivedValue: unknown;
+
+    try {
+      derivedValue = entry.normalize(currentValue, normalizedValues);
+    } catch (error) {
+      onError?.(error, entry.path);
+      continue;
+    }
+
+    if (valueEqual(currentValue, derivedValue)) {
+      continue;
+    }
+
+    normalizerUpdates.push([entry.path, derivedValue]);
+    normalizedValues = setDeepValue(normalizedValues, entry.path, derivedValue);
+  }
+
   const nextChangedPaths = mergePaths(
     changedPaths,
     normalizerUpdates.map(([path]) => path),
@@ -151,17 +131,31 @@ export function applyTransformDerivations<T extends object>(args: {
     return values;
   }
 
-  const updates = collectChangedValueUpdates({
-    values,
-    entries: transformEntries.map(([path, transform]) => ({ path, transform })),
-    deriveValue: (entry, currentValue) =>
-      entry.transform(currentValue, sourceValues),
-    onError,
-  });
+  let transformedValues = values;
+  let transformedAllValues = sourceValues;
 
-  if (updates.length === 0) {
-    return values;
+  for (const [path, transform] of transformEntries) {
+    const currentValue = getDeepValue(transformedValues, path);
+    let derivedValue: unknown;
+
+    try {
+      derivedValue = transform(currentValue, transformedAllValues);
+    } catch (error) {
+      onError?.(error, path);
+      continue;
+    }
+
+    if (valueEqual(currentValue, derivedValue)) {
+      continue;
+    }
+
+    transformedValues = setDeepValue(transformedValues, path, derivedValue);
+    transformedAllValues = setDeepValue(
+      transformedAllValues,
+      path,
+      derivedValue,
+    );
   }
 
-  return setDeepValues(values, updates);
+  return transformedValues;
 }
