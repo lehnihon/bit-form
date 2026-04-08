@@ -314,6 +314,7 @@ export function createBitStoreDomains<T extends object>(args: {
         invalidateFieldIndexes: () => {
           fieldRegistry.invalidateIndexes();
         },
+        dispatch: (operation) => runtime.dispatch(operation),
       });
     },
     setField: (path, value) => {

@@ -139,6 +139,7 @@ export function composeBitStoreRuntime<T extends object>(args: {
                 .getCapability("validation")
                 .cleanupPrefix(fieldPrefix),
             invalidateFieldIndexes,
+            dispatch: (operation) => getRuntimeKernel().dispatch(operation),
           });
         },
         triggerValidation: (

@@ -1,12 +1,12 @@
 import type { BitFieldDefinition, BitState } from "../contracts/types";
-import { BitFieldRegistry } from "../registry/field-registry";
-import { BitSubscriptionEngine } from "../engines/subscription-engine";
-import { buildFieldUnregisterPatch } from "../engines/store-field-cleanup-engine";
-import { getScopeRegistrySubscriptionPath } from "../shared/scope-status";
 import {
   patchStateOperation,
   type BitStoreOperation,
 } from "../engines/operation-engine";
+import { buildFieldUnregisterPatch } from "../engines/store-field-cleanup-engine";
+import { BitSubscriptionEngine } from "../engines/subscription-engine";
+import { BitFieldRegistry } from "../registry/field-registry";
+import { getScopeRegistrySubscriptionPath } from "../shared/scope-status";
 import type { BitStoreStateReader } from "../shared/store-state-reader";
 
 export function registerStoreField<T extends object>(args: {
@@ -102,6 +102,7 @@ export function unregisterStorePrefix<T extends object>(args: {
   subscriptions: BitSubscriptionEngine<T>;
   validationCleanupPrefix: (prefix: string) => void;
   invalidateFieldIndexes: () => void;
+  dispatch: (operation: BitStoreOperation<T>) => void;
 }): void {
   const {
     prefix,
@@ -110,6 +111,7 @@ export function unregisterStorePrefix<T extends object>(args: {
     subscriptions,
     validationCleanupPrefix,
     invalidateFieldIndexes,
+    dispatch,
   } = args;
 
   validationCleanupPrefix(prefix);
@@ -126,4 +128,23 @@ export function unregisterStorePrefix<T extends object>(args: {
   impactedScopes.forEach((scopeName) => {
     subscriptions.notify(state, [getScopeRegistrySubscriptionPath(scopeName)]);
   });
+
+  const nextErrors = { ...state.errors };
+  const nextTouched = { ...state.touched };
+  let changed = false;
+
+  for (const [entryPath] of removedEntries) {
+    if (nextErrors[entryPath as keyof typeof nextErrors]) {
+      delete nextErrors[entryPath as keyof typeof nextErrors];
+      changed = true;
+    }
+    if (nextTouched[entryPath as keyof typeof nextTouched]) {
+      delete nextTouched[entryPath as keyof typeof nextTouched];
+      changed = true;
+    }
+  }
+
+  if (changed) {
+    dispatch(patchStateOperation({ errors: nextErrors, touched: nextTouched }));
+  }
 }
