@@ -12,6 +12,8 @@ import {
   setDeepValue,
   shiftKeys,
   swapKeys,
+  unsetDeepValue,
+  unsetDeepValues,
   valueEqual,
 } from "../../core/utils";
 
@@ -279,6 +281,77 @@ describe("utils - setDeepValue", () => {
     const result = setDeepValue({}, "items.0", "x");
     expect(Array.isArray(result.items)).toBe(true);
     expect(result.items[0]).toBe("x");
+  });
+});
+
+// getDeepValue / setDeepValue / unsetDeepValue / unsetDeepValues
+describe("utils - unsetDeepValue", () => {
+  it("remove propriedade de objeto simples", () => {
+    const result = unsetDeepValue({ a: 1, b: 2 }, "a");
+    expect(result).toEqual({ b: 2 });
+    expect(result.a).toBeUndefined();
+  });
+
+  it("remove elemento de array com índice válido", () => {
+    const result = unsetDeepValue({ items: [1, 2, 3] }, "items.1");
+    expect(result.items).toEqual([1, 3]);
+  });
+
+  it("ignora chaves não-numéricas em arrays (data loss prevention)", () => {
+    const original = { items: [{ id: 1 }, { id: 2 }] };
+    const result = unsetDeepValue(original, "items.fieldName");
+    expect(result.items).toEqual([{ id: 1 }, { id: 2 }]);
+  });
+
+  it("ignora índices negativos em arrays", () => {
+    const original = { items: [1, 2, 3] };
+    const result = unsetDeepValue(original, "items.-1");
+    expect(result.items).toEqual([1, 2, 3]);
+  });
+
+  it("remove propriedade em caminho aninhado", () => {
+    const original = { a: { b: { c: 1 } } };
+    const result = unsetDeepValue(original, "a.b.c");
+    expect(result.a.b).toEqual({});
+    expect(result.a.b.c).toBeUndefined();
+  });
+
+  it("não muta o objeto original (imutável)", () => {
+    const original = { items: [1, 2, 3] };
+    const result = unsetDeepValue(original, "items.0");
+    expect(original.items).toEqual([1, 2, 3]);
+    expect(result.items).toEqual([2, 3]);
+  });
+});
+
+describe("utils - unsetDeepValues", () => {
+  it("remove múltiplas propriedades simples", () => {
+    const result = unsetDeepValues({ a: 1, b: 2, c: 3 }, ["a", "c"]);
+    expect(result).toEqual({ b: 2 });
+  });
+
+  it("remove elemento de array com índice válido", () => {
+    const result = unsetDeepValues({ items: [1, 2, 3, 4] }, ["items.1"]);
+    expect(result.items).toEqual([1, 3, 4]);
+  });
+
+  it("valida índices em batch operations - ignora chaves não-numéricas", () => {
+    const original = { items: [{ id: 1 }, { id: 2 }, { id: 3 }] };
+    const result = unsetDeepValues(original, ["items.invalid", "items.1"]);
+    expect(result.items).toEqual([{ id: 1 }, { id: 3 }]);
+  });
+
+  it("valida índices em batch operations - ignora negativos", () => {
+    const original = { items: [1, 2, 3] };
+    const result = unsetDeepValues(original, ["items.-1", "items.0"]);
+    expect(result.items).toEqual([2, 3]);
+  });
+
+  it("não muta o objeto original (imutável)", () => {
+    const original = { a: 1, b: 2 };
+    const result = unsetDeepValues(original, ["a"]);
+    expect(original).toEqual({ a: 1, b: 2 });
+    expect(result).toEqual({ b: 2 });
   });
 });
 
