@@ -1638,6 +1638,31 @@ describe("BitStore Core", () => {
       const values = store.read.getState().values.list as string[];
       expect(values).toEqual(["A", "B", "C"]);
     });
+
+    it("prependItem deve reindexar errors e touched dos itens existentes (regression)", () => {
+      const store = createBitStore({
+        initialValues: { list: ["A", "B", "C"] },
+      });
+      store.feature.triggerValidation = vi.fn();
+
+      store.write.setError("list.0", "Error on A");
+      store.write.blurField("list.0");
+
+      store.feature.prependItem("list", "novo");
+
+      expect(store.read.getState().values.list).toEqual([
+        "novo",
+        "A",
+        "B",
+        "C",
+      ]);
+      // Novo item no índice 0 não deve herdar erro nem touched do antigo índice 0
+      expect(store.read.getState().errors["list.0"]).toBeUndefined();
+      expect(store.read.getState().touched["list.0"]).toBeUndefined();
+      // Erro e touched do antigo índice 0 devem ter sido deslocados para o índice 1
+      expect(store.read.getState().errors["list.1"]).toBe("Error on A");
+      expect(store.read.getState().touched["list.1"]).toBe(true);
+    });
   });
 
   describe("BitStore - Validação Assíncrona (Async Validation)", () => {
