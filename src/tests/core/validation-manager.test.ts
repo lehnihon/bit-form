@@ -1,7 +1,60 @@
 import { describe, expect, it, vi } from "vitest";
 import { BitValidationManager } from "../../core/store/managers/features/validation-manager";
+import { commitSynchronousScopeValidation } from "../../core/store/managers/features/validation/scope-validation-commit";
 
 describe("BitValidationManager", () => {
+  it("BUG-10: should not drop scoped commit when unrelated field changes during resolver", async () => {
+    let resolveResolver!: (value: Record<string, string>) => void;
+
+    const state = {
+      values: { email: "invalid", name: "" },
+      errors: {},
+      touched: {},
+      isValidating: {},
+      persist: { isSaving: false, isRestoring: false, error: null },
+      isValid: true,
+      isSubmitting: false,
+      isDirty: false,
+    } as any;
+
+    const dispatch = vi.fn((operation: any) => {
+      if (operation.kind === "validation.commit") {
+        state.errors = operation.errors;
+        state.isValid = operation.isValid;
+      }
+    });
+
+    const resolver = vi.fn().mockImplementation(
+      () =>
+        new Promise<Record<string, string>>((resolve) => {
+          resolveResolver = resolve;
+        }),
+    );
+
+    const commitPromise = commitSynchronousScopeValidation({
+      scopeFields: ["email"],
+      store: {
+        getState: () => state,
+        dispatch,
+        config: { resolver } as any,
+        getRequiredErrors: () => ({}),
+        getHiddenFields: () => new Set<string>(),
+      } as any,
+      asyncErrors: new Map<string, string>(),
+    });
+
+    state.values = { email: "invalid", name: "Leandro" };
+    resolveResolver({ email: "E-mail inválido" });
+    await commitPromise;
+
+    const validationCommit = dispatch.mock.calls.find(
+      (call) => call[0]?.kind === "validation.commit",
+    );
+
+    expect(validationCommit).toBeDefined();
+    expect(state.errors.email).toBe("E-mail inválido");
+  });
+
   it("should accumulate scopeFields during debounce window", async () => {
     vi.useFakeTimers();
 
@@ -966,5 +1019,81 @@ describe("BitValidationManager", () => {
     expect(abortedEvent!.result).toBe(false);
 
     vi.useRealTimers();
+  });
+
+  it("BUG-8: stale immediate async from another path must clear isValidating", async () => {
+    let resolveEmailValidation!: (value: string | null) => void;
+    let notifyEmailValidationStarted!: () => void;
+    const emailValidationStarted = new Promise<void>((resolve) => {
+      notifyEmailValidationStarted = resolve;
+    });
+    const validatingTransitions: Array<boolean> = [];
+
+    const state: any = {
+      values: { email: "a@a.com", name: "Leo" },
+      errors: {},
+      touched: {},
+      isValidating: {},
+      persist: { isSaving: false, isRestoring: false, error: null },
+      isValid: true,
+      isSubmitting: false,
+      isDirty: false,
+    };
+
+    const manager = new BitValidationManager<any>({
+      getState: () => state,
+      dispatch: vi.fn((operation: any) => {
+        if (
+          operation.kind === "state.patch" &&
+          operation.partialState.isValidating
+        ) {
+          state.isValidating = operation.partialState.isValidating;
+          if (
+            Object.prototype.hasOwnProperty.call(state.isValidating, "email")
+          ) {
+            validatingTransitions.push(!!state.isValidating.email);
+          }
+        }
+
+        if (operation.kind === "validation.commit") {
+          state.errors = operation.errors;
+          state.isValid = operation.isValid;
+        }
+      }),
+      setError: vi.fn(),
+      getFieldConfig: (path: string) => {
+        if (path === "email") {
+          return {
+            validation: {
+              asyncValidate: async () =>
+                new Promise<string | null>((resolve) => {
+                  resolveEmailValidation = resolve;
+                  notifyEmailValidationStarted();
+                }),
+            },
+          };
+        }
+
+        return undefined;
+      },
+      getScopeFields: () => [],
+      forEachFieldConfig: () => {},
+      config: { validationDelay: 0, onUnhandledError: vi.fn() } as any,
+      getRequiredErrors: () => ({}),
+      getHiddenFields: () => new Set<string>(),
+      emitBeforeValidate: async () => {},
+      emitAfterValidate: async () => {},
+    });
+
+    const pendingEmailValidation = manager.validate({ scopeFields: ["email"] });
+    await emailValidationStarted;
+
+    await manager.validate({ scopeFields: ["name"] });
+
+    resolveEmailValidation(null);
+    await pendingEmailValidation;
+
+    expect(validatingTransitions).toContain(true);
+    expect(state.isValidating.email).toBeUndefined();
   });
 });

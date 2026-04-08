@@ -42,23 +42,29 @@ export function createUploadHandler<
   uploadFn: BitUploadFn<TMetadata>,
   callbacks: UploadKernelCallbacks,
 ): (file: File | null | undefined) => Promise<void> {
+  let currentGeneration = 0;
   return async (file) => {
     if (!file) return;
 
+    const myGeneration = ++currentGeneration;
     callbacks.setLoading(true);
     callbacks.setError(fieldPath, undefined);
 
     try {
       const result = await uploadFn(file);
 
+      if (myGeneration !== currentGeneration) return;
       callbacks.setValue(result.url);
       callbacks.setUploadKey(result.key);
       callbacks.setError(fieldPath, undefined);
     } catch (error) {
+      if (myGeneration !== currentGeneration) return;
       const message = error instanceof Error ? error.message : "Upload failed";
       callbacks.setError(fieldPath, message);
     } finally {
-      callbacks.setLoading(false);
+      if (myGeneration === currentGeneration) {
+        callbacks.setLoading(false);
+      }
     }
   };
 }

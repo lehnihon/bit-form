@@ -150,7 +150,11 @@ export function unsetDeepValue(obj: any, path: string): any {
   const leafKey = keys[keys.length - 1];
 
   if (Array.isArray(current)) {
-    current.splice(Number(leafKey), 1);
+    const arrayIndex = Number(leafKey);
+    // Only splice if leafKey is a valid array index (integer >= 0)
+    if (Number.isInteger(arrayIndex) && arrayIndex >= 0) {
+      current.splice(arrayIndex, 1);
+    }
   } else if (current && typeof current === "object") {
     delete current[leafKey];
   }
@@ -208,7 +212,11 @@ export function unsetDeepValues(obj: any, paths: ReadonlyArray<string>): any {
     const leafKey = keys[keys.length - 1];
 
     if (Array.isArray(current)) {
-      current.splice(Number(leafKey), 1);
+      const arrayIndex = Number(leafKey);
+      // Only splice if leafKey is a valid array index (integer >= 0)
+      if (Number.isInteger(arrayIndex) && arrayIndex >= 0) {
+        current.splice(arrayIndex, 1);
+      }
     } else if (current && typeof current === "object") {
       delete current[leafKey];
     }

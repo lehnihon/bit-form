@@ -317,4 +317,43 @@ describe("Production Audit - Critical Fixes", () => {
       expect(finalState.errors.email).toBeUndefined();
     });
   });
+
+  describe("BUG-9: unregisterStorePrefix deve limpar errors/touched dos campos removidos", () => {
+    it("removeItem deve remover errors do item removido do estado", () => {
+      const store = createBitStore({
+        initialValues: { items: [{ email: "a" }, { email: "b" }] },
+      });
+
+      store.feature.registerField("items.0.email", {});
+      store.feature.registerField("items.1.email", {});
+
+      // Simula erro no item 0
+      store.write.setErrors({ "items.0.email": "E-mail inválido" });
+      expect(store.read.getState().errors["items.0.email"]).toBe(
+        "E-mail inválido",
+      );
+
+      // Remove o item 0
+      store.feature.removeItem("items", 0);
+
+      // O erro do item removido não deve mais existir no estado
+      const state = store.read.getState();
+      expect(state.errors["items.0.email"]).toBeUndefined();
+    });
+
+    it("removeItem deve remover touched do item removido do estado", () => {
+      const store = createBitStore({
+        initialValues: { tags: ["x", "y", "z"] },
+      });
+
+      store.feature.registerField("tags.1", {});
+
+      store.write.blurField("tags.1");
+      expect(store.read.getState().touched["tags.1"]).toBe(true);
+
+      store.feature.removeItem("tags", 1);
+
+      expect(store.read.getState().touched["tags.1"]).toBeUndefined();
+    });
+  });
 });

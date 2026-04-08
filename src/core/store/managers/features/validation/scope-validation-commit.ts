@@ -19,10 +19,14 @@ export async function commitSynchronousScopeValidation<T extends object>(args: {
   // Capture current state AFTER async operations to avoid stale state
   const currentState = store.getState();
 
-  // Guard: if values changed significantly, abort to prevent overwriting newer validation
-  const valuesStale = !Object.is(initialState.values, currentState.values);
+  // Guard: if any of the scope fields' values changed, abort to prevent overwriting newer validation
+  const valuesStale = scopeFields.some(
+    (field) =>
+      (initialState.values as Record<string, unknown>)[field] !==
+      (currentState.values as Record<string, unknown>)[field],
+  );
   if (valuesStale) {
-    // Values changed during resolver execution; newer validations may be in flight
+    // A scoped field value changed during resolver execution; newer validations may be in flight
     // Skip this commit to avoid race condition
     return;
   }

@@ -1488,6 +1488,21 @@ describe("BitStore Core", () => {
       expect(submittedData.amount).toBe(10);
       expect(submittedData.total).toBe(20);
     });
+
+    it("resolver que retorna undefined para campo não deve invalidar o formulário (regression)", async () => {
+      const store = createBitStore({
+        initialValues: { email: "ok@ok.com" },
+        validation: {
+          resolver: () => Promise.resolve({ email: undefined }),
+          delay: 0,
+        },
+      });
+
+      const result = await store.write.submit(vi.fn());
+      expect(result.status).toBe("submitted");
+      expect(store.read.getState().isValid).toBe(true);
+      expect(store.read.getState().errors.email).toBeUndefined();
+    });
   });
 
   describe("Array Operations", () => {
@@ -1637,6 +1652,56 @@ describe("BitStore Core", () => {
 
       const values = store.read.getState().values.list as string[];
       expect(values).toEqual(["A", "B", "C"]);
+    });
+
+    it("prependItem deve reindexar errors e touched dos itens existentes (regression)", () => {
+      const store = createBitStore({
+        initialValues: { list: ["A", "B", "C"] },
+      });
+      store.feature.triggerValidation = vi.fn();
+
+      store.write.setError("list.0", "Error on A");
+      store.write.blurField("list.0");
+
+      store.feature.prependItem("list", "novo");
+
+      expect(store.read.getState().values.list).toEqual([
+        "novo",
+        "A",
+        "B",
+        "C",
+      ]);
+      // Novo item no índice 0 não deve herdar erro nem touched do antigo índice 0
+      expect(store.read.getState().errors["list.0"]).toBeUndefined();
+      expect(store.read.getState().touched["list.0"]).toBeUndefined();
+      // Erro e touched do antigo índice 0 devem ter sido deslocados para o índice 1
+      expect(store.read.getState().errors["list.1"]).toBe("Error on A");
+      expect(store.read.getState().touched["list.1"]).toBe(true);
+    });
+
+    it("insertItem deve reindexar errors e touched dos itens deslocados (regression)", () => {
+      const store = createBitStore({
+        initialValues: { list: ["A", "B", "C"] },
+      });
+      store.feature.triggerValidation = vi.fn();
+
+      store.write.setError("list.1", "Error on B");
+      store.write.blurField("list.1");
+
+      store.feature.insertItem("list", 0, "NOVO");
+
+      expect(store.read.getState().values.list).toEqual([
+        "NOVO",
+        "A",
+        "B",
+        "C",
+      ]);
+      // Itens abaixo do safeIndex não se deslocam
+      expect(store.read.getState().errors["list.0"]).toBeUndefined();
+      // Antigo índice 1 ("B" com erro) deve ter sido deslocado para índice 2
+      expect(store.read.getState().errors["list.1"]).toBeUndefined();
+      expect(store.read.getState().errors["list.2"]).toBe("Error on B");
+      expect(store.read.getState().touched["list.2"]).toBe(true);
     });
   });
 

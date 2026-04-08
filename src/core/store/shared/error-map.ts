@@ -1,6 +1,6 @@
 export function hasAnyError(errors: Record<string, unknown>): boolean {
-  for (const _path in errors) {
-    return true;
+  for (const path in errors) {
+    if (errors[path]) return true;
   }
 
   return false;
