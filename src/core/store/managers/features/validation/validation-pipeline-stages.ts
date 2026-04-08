@@ -104,7 +104,7 @@ export async function runAsyncTrackStage<T extends object>(args: {
     return;
   }
 
-  await Promise.all(
+  const results = await Promise.allSettled(
     targetPaths.map((path) =>
       deps.runImmediateAsyncValidation(
         path,
@@ -113,6 +113,12 @@ export async function runAsyncTrackStage<T extends object>(args: {
       ),
     ),
   );
+
+  for (const result of results) {
+    if (result.status === "rejected") {
+      deps.store.config.onUnhandledError(result.reason, "validation");
+    }
+  }
 }
 
 export function mergeAsyncTrackStage<T extends object>(args: {

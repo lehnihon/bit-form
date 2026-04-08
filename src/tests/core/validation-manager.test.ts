@@ -284,6 +284,98 @@ describe("BitValidationManager", () => {
     vi.useRealTimers();
   });
 
+  it("should keep committed async errors from other fields when one immediate async validator throws", async () => {
+    const onUnhandledError = vi.fn();
+    const state = {
+      values: { username: "leo", email: "leo@example.com" },
+      errors: {},
+      touched: {},
+      isValidating: {},
+      persist: { isSaving: false, isRestoring: false, error: null },
+      isValid: true,
+      isSubmitting: false,
+      isDirty: false,
+    } as any;
+
+    const dispatch = vi.fn((operation: any) => {
+      if (
+        operation.kind === "state.patch" &&
+        operation.partialState.isValidating
+      ) {
+        state.isValidating = operation.partialState.isValidating;
+      }
+
+      if (operation.kind === "validation.commit") {
+        state.errors = operation.errors;
+        state.isValid = operation.isValid;
+      }
+    });
+
+    const manager = new BitValidationManager<any>({
+      getState: () => state,
+      dispatch,
+      setError: vi.fn(),
+      getFieldConfig: (path) => {
+        if (path === "username") {
+          return {
+            validation: {
+              asyncValidate: async () => {
+                throw new Error("validation backend down");
+              },
+            },
+          };
+        }
+
+        if (path === "email") {
+          return {
+            validation: {
+              asyncValidate: async () => "email inválido",
+            },
+          };
+        }
+
+        return undefined;
+      },
+      getScopeFields: () => [],
+      forEachFieldConfig: (callback) => {
+        callback(
+          {
+            validation: {
+              asyncValidate: async () => {
+                throw new Error("validation backend down");
+              },
+            },
+          } as any,
+          "username",
+        );
+        callback(
+          {
+            validation: {
+              asyncValidate: async () => "email inválido",
+            },
+          } as any,
+          "email",
+        );
+      },
+      config: { validationDelay: 0, onUnhandledError } as any,
+      getRequiredErrors: () => ({}),
+      getHiddenFields: () => new Set<string>(),
+      emitBeforeValidate: async () => {},
+      emitAfterValidate: async () => {},
+    });
+
+    const result = await manager.validate();
+
+    expect(result).toBe(false);
+    expect(onUnhandledError).toHaveBeenCalledWith(
+      expect.objectContaining({ message: "validation backend down" }),
+      "validation",
+    );
+    expect(state.errors).toEqual({ email: "email inválido" });
+    expect(state.isValid).toBe(false);
+    expect(state.isValidating).toEqual({});
+  });
+
   // ── Regressão BUG-1 ──────────────────────────────────────────────────────
   it("BUG-1: cancelAll after rapid re-schedule should not reach a job whose controller was stolen", async () => {
     vi.useFakeTimers();
@@ -435,7 +527,7 @@ describe("BitValidationManager", () => {
 
     // Second validate — cancels first, registers new controller, starts validators[1]
     callIndex = 1;
-    const p2 = manager.validate({ scopeFields: ["email"] });
+    void manager.validate({ scopeFields: ["email"] });
     await vi.advanceTimersByTimeAsync(0);
     await Promise.resolve();
 
