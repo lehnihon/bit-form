@@ -81,19 +81,16 @@ export class BitArrayManager<T extends object = Record<string, unknown>> {
       }
     }
 
-    this.mutateArrayWithSetField(
+    const current = (getDeepValue(this.store.getState().values, path) as unknown[] | undefined) ?? [];
+    const nextArray = [...current];
+    nextArray.splice(safeIndex, 0, value);
+
+    this.commitArrayMutationWithFieldPipeline({
       path,
-      (arr) => {
-        const next = [...arr];
-        next.splice(safeIndex, 0, value);
-        return next;
-      },
-      {
-        origin: "array",
-        operation: "insert",
-        index: safeIndex,
-      },
-    );
+      nextArray,
+      meta: { origin: "array", operation: "insert", index: safeIndex },
+      reindex: (currentIdx) => currentIdx < safeIndex ? currentIdx : currentIdx + 1,
+    });
   }
 
   removeItem(path: string, index: number) {

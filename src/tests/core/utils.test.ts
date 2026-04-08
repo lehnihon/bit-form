@@ -16,6 +16,7 @@ import {
   unsetDeepValues,
   valueEqual,
 } from "../../core/utils";
+import { hasAnyError } from "../../core/store/shared/error-map";
 
 // -------------------------------------------------------------------
 // deepClone
@@ -529,5 +530,30 @@ describe("utils - extractServerErrors", () => {
   it("retorna objeto vazio para input inválido", () => {
     expect(extractServerErrors("bad")).toEqual({});
     expect(extractServerErrors(null)).toEqual({});
+  });
+});
+
+// -------------------------------------------------------------------
+// hasAnyError
+// -------------------------------------------------------------------
+describe("utils - hasAnyError", () => {
+  it("retorna false para objeto vazio", () => {
+    expect(hasAnyError({})).toBe(false);
+  });
+
+  it("retorna false quando todos os valores são undefined (regression)", () => {
+    expect(hasAnyError({ email: undefined, name: undefined })).toBe(false);
+  });
+
+  it("retorna false quando todos os valores são string vazia", () => {
+    expect(hasAnyError({ email: "" })).toBe(false);
+  });
+
+  it("retorna true quando há ao menos um erro com mensagem", () => {
+    expect(hasAnyError({ email: "Obrigatório" })).toBe(true);
+  });
+
+  it("retorna true mesmo com erros undefined junto a erros reais", () => {
+    expect(hasAnyError({ email: undefined, name: "Required" })).toBe(true);
   });
 });

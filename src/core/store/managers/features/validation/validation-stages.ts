@@ -66,7 +66,9 @@ export function mergeValidationErrors<T extends object>(args: {
   });
 
   Object.entries(allErrors).forEach(([path, message]) => {
-    globalErrors[path as keyof BitErrors<T>] = message;
+    if (message) {
+      globalErrors[path as keyof BitErrors<T>] = message;
+    }
   });
 
   return {
