@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { hasAnyError } from "../../core/store/shared/error-map";
 import {
   cleanPrefixedKeys,
   collectDirtyPaths,
@@ -16,7 +17,6 @@ import {
   unsetDeepValues,
   valueEqual,
 } from "../../core/utils";
-import { hasAnyError } from "../../core/store/shared/error-map";
 
 // -------------------------------------------------------------------
 // deepClone

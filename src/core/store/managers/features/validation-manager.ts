@@ -280,7 +280,7 @@ export class BitValidationManager<T extends object> {
         this.coordinator.setImmediateController(fieldPath, controller);
       },
       clearAbortController: (fieldPath, ctrl) => {
-        this.coordinator.clearImmediateController(fieldPath, ctrl);
+        return this.coordinator.clearImmediateController(fieldPath, ctrl);
       },
       setFieldValidating: (fieldPath, isValidating) =>
         this.updateFieldValidating(fieldPath, isValidating),

@@ -1690,7 +1690,12 @@ describe("BitStore Core", () => {
 
       store.feature.insertItem("list", 0, "NOVO");
 
-      expect(store.read.getState().values.list).toEqual(["NOVO", "A", "B", "C"]);
+      expect(store.read.getState().values.list).toEqual([
+        "NOVO",
+        "A",
+        "B",
+        "C",
+      ]);
       // Itens abaixo do safeIndex não se deslocam
       expect(store.read.getState().errors["list.0"]).toBeUndefined();
       // Antigo índice 1 ("B" com erro) deve ter sido deslocado para índice 2

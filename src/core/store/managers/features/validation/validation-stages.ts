@@ -129,7 +129,7 @@ export async function runImmediateAsyncValidationStage<T extends object>(args: {
   cancelFieldAsync: (path: string) => void;
   createAbortController: () => AbortController;
   setAbortController: (path: string, controller: AbortController) => void;
-  clearAbortController: (path: string, controller: AbortController) => void;
+  clearAbortController: (path: string, controller: AbortController) => boolean;
   setFieldValidating: (path: string, isValidating: boolean) => void;
   setAsyncError: (path: string, message: string) => void;
   clearAsyncError: (path: string) => void;
@@ -208,12 +208,9 @@ export async function runImmediateAsyncValidationStage<T extends object>(args: {
       clearAsyncError(path);
     }
   } finally {
-    if (
-      !controller.signal.aborted &&
-      validationId === getCurrentValidationId()
-    ) {
+    const releasedCurrentController = clearAbortController(path, controller);
+    if (releasedCurrentController) {
       setFieldValidating(path, false);
     }
-    clearAbortController(path, controller);
   }
 }

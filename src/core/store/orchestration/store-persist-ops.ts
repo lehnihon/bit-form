@@ -42,22 +42,22 @@ export async function forceStorePersistedSave<T extends object>(args: {
   effects: BitStoreEffectEngine<T>;
 }): Promise<void> {
   const { dispatch, effects } = args;
+  let persistError: Error | null = null;
 
   dispatch(persistMetaOperation({ isSaving: true, error: null }));
 
   try {
     await effects.savePersistedNow();
   } catch (error) {
+    persistError = error instanceof Error ? error : new Error(String(error));
+  } finally {
     dispatch(
       persistMetaOperation({
         isSaving: false,
-        error: error instanceof Error ? error : new Error(String(error)),
+        error: persistError,
       }),
     );
-    return;
   }
-
-  dispatch(persistMetaOperation({ isSaving: false }));
 }
 
 export async function clearStorePersisted<T extends object>(args: {
@@ -65,15 +65,18 @@ export async function clearStorePersisted<T extends object>(args: {
   effects: BitStoreEffectEngine<T>;
 }): Promise<void> {
   const { dispatch, effects } = args;
+  let persistError: Error | null = null;
 
   dispatch(persistMetaOperation({ error: null }));
 
   try {
     await effects.clearPersisted();
   } catch (error) {
+    persistError = error instanceof Error ? error : new Error(String(error));
+  } finally {
     dispatch(
       persistMetaOperation({
-        error: error instanceof Error ? error : new Error(String(error)),
+        error: persistError,
       }),
     );
   }
