@@ -24,6 +24,7 @@ export interface BitStoreRuntimeKernelArgs<T extends object> {
   effects: BitStoreEffectEngine<T>;
   capabilityRegistry: BitStoreCapabilityRegistry<T>;
   applyValueDerivations?: (values: T, changedPaths?: readonly string[]) => T;
+  onUnhandledError?: (error: unknown, source: string) => void;
 }
 
 export class BitStoreRuntimeKernel<T extends object> {
@@ -69,6 +70,8 @@ export class BitStoreRuntimeKernel<T extends object> {
       operation,
       applyValueDerivations: (values, changedPaths) =>
         this.applyValueDerivations(values, changedPaths),
+      onOperationError: (error) =>
+        this.args.onUnhandledError?.(error, "derivation"),
       onStateCommitted: (payload) => this.onStateCommitted(payload),
     });
   }

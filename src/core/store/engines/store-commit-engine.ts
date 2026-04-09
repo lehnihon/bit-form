@@ -71,8 +71,10 @@ function executeStatePatchOperation<T extends object>(args: {
   currentState: BitState<T>;
   operation: BitStatePatchOperation<T>;
   applyValueDerivations: (values: T, changedPaths?: readonly string[]) => T;
+  onOperationError?: (error: unknown) => void;
 }) {
-  const { currentState, operation, applyValueDerivations } = args;
+  const { currentState, operation, applyValueDerivations, onOperationError } =
+    args;
 
   const hasValuesPatch = Object.prototype.hasOwnProperty.call(
     operation.partialState,
@@ -90,8 +92,7 @@ function executeStatePatchOperation<T extends object>(args: {
       applyValueDerivations,
     });
   } catch (error) {
-    // If derivation fails, return state with original values (fail-open)
-    console.error("Derivation error during state patch:", error);
+    onOperationError?.(error);
     result = applyStateUpdate({
       currentState,
       partialState: operation.partialState,
@@ -106,8 +107,10 @@ function executeStoreOperation<T extends object>(args: {
   currentState: BitState<T>;
   operation: BitStoreOperation<T>;
   applyValueDerivations: (values: T, changedPaths?: readonly string[]) => T;
+  onOperationError?: (error: unknown) => void;
 }) {
-  const { currentState, operation, applyValueDerivations } = args;
+  const { currentState, operation, applyValueDerivations, onOperationError } =
+    args;
   const patchOperation = routeStoreOperation(currentState, operation);
 
   if (!patchOperation) {
@@ -121,6 +124,7 @@ function executeStoreOperation<T extends object>(args: {
       patchOperation.skipComputed
         ? values
         : applyValueDerivations(values, changedPaths),
+    onOperationError,
   });
 }
 
@@ -129,6 +133,7 @@ export function dispatchStoreKernelOperation<T extends object>(args: {
   batchState: BitStoreBatchState<T>;
   operation: BitStoreOperation<T>;
   applyValueDerivations: (values: T, changedPaths?: readonly string[]) => T;
+  onOperationError?: (error: unknown) => void;
   onStateCommitted: (payload: {
     nextState: BitState<T>;
     changedPaths?: Iterable<string>;
@@ -140,6 +145,7 @@ export function dispatchStoreKernelOperation<T extends object>(args: {
     batchState,
     operation,
     applyValueDerivations,
+    onOperationError,
     onStateCommitted,
   } = args;
 
@@ -150,6 +156,7 @@ export function dispatchStoreKernelOperation<T extends object>(args: {
       currentState,
       operation,
       applyValueDerivations: (values) => values,
+      onOperationError,
     });
 
     if (!updateResult) {
@@ -164,6 +171,7 @@ export function dispatchStoreKernelOperation<T extends object>(args: {
     currentState: state,
     operation,
     applyValueDerivations,
+    onOperationError,
   });
 
   if (!updateResult) {

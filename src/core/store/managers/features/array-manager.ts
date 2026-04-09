@@ -17,6 +17,10 @@ export interface BitArrayStorePort<T extends object> {
   internalSaveSnapshot: () => void;
   createArrayItemId: (path: string, index?: number) => string;
   unregisterPrefix?: (prefix: string) => void;
+  remapValidationPaths?: (
+    path: string,
+    remapIndex: (currentIdx: number) => number | null,
+  ) => void;
 }
 
 export class BitArrayManager<T extends object = Record<string, unknown>> {
@@ -313,15 +317,14 @@ export class BitArrayManager<T extends object = Record<string, unknown>> {
 
     const reindexedMeta = reindexFieldArrayMeta(previousState, path, reindex);
 
+    this.store.remapValidationPaths?.(path, reindex);
+
     this.store.dispatch(
       patchStateOperation(
         {
           errors: reindexedMeta.errors,
           touched: reindexedMeta.touched,
-          // Não reindexa isValidating em mutações estruturais de array.
-          // Jobs assíncronos ainda em voo finalizam/cancelam no path original,
-          // evitando flags órfãs após shift de índice.
-          isValidating: previousState.isValidating,
+          isValidating: reindexedMeta.isValidating,
         },
         [path],
       ),

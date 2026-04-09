@@ -1270,6 +1270,135 @@ describe("BitStore Core", () => {
       ).toThrow(/Circular dependency detected/);
     });
 
+    it("should recompute computed field immediately when registered at runtime", () => {
+      const store = createBitStore({
+        initialValues: { price: 15, total: 0 },
+      });
+
+      store.feature.registerField("total", {
+        computed: (values) => (values.price as number) * 2,
+        computedDependsOn: ["price"],
+      });
+
+      expect(store.read.getState().values.total).toBe(30);
+    });
+
+    it("should rollback runtime computed registration when it introduces a cycle", () => {
+      const onUnhandledError = vi.fn();
+      const store = createBitStore({
+        initialValues: { a: 0, b: 1 },
+        onUnhandledError,
+      });
+
+      store.feature.registerField("a", {
+        computed: (values) => (values.b as number) + 1,
+        computedDependsOn: ["b"],
+      });
+
+      store.feature.registerField("b", {
+        computed: (values) => (values.a as number) + 1,
+        computedDependsOn: ["a"],
+      });
+
+      store.write.setField("b", 3);
+
+      expect(store.read.getState().values.a).toBe(4);
+      expect(store.read.getState().values.b).toBe(3);
+      expect(onUnhandledError).toHaveBeenCalled();
+      expect(
+        onUnhandledError.mock.calls.some(
+          ([error, source]) =>
+            source === "computed" &&
+            String((error as Error)?.message ?? "").includes(
+              "Circular dependency detected",
+            ),
+        ),
+      ).toBe(true);
+    });
+
+    it("should report derivation errors from malformed runtime computed config", () => {
+      const onUnhandledError = vi.fn();
+      const store = createBitStore({
+        initialValues: { base: 2, broken: 0 },
+        onUnhandledError,
+      });
+
+      expect(() => {
+        store.feature.registerField("broken", {
+          computed: (values: any) => values.base,
+          computedDependsOn: [],
+        } as any);
+      }).not.toThrow();
+
+      expect(store.read.getState().values.broken).toBe(0);
+      expect(
+        onUnhandledError.mock.calls.some(
+          ([, source]) => source === "derivation",
+        ),
+      ).toBe(true);
+    });
+
+    it("should notify subscribers with fresh state after computed registerField", () => {
+      const store = createBitStore({
+        initialValues: { price: 15, total: 0 },
+      });
+
+      const listener = vi.fn();
+      store.observe.subscribePath("total", listener);
+      listener.mockClear();
+
+      store.feature.registerField("total", {
+        computed: (values: any) => values.price * 2,
+        computedDependsOn: ["price"],
+      });
+
+      expect(listener).toHaveBeenCalledTimes(1);
+      const receivedValue = listener.mock.calls[0][0];
+      expect(receivedValue).toBe(30);
+    });
+
+    it("should treat empty string as a validation error", async () => {
+      const store = createBitStore({
+        initialValues: { email: "test@example.com" },
+        validation: {
+          resolver: () => ({ email: "" }),
+        },
+      });
+
+      const result = await store.feature.validate();
+
+      expect(result).toBe(false);
+      expect(store.read.getState().isValid).toBe(false);
+      expect(store.read.getState().errors.email).toBe("");
+    });
+
+    it("should treat empty string from async validator as a validation error", async () => {
+      vi.useFakeTimers();
+      try {
+        const store = createBitStore({
+          initialValues: { email: "test@example.com" },
+          validation: { delay: 0 },
+          fields: {
+            email: {
+              validation: {
+                asyncValidateOn: "change",
+                asyncValidate: async () => "",
+                asyncValidateDelay: 0,
+              },
+            },
+          },
+        });
+
+        store.write.setField("email", "other@example.com");
+        await vi.advanceTimersByTimeAsync(10);
+
+        expect(store.read.getState().isValid).toBe(false);
+        expect(store.read.getState().errors.email).toBe("");
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
     it("should remove hidden fields and apply transforms on submit", async () => {
       const store = createBitStore({
         initialValues: { newsletter: false, email: "test@test.com", price: 10 },
@@ -1936,6 +2065,33 @@ describe("BitStore Core", () => {
       expect(store.read.getState().errors["list.0"]).toBeUndefined();
       expect(store.read.getState().errors["list.1"]).toBeUndefined();
       expect(store.feature.hasValidationsInProgress()).toBe(false);
+    });
+
+    it("não deve disparar asyncValidateOn change para campo oculto", async () => {
+      const asyncValidate = vi.fn().mockResolvedValue("erro");
+
+      const store = createBitStore({
+        initialValues: { showCode: false, code: "" },
+      });
+
+      store.feature.registerField("code", {
+        conditional: {
+          dependsOn: ["showCode"],
+          showIf: (values: any) => values.showCode === true,
+        },
+        validation: {
+          asyncValidateOn: "change",
+          asyncValidate,
+          asyncValidateDelay: 0,
+        },
+      });
+
+      store.write.setField("code", "ABC");
+      await vi.advanceTimersByTimeAsync(10);
+
+      expect(asyncValidate).not.toHaveBeenCalled();
+      expect(store.read.isFieldValidating("code")).toBe(false);
+      expect(store.read.getState().errors.code).toBeUndefined();
     });
 
     it("deve descartar resultado async stale após insertItem deslocar índices", async () => {

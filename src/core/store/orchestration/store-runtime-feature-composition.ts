@@ -137,6 +137,8 @@ export function composeRuntimeFeatureCapabilities<T extends object>(
     setFieldWithMeta: (path, value, meta) =>
       actions.setFieldWithMeta(path, value, meta),
     unregisterPrefix: actions.unregisterPrefix,
+    remapValidationPaths: (path, remapIndex) =>
+      featureAccess.getValidation().remapArrayPaths(path, remapIndex),
     saveHistorySnapshot: stateAccess.saveHistorySnapshot,
     createArrayItemId: (path, index) =>
       config.idFactory({ scope: "array", path, index }),

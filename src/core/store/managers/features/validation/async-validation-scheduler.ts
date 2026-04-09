@@ -106,6 +106,55 @@ export class BitAsyncValidationScheduler<T extends object> {
     }
   }
 
+  remapPaths(remapPath: (path: string) => string | null): void {
+    let hasPendingChange = false;
+
+    const nextPendingJobs = new Map<string, PendingAsyncValidationJob<T>>();
+
+    for (const [path, job] of this.pendingJobs.entries()) {
+      const nextPath = remapPath(path);
+
+      if (!nextPath) {
+        job.controller.abort();
+        hasPendingChange = true;
+        continue;
+      }
+
+      if (nextPath !== path) {
+        hasPendingChange = true;
+      }
+
+      nextPendingJobs.set(nextPath, job);
+    }
+
+    const nextAbortControllers = new Map<string, AbortController>();
+
+    for (const [path, controller] of this.abortControllers.entries()) {
+      const nextPath = remapPath(path);
+
+      if (!nextPath) {
+        controller.abort();
+        continue;
+      }
+
+      nextAbortControllers.set(nextPath, controller);
+    }
+
+    this.pendingJobs.clear();
+    nextPendingJobs.forEach((job, path) => {
+      this.pendingJobs.set(path, job);
+    });
+
+    this.abortControllers.clear();
+    nextAbortControllers.forEach((controller, path) => {
+      this.abortControllers.set(path, controller);
+    });
+
+    if (hasPendingChange) {
+      this.schedulePendingJobs();
+    }
+  }
+
   cancelAll(): void {
     if (this.cancelSchedulerTimeout) {
       try {
@@ -238,19 +287,32 @@ export class BitAsyncValidationScheduler<T extends object> {
         return;
       }
 
-      if (errorMessage) {
+      if (errorMessage !== null && errorMessage !== undefined) {
         this.port.setAsyncError(path, errorMessage);
       } else {
         this.port.clearAsyncError(path);
         await this.port.onValidationPassed(path);
       }
     } finally {
+      const currentPath = this.findControllerPath(job.controller) ?? path;
+
       if (!job.controller.signal.aborted) {
-        this.port.setFieldValidating(path, false);
+        this.port.setFieldValidating(currentPath, false);
       }
-      if (this.abortControllers.get(path) === job.controller) {
-        this.abortControllers.delete(path);
+
+      if (this.abortControllers.get(currentPath) === job.controller) {
+        this.abortControllers.delete(currentPath);
       }
     }
+  }
+
+  private findControllerPath(controller: AbortController): string | undefined {
+    for (const [path, storedController] of this.abortControllers.entries()) {
+      if (storedController === controller) {
+        return path;
+      }
+    }
+
+    return undefined;
   }
 }

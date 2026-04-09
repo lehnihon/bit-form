@@ -64,6 +64,7 @@ export function createStoreEffects<T extends object>(args: {
           isSaving: false,
           error: error instanceof Error ? error : new Error(String(error)),
         }),
+      onError: (error) => config.onUnhandledError(error, "persist"),
     },
   );
 

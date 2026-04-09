@@ -189,17 +189,24 @@ export function composeBitStoreRuntime<T extends object>(args: {
     subscriptions: runtime.subscriptions,
     effects,
     capabilityRegistry: runtime.capabilityRegistry,
-    applyValueDerivations: (values, changedPaths) =>
-      applyValueDerivations({
-        values,
-        changedPaths,
-        normalizerEntries: fieldRegistry.getNormalizerEntries(),
-        applyComputed: (nextValues, nextChangedPaths) =>
-          computedManager.apply(nextValues, nextChangedPaths),
-        onError: (error, path) => {
-          config.onUnhandledError(error, "derivation");
-        },
-      }),
+    onUnhandledError: (error, source) => config.onUnhandledError(error, source),
+    applyValueDerivations: (values, changedPaths) => {
+      try {
+        return applyValueDerivations({
+          values,
+          changedPaths,
+          normalizerEntries: fieldRegistry.getNormalizerEntries(),
+          applyComputed: (nextValues, nextChangedPaths) =>
+            computedManager.apply(nextValues, nextChangedPaths),
+          onError: (error, path) => {
+            config.onUnhandledError(error, "derivation");
+          },
+        });
+      } catch (error) {
+        config.onUnhandledError(error, "derivation");
+        return values;
+      }
+    },
   });
 
   runtimeKernel.saveHistorySnapshot();
