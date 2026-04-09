@@ -591,6 +591,36 @@ describe("Persist Feature (BitPersistManager)", () => {
       store.feature.cleanup();
     });
 
+    it("should route restore deserialize errors to onUnhandledError with source persist", async () => {
+      const onUnhandledError = vi.fn();
+
+      const store = createBitStore({
+        initialValues: { name: "Leo" },
+        onUnhandledError,
+        persist: {
+          enabled: true,
+          key: "test-persist-onunhandled-restore",
+          storage: {
+            getItem: async () => "invalid-json",
+            setItem: async () => {},
+            removeItem: async () => {},
+          },
+          deserialize: () => {
+            throw new Error("deserialize failed");
+          },
+        },
+      });
+
+      const result = await store.feature.restorePersisted();
+      expect(result).toBe(false);
+      expect(onUnhandledError).toHaveBeenCalledWith(
+        expect.any(Error),
+        "persist",
+      );
+
+      store.feature.cleanup();
+    });
+
     it("should not throw from forceSave when localStorage getter throws", async () => {
       Object.defineProperty(globalThis, "localStorage", {
         configurable: true,

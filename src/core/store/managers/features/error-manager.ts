@@ -46,7 +46,7 @@ export class BitErrorManager<T extends object = Record<string, unknown>> {
       [path]: message,
     } as BitErrors<T>;
 
-    if (!message) {
+    if (message === undefined) {
       delete newErrors[path as keyof BitErrors<T>];
     }
 

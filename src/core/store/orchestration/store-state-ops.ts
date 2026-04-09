@@ -1,3 +1,5 @@
+import type { BitState } from "../contracts/types";
+import type { BitStoreOperation } from "../engines/operation-engine";
 import {
   beginStoreBatch,
   endStoreBatch,
@@ -7,8 +9,6 @@ import {
   dispatchStoreKernelOperation,
   flushStoreKernelBatch,
 } from "../engines/store-commit-engine";
-import type { BitStoreOperation } from "../engines/operation-engine";
-import type { BitState } from "../contracts/types";
 
 export function runStoreStateBatch<T extends object, TResult>(args: {
   batchState: BitStoreBatchState<T>;
@@ -51,6 +51,7 @@ export function dispatchStoreStateOperation<T extends object>(args: {
   batchState: BitStoreBatchState<T>;
   operation: BitStoreOperation<T>;
   applyValueDerivations: (values: T, changedPaths?: readonly string[]) => T;
+  onOperationError?: (error: unknown) => void;
   onStateCommitted: (payload: {
     nextState: BitState<T>;
     changedPaths?: Iterable<string>;
@@ -62,6 +63,7 @@ export function dispatchStoreStateOperation<T extends object>(args: {
     batchState,
     operation,
     applyValueDerivations,
+    onOperationError,
     onStateCommitted,
   } = args;
 
@@ -70,6 +72,7 @@ export function dispatchStoreStateOperation<T extends object>(args: {
     batchState,
     operation,
     applyValueDerivations,
+    onOperationError,
     onStateCommitted,
   });
 }

@@ -28,6 +28,10 @@ interface BitValidationAccess<_T extends object> {
   clear(path: string): void;
   trigger(scopeFields?: string[], options?: BitValidationTriggerOptions): void;
   handleAsync(path: string, value: unknown): void;
+  remapArrayPaths(
+    path: string,
+    remapIndex: (currentIdx: number) => number | null,
+  ): void;
   cancelAll(): void;
   validate(options?: BitValidationOptions): Promise<boolean>;
   hasValidationsInProgress(scopeFields?: string[]): boolean;
@@ -184,6 +188,10 @@ export interface BitArrayPortDeps<T extends object> {
     meta: BitFieldChangeMeta,
   ): void;
   unregisterPrefix(prefix: string): void;
+  remapValidationPaths(
+    path: string,
+    remapIndex: (currentIdx: number) => number | null,
+  ): void;
   saveHistorySnapshot(): void;
   createArrayItemId(path: string, index?: number): string;
 }
@@ -197,6 +205,7 @@ export function createArrayPort<T extends object>(
     dispatch: deps.dispatch,
     internalSaveSnapshot: deps.saveHistorySnapshot,
     unregisterPrefix: deps.unregisterPrefix,
+    remapValidationPaths: deps.remapValidationPaths,
     createArrayItemId: deps.createArrayItemId,
   };
 }

@@ -286,6 +286,10 @@ export function createBitStoreDomains<T extends object>(args: {
         invalidateFieldIndexes: () => {
           fieldRegistry.invalidateIndexes();
         },
+        dispatch: (operation) => runtime.dispatch(operation),
+        getState: () => runtime.getState(),
+        onUnhandledError: (error, source) =>
+          config.onUnhandledError(error, source),
       });
     },
     unregisterField: (path) => {

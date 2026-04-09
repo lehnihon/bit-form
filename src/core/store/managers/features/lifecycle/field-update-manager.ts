@@ -184,6 +184,10 @@ export class BitFieldUpdateManager<T extends object> {
   }
 
   private triggerAsyncValidation(ctx: FieldUpdatePipelineContext<T>) {
+    if (this.store.isFieldHidden(ctx.path)) {
+      return;
+    }
+
     const asyncValidateOn =
       typeof this.store.getFieldConfig === "function"
         ? this.store.getFieldConfig(ctx.path)?.validation?.asyncValidateOn

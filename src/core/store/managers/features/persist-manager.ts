@@ -7,6 +7,7 @@ interface BitPersistManagerCallbacks {
   onAutoSaveStart?: () => void;
   onAutoSaveSuccess?: () => void;
   onAutoSaveError?: (error: unknown) => void;
+  onError?: (error: unknown) => void;
 }
 
 function getDefaultStorage(): BitPersistStorageAdapter | undefined {
@@ -51,6 +52,7 @@ export class BitPersistManager<T extends object = Record<string, unknown>> {
   }
 
   private handleError(error: unknown) {
+    this.callbacks.onError?.(error);
     this.config.onError?.(error);
   }
 

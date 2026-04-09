@@ -545,8 +545,8 @@ describe("utils - hasAnyError", () => {
     expect(hasAnyError({ email: undefined, name: undefined })).toBe(false);
   });
 
-  it("retorna false quando todos os valores são string vazia", () => {
-    expect(hasAnyError({ email: "" })).toBe(false);
+  it("retorna true quando há erro com string vazia", () => {
+    expect(hasAnyError({ email: "" })).toBe(true);
   });
 
   it("retorna true quando há ao menos um erro com mensagem", () => {

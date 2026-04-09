@@ -57,6 +57,26 @@ export class BitValidationCoordinator {
     }
   }
 
+  remapImmediateControllers(remapPath: (path: string) => string | null): void {
+    const nextControllers = new Map<string, AbortController>();
+
+    for (const [path, controller] of this.immediateAbortControllers.entries()) {
+      const nextPath = remapPath(path);
+
+      if (!nextPath) {
+        controller.abort();
+        continue;
+      }
+
+      nextControllers.set(nextPath, controller);
+    }
+
+    this.immediateAbortControllers.clear();
+    nextControllers.forEach((controller, path) => {
+      this.immediateAbortControllers.set(path, controller);
+    });
+  }
+
   cancelAllImmediate(): void {
     this.immediateAbortControllers.forEach((controller) => {
       controller.abort();

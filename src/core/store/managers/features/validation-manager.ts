@@ -16,6 +16,32 @@ import {
 } from "./validation/validation-pipeline-orchestrator";
 import { runImmediateAsyncValidationStage } from "./validation/validation-stages";
 
+function remapIndexedPath(
+  key: string,
+  prefix: string,
+  remapIndex: (index: number) => number | null,
+): string | null {
+  if (!key.startsWith(prefix)) {
+    return key;
+  }
+
+  const remaining = key.substring(prefix.length);
+  const parts = remaining.split(".");
+  const currentIdx = Number(parts[0]);
+  if (!Number.isInteger(currentIdx) || currentIdx < 0) {
+    return key;
+  }
+
+  const nextIdx = remapIndex(currentIdx);
+
+  if (nextIdx === null) {
+    return null;
+  }
+
+  const rest = parts.slice(1).join(".");
+  return rest ? `${prefix}${nextIdx}.${rest}` : `${prefix}${nextIdx}`;
+}
+
 export class BitValidationManager<T extends object> {
   private validatingCount = 0;
   private readonly asyncErrors = new Map<string, string>();
@@ -148,6 +174,35 @@ export class BitValidationManager<T extends object> {
     this.coordinator.cancelImmediatePrefix(prefix, (path) => {
       this.asyncErrors.delete(path);
       this.updateFieldValidating(path, false);
+    });
+  }
+
+  remapArrayPaths(
+    path: string,
+    remapIndex: (currentIdx: number) => number | null,
+  ) {
+    const prefix = `${path}.`;
+
+    this.asyncScheduler.remapPaths((currentPath) =>
+      remapIndexedPath(currentPath, prefix, remapIndex),
+    );
+
+    this.coordinator.remapImmediateControllers((currentPath) =>
+      remapIndexedPath(currentPath, prefix, remapIndex),
+    );
+
+    const nextAsyncErrors = new Map<string, string>();
+    this.asyncErrors.forEach((message, currentPath) => {
+      const nextPath = remapIndexedPath(currentPath, prefix, remapIndex);
+
+      if (nextPath !== null) {
+        nextAsyncErrors.set(nextPath, message);
+      }
+    });
+
+    this.asyncErrors.clear();
+    nextAsyncErrors.forEach((message, nextPath) => {
+      this.asyncErrors.set(nextPath, message);
     });
   }
 

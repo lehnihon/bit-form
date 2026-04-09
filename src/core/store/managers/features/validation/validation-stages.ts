@@ -32,7 +32,7 @@ export function mergeValidationErrors<T extends object>(args: {
       const key = field as keyof BitErrors<T>;
       const currentMessage = currentErrors[key] as string | undefined;
 
-      if (allErrors[field]) {
+      if (allErrors[field] !== undefined) {
         if (currentMessage !== allErrors[field]) {
           ensureScopedMutable()[key] = allErrors[field];
         }
@@ -49,7 +49,7 @@ export function mergeValidationErrors<T extends object>(args: {
     });
 
     const scopedResult = targetFields.every(
-      (field) => !allErrors[field] && !asyncErrors.has(field),
+      (field) => allErrors[field] === undefined && !asyncErrors.has(field),
     );
 
     return {
@@ -66,7 +66,7 @@ export function mergeValidationErrors<T extends object>(args: {
   });
 
   Object.entries(allErrors).forEach(([path, message]) => {
-    if (message) {
+    if (message !== undefined) {
       globalErrors[path as keyof BitErrors<T>] = message;
     }
   });
@@ -202,7 +202,7 @@ export async function runImmediateAsyncValidationStage<T extends object>(args: {
 
     if (errorMessage === BIT_ASYNC_VALIDATION_TIMEOUT) {
       // Timeout is inconclusive: preserve current async error state.
-    } else if (errorMessage) {
+    } else if (errorMessage !== null && errorMessage !== undefined) {
       setAsyncError(path, errorMessage);
     } else {
       clearAsyncError(path);

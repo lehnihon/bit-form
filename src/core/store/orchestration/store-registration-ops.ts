@@ -5,9 +5,16 @@ import {
 } from "../engines/operation-engine";
 import { buildFieldUnregisterPatch } from "../engines/store-field-cleanup-engine";
 import { BitSubscriptionEngine } from "../engines/subscription-engine";
+import { analyzeCyclicDependencies } from "../managers/core/computed-dependency-analyzer";
 import { BitFieldRegistry } from "../registry/field-registry";
 import { getScopeRegistrySubscriptionPath } from "../shared/scope-status";
 import type { BitStoreStateReader } from "../shared/store-state-reader";
+
+function hasValueDerivation<T extends object>(
+  config?: BitFieldDefinition<T>,
+): boolean {
+  return !!(config?.computed || config?.normalize);
+}
 
 export function registerStoreField<T extends object>(args: {
   path: string;
@@ -17,6 +24,9 @@ export function registerStoreField<T extends object>(args: {
   subscriptions: BitSubscriptionEngine<T>;
   stateReader: BitStoreStateReader<T>;
   invalidateFieldIndexes: () => void;
+  dispatch: (operation: BitStoreOperation<T>) => void;
+  getState: () => BitState<T>;
+  onUnhandledError: (error: unknown, source: string) => void;
 }): void {
   const {
     path,
@@ -26,21 +36,65 @@ export function registerStoreField<T extends object>(args: {
     subscriptions,
     stateReader,
     invalidateFieldIndexes,
+    dispatch,
+    getState,
+    onUnhandledError,
   } = args;
+
+  const previousConfig = fieldRegistry.getFieldConfig(path);
+  const shouldValidateComputedGraph = !!(
+    previousConfig?.computed || config.computed
+  );
+  const shouldRecomputeValues =
+    hasValueDerivation(previousConfig) || hasValueDerivation(config);
 
   fieldRegistry.register(path, config, state.values);
   invalidateFieldIndexes();
+
+  if (shouldValidateComputedGraph) {
+    const cycles = analyzeCyclicDependencies(
+      fieldRegistry.getComputedEntries(),
+    );
+
+    if (cycles.length > 0) {
+      if (previousConfig) {
+        fieldRegistry.register(path, previousConfig, state.values);
+      } else {
+        fieldRegistry.unregister(path);
+      }
+
+      invalidateFieldIndexes();
+      subscriptions.invalidatePathExpansionCache(path);
+      stateReader.invalidatePath(path);
+      onUnhandledError(new Error(cycles[0].message), "computed");
+      return;
+    }
+  }
+
   subscriptions.invalidatePathExpansionCache(path);
   stateReader.invalidatePath(path);
 
+  if (shouldRecomputeValues) {
+    dispatch(
+      patchStateOperation(
+        {
+          values: state.values,
+        },
+        ["*"],
+      ),
+    );
+  }
+
+  const currentState = getState();
+
   if (config.scope) {
-    subscriptions.notify(state, [
+    subscriptions.notify(currentState, [
       getScopeRegistrySubscriptionPath(config.scope),
     ]);
   }
 
   if (fieldRegistry.isHidden(path)) {
-    subscriptions.notify(state, [path]);
+    subscriptions.notify(currentState, [path]);
   }
 }
 
