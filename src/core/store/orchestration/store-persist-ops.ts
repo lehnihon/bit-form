@@ -118,7 +118,7 @@ export function applyStorePersistedValues<T extends object>(args: {
       touched: {},
       isValidating: {},
       persist: { ...state.persist, error: null },
-      isValid: true,
+      isValid: false,
       isDirty,
     }),
   );

@@ -293,6 +293,53 @@ describe("Persist Feature (BitPersistManager)", () => {
       store.feature.cleanup();
     });
 
+    it("should not mark restored state as valid while async validation is still pending", async () => {
+      const storage = createMockStorage();
+      storage._data["test-form"] = JSON.stringify({
+        name: "",
+        email: "leo@test.com",
+        age: 30,
+      });
+
+      let resolveResolver:
+        | ((errors: Record<string, string>) => void)
+        | undefined;
+
+      const store = createBitStore<TestForm>({
+        initialValues: { name: "Leo", email: "leo@test.com", age: 30 },
+        persist: {
+          enabled: true,
+          key: "test-form",
+          storage,
+        },
+        validation: {
+          resolver: () =>
+            new Promise<Record<string, string>>((resolve) => {
+              resolveResolver = resolve;
+            }),
+          delay: 0,
+        },
+      });
+
+      const isValidEvents: boolean[] = [];
+      const unsubscribe = store.observe.subscribeFormMeta((meta) => {
+        isValidEvents.push(meta.isValid);
+      });
+
+      const restored = await store.feature.restorePersisted();
+
+      expect(restored).toBe(true);
+      expect(store.read.getState().isValid).toBe(false);
+      expect(isValidEvents.every((value) => value === false)).toBe(true);
+
+      resolveResolver?.({ name: "Required" });
+      await Promise.resolve();
+      await Promise.resolve();
+
+      unsubscribe();
+      store.feature.cleanup();
+    });
+
     it("should return false when nothing is saved", async () => {
       const storage = createMockStorage();
       const store = createBitStore<TestForm>({

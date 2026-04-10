@@ -338,7 +338,7 @@ describe("BitLifecycleManager", () => {
       Object.assign(state, operation.partialState);
     });
     const cancelAllValidations = vi.fn();
-    const triggerValidation = vi.fn();
+    const validateNow = vi.fn(async () => true);
 
     const manager = new BitLifecycleManager<any>({
       fieldUpdate: {
@@ -366,14 +366,14 @@ describe("BitLifecycleManager", () => {
         internalSaveSnapshot: () => {},
         evaluateAllDependencies: () => {},
         cancelAllValidations,
-        validateNow: async () => true,
+        validateNow,
         rebuildDirtyState: () => true,
         clearDirtyState: () => {},
         getBaselineValues: () => ({ name: "initial" }),
         setBaselineValues: () => {},
         resetHistory: () => {},
         emitFieldChange: () => {},
-        triggerValidation,
+        triggerValidation: () => {},
       },
       submit: {
         getState: () => state,
@@ -397,9 +397,7 @@ describe("BitLifecycleManager", () => {
 
     expect(cancelAllValidations).toHaveBeenCalledTimes(1);
     expect(dispatch).toHaveBeenCalledTimes(1);
-    expect(triggerValidation).toHaveBeenCalledWith(undefined, {
-      forceDebounce: true,
-    });
+    expect(validateNow).toHaveBeenCalledTimes(1);
 
     const cancelCall = cancelAllValidations.mock.invocationCallOrder[0];
     const dispatchCall = dispatch.mock.invocationCallOrder[0];

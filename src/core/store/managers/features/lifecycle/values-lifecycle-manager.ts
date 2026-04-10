@@ -106,7 +106,7 @@ export class BitValuesLifecycleManager<T extends object> {
           errors: {},
           touched: {},
           isValidating: {},
-          isValid: true,
+          isValid: false,
           isDirty: false,
         },
         ["*"],
@@ -140,13 +140,16 @@ export class BitValuesLifecycleManager<T extends object> {
       patchStateOperation(
         {
           values: snapshot,
+          errors: {},
+          isValid: false,
           isDirty,
         },
         ["*"],
       ),
     );
-
-    this.store.triggerValidation(undefined, { forceDebounce: true });
+    void this.store.validateNow().catch((error) => {
+      this.store.config?.onUnhandledError(error, "applyHistoryState");
+    });
   }
 
   reset() {
@@ -197,7 +200,7 @@ export class BitValuesLifecycleManager<T extends object> {
           values: clonedValues,
           errors: {},
           isValidating: {},
-          isValid: true,
+          isValid: false,
           isDirty,
         },
         changedPaths,
