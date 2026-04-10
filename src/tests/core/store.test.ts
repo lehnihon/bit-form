@@ -491,6 +491,36 @@ describe("BitStore Core", () => {
       unsubscribe();
     });
 
+    it("should not emit transient isValid=true while replacing values with invalid payload", () => {
+      let resolveResolver:
+        | ((errors: Record<string, string>) => void)
+        | undefined;
+
+      const store = createBitStore({
+        initialValues: { name: "Leo" },
+        validation: {
+          resolver: () =>
+            new Promise<Record<string, string>>((resolve) => {
+              resolveResolver = resolve;
+            }),
+          delay: 0,
+        },
+      });
+
+      const isValidEvents: boolean[] = [];
+      const unsubscribe = store.observe.subscribeFormMeta((meta) => {
+        isValidEvents.push(meta.isValid);
+      });
+
+      store.write.setValues({ name: "" });
+
+      expect(store.read.getState().isValid).toBe(false);
+      expect(isValidEvents.every((value) => value === false)).toBe(true);
+
+      resolveResolver?.({ name: "Required" });
+      unsubscribe();
+    });
+
     it("should persist a single history snapshot for multiple mutations inside transaction", () => {
       const store = createBitStore({
         initialValues: { items: [1] },
@@ -760,6 +790,27 @@ describe("BitStore Core", () => {
       store.write.setField("country", "US");
     });
 
+    it("should cleanup descendant errors and touched when unregistering parent field", () => {
+      const store = createBitStore({
+        initialValues: { address: { city: "", zip: "" } },
+      });
+
+      store.feature.registerField("address", {});
+
+      store.write.setErrors({
+        "address.city": "Required",
+      });
+      store.write.blurField("address.city");
+
+      expect(store.read.getState().errors["address.city"]).toBe("Required");
+      expect(store.read.getState().touched["address.city"]).toBe(true);
+
+      store.feature.unregisterField("address");
+
+      expect(store.read.getState().errors["address.city"]).toBeUndefined();
+      expect(store.read.getState().touched["address.city"]).toBeUndefined();
+    });
+
     it("should NOT unregister fields from config.fields (keeps them for validation)", () => {
       const store = createBitStore({
         initialValues: { bonus: false, bonusValue: 0 },
@@ -990,6 +1041,63 @@ describe("BitStore Core", () => {
       expect(store.feature.redo()).toBeUndefined();
       expect(store.read.getState().values.name).toBe("D");
     });
+
+    it("should clear stale errors immediately when applying undo snapshot", async () => {
+      const store = createBitStore({
+        initialValues: { name: "A" },
+        history: { enabled: true },
+        validation: {
+          resolver: async (values: any) =>
+            values.name ? {} : { name: "Required" },
+        },
+      });
+
+      store.write.setField("name", "B");
+      store.write.setField("name", "");
+      await store.feature.validate();
+
+      expect(store.read.getState().errors.name).toBe("Required");
+
+      store.feature.undo();
+
+      expect(store.read.getState().values.name).toBe("B");
+      expect(store.read.getState().errors.name).toBeUndefined();
+    });
+
+    it("should not emit transient isValid=true when undo restores invalid snapshot", () => {
+      let resolveResolver:
+        | ((errors: Record<string, string>) => void)
+        | undefined;
+
+      const store = createBitStore({
+        initialValues: { name: "A" },
+        history: { enabled: true },
+        validation: {
+          resolver: () =>
+            new Promise<Record<string, string>>((resolve) => {
+              resolveResolver = resolve;
+            }),
+          delay: 0,
+        },
+      });
+
+      store.write.setField("name", "");
+      store.write.setField("name", "B");
+
+      const isValidEvents: boolean[] = [];
+      const unsubscribe = store.observe.subscribeFormMeta((meta) => {
+        isValidEvents.push(meta.isValid);
+      });
+
+      store.feature.undo();
+
+      expect(store.read.getState().values.name).toBe("");
+      expect(store.read.getState().isValid).toBe(false);
+      expect(isValidEvents.every((value) => value === false)).toBe(true);
+
+      resolveResolver?.({ name: "Required" });
+      unsubscribe();
+    });
   });
 
   describe("Form Lifecycle & Submissions", () => {
@@ -1028,6 +1136,52 @@ describe("BitStore Core", () => {
         age: 30,
       });
       expect(store.read.getState().isDirty).toBe(true);
+    });
+
+    it("should keep state invalid while async validation is pending after setValues", () => {
+      let resolveResolver:
+        | ((errors: Record<string, string>) => void)
+        | undefined;
+
+      const store = createBitStore({
+        initialValues: { name: "Leo" },
+        validation: {
+          resolver: () =>
+            new Promise<Record<string, string>>((resolve) => {
+              resolveResolver = resolve;
+            }),
+          delay: 0,
+        },
+      });
+
+      store.write.setValues({ name: "" });
+
+      expect(store.read.getState().isValid).toBe(false);
+
+      resolveResolver?.({ name: "Required" });
+    });
+
+    it("should keep state invalid while async validation is pending after rebase", () => {
+      let resolveResolver:
+        | ((errors: Record<string, string>) => void)
+        | undefined;
+
+      const store = createBitStore({
+        initialValues: { name: "Leo" },
+        validation: {
+          resolver: () =>
+            new Promise<Record<string, string>>((resolve) => {
+              resolveResolver = resolve;
+            }),
+          delay: 0,
+        },
+      });
+
+      store.write.setValues({ name: "" }, { rebase: true });
+
+      expect(store.read.getState().isValid).toBe(false);
+
+      resolveResolver?.({ name: "Required" });
     });
 
     it("should not crash when setValues receives circular references", () => {
@@ -2730,6 +2884,46 @@ describe("BitStore Core", () => {
         expect.objectContaining({ success: false }),
         expect.any(Object),
       );
+
+      consoleErrorSpy.mockRestore();
+      store.feature.cleanup();
+    });
+
+    it("should emit failed afterSubmit with prepared submit snapshot", async () => {
+      const consoleErrorSpy = vi
+        .spyOn(console, "error")
+        .mockImplementation(() => undefined);
+      const afterSubmitEvents: Array<any> = [];
+
+      const store = createBitStore({
+        initialValues: { name: "Leo" },
+        validation: {
+          resolver: () => ({}),
+          delay: 0,
+        },
+        plugins: [
+          {
+            name: "submit-failure-snapshot",
+            hooks: {
+              beforeSubmit: () => {
+                store.write.setField("name", "Mutated in hook");
+              },
+              afterSubmit: (event) => {
+                afterSubmitEvents.push(event);
+              },
+            },
+          },
+        ],
+      });
+
+      await store.write.submit(async () => {
+        throw new Error("submit failed");
+      });
+
+      expect(afterSubmitEvents).toHaveLength(1);
+      expect(afterSubmitEvents[0]?.success).toBe(false);
+      expect(afterSubmitEvents[0]?.values).toEqual({ name: "Leo" });
+      expect(afterSubmitEvents[0]?.state?.values?.name).toBe("Mutated in hook");
 
       consoleErrorSpy.mockRestore();
       store.feature.cleanup();

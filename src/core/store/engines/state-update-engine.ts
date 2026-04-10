@@ -65,9 +65,13 @@ export function applyStateUpdate<T extends object>(args: {
 
   if (partialState.errors) {
     nextState.errors = normalizeErrors(partialState.errors as BitErrors<T>);
-    nextState.isValid = !hasAnyError(
+    const derivedIsValid = !hasAnyError(
       nextState.errors as Record<string, unknown>,
     );
+    nextState.isValid =
+      "isValid" in partialState
+        ? Boolean(partialState.isValid)
+        : derivedIsValid;
   }
 
   const explicitChangedPaths =

@@ -44,6 +44,48 @@ describe("applyStorePersistedValues", () => {
     const partialState = dispatch.mock.calls[0]?.[0]?.partialState ?? {};
     expect("isSubmitting" in partialState).toBe(false);
   });
+
+  it("should avoid optimistic isValid=true before validation settles", () => {
+    const state: any = {
+      values: { name: "A" },
+      errors: {},
+      touched: {},
+      isValidating: {},
+      persist: { isSaving: false, isRestoring: false, error: null },
+      isValid: true,
+      isSubmitting: false,
+      isDirty: false,
+    };
+
+    const dispatch = vi.fn((operation: any) => {
+      Object.assign(state, operation.partialState);
+    });
+
+    applyStorePersistedValues({
+      values: { name: "B" },
+      state,
+      initialValues: { name: "A" },
+      validation: {
+        cancelAll: vi.fn(),
+        validate: vi.fn(async () => false),
+      },
+      fieldRegistry: {
+        evaluateAll: vi.fn(),
+      } as any,
+      dirtyManager: {
+        rebuild: vi.fn(() => true),
+      } as any,
+      dispatch,
+      saveHistorySnapshot: vi.fn(),
+    });
+
+    expect(state.isValid).toBe(false);
+    expect(
+      dispatch.mock.calls.some(
+        (call) => call[0]?.partialState?.isValid === false,
+      ),
+    ).toBe(true);
+  });
 });
 
 describe("forceStorePersistedSave", () => {

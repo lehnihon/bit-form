@@ -93,8 +93,8 @@ export class BitSubmitLifecycleManager<T extends object> {
       });
 
       await this.store.emitAfterSubmit({
-        values: this.store.getState().values,
-        dirtyValues: this.store.buildDirtyValues(this.store.getState().values),
+        values: context.valuesToSubmit,
+        dirtyValues: context.dirtyValues,
         state: this.store.getState(),
         success: false,
         error,
