@@ -18,6 +18,7 @@ export {
   cleanPrefixedKeys,
   moveKeys,
   reindexFieldArrayMeta,
+  remapIndexedPath,
   shiftKeys,
   swapKeys,
 } from "./array-meta";

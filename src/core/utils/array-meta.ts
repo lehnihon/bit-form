@@ -106,11 +106,11 @@ export function reindexFieldArrayMeta(
   };
 }
 
-function remapIndexedPath(
+export function remapIndexedPath(
   key: string,
   prefix: string,
   remapIndex: (index: number) => number | null,
-) {
+): string | null {
   if (!key.startsWith(prefix)) {
     return key;
   }

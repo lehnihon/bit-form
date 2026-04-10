@@ -575,6 +575,30 @@ describe("BitStore Core", () => {
       });
     });
 
+    it("should keep both dirty branches when values share the same object reference", () => {
+      const initialShared = { city: "Tokyo" };
+      const nextShared = { city: "Osaka" };
+
+      const store = createBitStore({
+        initialValues: {
+          billing: initialShared,
+          shipping: initialShared,
+        },
+      });
+
+      store.write.setValues({
+        billing: nextShared,
+        shipping: nextShared,
+      });
+
+      expect(store.read.getDirtyValues()).toEqual({
+        billing: { city: "Osaka" },
+        shipping: { city: "Osaka" },
+      });
+      expect(store.read.isFieldDirty("billing.city")).toBe(true);
+      expect(store.read.isFieldDirty("shipping.city")).toBe(true);
+    });
+
     it("should return full array when any index changes", () => {
       const store = createBitStore({
         initialValues: { tags: ["react", "vue"], count: 0 },

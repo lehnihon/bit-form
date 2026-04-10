@@ -87,4 +87,34 @@ describe("BitHistoryManager", () => {
     expect(history.canRedo).toBe(true);
     expect(history.redo()).toEqual({ step: "C" });
   });
+
+  it("should preserve both branches when snapshots reuse shared references", () => {
+    const history = new BitHistoryManager<{
+      billing: { city: string };
+      shipping: { city: string };
+    }>(true, 10);
+
+    const initialShared = { city: "Tokyo" };
+    const nextShared = { city: "Osaka" };
+
+    history.reset({
+      billing: initialShared,
+      shipping: initialShared,
+    });
+
+    history.saveSnapshot({
+      billing: nextShared,
+      shipping: nextShared,
+    });
+
+    expect(history.undo()).toEqual({
+      billing: { city: "Tokyo" },
+      shipping: { city: "Tokyo" },
+    });
+
+    expect(history.redo()).toEqual({
+      billing: { city: "Osaka" },
+      shipping: { city: "Osaka" },
+    });
+  });
 });

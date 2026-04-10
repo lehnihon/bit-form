@@ -22,6 +22,7 @@ export function registerStoreField<T extends object>(args: {
   state: BitState<T>;
   fieldRegistry: BitFieldRegistry<T>;
   subscriptions: BitSubscriptionEngine<T>;
+  validationCleanupField: (path: string) => void;
   stateReader: BitStoreStateReader<T>;
   invalidateFieldIndexes: () => void;
   dispatch: (operation: BitStoreOperation<T>) => void;
@@ -34,6 +35,7 @@ export function registerStoreField<T extends object>(args: {
     state,
     fieldRegistry,
     subscriptions,
+    validationCleanupField,
     stateReader,
     invalidateFieldIndexes,
     dispatch,
@@ -42,6 +44,21 @@ export function registerStoreField<T extends object>(args: {
   } = args;
 
   const previousConfig = fieldRegistry.getFieldConfig(path);
+  const previousAsyncValidate = previousConfig?.validation?.asyncValidate;
+  const nextAsyncValidate = config.validation?.asyncValidate;
+  const previousAsyncValidateOn =
+    previousConfig?.validation?.asyncValidateOn ?? "blur";
+  const nextAsyncValidateOn = config.validation?.asyncValidateOn ?? "blur";
+  const shouldCleanupAsyncState =
+    !!previousConfig &&
+    !!previousAsyncValidate &&
+    (nextAsyncValidate !== previousAsyncValidate ||
+      nextAsyncValidateOn !== previousAsyncValidateOn);
+
+  if (shouldCleanupAsyncState) {
+    validationCleanupField(path);
+  }
+
   const shouldValidateComputedGraph = !!(
     previousConfig?.computed || config.computed
   );

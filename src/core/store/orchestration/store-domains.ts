@@ -282,6 +282,8 @@ export function createBitStoreDomains<T extends object>(args: {
         state: runtime.getState(),
         fieldRegistry,
         subscriptions: runtime.subscriptions,
+        validationCleanupField: (fieldPath) =>
+          runtime.capabilities.validation.cleanupField(fieldPath),
         stateReader,
         invalidateFieldIndexes: () => {
           fieldRegistry.invalidateIndexes();

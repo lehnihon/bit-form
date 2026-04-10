@@ -1,3 +1,4 @@
+import { remapIndexedPath } from "../../../utils";
 import type {
   BitValidationManagerPort,
   BitValidationPipelinePort,
@@ -15,32 +16,6 @@ import {
   type BitValidationPipelineOrchestratorDeps,
 } from "./validation/validation-pipeline-orchestrator";
 import { runImmediateAsyncValidationStage } from "./validation/validation-stages";
-
-function remapIndexedPath(
-  key: string,
-  prefix: string,
-  remapIndex: (index: number) => number | null,
-): string | null {
-  if (!key.startsWith(prefix)) {
-    return key;
-  }
-
-  const remaining = key.substring(prefix.length);
-  const parts = remaining.split(".");
-  const currentIdx = Number(parts[0]);
-  if (!Number.isInteger(currentIdx) || currentIdx < 0) {
-    return key;
-  }
-
-  const nextIdx = remapIndex(currentIdx);
-
-  if (nextIdx === null) {
-    return null;
-  }
-
-  const rest = parts.slice(1).join(".");
-  return rest ? `${prefix}${nextIdx}.${rest}` : `${prefix}${nextIdx}`;
-}
 
 export class BitValidationManager<T extends object> {
   private validatingCount = 0;
@@ -263,9 +238,10 @@ export class BitValidationManager<T extends object> {
   async validate(options?: BitValidationOptions): Promise<boolean> {
     try {
       if (options?.scopeFields?.length) {
-        options.scopeFields.forEach((fieldPath) =>
-          this.cancelFieldAsync(fieldPath),
-        );
+        options.scopeFields.forEach((fieldPath) => {
+          this.cancelFieldAsync(fieldPath);
+          this.updateFieldValidating(fieldPath, false);
+        });
       }
 
       const context: ValidationPipelineContext<T> = {

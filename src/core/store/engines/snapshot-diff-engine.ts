@@ -35,7 +35,7 @@ export function createHistoryPatch<T extends object>(
   nextValue: T,
 ): BitHistoryPatch<T> {
   const operations: BitHistoryPatchOperation[] = [];
-  const visitedPairs = new WeakMap<object, WeakSet<object>>();
+  const activePairs = new Map<object, Set<object>>();
 
   const visit = (
     previousNode: unknown,
@@ -54,61 +54,74 @@ export function createHistoryPatch<T extends object>(
       nextNode !== null &&
       typeof nextNode === "object"
     ) {
-      const visitedNextNodes = visitedPairs.get(previousNode as object);
-      if (visitedNextNodes?.has(nextNode as object)) {
+      const activeNextNodes = activePairs.get(previousNode as object);
+      if (activeNextNodes?.has(nextNode as object)) {
         return;
       }
 
-      if (visitedNextNodes) {
-        visitedNextNodes.add(nextNode as object);
+      if (activeNextNodes) {
+        activeNextNodes.add(nextNode as object);
       } else {
-        visitedPairs.set(
-          previousNode as object,
-          new WeakSet([nextNode as object]),
-        );
+        activePairs.set(previousNode as object, new Set([nextNode as object]));
       }
     }
 
-    if (
-      isPlainObject(previousNode) &&
-      isPlainObject(nextNode) &&
-      hadPreviousValue &&
-      hasNextValue
-    ) {
-      const keys = new Set<string>([
-        ...Object.keys(previousNode),
-        ...Object.keys(nextNode),
-      ]);
+    try {
+      if (
+        isPlainObject(previousNode) &&
+        isPlainObject(nextNode) &&
+        hadPreviousValue &&
+        hasNextValue
+      ) {
+        const keys = new Set<string>([
+          ...Object.keys(previousNode),
+          ...Object.keys(nextNode),
+        ]);
 
-      for (const key of keys) {
-        const childPath = path ? `${path}.${key}` : key;
-        const childHasPrevious = Object.prototype.hasOwnProperty.call(
-          previousNode,
-          key,
-        );
-        const childHasNext = Object.prototype.hasOwnProperty.call(
-          nextNode,
-          key,
-        );
+        for (const key of keys) {
+          const childPath = path ? `${path}.${key}` : key;
+          const childHasPrevious = Object.prototype.hasOwnProperty.call(
+            previousNode,
+            key,
+          );
+          const childHasNext = Object.prototype.hasOwnProperty.call(
+            nextNode,
+            key,
+          );
 
-        visit(
-          previousNode[key],
-          nextNode[key],
-          childPath,
-          childHasPrevious,
-          childHasNext,
-        );
+          visit(
+            previousNode[key],
+            nextNode[key],
+            childPath,
+            childHasPrevious,
+            childHasNext,
+          );
+        }
+        return;
       }
-      return;
-    }
 
-    operations.push({
-      path,
-      previousValue: deepClone(previousNode),
-      nextValue: deepClone(nextNode),
-      hadPreviousValue,
-      hasNextValue,
-    });
+      operations.push({
+        path,
+        previousValue: deepClone(previousNode),
+        nextValue: deepClone(nextNode),
+        hadPreviousValue,
+        hasNextValue,
+      });
+    } finally {
+      if (
+        previousNode !== null &&
+        typeof previousNode === "object" &&
+        nextNode !== null &&
+        typeof nextNode === "object"
+      ) {
+        const nextActiveNodes = activePairs.get(previousNode as object);
+        nextActiveNodes?.delete(nextNode as object);
+
+        if (nextActiveNodes && nextActiveNodes.size === 0) {
+          activePairs.delete(previousNode as object);
+        }
+      }
+    }
   };
 
   visit(previousValue, nextValue, "", true, true);
