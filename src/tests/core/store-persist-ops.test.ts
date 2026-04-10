@@ -102,11 +102,11 @@ describe("clearStorePersisted", () => {
     expect(dispatch).toHaveBeenCalledTimes(2);
     expect(dispatch).toHaveBeenNthCalledWith(1, {
       kind: "form.persistMeta",
-      patch: { error: null },
+      patch: { isSaving: true, error: null },
     });
     expect(dispatch).toHaveBeenNthCalledWith(2, {
       kind: "form.persistMeta",
-      patch: { error: null },
+      patch: { isSaving: false, error: null },
     });
   });
 
@@ -123,9 +123,10 @@ describe("clearStorePersisted", () => {
     expect(dispatch).toHaveBeenCalledTimes(2);
     expect(dispatch).toHaveBeenNthCalledWith(1, {
       kind: "form.persistMeta",
-      patch: { error: null },
+      patch: { isSaving: true, error: null },
     });
     expect(dispatch.mock.calls[1]?.[0]?.kind).toBe("form.persistMeta");
+    expect(dispatch.mock.calls[1]?.[0]?.patch?.isSaving).toBe(false);
     expect(dispatch.mock.calls[1]?.[0]?.patch?.error).toBeInstanceOf(Error);
     expect(dispatch.mock.calls[1]?.[0]?.patch?.error?.message).toBe(
       "clear failed",

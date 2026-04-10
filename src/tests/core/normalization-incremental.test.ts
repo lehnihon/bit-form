@@ -207,4 +207,67 @@ describe("Incremental Normalization (normalizeDependsOn)", () => {
       fullName: "Ana",
     });
   });
+
+  it("ordena normalizers por dependência em registro dinâmico fora de ordem", () => {
+    const store = createBitStore({
+      initialValues: { firstName: "", fullName: "" },
+    });
+
+    store.feature.registerField("fullName", {
+      normalize: (_value, values: any) => String(values.firstName),
+      normalizeDependsOn: ["firstName"],
+    });
+
+    store.feature.registerField("firstName", {
+      normalize: (value) => String(value).trim(),
+    });
+
+    store.write.setField("firstName", "  Ana  ");
+
+    expect(store.read.getState().values).toEqual({
+      firstName: "Ana",
+      fullName: "Ana",
+    });
+  });
+
+  it("reporta ciclo em normalizeDependsOn e evita rodada de normalização indefinida", () => {
+    const onUnhandledError = vi.fn();
+
+    const store = createBitStore({
+      initialValues: { a: "init-a", b: "init-b", name: "  Ana  " },
+      onUnhandledError,
+      fields: {
+        a: {
+          normalize: (_value, values: any) => `A:${values.b}`,
+          normalizeDependsOn: ["b"],
+        },
+        b: {
+          normalize: (_value, values: any) => `B:${values.a}`,
+          normalizeDependsOn: ["a"],
+        },
+        name: {
+          normalize: (value) => String(value).trim(),
+        },
+      },
+    });
+
+    onUnhandledError.mockClear();
+
+    store.write.reset();
+
+    expect(onUnhandledError).toHaveBeenCalled();
+    expect(
+      onUnhandledError.mock.calls.some(
+        ([error, source]) =>
+          source === "derivation" &&
+          error instanceof Error &&
+          error.message.includes("cyclic normalizer dependencies detected"),
+      ),
+    ).toBe(true);
+
+    // Entradas cíclicas não devem ser executadas.
+    expect(store.read.getState().values.a).toBe("init-a");
+    // Entradas acíclicas continuam executando na mesma rodada.
+    expect(store.read.getState().values.name).toBe("Ana");
+  });
 });

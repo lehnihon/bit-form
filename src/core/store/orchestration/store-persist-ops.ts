@@ -67,7 +67,7 @@ export async function clearStorePersisted<T extends object>(args: {
   const { dispatch, effects } = args;
   let persistError: Error | null = null;
 
-  dispatch(persistMetaOperation({ error: null }));
+  dispatch(persistMetaOperation({ isSaving: true, error: null }));
 
   try {
     await effects.clearPersisted();
@@ -76,6 +76,7 @@ export async function clearStorePersisted<T extends object>(args: {
   } finally {
     dispatch(
       persistMetaOperation({
+        isSaving: false,
         error: persistError,
       }),
     );

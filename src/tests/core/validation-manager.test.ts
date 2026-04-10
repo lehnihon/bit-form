@@ -1096,4 +1096,59 @@ describe("BitValidationManager", () => {
     expect(validatingTransitions).toContain(true);
     expect(state.isValidating.email).toBeUndefined();
   });
+
+  it("BUG-11: scoped validate after async config removal must clear isValidating", async () => {
+    let config: any = {
+      validation: {
+        asyncValidateOn: "change",
+        asyncValidateDelay: 0,
+        asyncValidate: async () => new Promise<string | null>(() => {}),
+      },
+    };
+
+    const state: any = {
+      values: { email: "" },
+      errors: {},
+      touched: {},
+      isValidating: {},
+      persist: { isSaving: false, isRestoring: false, error: null },
+      isValid: true,
+      isSubmitting: false,
+      isDirty: false,
+    };
+
+    const manager = new BitValidationManager<any>({
+      getState: () => state,
+      dispatch: vi.fn((operation: any) => {
+        if (
+          operation.kind === "state.patch" &&
+          operation.partialState.isValidating
+        ) {
+          state.isValidating = operation.partialState.isValidating;
+        }
+
+        if (operation.kind === "validation.commit") {
+          state.errors = operation.errors;
+          state.isValid = operation.isValid;
+        }
+      }),
+      setError: vi.fn(),
+      getFieldConfig: () => config,
+      getScopeFields: () => [],
+      forEachFieldConfig: () => {},
+      config: { validationDelay: 0, onUnhandledError: vi.fn() } as any,
+      getRequiredErrors: () => ({}),
+      getHiddenFields: () => new Set<string>(),
+      emitBeforeValidate: async () => {},
+      emitAfterValidate: async () => {},
+    });
+
+    manager.handleAsync("email", "x");
+    expect(state.isValidating.email).toBe(true);
+
+    config = {};
+    await manager.validate({ scopeFields: ["email"] });
+
+    expect(state.isValidating.email).toBeUndefined();
+  });
 });

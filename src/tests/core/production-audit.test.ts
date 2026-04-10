@@ -184,6 +184,34 @@ describe("Production Audit - Critical Fixes", () => {
       expect(store.read.isHidden("target")).toBe(false);
       expect(submitted.target).toBe("value");
     });
+
+    it("should not keep submit blocked after re-register removes async validation", async () => {
+      const store = createBitStore({
+        initialValues: { email: "" },
+      });
+
+      store.feature.registerField("email", {
+        validation: {
+          asyncValidateOn: "change",
+          asyncValidateDelay: 0,
+          asyncValidate: async () => new Promise<string | null>(() => {}),
+        },
+      });
+
+      store.write.setField("email", "x");
+      expect(store.read.getState().isValidating.email).toBe(true);
+
+      store.feature.registerField("email", {});
+
+      let submitted = false;
+      const result = await store.write.submit(() => {
+        submitted = true;
+      });
+
+      expect(store.read.getState().isValidating.email).toBeUndefined();
+      expect(result).toEqual({ status: "submitted" });
+      expect(submitted).toBe(true);
+    });
   });
 
   describe("ALTO #5: Hidden Field Error Validation", () => {

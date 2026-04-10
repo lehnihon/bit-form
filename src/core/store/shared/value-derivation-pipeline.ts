@@ -71,6 +71,92 @@ export function filterDependencyEntries<TEntry extends BitDependencyAwareEntry>(
   );
 }
 
+function orderDependencyEntries<TEntry extends BitDependencyAwareEntry>(
+  entries: readonly TEntry[],
+): {
+  orderedEntries: TEntry[];
+  cyclePaths: string[];
+} {
+  if (entries.length <= 1) {
+    return {
+      orderedEntries: [...entries],
+      cyclePaths: [],
+    };
+  }
+
+  const entryByPath = new Map(entries.map((entry) => [entry.path, entry]));
+  const inDegree = new Map<string, number>();
+  const dependents = new Map<string, Set<string>>();
+  const originalIndex = new Map(
+    entries.map((entry, index) => [entry.path, index]),
+  );
+
+  entries.forEach((entry) => inDegree.set(entry.path, 0));
+
+  entries.forEach((entry) => {
+    entry.dependsOn.forEach((dependencyPath) => {
+      if (dependencyPath === entry.path || !entryByPath.has(dependencyPath)) {
+        return;
+      }
+
+      const nextDependents =
+        dependents.get(dependencyPath) ?? new Set<string>();
+      if (nextDependents.has(entry.path)) {
+        return;
+      }
+
+      nextDependents.add(entry.path);
+      dependents.set(dependencyPath, nextDependents);
+      inDegree.set(entry.path, (inDegree.get(entry.path) ?? 0) + 1);
+    });
+  });
+
+  const queue = entries
+    .filter((entry) => (inDegree.get(entry.path) ?? 0) === 0)
+    .map((entry) => entry.path);
+  const orderedPaths: string[] = [];
+
+  while (queue.length > 0) {
+    queue.sort(
+      (left, right) =>
+        (originalIndex.get(left) ?? 0) - (originalIndex.get(right) ?? 0),
+    );
+
+    const currentPath = queue.shift()!;
+    orderedPaths.push(currentPath);
+
+    const nextDependents = dependents.get(currentPath);
+    if (!nextDependents) {
+      continue;
+    }
+
+    nextDependents.forEach((dependentPath) => {
+      const nextDegree = (inDegree.get(dependentPath) ?? 0) - 1;
+      inDegree.set(dependentPath, nextDegree);
+
+      if (nextDegree === 0) {
+        queue.push(dependentPath);
+      }
+    });
+  }
+
+  if (orderedPaths.length !== entries.length) {
+    const cyclePaths = entries
+      .filter((entry) => (inDegree.get(entry.path) ?? 0) > 0)
+      .map((entry) => entry.path);
+
+    return {
+      orderedEntries: orderedPaths.map((path) => entryByPath.get(path)!),
+      cyclePaths,
+    };
+  }
+
+  return {
+    orderedEntries: orderedPaths.map((path) => entryByPath.get(path)!),
+    cyclePaths: [],
+  };
+}
+
 export function applyValueDerivations<T extends object>(args: {
   values: T;
   changedPaths?: readonly string[];
@@ -81,10 +167,19 @@ export function applyValueDerivations<T extends object>(args: {
   const { values, changedPaths, normalizerEntries, applyComputed, onError } =
     args;
 
-  const targetedNormalizers = filterDependencyEntries(
-    normalizerEntries,
-    changedPaths,
+  const orderedResult = orderDependencyEntries(
+    filterDependencyEntries(normalizerEntries, changedPaths),
   );
+  const { orderedEntries: targetedNormalizers, cyclePaths } = orderedResult;
+
+  if (cyclePaths.length > 0) {
+    onError?.(
+      new Error(
+        `BitStore: cyclic normalizer dependencies detected. Check normalizeDependsOn definitions for: ${cyclePaths.join(", ")}.`,
+      ),
+      cyclePaths[0] ?? "*",
+    );
+  }
 
   if (targetedNormalizers.length === 0) {
     return applyComputed(values, changedPaths);

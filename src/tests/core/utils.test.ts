@@ -389,6 +389,24 @@ describe("utils - collectDirtyPaths", () => {
 
     expect(paths.size).toBe(0);
   });
+
+  it("marca ambos os ramos quando paths distintos compartilham a mesma referência", () => {
+    const currentShared = { city: "Osaka" };
+    const current = {
+      billing: currentShared,
+      shipping: currentShared,
+    };
+
+    const initialShared = { city: "Tokyo" };
+    const initial = {
+      billing: initialShared,
+      shipping: initialShared,
+    };
+
+    const paths = collectDirtyPaths(current, initial);
+
+    expect(paths).toEqual(new Set(["billing.city", "shipping.city"]));
+  });
 });
 
 // -------------------------------------------------------------------

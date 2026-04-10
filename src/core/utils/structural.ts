@@ -134,7 +134,7 @@ export function collectDirtyPaths(
   initial: any,
   prefix = "",
   result: Set<string> = new Set(),
-  visitedPairs: WeakMap<object, WeakSet<object>> = new WeakMap(),
+  activePairs: Map<object, Set<object>> = new Map(),
 ): Set<string> {
   if (valueEqual(obj, initial)) return result;
   if (
@@ -147,37 +147,46 @@ export function collectDirtyPaths(
     return result;
   }
 
-  const visitedInitials = visitedPairs.get(obj as object);
-  if (visitedInitials?.has(initial as object)) {
+  const activeInitials = activePairs.get(obj as object);
+  if (activeInitials?.has(initial as object)) {
     return result;
   }
 
-  if (visitedInitials) {
-    visitedInitials.add(initial as object);
+  if (activeInitials) {
+    activeInitials.add(initial as object);
   } else {
-    visitedPairs.set(obj as object, new WeakSet([initial as object]));
+    activePairs.set(obj as object, new Set([initial as object]));
   }
 
-  if (Array.isArray(obj) || Array.isArray(initial)) {
-    if (!valueEqual(obj, initial) && prefix) result.add(prefix);
+  try {
+    if (Array.isArray(obj) || Array.isArray(initial)) {
+      if (!valueEqual(obj, initial) && prefix) result.add(prefix);
+      return result;
+    }
+    const allKeys = new Set<string>();
+    for (const key of Object.keys(obj || {})) {
+      allKeys.add(key);
+    }
+    for (const key of Object.keys(initial || {})) {
+      allKeys.add(key);
+    }
+    for (const k of allKeys) {
+      const p = prefix ? `${prefix}.${k}` : k;
+      collectDirtyPaths(
+        (obj as any)?.[k],
+        (initial as any)?.[k],
+        p,
+        result,
+        activePairs,
+      );
+    }
     return result;
+  } finally {
+    const nextActiveInitials = activePairs.get(obj as object);
+    nextActiveInitials?.delete(initial as object);
+
+    if (nextActiveInitials && nextActiveInitials.size === 0) {
+      activePairs.delete(obj as object);
+    }
   }
-  const allKeys = new Set<string>();
-  for (const key of Object.keys(obj || {})) {
-    allKeys.add(key);
-  }
-  for (const key of Object.keys(initial || {})) {
-    allKeys.add(key);
-  }
-  for (const k of allKeys) {
-    const p = prefix ? `${prefix}.${k}` : k;
-    collectDirtyPaths(
-      (obj as any)?.[k],
-      (initial as any)?.[k],
-      p,
-      result,
-      visitedPairs,
-    );
-  }
-  return result;
 }

@@ -134,7 +134,7 @@ describe("architecture coupling baseline", () => {
       },
       "store/managers/features/validation-manager.ts": {
         fanIn: 2,
-        fanOut: 10,
+        fanOut: 11,
       },
       "store/managers/features/lifecycle-manager.ts": {
         fanIn: 2,
