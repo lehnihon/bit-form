@@ -55,6 +55,54 @@ describe("BitValidationManager", () => {
     expect(state.errors.email).toBe("E-mail inválido");
   });
 
+  it("should abort scoped commit when field visibility changes during resolver", async () => {
+    let resolveResolver!: (value: Record<string, string>) => void;
+    let hiddenFields = new Set<string>();
+
+    const state = {
+      values: { email: "invalid" },
+      errors: {},
+      touched: {},
+      isValidating: {},
+      persist: { isSaving: false, isRestoring: false, error: null },
+      isValid: true,
+      isSubmitting: false,
+      isDirty: false,
+    } as any;
+
+    const dispatch = vi.fn();
+
+    const resolver = vi.fn().mockImplementation(
+      () =>
+        new Promise<Record<string, string>>((resolve) => {
+          resolveResolver = resolve;
+        }),
+    );
+
+    const commitPromise = commitSynchronousScopeValidation({
+      scopeFields: ["email"],
+      store: {
+        getState: () => state,
+        dispatch,
+        config: { resolver } as any,
+        getRequiredErrors: () => ({}),
+        getHiddenFields: () => hiddenFields,
+      } as any,
+      asyncErrors: new Map<string, string>(),
+    });
+
+    hiddenFields = new Set(["email"]);
+
+    resolveResolver({ email: "E-mail inválido" });
+    await commitPromise;
+
+    const validationCommit = dispatch.mock.calls.find(
+      (call) => call[0]?.kind === "validation.commit",
+    );
+
+    expect(validationCommit).toBeUndefined();
+  });
+
   it("should accumulate scopeFields during debounce window", async () => {
     vi.useFakeTimers();
 

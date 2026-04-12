@@ -35,6 +35,14 @@ export interface UploadKernelCallbacks {
  * });
  * ```
  */
+function safeCallbackExecution(fn: () => void): void {
+  try {
+    fn();
+  } catch (error) {
+    // Silently swallow callback errors to maintain upload state consistency
+  }
+}
+
 export function createUploadHandler<
   TMetadata extends Record<string, unknown> = Record<string, unknown>,
 >(
@@ -47,23 +55,23 @@ export function createUploadHandler<
     if (!file) return;
 
     const myGeneration = ++currentGeneration;
-    callbacks.setLoading(true);
-    callbacks.setError(fieldPath, undefined);
+    safeCallbackExecution(() => callbacks.setLoading(true));
+    safeCallbackExecution(() => callbacks.setError(fieldPath, undefined));
 
     try {
       const result = await uploadFn(file);
 
       if (myGeneration !== currentGeneration) return;
-      callbacks.setValue(result.url);
-      callbacks.setUploadKey(result.key);
-      callbacks.setError(fieldPath, undefined);
+      safeCallbackExecution(() => callbacks.setValue(result.url));
+      safeCallbackExecution(() => callbacks.setUploadKey(result.key));
+      safeCallbackExecution(() => callbacks.setError(fieldPath, undefined));
     } catch (error) {
       if (myGeneration !== currentGeneration) return;
       const message = error instanceof Error ? error.message : "Upload failed";
-      callbacks.setError(fieldPath, message);
+      safeCallbackExecution(() => callbacks.setError(fieldPath, message));
     } finally {
       if (myGeneration === currentGeneration) {
-        callbacks.setLoading(false);
+        safeCallbackExecution(() => callbacks.setLoading(false));
       }
     }
   };

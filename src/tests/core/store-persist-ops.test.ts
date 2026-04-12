@@ -3,7 +3,20 @@ import {
   applyStorePersistedValues,
   clearStorePersisted,
   forceStorePersistedSave,
+  restoreStorePersisted,
 } from "../../core/store/orchestration/store-persist-ops";
+
+function createDeferred<T>() {
+  let resolve!: (value: T | PromiseLike<T>) => void;
+  let reject!: (reason?: unknown) => void;
+
+  const promise = new Promise<T>((res, rej) => {
+    resolve = res;
+    reject = rej;
+  });
+
+  return { promise, resolve, reject };
+}
 
 describe("applyStorePersistedValues", () => {
   it("should preserve isSubmitting while applying persisted values", () => {
@@ -89,7 +102,7 @@ describe("applyStorePersistedValues", () => {
 });
 
 describe("forceStorePersistedSave", () => {
-  it("should always reset isSaving in a final dispatch on success", async () => {
+  it("should delegate success path without local metadata dispatch", async () => {
     const dispatch = vi.fn();
     const effects = {
       savePersistedNow: vi.fn(async () => undefined),
@@ -97,18 +110,11 @@ describe("forceStorePersistedSave", () => {
 
     await forceStorePersistedSave({ dispatch, effects });
 
-    expect(dispatch).toHaveBeenCalledTimes(2);
-    expect(dispatch).toHaveBeenNthCalledWith(1, {
-      kind: "form.persistMeta",
-      patch: { isSaving: true, error: null },
-    });
-    expect(dispatch).toHaveBeenNthCalledWith(2, {
-      kind: "form.persistMeta",
-      patch: { isSaving: false, error: null },
-    });
+    expect(dispatch).not.toHaveBeenCalled();
+    expect(effects.savePersistedNow).toHaveBeenCalledTimes(1);
   });
 
-  it("should reset isSaving and expose error when save fails", async () => {
+  it("should swallow save errors and avoid local metadata dispatch", async () => {
     const dispatch = vi.fn();
     const effects = {
       savePersistedNow: vi.fn(async () => {
@@ -116,24 +122,64 @@ describe("forceStorePersistedSave", () => {
       }),
     } as any;
 
-    await forceStorePersistedSave({ dispatch, effects });
+    await expect(
+      forceStorePersistedSave({ dispatch, effects }),
+    ).resolves.toBeUndefined();
 
-    expect(dispatch).toHaveBeenCalledTimes(2);
-    expect(dispatch).toHaveBeenNthCalledWith(1, {
-      kind: "form.persistMeta",
-      patch: { isSaving: true, error: null },
-    });
-    expect(dispatch.mock.calls[1]?.[0]?.kind).toBe("form.persistMeta");
-    expect(dispatch.mock.calls[1]?.[0]?.patch?.isSaving).toBe(false);
-    expect(dispatch.mock.calls[1]?.[0]?.patch?.error).toBeInstanceOf(Error);
-    expect(dispatch.mock.calls[1]?.[0]?.patch?.error?.message).toBe(
-      "save failed",
-    );
+    expect(dispatch).not.toHaveBeenCalled();
+  });
+
+  it("should allow concurrent saves without throwing", async () => {
+    const dispatch = vi.fn();
+
+    const first = createDeferred<void>();
+    const second = createDeferred<void>();
+    const effects = {
+      savePersistedNow: vi
+        .fn()
+        .mockImplementationOnce(() => first.promise)
+        .mockImplementationOnce(() => second.promise),
+    } as any;
+
+    const op1 = forceStorePersistedSave({ dispatch, effects });
+    const op2 = forceStorePersistedSave({ dispatch, effects });
+
+    first.resolve();
+    await op1;
+
+    second.resolve();
+    await op2;
+
+    expect(dispatch).not.toHaveBeenCalled();
+  });
+
+  it("should resolve when a failed save completes before a successful one", async () => {
+    const dispatch = vi.fn();
+
+    const first = createDeferred<void>();
+    const second = createDeferred<void>();
+    const effects = {
+      savePersistedNow: vi
+        .fn()
+        .mockImplementationOnce(() => first.promise)
+        .mockImplementationOnce(() => second.promise),
+    } as any;
+
+    const op1 = forceStorePersistedSave({ dispatch, effects });
+    const op2 = forceStorePersistedSave({ dispatch, effects });
+
+    first.reject(new Error("first failed"));
+    await op1;
+
+    second.resolve();
+    await op2;
+
+    expect(dispatch).not.toHaveBeenCalled();
   });
 });
 
 describe("clearStorePersisted", () => {
-  it("should finalize metadata with error null when clear succeeds", async () => {
+  it("should delegate clear success without local metadata dispatch", async () => {
     const dispatch = vi.fn();
     const effects = {
       clearPersisted: vi.fn(async () => undefined),
@@ -141,18 +187,11 @@ describe("clearStorePersisted", () => {
 
     await clearStorePersisted({ dispatch, effects });
 
-    expect(dispatch).toHaveBeenCalledTimes(2);
-    expect(dispatch).toHaveBeenNthCalledWith(1, {
-      kind: "form.persistMeta",
-      patch: { isSaving: true, error: null },
-    });
-    expect(dispatch).toHaveBeenNthCalledWith(2, {
-      kind: "form.persistMeta",
-      patch: { isSaving: false, error: null },
-    });
+    expect(dispatch).not.toHaveBeenCalled();
+    expect(effects.clearPersisted).toHaveBeenCalledTimes(1);
   });
 
-  it("should finalize metadata with error when clear fails", async () => {
+  it("should swallow clear failures and avoid local metadata dispatch", async () => {
     const dispatch = vi.fn();
     const effects = {
       clearPersisted: vi.fn(async () => {
@@ -160,18 +199,50 @@ describe("clearStorePersisted", () => {
       }),
     } as any;
 
-    await clearStorePersisted({ dispatch, effects });
+    await expect(
+      clearStorePersisted({ dispatch, effects }),
+    ).resolves.toBeUndefined();
 
-    expect(dispatch).toHaveBeenCalledTimes(2);
+    expect(dispatch).not.toHaveBeenCalled();
+  });
+});
+
+describe("restoreStorePersisted", () => {
+  it("should keep isRestoring=true until all concurrent restores finish", async () => {
+    const dispatch = vi.fn();
+
+    const first = createDeferred<boolean>();
+    const second = createDeferred<boolean>();
+    const effects = {
+      restorePersisted: vi
+        .fn()
+        .mockImplementationOnce(() => first.promise)
+        .mockImplementationOnce(() => second.promise),
+    } as any;
+
+    const op1 = restoreStorePersisted({ dispatch, effects });
+    const op2 = restoreStorePersisted({ dispatch, effects });
+
+    expect(dispatch).toHaveBeenCalledTimes(1);
     expect(dispatch).toHaveBeenNthCalledWith(1, {
       kind: "form.persistMeta",
-      patch: { isSaving: true, error: null },
+      patch: { isRestoring: true, error: null },
     });
-    expect(dispatch.mock.calls[1]?.[0]?.kind).toBe("form.persistMeta");
-    expect(dispatch.mock.calls[1]?.[0]?.patch?.isSaving).toBe(false);
-    expect(dispatch.mock.calls[1]?.[0]?.patch?.error).toBeInstanceOf(Error);
-    expect(dispatch.mock.calls[1]?.[0]?.patch?.error?.message).toBe(
-      "clear failed",
-    );
+
+    first.resolve(true);
+    await op1;
+
+    expect(
+      dispatch.mock.calls.some((call) => call[0]?.patch?.isRestoring === false),
+    ).toBe(false);
+
+    second.resolve(true);
+    await op2;
+
+    expect(dispatch).toHaveBeenCalledTimes(2);
+    expect(dispatch).toHaveBeenNthCalledWith(2, {
+      kind: "form.persistMeta",
+      patch: { isRestoring: false, error: null },
+    });
   });
 });

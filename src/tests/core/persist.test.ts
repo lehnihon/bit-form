@@ -27,6 +27,18 @@ function createMockStorage() {
   };
 }
 
+function createDeferred<T>() {
+  let resolve!: (value: T | PromiseLike<T>) => void;
+  let reject!: (reason?: unknown) => void;
+
+  const promise = new Promise<T>((res, rej) => {
+    resolve = res;
+    reject = rej;
+  });
+
+  return { promise, resolve, reject };
+}
+
 describe("Persist Feature (BitPersistManager)", () => {
   beforeEach(() => {
     vi.useFakeTimers();
@@ -265,6 +277,52 @@ describe("Persist Feature (BitPersistManager)", () => {
       consoleErrorSpy.mockRestore();
       store.feature.cleanup();
     });
+
+    it("should keep isSaving=true while forceSave is pending even if autosave finishes first", async () => {
+      const autosaveDeferred = createDeferred<void>();
+      const forceSaveDeferred = createDeferred<void>();
+
+      let saveCallCount = 0;
+      const storage = {
+        getItem: vi.fn(() => null),
+        setItem: vi.fn(() => {
+          saveCallCount += 1;
+          return saveCallCount === 1
+            ? autosaveDeferred.promise
+            : forceSaveDeferred.promise;
+        }),
+        removeItem: vi.fn(),
+      };
+
+      const store = createBitStore<TestForm>({
+        initialValues: { name: "Leo", email: "leo@test.com", age: 30 },
+        persist: {
+          enabled: true,
+          key: "test-form",
+          storage,
+          autoSave: true,
+          debounceMs: 10,
+        },
+      });
+
+      store.write.setField("name", "Leandro");
+      await vi.advanceTimersByTimeAsync(10);
+
+      const forceSavePromise = store.feature.forceSave();
+
+      expect(store.read.getState().persist.isSaving).toBe(true);
+
+      autosaveDeferred.resolve();
+      await Promise.resolve();
+
+      expect(store.read.getState().persist.isSaving).toBe(true);
+
+      forceSaveDeferred.resolve();
+      await forceSavePromise;
+
+      expect(store.read.getState().persist.isSaving).toBe(false);
+      store.feature.cleanup();
+    });
   });
 
   describe("restorePersisted", () => {
@@ -290,6 +348,52 @@ describe("Persist Feature (BitPersistManager)", () => {
       expect(restored).toBe(true);
       expect(store.read.getState().values.name).toBe("Restored");
       expect(store.read.getState().values.email).toBe("restored@test.com");
+      store.feature.cleanup();
+    });
+
+    it("should keep isRestoring=true until all concurrent restore calls complete", async () => {
+      const firstRestore = createDeferred<string | null>();
+      const secondRestore = createDeferred<string | null>();
+      let restoreCallCount = 0;
+
+      const storage = {
+        getItem: vi.fn(() => {
+          restoreCallCount += 1;
+          return restoreCallCount === 1
+            ? firstRestore.promise
+            : secondRestore.promise;
+        }),
+        setItem: vi.fn(),
+        removeItem: vi.fn(),
+      };
+
+      const store = createBitStore<TestForm>({
+        initialValues: { name: "Leo", email: "leo@test.com", age: 30 },
+        persist: {
+          enabled: true,
+          key: "test-form",
+          storage,
+        },
+      });
+
+      const restoreA = store.feature.restorePersisted();
+      const restoreB = store.feature.restorePersisted();
+
+      expect(store.read.getState().persist.isRestoring).toBe(true);
+
+      firstRestore.resolve(
+        JSON.stringify({ name: "First", email: "first@test.com", age: 40 }),
+      );
+      await restoreA;
+
+      expect(store.read.getState().persist.isRestoring).toBe(true);
+
+      secondRestore.resolve(
+        JSON.stringify({ name: "Second", email: "second@test.com", age: 41 }),
+      );
+      await restoreB;
+
+      expect(store.read.getState().persist.isRestoring).toBe(false);
       store.feature.cleanup();
     });
 
@@ -564,6 +668,10 @@ describe("Persist Feature (BitPersistManager)", () => {
 
       expect(restored).toBe(false);
       expect(onError).toHaveBeenCalledWith(expect.any(Error));
+      expect(store.read.getState().persist.error).toBeInstanceOf(Error);
+      expect(store.read.getState().persist.error?.message).toContain(
+        "Storage failure",
+      );
       store.feature.cleanup();
     });
   });

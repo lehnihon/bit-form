@@ -17,7 +17,13 @@ if (!rootGlobal.__BIT_FORM__) {
     listeners: new Set<BitBusListener>(),
 
     dispatch(id: string, state) {
-      this.listeners.forEach((fn: BitBusListener) => fn(id, state));
+      this.listeners.forEach((fn: BitBusListener) => {
+        try {
+          fn(id, state);
+        } catch (error) {
+          // Silently swallow listener errors to prevent breaking the notification chain
+        }
+      });
     },
 
     subscribe(fn: BitBusListener) {
@@ -58,7 +64,13 @@ export function createBitBus(): BitFormGlobal {
     stores: {},
     listeners,
     dispatch(id, state) {
-      listeners.forEach((fn) => fn(id, state));
+      listeners.forEach((fn) => {
+        try {
+          fn(id, state);
+        } catch (error) {
+          // Silently swallow listener errors to prevent breaking the notification chain
+        }
+      });
     },
     subscribe(fn) {
       listeners.add(fn);

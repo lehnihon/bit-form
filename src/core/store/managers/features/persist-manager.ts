@@ -4,9 +4,10 @@ import type {
 } from "../../contracts/types";
 
 interface BitPersistManagerCallbacks {
-  onAutoSaveStart?: () => void;
-  onAutoSaveSuccess?: () => void;
-  onAutoSaveError?: (error: unknown) => void;
+  onWriteStart?: () => void;
+  onWriteSuccess?: () => void;
+  onWriteError?: (error: unknown) => void;
+  onWriteSettled?: () => void;
   onError?: (error: unknown) => void;
 }
 
@@ -34,6 +35,8 @@ function getDefaultStorage(): BitPersistStorageAdapter | undefined {
 
 export class BitPersistManager<T extends object = Record<string, unknown>> {
   private timer: ReturnType<typeof setTimeout> | undefined;
+  private writeQueue: Promise<void> = Promise.resolve();
+  private activeWrites = 0;
 
   constructor(
     private config: BitPersistResolvedConfig<T>,
@@ -56,6 +59,44 @@ export class BitPersistManager<T extends object = Record<string, unknown>> {
     this.config.onError?.(error);
   }
 
+  private enqueueWriteOperation(operation: () => Promise<void>): Promise<void> {
+    this.activeWrites += 1;
+
+    if (this.activeWrites === 1) {
+      this.callbacks.onWriteStart?.();
+    }
+
+    const run = this.writeQueue.then(operation, operation);
+    this.writeQueue = run.then(
+      () => undefined,
+      () => undefined,
+    );
+
+    const observed = run.then(
+      () => ({ ok: true as const, error: undefined }),
+      (error) => ({ ok: false as const, error }),
+    );
+
+    return observed.then((result) => {
+      this.activeWrites = Math.max(0, this.activeWrites - 1);
+
+      if (result.ok) {
+        if (this.activeWrites === 0) {
+          this.callbacks.onWriteSuccess?.();
+        }
+        return;
+      }
+
+      this.callbacks.onWriteError?.(result.error);
+
+      if (this.activeWrites === 0) {
+        this.callbacks.onWriteSettled?.();
+      }
+
+      throw result.error;
+    });
+  }
+
   private async persistPayload() {
     const storage = this.getStorage();
     if (!storage) return;
@@ -71,12 +112,14 @@ export class BitPersistManager<T extends object = Record<string, unknown>> {
   async saveNow() {
     if (!this.canPersist()) return;
 
-    try {
-      await this.persistPayload();
-    } catch (error) {
-      this.handleError(error);
-      throw error;
-    }
+    await this.enqueueWriteOperation(async () => {
+      try {
+        await this.persistPayload();
+      } catch (error) {
+        this.handleError(error);
+        throw error;
+      }
+    });
   }
 
   queueSave() {
@@ -88,15 +131,9 @@ export class BitPersistManager<T extends object = Record<string, unknown>> {
 
     this.timer = setTimeout(() => {
       this.timer = undefined;
-      this.callbacks.onAutoSaveStart?.();
-
-      void this.saveNow()
-        .then(() => {
-          this.callbacks.onAutoSaveSuccess?.();
-        })
-        .catch((error) => {
-          this.callbacks.onAutoSaveError?.(error);
-        });
+      void this.saveNow().catch(() => {
+        // saveNow already routes persist errors via callbacks and config handlers.
+      });
     }, this.config.debounceMs);
   }
 
@@ -119,7 +156,7 @@ export class BitPersistManager<T extends object = Record<string, unknown>> {
       return true;
     } catch (error) {
       this.handleError(error);
-      return false;
+      throw error;
     }
   }
 
@@ -129,11 +166,14 @@ export class BitPersistManager<T extends object = Record<string, unknown>> {
     const storage = this.getStorage();
     if (!storage) return;
 
-    try {
-      await storage.removeItem(this.config.key);
-    } catch (error) {
-      this.handleError(error);
-    }
+    await this.enqueueWriteOperation(async () => {
+      try {
+        await storage.removeItem(this.config.key);
+      } catch (error) {
+        this.handleError(error);
+        throw error;
+      }
+    });
   }
 
   destroy() {

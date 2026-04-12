@@ -76,13 +76,14 @@ export class BitPluginManager<T extends object = Record<string, unknown>> {
     pluginName?: string,
   ) {
     const context = this.getContext();
+    const stateSnapshot = context.getState();
     this.pendingErrorQueue.push({
       source,
       pluginName,
       error,
       event,
-      values: context.getState().values,
-      state: context.getState(),
+      values: stateSnapshot.values,
+      state: stateSnapshot,
     });
 
     if (this.notifyingError) {
@@ -103,7 +104,7 @@ export class BitPluginManager<T extends object = Record<string, unknown>> {
           if (!onError) continue;
 
           try {
-            await onError(payload, context);
+            await onError(payload, this.contextFactory());
           } catch {
             // fail-open: ignore secondary errors from onError handlers
           }

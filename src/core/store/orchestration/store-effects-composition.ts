@@ -55,15 +55,14 @@ export function createStoreEffects<T extends object>(args: {
     getDirtyValues,
     applyPersistedValues,
     {
-      onAutoSaveStart: () =>
-        setPersistMetadata?.({ isSaving: true, error: null }),
-      onAutoSaveSuccess: () =>
+      onWriteStart: () => setPersistMetadata?.({ isSaving: true, error: null }),
+      onWriteSuccess: () =>
         setPersistMetadata?.({ isSaving: false, error: null }),
-      onAutoSaveError: (error) =>
+      onWriteError: (error) =>
         setPersistMetadata?.({
-          isSaving: false,
           error: error instanceof Error ? error : new Error(String(error)),
         }),
+      onWriteSettled: () => setPersistMetadata?.({ isSaving: false }),
       onError: (error) => config.onUnhandledError(error, "persist"),
     },
   );

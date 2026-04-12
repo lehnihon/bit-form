@@ -33,17 +33,25 @@ export class BitSubscriptionEngine<T extends object> {
   private cacheHits = 0;
   private cacheMisses = 0;
   private cacheEvictions = 0;
+  private readonly onError?: (error: unknown, source: string) => void;
 
+  /**
+   * Maximum number of entries for path expansion cache.
+   * Lower = less memory; higher = fewer cache evictions in large dynamic forms.
+   * @default 500
+   */
   constructor(
     private readonly getState: () => Readonly<BitState<T>>,
-    /**
-     * Maximum number of entries for path expansion cache.
-     * Lower = less memory; higher = fewer cache evictions in large dynamic forms.
-     * @default 500
-     */
+    onErrorOrMaxCache?: ((error: unknown, source: string) => void) | number,
     maxCacheSize = 500,
   ) {
-    this.MAX_PATH_EXPANSION_CACHE_SIZE = maxCacheSize;
+    if (typeof onErrorOrMaxCache === "function") {
+      this.onError = onErrorOrMaxCache;
+      this.MAX_PATH_EXPANSION_CACHE_SIZE = maxCacheSize;
+      return;
+    }
+
+    this.MAX_PATH_EXPANSION_CACHE_SIZE = onErrorOrMaxCache ?? maxCacheSize;
   }
 
   subscribe(listener: () => void): () => void {
@@ -61,14 +69,18 @@ export class BitSubscriptionEngine<T extends object> {
 
     const subscription: SelectorListenerEntry<T> = {
       notify: (nextState) => {
-        const nextSlice = selector(nextState);
+        try {
+          const nextSlice = selector(nextState);
 
-        if (equalityFn(lastSlice, nextSlice)) {
-          return;
+          if (equalityFn(lastSlice, nextSlice)) {
+            return;
+          }
+
+          lastSlice = nextSlice;
+          listener(nextSlice);
+        } catch (error) {
+          this.reportError(error, "subscription:selector-notify");
         }
-
-        lastSlice = nextSlice;
-        listener(nextSlice);
       },
     };
 
@@ -84,7 +96,11 @@ export class BitSubscriptionEngine<T extends object> {
     });
 
     if (options.emitImmediately) {
-      listener(lastSlice);
+      try {
+        listener(lastSlice);
+      } catch (error) {
+        this.reportError(error, "subscription:emit-immediately");
+      }
     }
 
     return () => {
@@ -117,7 +133,7 @@ export class BitSubscriptionEngine<T extends object> {
       try {
         listener();
       } catch (error) {
-        console.error("Subscription listener error:", error);
+        this.reportError(error, "subscription:global-listener");
       }
     });
 
@@ -136,7 +152,7 @@ export class BitSubscriptionEngine<T extends object> {
         try {
           subscription.notify(nextState);
         } catch (error) {
-          console.error("Path subscription notify error:", error);
+          this.reportError(error, "subscription:path-notify");
         }
       });
       return;
@@ -153,7 +169,7 @@ export class BitSubscriptionEngine<T extends object> {
         try {
           subscription.notify(nextState);
         } catch (error) {
-          console.error("Path subscription notify error:", error);
+          this.reportError(error, "subscription:path-notify");
         }
       });
       return;
@@ -167,9 +183,18 @@ export class BitSubscriptionEngine<T extends object> {
       try {
         subscription.notify(nextState);
       } catch (error) {
-        console.error("Path subscription notify error:", error);
+        this.reportError(error, "subscription:path-notify");
       }
     });
+  }
+
+  private reportError(error: unknown, source: string): void {
+    if (this.onError) {
+      this.onError(error, source);
+      return;
+    }
+
+    console.error("Subscription listener error:", error);
   }
 
   destroy(): void {
