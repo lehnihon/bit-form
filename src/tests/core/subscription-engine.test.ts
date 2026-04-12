@@ -70,7 +70,7 @@ describe("BitSubscriptionEngine", () => {
     engine.notify(state, ["user.age"]);
 
     expect(onError).toHaveBeenCalledTimes(1);
-    expect(onError.mock.calls[0]?.[1]).toBe("subscription:global-listener");
+    expect(onError.mock.calls[0]?.[1]).toBe("subscription");
     expect(onError.mock.calls[0]?.[0]).toBeInstanceOf(Error);
   });
 
@@ -89,7 +89,7 @@ describe("BitSubscriptionEngine", () => {
     );
 
     expect(onError).toHaveBeenCalledTimes(1);
-    expect(onError.mock.calls[0]?.[1]).toBe("subscription:emit-immediately");
+    expect(onError.mock.calls[0]?.[1]).toBe("subscription");
     expect(onError.mock.calls[0]?.[0]).toBeInstanceOf(Error);
   });
 

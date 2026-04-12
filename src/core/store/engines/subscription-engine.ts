@@ -9,6 +9,8 @@ interface SelectorListenerEntry<T extends object> {
   notify(nextState: Readonly<BitState<T>>): void;
 }
 
+const SUBSCRIPTION_ERROR_SOURCE = "subscription";
+
 export interface BitSubscriptionCacheStats {
   cacheSize: number;
   cacheLimit: number;
@@ -79,7 +81,7 @@ export class BitSubscriptionEngine<T extends object> {
           lastSlice = nextSlice;
           listener(nextSlice);
         } catch (error) {
-          this.reportError(error, "subscription:selector-notify");
+          this.reportError(error);
         }
       },
     };
@@ -99,7 +101,7 @@ export class BitSubscriptionEngine<T extends object> {
       try {
         listener(lastSlice);
       } catch (error) {
-        this.reportError(error, "subscription:emit-immediately");
+        this.reportError(error);
       }
     }
 
@@ -133,7 +135,7 @@ export class BitSubscriptionEngine<T extends object> {
       try {
         listener();
       } catch (error) {
-        this.reportError(error, "subscription:global-listener");
+        this.reportError(error);
       }
     });
 
@@ -148,13 +150,10 @@ export class BitSubscriptionEngine<T extends object> {
       normalizedChangedPaths.length === 0 ||
       normalizedChangedPaths.includes("*")
     ) {
-      this.pathScopedSubscriptions.forEach((_paths, subscription) => {
-        try {
-          subscription.notify(nextState);
-        } catch (error) {
-          this.reportError(error, "subscription:path-notify");
-        }
-      });
+      this.notifyScopedSubscribers(
+        this.pathScopedSubscriptions.keys(),
+        nextState,
+      );
       return;
     }
 
@@ -165,13 +164,7 @@ export class BitSubscriptionEngine<T extends object> {
       const singleScopedSubscribers =
         this.collectSubscribersForSingleChangedPath(normalizedChangedPaths[0]);
 
-      singleScopedSubscribers.forEach((subscription) => {
-        try {
-          subscription.notify(nextState);
-        } catch (error) {
-          this.reportError(error, "subscription:path-notify");
-        }
-      });
+      this.notifyScopedSubscribers(singleScopedSubscribers, nextState);
       return;
     }
 
@@ -179,18 +172,25 @@ export class BitSubscriptionEngine<T extends object> {
       normalizedChangedPaths,
     );
 
-    scopedSubscribers.forEach((subscription) => {
+    this.notifyScopedSubscribers(scopedSubscribers, nextState);
+  }
+
+  private notifyScopedSubscribers(
+    subscriptions: Iterable<SelectorListenerEntry<T>>,
+    nextState: Readonly<BitState<T>>,
+  ): void {
+    for (const subscription of subscriptions) {
       try {
         subscription.notify(nextState);
       } catch (error) {
-        this.reportError(error, "subscription:path-notify");
+        this.reportError(error);
       }
-    });
+    }
   }
 
-  private reportError(error: unknown, source: string): void {
+  private reportError(error: unknown): void {
     if (this.onError) {
-      this.onError(error, source);
+      this.onError(error, SUBSCRIPTION_ERROR_SOURCE);
       return;
     }
 
