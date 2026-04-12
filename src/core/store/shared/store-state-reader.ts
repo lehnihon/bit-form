@@ -46,6 +46,12 @@ export class BitStoreStateReader<T extends object> {
       snapshot: Readonly<BitFieldState<T, unknown>>;
     }
   >();
+  private persistMetaCache:
+    | {
+        state: Readonly<BitState<T>>;
+        snapshot: BitPersistMetadata;
+      }
+    | undefined;
 
   constructor(private readonly deps: BitStoreStateReaderDeps<T>) {}
 
@@ -94,7 +100,32 @@ export class BitStoreStateReader<T extends object> {
   }
 
   getPersistMetadata(): BitPersistMetadata {
-    return this.deps.getState().persist;
+    const state = this.deps.getState();
+    const persist = state.persist;
+    const cached = this.persistMetaCache;
+
+    if (
+      cached &&
+      cached.state === state &&
+      cached.snapshot.isSaving === persist.isSaving &&
+      cached.snapshot.isRestoring === persist.isRestoring &&
+      cached.snapshot.error === persist.error
+    ) {
+      return cached.snapshot;
+    }
+
+    const snapshot: BitPersistMetadata = {
+      isSaving: persist.isSaving,
+      isRestoring: persist.isRestoring,
+      error: persist.error,
+    };
+
+    this.persistMetaCache = {
+      state,
+      snapshot,
+    };
+
+    return snapshot;
   }
 
   getFieldState<P extends BitPath<T>>(

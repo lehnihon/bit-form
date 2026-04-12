@@ -833,6 +833,41 @@ describe("BitStore Core", () => {
 
       expect(store.read.getFieldConfig("bonusValue")).toBeDefined();
     });
+
+    it("should not allow runtime field behavior changes by mutating read.getFieldConfig", () => {
+      const store = createBitStore({
+        initialValues: { email: "" },
+        fields: {
+          email: {
+            validation: {
+              asyncValidateOn: "change",
+            },
+          },
+        },
+      });
+
+      const leakedConfig = store.read.getFieldConfig("email");
+      expect(leakedConfig).toBeDefined();
+
+      leakedConfig!.validation = {
+        ...leakedConfig!.validation,
+        asyncValidate: async () => new Promise<string | null>(() => {}),
+      };
+
+      store.write.setField("email", "local-mutation");
+      expect(store.read.getState().isValidating.email).toBeUndefined();
+
+      store.feature.registerField("email", {
+        validation: {
+          asyncValidateOn: "change",
+          asyncValidateDelay: 0,
+          asyncValidate: async () => new Promise<string | null>(() => {}),
+        },
+      });
+
+      store.write.setField("email", "registered-change");
+      expect(store.read.getState().isValidating.email).toBe(true);
+    });
   });
 
   describe("Validation & Scopes", () => {
@@ -2926,6 +2961,67 @@ describe("BitStore Core", () => {
       expect(afterSubmitEvents[0]?.state?.values?.name).toBe("Mutated in hook");
 
       consoleErrorSpy.mockRestore();
+      store.feature.cleanup();
+    });
+
+    it("should ignore plugin config mutations from context.getConfig", async () => {
+      vi.useFakeTimers();
+
+      const storage = {
+        getItem: vi.fn(async () => null),
+        setItem: vi.fn(async () => undefined),
+        removeItem: vi.fn(async () => undefined),
+      };
+
+      const store = createBitStore({
+        initialValues: { name: "Leo" },
+        persist: {
+          enabled: true,
+          key: "plugin-config-guard",
+          storage,
+          debounceMs: 0,
+        },
+        plugins: [
+          {
+            name: "mutate-config",
+            setup: (context: any) => {
+              context.getConfig().persist.enabled = false;
+            },
+          },
+        ],
+      });
+
+      store.write.setField("name", "Ana");
+      await vi.runAllTimersAsync();
+
+      expect(storage.setItem).toHaveBeenCalledTimes(1);
+
+      store.feature.cleanup();
+      vi.useRealTimers();
+    });
+
+    it("should ignore plugin state mutations from context.getState", async () => {
+      const store = createBitStore({
+        initialValues: { name: "Leo" },
+        validation: {
+          resolver: () => ({}),
+          delay: 0,
+        },
+        plugins: [
+          {
+            name: "mutate-state",
+            hooks: {
+              beforeValidate: (_event, context) => {
+                (context.getState().values as any).name = "Mutated by plugin";
+              },
+            },
+          },
+        ],
+      });
+
+      await store.feature.validate();
+
+      expect(store.read.getState().values.name).toBe("Leo");
       store.feature.cleanup();
     });
   });

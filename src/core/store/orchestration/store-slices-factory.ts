@@ -1,3 +1,4 @@
+import { deepClone } from "../../utils";
 import type { BitFieldDefinition } from "../contracts/types";
 
 import type { BitMask } from "../../mask/types";
@@ -39,7 +40,7 @@ export function buildStoreSlicesApi<T extends object>(
       return deps.identity.storeId;
     },
     get config() {
-      return deps.identity.config;
+      return deepClone(deps.identity.config);
     },
     get isValid() {
       return deps.read.getIsValid();
@@ -51,7 +52,10 @@ export function buildStoreSlicesApi<T extends object>(
       return deps.read.getIsDirty();
     },
     getState: readState,
-    getFieldConfig: (path) => deps.getFieldConfig(path),
+    getFieldConfig: (path) => {
+      const config = deps.getFieldConfig(path);
+      return config ? deepClone(config) : undefined;
+    },
     getFieldState: (path) => deps.read.getFieldState(path),
     isHidden: (path) => deps.read.isHidden(path),
     isRequired: (path) => deps.read.isRequired(path),
