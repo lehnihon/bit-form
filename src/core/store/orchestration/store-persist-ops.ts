@@ -14,26 +14,98 @@ interface ValidationAccess {
   validate(): Promise<boolean>;
 }
 
+const activeRestoringOpsByDispatch = new WeakMap<Function, number>();
+const lastRestoringErrorByDispatch = new WeakMap<Function, Error | null>();
+
+function beginPersistOperation<T extends object>(args: {
+  dispatch: (operation: BitStoreOperation<T>) => void;
+  type: "restoring";
+}): void {
+  const { dispatch } = args;
+  const map = activeRestoringOpsByDispatch;
+  const errorMap = lastRestoringErrorByDispatch;
+  const active = map.get(dispatch) ?? 0;
+
+  map.set(dispatch, active + 1);
+
+  if (active === 0) {
+    errorMap.set(dispatch, null);
+    dispatch(
+      persistMetaOperation({
+        isRestoring: true,
+        error: null,
+      }),
+    );
+  }
+}
+
+function finalizePersistOperation<T extends object>(args: {
+  dispatch: (operation: BitStoreOperation<T>) => void;
+  type: "restoring";
+  error: Error | null;
+}): void {
+  const { dispatch, error } = args;
+  const map = activeRestoringOpsByDispatch;
+  const errorMap = lastRestoringErrorByDispatch;
+  const active = map.get(dispatch) ?? 0;
+
+  if (active <= 0) {
+    return;
+  }
+
+  const nextActive = active - 1;
+
+  if (error) {
+    errorMap.set(dispatch, error);
+  }
+
+  if (nextActive > 0) {
+    map.set(dispatch, nextActive);
+    const pendingError = errorMap.get(dispatch) ?? null;
+    if (pendingError) {
+      dispatch(persistMetaOperation({ error: pendingError }));
+    }
+    return;
+  }
+
+  map.delete(dispatch);
+
+  // If the last active operation succeeded, clear any stale concurrent error.
+  if (!error) {
+    errorMap.set(dispatch, null);
+  }
+
+  const finalError = errorMap.get(dispatch) ?? null;
+  errorMap.delete(dispatch);
+
+  dispatch(
+    persistMetaOperation({
+      isRestoring: false,
+      error: finalError,
+    }),
+  );
+}
+
 export async function restoreStorePersisted<T extends object>(args: {
   dispatch: (operation: BitStoreOperation<T>) => void;
   effects: BitStoreEffectEngine<T>;
 }): Promise<boolean> {
   const { dispatch, effects } = args;
+  beginPersistOperation({ dispatch, type: "restoring" });
 
-  dispatch(persistMetaOperation({ isRestoring: true, error: null }));
+  let operationError: Error | null = null;
 
   try {
     return await effects.restorePersisted();
   } catch (error) {
-    dispatch(
-      persistMetaOperation({
-        isRestoring: false,
-        error: error instanceof Error ? error : new Error(String(error)),
-      }),
-    );
+    operationError = error instanceof Error ? error : new Error(String(error));
     return false;
   } finally {
-    dispatch(persistMetaOperation({ isRestoring: false }));
+    finalizePersistOperation({
+      dispatch,
+      type: "restoring",
+      error: operationError,
+    });
   }
 }
 
@@ -41,22 +113,12 @@ export async function forceStorePersistedSave<T extends object>(args: {
   dispatch: (operation: BitStoreOperation<T>) => void;
   effects: BitStoreEffectEngine<T>;
 }): Promise<void> {
-  const { dispatch, effects } = args;
-  let persistError: Error | null = null;
-
-  dispatch(persistMetaOperation({ isSaving: true, error: null }));
+  const { effects } = args;
 
   try {
     await effects.savePersistedNow();
-  } catch (error) {
-    persistError = error instanceof Error ? error : new Error(String(error));
-  } finally {
-    dispatch(
-      persistMetaOperation({
-        isSaving: false,
-        error: persistError,
-      }),
-    );
+  } catch {
+    // Save lifecycle metadata is managed by persist-manager callbacks.
   }
 }
 
@@ -64,22 +126,12 @@ export async function clearStorePersisted<T extends object>(args: {
   dispatch: (operation: BitStoreOperation<T>) => void;
   effects: BitStoreEffectEngine<T>;
 }): Promise<void> {
-  const { dispatch, effects } = args;
-  let persistError: Error | null = null;
-
-  dispatch(persistMetaOperation({ isSaving: true, error: null }));
+  const { effects } = args;
 
   try {
     await effects.clearPersisted();
-  } catch (error) {
-    persistError = error instanceof Error ? error : new Error(String(error));
-  } finally {
-    dispatch(
-      persistMetaOperation({
-        isSaving: false,
-        error: persistError,
-      }),
-    );
+  } catch {
+    // Clear lifecycle metadata is managed by persist-manager callbacks.
   }
 }
 

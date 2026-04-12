@@ -1,15 +1,12 @@
-import { BitSubscriptionEngine } from "../engines/subscription-engine";
-import { createInitialStoreState } from "./store-bootstrap";
-import type { BitStoreCapabilityRegistry } from "./store-capability-registry";
 import type { BitFrameworkConfig } from "../contracts/public/store-api-types";
-import type {
-  BitConfig,
-  BitState,
-} from "../contracts/types";
-import type { BitFieldRegistry } from "../registry/field-registry";
+import type { BitConfig, BitState } from "../contracts/types";
+import { BitSubscriptionEngine } from "../engines/subscription-engine";
+import type { BitBaselineManager } from "../managers/core/baseline-manager";
 import type { BitComputedManager } from "../managers/core/computed-manager";
 import type { BitDirtyManager } from "../managers/core/dirty-manager";
-import type { BitBaselineManager } from "../managers/core/baseline-manager";
+import type { BitFieldRegistry } from "../registry/field-registry";
+import { createInitialStoreState } from "./store-bootstrap";
+import type { BitStoreCapabilityRegistry } from "./store-capability-registry";
 import {
   composeRuntimeFeatureCapabilities,
   type BitStoreRuntimeContext,
@@ -67,6 +64,7 @@ export function createStoreRuntime<T extends object>(
 
   const subscriptions = new BitSubscriptionEngine<T>(
     stateAccess.getState,
+    (error, source) => config.onUnhandledError(error, source),
     config.subscriptionCacheSize,
   );
 

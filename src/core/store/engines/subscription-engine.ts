@@ -9,6 +9,8 @@ interface SelectorListenerEntry<T extends object> {
   notify(nextState: Readonly<BitState<T>>): void;
 }
 
+const SUBSCRIPTION_ERROR_SOURCE = "subscription";
+
 export interface BitSubscriptionCacheStats {
   cacheSize: number;
   cacheLimit: number;
@@ -33,17 +35,25 @@ export class BitSubscriptionEngine<T extends object> {
   private cacheHits = 0;
   private cacheMisses = 0;
   private cacheEvictions = 0;
+  private readonly onError?: (error: unknown, source: string) => void;
 
+  /**
+   * Maximum number of entries for path expansion cache.
+   * Lower = less memory; higher = fewer cache evictions in large dynamic forms.
+   * @default 500
+   */
   constructor(
     private readonly getState: () => Readonly<BitState<T>>,
-    /**
-     * Maximum number of entries for path expansion cache.
-     * Lower = less memory; higher = fewer cache evictions in large dynamic forms.
-     * @default 500
-     */
+    onErrorOrMaxCache?: ((error: unknown, source: string) => void) | number,
     maxCacheSize = 500,
   ) {
-    this.MAX_PATH_EXPANSION_CACHE_SIZE = maxCacheSize;
+    if (typeof onErrorOrMaxCache === "function") {
+      this.onError = onErrorOrMaxCache;
+      this.MAX_PATH_EXPANSION_CACHE_SIZE = maxCacheSize;
+      return;
+    }
+
+    this.MAX_PATH_EXPANSION_CACHE_SIZE = onErrorOrMaxCache ?? maxCacheSize;
   }
 
   subscribe(listener: () => void): () => void {
@@ -61,14 +71,18 @@ export class BitSubscriptionEngine<T extends object> {
 
     const subscription: SelectorListenerEntry<T> = {
       notify: (nextState) => {
-        const nextSlice = selector(nextState);
+        try {
+          const nextSlice = selector(nextState);
 
-        if (equalityFn(lastSlice, nextSlice)) {
-          return;
+          if (equalityFn(lastSlice, nextSlice)) {
+            return;
+          }
+
+          lastSlice = nextSlice;
+          listener(nextSlice);
+        } catch (error) {
+          this.reportError(error);
         }
-
-        lastSlice = nextSlice;
-        listener(nextSlice);
       },
     };
 
@@ -84,7 +98,11 @@ export class BitSubscriptionEngine<T extends object> {
     });
 
     if (options.emitImmediately) {
-      listener(lastSlice);
+      try {
+        listener(lastSlice);
+      } catch (error) {
+        this.reportError(error);
+      }
     }
 
     return () => {
@@ -117,7 +135,7 @@ export class BitSubscriptionEngine<T extends object> {
       try {
         listener();
       } catch (error) {
-        console.error("Subscription listener error:", error);
+        this.reportError(error);
       }
     });
 
@@ -132,13 +150,10 @@ export class BitSubscriptionEngine<T extends object> {
       normalizedChangedPaths.length === 0 ||
       normalizedChangedPaths.includes("*")
     ) {
-      this.pathScopedSubscriptions.forEach((_paths, subscription) => {
-        try {
-          subscription.notify(nextState);
-        } catch (error) {
-          console.error("Path subscription notify error:", error);
-        }
-      });
+      this.notifyScopedSubscribers(
+        this.pathScopedSubscriptions.keys(),
+        nextState,
+      );
       return;
     }
 
@@ -149,13 +164,7 @@ export class BitSubscriptionEngine<T extends object> {
       const singleScopedSubscribers =
         this.collectSubscribersForSingleChangedPath(normalizedChangedPaths[0]);
 
-      singleScopedSubscribers.forEach((subscription) => {
-        try {
-          subscription.notify(nextState);
-        } catch (error) {
-          console.error("Path subscription notify error:", error);
-        }
-      });
+      this.notifyScopedSubscribers(singleScopedSubscribers, nextState);
       return;
     }
 
@@ -163,13 +172,29 @@ export class BitSubscriptionEngine<T extends object> {
       normalizedChangedPaths,
     );
 
-    scopedSubscribers.forEach((subscription) => {
+    this.notifyScopedSubscribers(scopedSubscribers, nextState);
+  }
+
+  private notifyScopedSubscribers(
+    subscriptions: Iterable<SelectorListenerEntry<T>>,
+    nextState: Readonly<BitState<T>>,
+  ): void {
+    for (const subscription of subscriptions) {
       try {
         subscription.notify(nextState);
       } catch (error) {
-        console.error("Path subscription notify error:", error);
+        this.reportError(error);
       }
-    });
+    }
+  }
+
+  private reportError(error: unknown): void {
+    if (this.onError) {
+      this.onError(error, SUBSCRIPTION_ERROR_SOURCE);
+      return;
+    }
+
+    console.error("Subscription listener error:", error);
   }
 
   destroy(): void {

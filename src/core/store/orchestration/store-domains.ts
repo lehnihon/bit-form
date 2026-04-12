@@ -25,7 +25,10 @@ import type {
   DeepPartial,
   ScopeStatus,
 } from "../contracts/types";
-import { touchFieldsOperation } from "../engines/operation-engine";
+import {
+  touchFieldsOperation,
+  type BitStoreOperation,
+} from "../engines/operation-engine";
 import type { BitDirtyManager } from "../managers/core/dirty-manager";
 import type { BitFieldRegistry } from "../registry/field-registry";
 import type { BitStoreStateReader } from "../shared/store-state-reader";
@@ -379,6 +382,9 @@ export function createBitStoreDomains<T extends object>(args: {
     clearItems: (path) => runtime.capabilities.arrays.clearItems(path),
   };
 
+  const featureDispatch = (operation: BitStoreOperation<T>) =>
+    runtime.dispatch(operation);
+
   const featureDomain: BitStoreFeatureDomain<T> = {
     undo: () => {
       runUndoFeature({
@@ -401,17 +407,17 @@ export function createBitStoreDomains<T extends object>(args: {
       runtime.capabilities.validation.trigger(scopeFields, options),
     restorePersisted: () =>
       restorePersistedFeature({
-        dispatch: (operation) => runtime.dispatch(operation),
+        dispatch: featureDispatch,
         effects: runtime.effects,
       }),
     forceSave: () =>
       forceSavePersistedFeature({
-        dispatch: (operation) => runtime.dispatch(operation),
+        dispatch: featureDispatch,
         effects: runtime.effects,
       }),
     clearPersisted: () =>
       clearPersistedFeature({
-        dispatch: (operation) => runtime.dispatch(operation),
+        dispatch: featureDispatch,
         effects: runtime.effects,
       }),
     getArrayItemIds: (path, length) =>

@@ -234,10 +234,14 @@ export class BitArrayManager<T extends object = Record<string, unknown>> {
   replaceItems(path: string, items: unknown[]) {
     this.store.unregisterPrefix?.(toPathPrefix(path));
 
-    this.pathIds.set(
-      path,
-      items.map((_, index) => this.store.createArrayItemId(path, index)),
-    );
+    if (items.length === 0) {
+      this.pathIds.delete(path);
+    } else {
+      this.pathIds.set(
+        path,
+        items.map((_, index) => this.store.createArrayItemId(path, index)),
+      );
+    }
 
     this.commitArrayMutationWithFieldPipeline({
       path,
@@ -248,7 +252,7 @@ export class BitArrayManager<T extends object = Record<string, unknown>> {
   }
 
   clearItems(path: string) {
-    this.pathIds.set(path, []);
+    this.pathIds.delete(path);
 
     if (this.store.unregisterPrefix) {
       this.store.unregisterPrefix(toPathPrefix(path));
@@ -275,7 +279,13 @@ export class BitArrayManager<T extends object = Record<string, unknown>> {
   private withPathIds(path: string, updater: (ids: string[]) => string[]) {
     const currentLength = this.getCurrentArrayLength(path);
     const current = this.ensureIds(path, currentLength);
-    this.pathIds.set(path, updater(current));
+    const next = updater(current);
+
+    if (next.length === 0) {
+      this.pathIds.delete(path);
+    } else {
+      this.pathIds.set(path, next);
+    }
   }
 
   private ensureIds(path: string, length: number): string[] {
@@ -295,7 +305,13 @@ export class BitArrayManager<T extends object = Record<string, unknown>> {
     }
 
     const next = current.slice(0, length);
-    this.pathIds.set(path, next);
+
+    if (next.length === 0) {
+      this.pathIds.delete(path);
+    } else {
+      this.pathIds.set(path, next);
+    }
+
     return next;
   }
 

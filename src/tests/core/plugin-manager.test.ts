@@ -44,4 +44,35 @@ describe("BitPluginManager", () => {
       expect.objectContaining({ source: "beforeSubmit" }),
     );
   });
+
+  it("deve manter payload de erro consistente com uma unica leitura de estado", async () => {
+    const onError = vi.fn();
+    let getStateCallCount = 0;
+
+    const manager = new BitPluginManager<Record<string, unknown>>(
+      [
+        {
+          name: "error-snapshot",
+          hooks: { onError },
+        },
+      ],
+      () =>
+        ({
+          getState: () => {
+            getStateCallCount += 1;
+            return {
+              values: { sequence: getStateCallCount },
+              errors: {},
+              touched: {},
+            };
+          },
+        }) as any,
+    );
+
+    await manager.reportError("beforeValidate", new Error("snapshot"));
+
+    const payload = onError.mock.calls[0]?.[0];
+    expect(payload).toBeDefined();
+    expect(payload.values).toEqual(payload.state.values);
+  });
 });

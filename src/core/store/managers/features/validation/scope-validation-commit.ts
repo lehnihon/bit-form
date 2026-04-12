@@ -10,6 +10,7 @@ export async function commitSynchronousScopeValidation<T extends object>(args: {
 }) {
   const { scopeFields, store, asyncErrors } = args;
   const initialState = store.getState();
+  const initialHiddenFields = new Set(store.getHiddenFields());
   const resolverErrors = store.config.resolver
     ? await store.config.resolver(initialState.values, {
         scopeFields,
@@ -25,7 +26,13 @@ export async function commitSynchronousScopeValidation<T extends object>(args: {
       (initialState.values as Record<string, unknown>)[field] !==
       (currentState.values as Record<string, unknown>)[field],
   );
-  if (valuesStale) {
+  const currentHiddenFields = store.getHiddenFields();
+  const visibilityStale = scopeFields.some(
+    (field) =>
+      initialHiddenFields.has(field) !== currentHiddenFields.has(field),
+  );
+
+  if (valuesStale || visibilityStale) {
     // A scoped field value changed during resolver execution; newer validations may be in flight
     // Skip this commit to avoid race condition
     return;
@@ -34,7 +41,7 @@ export async function commitSynchronousScopeValidation<T extends object>(args: {
   const dynamicRequiredErrors = store.getRequiredErrors(currentState.values);
   const allErrors = { ...resolverErrors, ...dynamicRequiredErrors };
 
-  store.getHiddenFields().forEach((hiddenPath) => {
+  currentHiddenFields.forEach((hiddenPath) => {
     delete allErrors[hiddenPath];
     asyncErrors.delete(hiddenPath);
   });

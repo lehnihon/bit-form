@@ -57,6 +57,42 @@ describe("BitSubscriptionEngine", () => {
     expect(listener).toHaveBeenCalledTimes(1);
   });
 
+  it("encaminha erro de subscriber global para handler central", () => {
+    let state = createState({ user: { name: "Leo", age: 30 } });
+    const onError = vi.fn();
+    const engine = new BitSubscriptionEngine<Values>(() => state, onError);
+
+    engine.subscribe(() => {
+      throw new Error("global subscriber failed");
+    });
+
+    state = createState({ user: { name: "Leo", age: 31 } });
+    engine.notify(state, ["user.age"]);
+
+    expect(onError).toHaveBeenCalledTimes(1);
+    expect(onError.mock.calls[0]?.[1]).toBe("subscription");
+    expect(onError.mock.calls[0]?.[0]).toBeInstanceOf(Error);
+  });
+
+  it("encaminha erro de emitImmediately para handler central", () => {
+    const state = createState({ user: { name: "Leo", age: 30 } });
+    const onError = vi.fn();
+    const engine = new BitSubscriptionEngine<Values>(() => state, onError);
+
+    engine.subscribeSelector(
+      (s) => s.values.user.name,
+      () => {
+        throw new Error("emit immediately failed");
+      },
+      { paths: ["user.name"], emitImmediately: true },
+      (a, b) => a === b,
+    );
+
+    expect(onError).toHaveBeenCalledTimes(1);
+    expect(onError.mock.calls[0]?.[1]).toBe("subscription");
+    expect(onError.mock.calls[0]?.[0]).toBeInstanceOf(Error);
+  });
+
   // --- Stress tests ---
 
   it("fanout: 100 subscribers scoped no mesmo path são todos notificados", () => {

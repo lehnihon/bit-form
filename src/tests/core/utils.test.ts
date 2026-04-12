@@ -11,6 +11,7 @@ import {
   isValidationErrorShape,
   moveKeys,
   setDeepValue,
+  setDeepValues,
   shiftKeys,
   swapKeys,
   unsetDeepValue,
@@ -258,6 +259,14 @@ describe("utils - getDeepValue", () => {
   it("suporta arrays via índice numérico", () => {
     expect(getDeepValue({ tags: ["a", "b"] }, "tags.1")).toBe("b");
   });
+
+  it("bloqueia apenas padrões perigosos de path", () => {
+    const obj = { safe: true, constructor: { name: "safe-name" } };
+
+    expect(getDeepValue(obj, "constructor.name")).toBe("safe-name");
+    expect(getDeepValue(obj, "__proto__.polluted")).toBeUndefined();
+    expect(getDeepValue(obj, "constructor.prototype.polluted")).toBeUndefined();
+  });
 });
 
 describe("utils - setDeepValue", () => {
@@ -282,6 +291,43 @@ describe("utils - setDeepValue", () => {
     const result = setDeepValue({}, "items.0", "x");
     expect(Array.isArray(result.items)).toBe(true);
     expect(result.items[0]).toBe("x");
+  });
+
+  it("não permite escrita com padrões perigosos e preserva constructor.* legítimo", () => {
+    const input: Record<string, unknown> = {};
+    const result = setDeepValue(input, "constructor.name", "ok");
+
+    expect(result).not.toBe(input);
+    expect((result.constructor as Record<string, unknown>).name).toBe("ok");
+
+    const blocked = setDeepValue(input, "__proto__.polluted", true);
+
+    expect(blocked).toBe(input);
+    expect(({} as Record<string, unknown>).polluted).toBeUndefined();
+
+    const blockedCtorProto = setDeepValue(
+      input,
+      "constructor.prototype.polluted",
+      true,
+    );
+
+    expect(blockedCtorProto).toBe(input);
+    expect(({} as Record<string, unknown>).polluted).toBeUndefined();
+  });
+});
+
+describe("utils - setDeepValues", () => {
+  it("ignora updates perigosos e preserva updates legítimos", () => {
+    const original = { ok: 1 };
+    const blocked = setDeepValues(original, [
+      ["constructor.name", "safe"],
+      ["__proto__.polluted", true],
+      ["constructor.prototype.polluted", true],
+    ]);
+
+    expect(blocked).not.toBe(original);
+    expect((blocked.constructor as Record<string, unknown>).name).toBe("safe");
+    expect(({} as Record<string, unknown>).polluted).toBeUndefined();
   });
 });
 
@@ -322,6 +368,28 @@ describe("utils - unsetDeepValue", () => {
     const result = unsetDeepValue(original, "items.0");
     expect(original.items).toEqual([1, 2, 3]);
     expect(result.items).toEqual([2, 3]);
+  });
+
+  it("ignora remoção com padrões perigosos", () => {
+    const original = { a: 1, constructor: { name: "x", keep: true } };
+    const safeRemoval = unsetDeepValue(original, "constructor.name");
+
+    expect(
+      (safeRemoval.constructor as Record<string, unknown>).name,
+    ).toBeUndefined();
+    expect((safeRemoval.constructor as Record<string, unknown>).keep).toBe(
+      true,
+    );
+
+    const result = unsetDeepValue(original, "__proto__.polluted");
+    expect(result).toBe(original);
+    expect(({} as Record<string, unknown>).polluted).toBeUndefined();
+
+    const blockedCtorProto = unsetDeepValue(
+      original,
+      "constructor.prototype.polluted",
+    );
+    expect(blockedCtorProto).toBe(original);
   });
 });
 
