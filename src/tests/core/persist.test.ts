@@ -157,6 +157,47 @@ describe("Persist Feature (BitPersistManager)", () => {
       store.feature.cleanup();
     });
 
+    it("should ignore runtime mutation of read.config.persist and keep autosave active", async () => {
+      const storage = createMockStorage();
+      const store = createBitStore<TestForm>({
+        initialValues: { name: "Leo", email: "leo@test.com", age: 30 },
+        persist: {
+          enabled: true,
+          key: "test-form",
+          storage,
+          debounceMs: 300,
+        },
+      });
+
+      store.read.config.persist.enabled = false;
+      store.write.setField("name", "Leandro");
+
+      vi.advanceTimersByTime(300);
+      await Promise.resolve();
+
+      expect(storage.setItem).toHaveBeenCalledTimes(1);
+      store.feature.cleanup();
+    });
+
+    it("should not allow external mutation via read.getPersistMetadata", () => {
+      const storage = createMockStorage();
+      const store = createBitStore<TestForm>({
+        initialValues: { name: "Leo", email: "leo@test.com", age: 30 },
+        persist: {
+          enabled: true,
+          key: "test-form",
+          storage,
+          debounceMs: 300,
+        },
+      });
+
+      const leakedMeta = store.read.getPersistMetadata();
+      leakedMeta.isSaving = true;
+
+      expect(store.read.getPersistMetadata().isSaving).toBe(false);
+      store.feature.cleanup();
+    });
+
     it("should expose persist.error when autosave fails", async () => {
       const onError = vi.fn();
       const store = createBitStore<TestForm>({

@@ -1,3 +1,4 @@
+import { deepClone } from "../../utils";
 import type { BitBusStorePort } from "../contracts/bus-types";
 import type { BitFrameworkConfig } from "../contracts/public/store-api-types";
 import type { BitPersistMetadata, BitState } from "../contracts/types";
@@ -69,8 +70,8 @@ export function createStoreEffects<T extends object>(args: {
 
   const pluginManager = new BitPluginManager<T>([...config.plugins], () => ({
     storeId,
-    getState: () => getState(),
-    getConfig: () => getConfig(),
+    getState: () => deepClone(getState()),
+    getConfig: () => deepClone(getConfig()),
   }));
 
   const enableBusDispatch = shouldEnableStoreBus(config);
