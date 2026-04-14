@@ -1,4 +1,10 @@
-import { useCallback, useRef, useState, useSyncExternalStore } from "react";
+import {
+  useCallback,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import type { ScopeStatus, ValidateScopeResult } from "../core";
 import { isScopeStatusEqual } from "../core";
 import { useBitStore } from "./context";
@@ -80,20 +86,34 @@ export function useBitSteps(scopeNames: string[]): UseBitStepsResult {
   const isFirst = stepIndex === 0;
   const isLast = stepIndex >= scopeNames.length - 1;
 
-  return {
-    step: stepIndex + 1,
-    stepIndex,
-    scope,
-    next,
-    prev,
-    goTo,
-    isFirst,
-    isLast,
-    status,
-    errors: status.errors,
-    isValid: !status.hasErrors,
-    isDirty: status.isDirty,
-    validate,
-    getErrors,
-  };
+  return useMemo(
+    () => ({
+      step: stepIndex + 1,
+      stepIndex,
+      scope,
+      next,
+      prev,
+      goTo,
+      isFirst,
+      isLast,
+      status,
+      errors: status.errors,
+      isValid: !status.hasErrors,
+      isDirty: status.isDirty,
+      validate,
+      getErrors,
+    }),
+    [
+      stepIndex,
+      scope,
+      next,
+      prev,
+      goTo,
+      isFirst,
+      isLast,
+      status,
+      validate,
+      getErrors,
+    ],
+  );
 }

@@ -1,4 +1,4 @@
-import { useCallback, useRef, useSyncExternalStore } from "react";
+import { useCallback, useMemo, useRef, useSyncExternalStore } from "react";
 import type { ScopeStatus, ValidateScopeResult } from "../core";
 import { isScopeStatusEqual } from "../core";
 import { useBitStore } from "./context";
@@ -49,13 +49,16 @@ export function useBitScope(scopeName: string) {
     return store.read.getScopeErrors(scopeName);
   }, [store, scopeName]);
 
-  return {
-    scopeName,
-    status,
-    errors: status.errors,
-    validate,
-    getErrors,
-    isValid: !status.hasErrors,
-    isDirty: status.isDirty,
-  };
+  return useMemo(
+    () => ({
+      scopeName,
+      status,
+      errors: status.errors,
+      validate,
+      getErrors,
+      isValid: !status.hasErrors,
+      isDirty: status.isDirty,
+    }),
+    [scopeName, status, validate, getErrors],
+  );
 }

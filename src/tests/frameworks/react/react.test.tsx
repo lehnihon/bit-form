@@ -408,6 +408,42 @@ describe("React Integration (Context + Hooks)", () => {
       expect(values.salary).toBe(5000);
       expect(dirtyValues).toEqual({ salary: 5000 });
     });
+
+    it("deve manter a mesma referência do useBitForm em rerender neutro", () => {
+      const store = createTestStore();
+      const { result, rerender } = renderHook(() => useBitForm<MyForm>(), {
+        wrapper: (props) => wrapper({ ...props, store }),
+      });
+
+      const initialRef = result.current;
+
+      rerender();
+
+      expect(result.current).toBe(initialRef);
+    });
+
+    it("deve manter a mesma referência do useBitHistory em rerender neutro", () => {
+      const store = createBitStore<MyForm>({
+        initialValues: {
+          salary: 10,
+          user: { firstName: "Leandro", lastName: "Ishikawa" },
+          skills: ["React"],
+          hasBonus: false,
+          bonusValue: 0,
+        },
+        history: { enabled: true },
+      });
+
+      const { result, rerender } = renderHook(() => useBitHistory<MyForm>(), {
+        wrapper: (props) => wrapper({ ...props, store }),
+      });
+
+      const initialRef = result.current;
+
+      rerender();
+
+      expect(result.current).toBe(initialRef);
+    });
   });
 
   describe("Scope Validation (useBitScope)", () => {
@@ -464,6 +500,32 @@ describe("React Integration (Context + Hooks)", () => {
       expect(result.current.isValid).toBe(false);
       expect(validateResult!.valid).toBe(false);
       expect(validateResult!.errors["user.firstName"]).toBe("Erro no nome");
+    });
+
+    it("deve manter a mesma referência do useBitScope em rerender neutro", () => {
+      const store = createBitStore<MyForm>({
+        initialValues: {
+          salary: 10,
+          user: { firstName: "Leo", lastName: "Ishikawa" },
+          skills: [],
+          hasBonus: false,
+          bonusValue: 0,
+        },
+        fields: {
+          "user.firstName": { scope: "step1" },
+        },
+        validation: { delay: 0 },
+      });
+
+      const { result, rerender } = renderHook(() => useBitScope("step1"), {
+        wrapper: (props) => wrapper({ ...props, store }),
+      });
+
+      const initialRef = result.current;
+
+      rerender();
+
+      expect(result.current).toBe(initialRef);
     });
   });
 
@@ -579,6 +641,36 @@ describe("React Integration (Context + Hooks)", () => {
 
       vi.useRealTimers();
     });
+
+    it("deve manter a mesma referência do useBitSteps em rerender neutro", () => {
+      const store = createBitStore<MyForm>({
+        initialValues: {
+          salary: 10,
+          user: { firstName: "Leo", lastName: "Ishikawa" },
+          skills: [],
+          hasBonus: false,
+          bonusValue: 0,
+        },
+        fields: {
+          "user.firstName": { scope: "step1" },
+          salary: { scope: "step2" },
+        },
+        validation: { delay: 0 },
+      });
+
+      const { result, rerender } = renderHook(
+        () => useBitSteps(["step1", "step2"]),
+        {
+          wrapper: (props) => wrapper({ ...props, store }),
+        },
+      );
+
+      const initialRef = result.current;
+
+      rerender();
+
+      expect(result.current).toBe(initialRef);
+    });
   });
 
   describe("useBitPersist", () => {
@@ -668,6 +760,63 @@ describe("React Integration (Context + Hooks)", () => {
 
       await act(() => result.current.clear());
       expect(storage.removeItem).toHaveBeenCalledWith("react-test");
+    });
+
+    it("deve manter a mesma referência do useBitPersist em rerender neutro", () => {
+      const storage = createMockStorage();
+      const store = createBitStore<MyForm>({
+        initialValues: {
+          salary: 0,
+          user: { firstName: "", lastName: "" },
+          skills: [],
+          hasBonus: false,
+          bonusValue: 0,
+        },
+        persist: { enabled: true, key: "react-test", storage, autoSave: false },
+      });
+
+      const { result, rerender } = renderHook(() => useBitPersist(), {
+        wrapper: (props) => wrapper({ ...props, store }),
+      });
+
+      const initialRef = result.current;
+
+      rerender();
+
+      expect(result.current).toBe(initialRef);
+    });
+  });
+
+  describe("Referential Stability", () => {
+    it("deve manter a mesma referência do useBitField e props em rerender neutro", () => {
+      const store = createTestStore();
+      const { result, rerender } = renderHook(
+        () => useBitField("user.firstName"),
+        {
+          wrapper: (props) => wrapper({ ...props, store }),
+        },
+      );
+
+      const initialFieldRef = result.current;
+      const initialPropsRef = result.current.props;
+
+      rerender();
+
+      expect(result.current).toBe(initialFieldRef);
+      expect(result.current.props).toBe(initialPropsRef);
+    });
+
+    it("deve manter a mesma referência do useBitArray em rerender neutro", () => {
+      const store = createTestStore({ skills: ["React", "Vue"] });
+      const { result, rerender } = renderHook(() => useBitArray("skills"), {
+        wrapper: (props) => wrapper({ ...props, store }),
+      });
+
+      const initialRef = result.current;
+
+      rerender();
+
+      expect(result.current).toBe(initialRef);
     });
   });
 });

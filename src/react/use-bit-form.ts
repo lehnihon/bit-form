@@ -1,16 +1,16 @@
 import {
   useCallback,
-  useSyncExternalStore,
   useMemo,
   useRef,
   useState,
+  useSyncExternalStore,
 } from "react";
-import { useBitStore } from "./context";
 import {
   createFrameworkFormBinding,
   readFormMetaSnapshot,
   subscribeFormMetaSnapshot,
 } from "../core";
+import { useBitStore } from "./context";
 import type { UseBitFormResult } from "./types";
 
 export function useBitForm<T extends object>(): UseBitFormResult<T> {
@@ -85,18 +85,31 @@ export function useBitForm<T extends object>(): UseBitFormResult<T> {
     [metaState, submitError, lastResponse],
   );
 
-  return {
-    // Metadata (grouped)
-    meta,
-    // Getters
-    getValues,
-    getErrors,
-    getTouched,
-    getDirtyValues,
-    // Main actions (frequent use - flat)
-    submit,
-    onSubmit,
-    reset,
-    ...actions,
-  };
+  return useMemo(
+    () => ({
+      // Metadata (grouped)
+      meta,
+      // Getters
+      getValues,
+      getErrors,
+      getTouched,
+      getDirtyValues,
+      // Main actions (frequent use - flat)
+      submit,
+      onSubmit,
+      reset,
+      ...actions,
+    }),
+    [
+      meta,
+      getValues,
+      getErrors,
+      getTouched,
+      getDirtyValues,
+      submit,
+      onSubmit,
+      reset,
+      actions,
+    ],
+  );
 }

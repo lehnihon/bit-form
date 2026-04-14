@@ -1,4 +1,4 @@
-import { useCallback, useRef, useSyncExternalStore } from "react";
+import { useCallback, useMemo, useRef, useSyncExternalStore } from "react";
 import { readHistoryMetaSnapshot, type HistoryMeta } from "../core";
 import { useBitStore } from "./context";
 import type { UseBitHistoryResult } from "./types";
@@ -39,9 +39,12 @@ export function useBitHistory<T extends object = any>(): UseBitHistoryResult {
     store.feature.redo();
   }, [store]);
 
-  return {
-    ...meta,
-    undo,
-    redo,
-  };
+  return useMemo(
+    () => ({
+      ...meta,
+      undo,
+      redo,
+    }),
+    [meta, undo, redo],
+  );
 }

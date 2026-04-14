@@ -157,4 +157,19 @@ describe("useBitUpload (React)", () => {
 
     expect(result.current.value).toBe("https://external-cdn.com/avatar.jpg");
   });
+
+  it("should keep the same hook reference on neutral rerender", () => {
+    const { result, rerender } = renderHook(
+      () => useBitUpload("avatar", mockUpload),
+      {
+        wrapper: (props) => wrapper({ ...props, testStore: store }),
+      },
+    );
+
+    const initialRef = result.current;
+
+    rerender();
+
+    expect(result.current).toBe(initialRef);
+  });
 });

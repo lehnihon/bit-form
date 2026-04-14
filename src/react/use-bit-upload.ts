@@ -20,7 +20,7 @@
  * ```
  */
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import type { BitDeleteUploadFn, BitUploadFn } from "../core";
 import { createRemoveHandler, createUploadHandler } from "../core/adapters";
 import { useBitStore } from "./context";
@@ -36,36 +36,45 @@ export function useBitUpload<
 ): UseBitUploadResult {
   const store = useBitStore<any>();
   const field = useBitField(fieldPath);
+  const { value, setValue, meta } = field;
+  const error = meta?.error;
+  const fieldIsValidating = !!meta?.isValidating;
   const uploadKeyRef = useRef<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
 
-  const kernelCallbacks = {
-    setLoading: setIsUploading,
-    setError: (path: string, msg: string | undefined) =>
-      store.write.setError(path, msg),
-    setValue: (val: string | null) => field.setValue(val as any),
-    getUploadKey: () => uploadKeyRef.current,
-    setUploadKey: (key: string | null) => {
-      uploadKeyRef.current = key;
-    },
-  };
+  const kernelCallbacks = useMemo(
+    () => ({
+      setLoading: setIsUploading,
+      setError: (path: string, msg: string | undefined) =>
+        store.write.setError(path, msg),
+      setValue: (val: string | null) => setValue(val as any),
+      getUploadKey: () => uploadKeyRef.current,
+      setUploadKey: (key: string | null) => {
+        uploadKeyRef.current = key;
+      },
+    }),
+    [store, setValue],
+  );
 
   const upload = useCallback(
     createUploadHandler(fieldPath, uploadFn, kernelCallbacks),
-    [uploadFn, field, fieldPath, store],
+    [fieldPath, uploadFn, kernelCallbacks],
   );
 
   const remove = useCallback(
     createRemoveHandler(fieldPath, deleteFile, kernelCallbacks),
-    [deleteFile, field, fieldPath, store],
+    [fieldPath, deleteFile, kernelCallbacks],
   );
 
-  return {
-    value: field.value,
-    setValue: field.setValue,
-    error: field.meta?.error,
-    isValidating: !!field.meta?.isValidating || isUploading,
-    upload,
-    remove,
-  };
+  return useMemo(
+    () => ({
+      value,
+      setValue,
+      error,
+      isValidating: fieldIsValidating || isUploading,
+      upload,
+      remove,
+    }),
+    [value, setValue, error, fieldIsValidating, isUploading, upload, remove],
+  );
 }

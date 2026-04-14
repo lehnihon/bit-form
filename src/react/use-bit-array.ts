@@ -51,16 +51,19 @@ export function useBitArray<
     };
   }, [store, path]);
 
-  return {
-    fields,
-    length: data.length,
-    append: controller.append,
-    prepend: controller.prepend,
-    insert: controller.insert,
-    remove: controller.remove,
-    move: controller.move,
-    swap: controller.swap,
-    replace: controller.replace,
-    clear: controller.clear,
-  };
+  return useMemo(
+    () => ({
+      fields,
+      length: data.length,
+      append: controller.append,
+      prepend: controller.prepend,
+      insert: controller.insert,
+      remove: controller.remove,
+      move: controller.move,
+      swap: controller.swap,
+      replace: controller.replace,
+      clear: controller.clear,
+    }),
+    [fields, data.length, controller],
+  );
 }
