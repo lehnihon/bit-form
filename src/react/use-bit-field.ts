@@ -1,5 +1,4 @@
-import { useMemo, useCallback } from "react";
-import { useBitFieldBase } from "./use-bit-field-base";
+import { useCallback, useMemo } from "react";
 import {
   BitPath,
   BitPathValue,
@@ -7,10 +6,8 @@ import {
   deriveFieldMeta,
   isBitFieldInputEventObject,
 } from "../core";
-import type {
-  BitFieldInputEvent,
-  UseBitFieldResult,
-} from "./types";
+import type { BitFieldInputEvent, UseBitFieldResult } from "./types";
+import { useBitFieldBase } from "./use-bit-field-base";
 
 export function useBitField<
   TForm extends object = any,
@@ -40,6 +37,16 @@ export function useBitField<
 
   const { value } = fieldState;
   const metaState = deriveFieldMeta(fieldState);
+  const {
+    error,
+    touched,
+    invalid,
+    isDirty,
+    isValidating,
+    isHidden,
+    isRequired,
+    hasError,
+  } = metaState;
 
   const onChange = useCallback(
     (e: BitFieldInputEvent) => {
@@ -53,30 +60,52 @@ export function useBitField<
     setBlur();
   }, [setBlur]);
 
-  return {
-    // Main handlers and values (flat)
-    value: value as BitPathValue<TForm, P>,
-    displayValue,
-    setValue,
-    setBlur,
-    onChange,
-    onBlur,
-    // Props helper
-    props: {
+  const props = useMemo(
+    () => ({
       value: displayValue,
       onChange,
       onBlur,
-    },
-    // Metadata (grouped)
-    meta: {
-      error: metaState.error,
-      touched: metaState.touched,
-      invalid: metaState.invalid,
-      isDirty: metaState.isDirty,
-      isValidating: metaState.isValidating,
-      isHidden: metaState.isHidden,
-      isRequired: metaState.isRequired,
-      hasError: metaState.hasError,
-    },
-  };
+    }),
+    [displayValue, onChange, onBlur],
+  );
+
+  const meta = useMemo(
+    () => ({
+      error,
+      touched,
+      invalid,
+      isDirty,
+      isValidating,
+      isHidden,
+      isRequired,
+      hasError,
+    }),
+    [
+      error,
+      touched,
+      invalid,
+      isDirty,
+      isValidating,
+      isHidden,
+      isRequired,
+      hasError,
+    ],
+  );
+
+  return useMemo(
+    () => ({
+      // Main handlers and values (flat)
+      value: value as BitPathValue<TForm, P>,
+      displayValue,
+      setValue,
+      setBlur,
+      onChange,
+      onBlur,
+      // Props helper
+      props,
+      // Metadata (grouped)
+      meta,
+    }),
+    [value, displayValue, setValue, setBlur, onChange, onBlur, props, meta],
+  );
 }
