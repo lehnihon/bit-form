@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 
 import { act, renderHook } from "@testing-library/react";
+import React from "react";
 import { describe, expect, it, vi } from "vitest";
 import { createBitStore as createBitStoreRuntime } from "../../../core";
 import { BitFormProvider, useBitField } from "../../../react-native";
@@ -32,6 +33,23 @@ describe("React Native Integration (bit-form/react-native)", () => {
       wrapper: ({ children }) => (
         <BitFormProvider store={strictStore}>{children}</BitFormProvider>
       ),
+    });
+
+    expect(result.current.value).toBe("Leandro");
+  });
+
+  it("deve aceitar store estritamente tipada com React.createElement no reexport", () => {
+    const strictStore = createBitStoreRuntime<{ name: string }>({
+      initialValues: { name: "Leandro" },
+      validation: { delay: 0 },
+    });
+
+    const { result } = renderHook(() => useBitField("name"), {
+      wrapper: ({ children }) =>
+        React.createElement(BitFormProvider, {
+          store: strictStore,
+          children,
+        }),
     });
 
     expect(result.current.value).toBe("Leandro");

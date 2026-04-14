@@ -12,6 +12,7 @@ import {
   useBitSteps,
   useBitWatch,
 } from "bit-form/react";
+import React from "react";
 import { describe, expect, it, vi } from "vitest";
 import { createBitStore as createBitStoreRuntime } from "../../../core";
 import { maskBRL } from "../../../mask";
@@ -73,6 +74,29 @@ describe("React Integration (Context + Hooks)", () => {
       wrapper: ({ children }) => (
         <BitFormProvider store={strictStore}>{children}</BitFormProvider>
       ),
+    });
+
+    expect(result.current.value).toBe("Leandro");
+  });
+
+  it("deve aceitar store estritamente tipada com React.createElement", () => {
+    const strictStore = createBitStoreRuntime<MyForm>({
+      initialValues: {
+        salary: 10,
+        user: { firstName: "Leandro", lastName: "Ishikawa" },
+        skills: ["React"],
+        hasBonus: false,
+        bonusValue: 0,
+      },
+      validation: { delay: 0 },
+    });
+
+    const { result } = renderHook(() => useBitField("user.firstName"), {
+      wrapper: ({ children }) =>
+        React.createElement(BitFormProvider, {
+          store: strictStore,
+          children,
+        }),
     });
 
     expect(result.current.value).toBe("Leandro");

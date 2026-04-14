@@ -9,12 +9,23 @@ interface BitFormProviderProps<T extends object> {
   children: React.ReactNode;
 }
 
-export function BitFormProvider<T extends object>({
+interface BitFormProviderRuntimeProps {
+  store: unknown;
+  children: React.ReactNode;
+}
+
+export function BitFormProvider<T extends object>(
+  props: BitFormProviderProps<T>,
+): React.ReactElement;
+export function BitFormProvider(
+  props: BitFormProviderRuntimeProps,
+): React.ReactElement;
+export function BitFormProvider({
   store,
   children,
-}: BitFormProviderProps<T>) {
+}: BitFormProviderRuntimeProps) {
   return (
-    <BitContext.Provider value={createFrameworkStoreAdapter<T>(store)}>
+    <BitContext.Provider value={createFrameworkStoreAdapter(store)}>
       {children}
     </BitContext.Provider>
   );
