@@ -1,6 +1,6 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { getAdapter } from "./adapters";
+import { getAdapter, listAdapters } from "./adapters";
 
 const DEFAULT_UI_PATH = "@/components/ui";
 
@@ -71,7 +71,7 @@ export function runAddCommand(args: string[]): void {
   const adapter = getAdapter(adapterName);
   if (!adapter) {
     throw new Error(
-      `bit-form add: unknown adapter "${adapterName}". Available: shadcn`,
+      `bit-form add: unknown adapter "${adapterName}". Available: ${listAdapters().join(", ")}`,
     );
   }
 

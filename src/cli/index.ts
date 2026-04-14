@@ -1,6 +1,6 @@
 #!/usr/bin/env node
-import { startDevServer } from "./server";
 import { runAddCommand } from "./add";
+import { startDevServer } from "./server";
 
 // Pega os argumentos ignorando o caminho do node e do script (os 2 primeiros)
 const args = process.argv.slice(2);
@@ -30,11 +30,13 @@ if (command === "devtools") {
 
   Comandos disponíveis:
     devtools    Inicia o servidor local do Remote Inspector
-    add         Gera wrappers Bit-Form para UI (ex.: shadcn)
+    add         Gera wrappers Bit-Form para UI (ex.: shadcn, html)
     
   Exemplo add:
     bit-form add shadcn input textarea select
+    bit-form add html input textarea select checkbox radio-group
     bit-form add shadcn --path ./components --ui-path @/components/ui --overwrite
+    bit-form add html --path ./components/forms --overwrite
 
   Opções do devtools:
     -p, --port  Define a porta do servidor (padrão: 3000)

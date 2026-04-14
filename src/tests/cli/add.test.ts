@@ -1,10 +1,10 @@
 /**
  * @vitest-environment node
  */
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import * as fs from "node:fs";
-import * as path from "node:path";
 import * as os from "node:os";
+import * as path from "node:path";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { runAddCommand } from "../../cli/add";
 
 describe("bit-form add", () => {
@@ -34,13 +34,19 @@ describe("bit-form add", () => {
 
   it("throws when adapter is unknown", () => {
     expect(() => runAddCommand(["unknown", "input"])).toThrow(
-      'unknown adapter "unknown"',
+      'unknown adapter "unknown". Available: shadcn, html',
     );
   });
 
   it("throws when component is invalid", () => {
     expect(() => runAddCommand(["shadcn", "invalid-component"])).toThrow(
       "Unknown shadcn component",
+    );
+  });
+
+  it("throws when html component is invalid", () => {
+    expect(() => runAddCommand(["html", "invalid-component"])).toThrow(
+      "Unknown html component",
     );
   });
 
@@ -64,6 +70,42 @@ describe("bit-form add", () => {
       true,
     );
     expect(fs.existsSync(path.join(tmpDir, "bit-form-checkbox.tsx"))).toBe(
+      true,
+    );
+  });
+
+  it("generates html input wrapper without shadcn imports", () => {
+    runAddCommand(["html", "input", "--path", "."]);
+
+    const filePath = path.join(tmpDir, "bit-form-input.tsx");
+    expect(fs.existsSync(filePath)).toBe(true);
+    const contents = fs.readFileSync(filePath, "utf-8");
+    expect(contents).not.toContain("@/components/ui");
+    expect(contents).toContain("<input");
+    expect(contents).toContain("useBitField");
+    expect(contents).toContain("BitFormInput");
+    expect(contents).toMatchSnapshot();
+  });
+
+  it("generates multiple html components", () => {
+    runAddCommand([
+      "html",
+      "input",
+      "textarea",
+      "checkbox",
+      "radio-group",
+      "--path",
+      ".",
+    ]);
+
+    expect(fs.existsSync(path.join(tmpDir, "bit-form-input.tsx"))).toBe(true);
+    expect(fs.existsSync(path.join(tmpDir, "bit-form-textarea.tsx"))).toBe(
+      true,
+    );
+    expect(fs.existsSync(path.join(tmpDir, "bit-form-checkbox.tsx"))).toBe(
+      true,
+    );
+    expect(fs.existsSync(path.join(tmpDir, "bit-form-radio-group.tsx"))).toBe(
       true,
     );
   });
@@ -119,6 +161,22 @@ describe("bit-form add", () => {
       true,
     );
     expect(fs.existsSync(path.join(tmpDir, "bit-form-switch.tsx"))).toBe(true);
+    expect(fs.existsSync(path.join(tmpDir, "bit-form-radio-group.tsx"))).toBe(
+      true,
+    );
+  });
+
+  it("generates all html components when none specified", () => {
+    runAddCommand(["html", "--path", "."]);
+
+    expect(fs.existsSync(path.join(tmpDir, "bit-form-input.tsx"))).toBe(true);
+    expect(fs.existsSync(path.join(tmpDir, "bit-form-textarea.tsx"))).toBe(
+      true,
+    );
+    expect(fs.existsSync(path.join(tmpDir, "bit-form-select.tsx"))).toBe(true);
+    expect(fs.existsSync(path.join(tmpDir, "bit-form-checkbox.tsx"))).toBe(
+      true,
+    );
     expect(fs.existsSync(path.join(tmpDir, "bit-form-radio-group.tsx"))).toBe(
       true,
     );
