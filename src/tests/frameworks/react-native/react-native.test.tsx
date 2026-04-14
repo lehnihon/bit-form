@@ -22,6 +22,21 @@ describe("React Native Integration (bit-form/react-native)", () => {
     <BitFormProvider store={store}>{children}</BitFormProvider>
   );
 
+  it("deve aceitar store estritamente tipada no BitFormProvider reexportado", () => {
+    const strictStore = createBitStoreRuntime<{ name: string }>({
+      initialValues: { name: "Leandro" },
+      validation: { delay: 0 },
+    });
+
+    const { result } = renderHook(() => useBitField("name"), {
+      wrapper: ({ children }) => (
+        <BitFormProvider store={strictStore}>{children}</BitFormProvider>
+      ),
+    });
+
+    expect(result.current.value).toBe("Leandro");
+  });
+
   it("deve retornar props específicas para React Native (onChangeText)", () => {
     const store = createTestStore({ name: "Leandro" });
     const { result } = renderHook(() => useBitField("name"), {

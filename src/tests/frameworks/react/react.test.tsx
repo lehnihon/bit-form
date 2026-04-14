@@ -57,6 +57,27 @@ describe("React Integration (Context + Hooks)", () => {
     <BitFormProvider store={store}>{children}</BitFormProvider>
   );
 
+  it("deve aceitar store estritamente tipada no BitFormProvider", () => {
+    const strictStore = createBitStoreRuntime<MyForm>({
+      initialValues: {
+        salary: 10,
+        user: { firstName: "Leandro", lastName: "Ishikawa" },
+        skills: ["React"],
+        hasBonus: false,
+        bonusValue: 0,
+      },
+      validation: { delay: 0 },
+    });
+
+    const { result } = renderHook(() => useBitField("user.firstName"), {
+      wrapper: ({ children }) => (
+        <BitFormProvider store={strictStore}>{children}</BitFormProvider>
+      ),
+    });
+
+    expect(result.current.value).toBe("Leandro");
+  });
+
   describe("Basic Field Logic & Lifecycle", () => {
     it("deve sincronizar useBitField, rastrear isDirty e invalid", async () => {
       const store = createTestStore();
