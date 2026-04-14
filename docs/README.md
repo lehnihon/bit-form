@@ -47,6 +47,7 @@ Use the path that best matches your goal:
 
 - [React](./frameworks/react.md)
 - [Next.js](./frameworks/next.md)
+- [React + native HTML](./frameworks/react-html.md)
 - [React + shadcn/ui](./frameworks/react-shadcn.md)
 - [React Native](./frameworks/react-native.md)
 - [Vue](./frameworks/vue.md)

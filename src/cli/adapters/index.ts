@@ -1,8 +1,10 @@
-import type { Adapter } from "./types";
+import { htmlReactAdapter } from "./html-react";
 import { shadcnReactAdapter } from "./shadcn-react";
+import type { Adapter } from "./types";
 
 const registry: Record<string, Adapter> = {
   shadcn: shadcnReactAdapter,
+  html: htmlReactAdapter,
 };
 
 export function getAdapter(name: string): Adapter | undefined {

@@ -183,6 +183,7 @@ The complete documentation is available in the `/docs` folder. Explore the guide
 
 - **[React](./docs/frameworks/react.md)**: Using hooks and Context Provider.
 - **[Next.js](./docs/frameworks/next.md)**: Using Bit-Form in App Router/Pages Router with client boundaries (`"use client"`).
+- **[React + native HTML](./docs/frameworks/react-html.md)**: Generate form wrappers with `bit-form add html` (Input, Textarea, Select, Checkbox, RadioGroup).
 - **[React + shadcn/ui](./docs/frameworks/react-shadcn.md)**: Generate form wrappers with `bit-form add shadcn` (Input, Textarea, Select, Checkbox, Switch, RadioGroup).
 - **[React Native](./docs/frameworks/react-native.md)**: Mobile specifics and `onChangeText` mapping.
 - **[Vue](./docs/frameworks/vue.md)**: Using composables and InjectionKeys.
@@ -227,7 +228,7 @@ The complete documentation is available in the `/docs` folder. Explore the guide
 - **[DevTools Overview](./docs/devtools/index.md)**: Configuration (`devTools: true` or `{ mode: "remote" }`).
 - **[Floating Panel](./docs/devtools/floating-panel.md)**: In-app inspector (local mode).
 - **[CLI & Remote Dashboard](./docs/devtools/cli-remote-dashboard.md)**: `bit-form devtools` + WebSocket for React Native / remote debugging.
-- **CLI `add`**: Generate Bit-Form + shadcn/ui wrappers with `bit-form add shadcn [input|textarea|select|checkbox|switch|radio-group]` — see [React + shadcn](./docs/frameworks/react-shadcn.md).
+- **CLI `add`**: Generate Bit-Form wrappers with `bit-form add shadcn [input|textarea|select|checkbox|switch|radio-group]` or `bit-form add html [input|textarea|select|checkbox|radio-group]` — see [React + shadcn](./docs/frameworks/react-shadcn.md) and [React + native HTML](./docs/frameworks/react-html.md).
 
 ### 📑 Reference
 
