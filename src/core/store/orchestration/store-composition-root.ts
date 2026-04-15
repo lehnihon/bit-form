@@ -154,6 +154,8 @@ export function composeBitStoreRuntime<T extends object>(args: {
   };
 
   const applyPersistedValues = (values: Partial<T>) => {
+    getRuntimeKernel().flushPendingHistorySnapshot();
+
     applyStorePersistedValues({
       values,
       state: getRuntimeKernel().getState(),
@@ -183,6 +185,7 @@ export function composeBitStoreRuntime<T extends object>(args: {
     subscriptions: runtime.subscriptions,
     effects,
     capabilityRegistry: runtime.capabilityRegistry,
+    historyDebounceMs: config.history.debounceMs,
     onUnhandledError: (error, source) => config.onUnhandledError(error, source),
     applyValueDerivations: (values, changedPaths) => {
       try {
@@ -204,6 +207,7 @@ export function composeBitStoreRuntime<T extends object>(args: {
   });
 
   runtimeKernel.saveHistorySnapshot();
+  runtimeKernel.flushPendingHistorySnapshot();
 
   return {
     config,

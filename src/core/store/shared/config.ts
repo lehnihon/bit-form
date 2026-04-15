@@ -56,6 +56,7 @@ export function normalizeConfig<T extends object>(
     history: {
       enabled: history?.enabled ?? false,
       limit: history?.limit ?? 50,
+      debounceMs: history?.debounceMs ?? 300,
     },
     fields: config.fields,
     devTools: config.devTools,

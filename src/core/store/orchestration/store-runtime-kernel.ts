@@ -23,6 +23,7 @@ export interface BitStoreRuntimeKernelArgs<T extends object> {
   subscriptions: BitSubscriptionEngine<T>;
   effects: BitStoreEffectEngine<T>;
   capabilityRegistry: BitStoreCapabilityRegistry<T>;
+  historyDebounceMs?: number;
   applyValueDerivations?: (values: T, changedPaths?: readonly string[]) => T;
   onUnhandledError?: (error: unknown, source: string) => void;
 }
@@ -31,6 +32,9 @@ export class BitStoreRuntimeKernel<T extends object> {
   private state: BitState<T>;
   private readonly batchState: BitStoreBatchState<T> =
     createStoreBatchState<T>();
+  private readonly historyDebounceMs: number;
+  private historyTimer: ReturnType<typeof setTimeout> | undefined;
+  private pendingHistoryValues: T | null = null;
 
   readonly subscriptions: BitSubscriptionEngine<T>;
   readonly effects: BitStoreEffectEngine<T>;
@@ -43,6 +47,7 @@ export class BitStoreRuntimeKernel<T extends object> {
     this.effects = args.effects;
     this.capabilityRegistry = args.capabilityRegistry;
     this.capabilities = args.capabilityRegistry.toCapabilities();
+    this.historyDebounceMs = Math.max(0, args.historyDebounceMs ?? 300);
   }
 
   getCapability<K extends keyof BitStoreCapabilities<T>>(
@@ -77,19 +82,30 @@ export class BitStoreRuntimeKernel<T extends object> {
   }
 
   saveHistorySnapshot(): void {
-    const before = this.capabilities.history.getMetadata();
-
     saveStoreHistorySnapshot({
       batchState: this.batchState,
       values: this.state.values,
-      saveHistory: (values) => this.capabilities.history.saveSnapshot(values),
+      saveHistory: (values) => this.queueHistorySnapshot(values),
     });
+  }
 
-    const after = this.capabilities.history.getMetadata();
-    this.notifyIfHistoryChanged(before, after);
+  flushPendingHistorySnapshot(): void {
+    if (this.historyTimer) {
+      clearTimeout(this.historyTimer);
+      this.historyTimer = undefined;
+    }
+
+    if (!this.pendingHistoryValues) {
+      return;
+    }
+
+    const values = this.pendingHistoryValues;
+    this.pendingHistoryValues = null;
+    this.recordHistorySnapshot(values);
   }
 
   cleanup(): void {
+    this.flushPendingHistorySnapshot();
     this.subscriptions.destroy();
     this.capabilities.validation.cancelAll();
     this.effects.destroy();
@@ -113,19 +129,39 @@ export class BitStoreRuntimeKernel<T extends object> {
   }
 
   private flushBatchedStateUpdates(): void {
-    const historyBeforeFlush = this.capabilities.history.getMetadata();
-
     this.state = flushStoreBatchedStateUpdates({
       state: this.state,
       batchState: this.batchState,
       applyValueDerivations: (values, changedPaths) =>
         this.applyValueDerivations(values, changedPaths),
       onStateCommitted: (payload) => this.onStateCommitted(payload),
-      saveHistory: (values) => this.capabilities.history.saveSnapshot(values),
+      saveHistory: (values) => this.queueHistorySnapshot(values),
     });
+  }
 
-    const historyAfterFlush = this.capabilities.history.getMetadata();
-    this.notifyIfHistoryChanged(historyBeforeFlush, historyAfterFlush);
+  private queueHistorySnapshot(values: T): void {
+    if (this.historyDebounceMs <= 0) {
+      this.recordHistorySnapshot(values);
+      return;
+    }
+
+    this.pendingHistoryValues = values;
+
+    if (this.historyTimer) {
+      clearTimeout(this.historyTimer);
+    }
+
+    this.historyTimer = setTimeout(() => {
+      this.historyTimer = undefined;
+      this.flushPendingHistorySnapshot();
+    }, this.historyDebounceMs);
+  }
+
+  private recordHistorySnapshot(values: T): void {
+    const before = this.capabilities.history.getMetadata();
+    this.capabilities.history.saveSnapshot(values);
+    const after = this.capabilities.history.getMetadata();
+    this.notifyIfHistoryChanged(before, after);
   }
 
   private applyValueDerivations(

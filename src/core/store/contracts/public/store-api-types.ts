@@ -48,7 +48,7 @@ export interface BitFrameworkConfig<
   initialValues: T;
   resolver?: ValidatorFn<T>;
   validationDelay: number;
-  history: { enabled: boolean; limit: number };
+  history: { enabled: boolean; limit: number; debounceMs: number };
   fields?: Record<string, BitFieldDefinition<T>>;
   devTools?: boolean | DevToolsOptions;
   persist: BitPersistResolvedConfig<T>;

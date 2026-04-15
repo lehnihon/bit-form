@@ -54,7 +54,7 @@ describe("Angular Integration (Signals)", () => {
       fields: {
         salary: { mask: "brl" },
       },
-      history: { enabled: true },
+      history: { enabled: true, debounceMs: 0 },
       validation: { delay: 0 },
     });
 

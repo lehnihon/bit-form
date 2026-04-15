@@ -524,7 +524,7 @@ describe("BitStore Core", () => {
     it("should persist a single history snapshot for multiple mutations inside transaction", () => {
       const store = createBitStore({
         initialValues: { items: [1] },
-        history: { enabled: true, limit: 20 },
+        history: { enabled: true, limit: 20, debounceMs: 0 },
       });
 
       expect(store.read.getHistoryMetadata().historySize).toBe(1);
@@ -1014,7 +1014,7 @@ describe("BitStore Core", () => {
     it("should track history correctly", () => {
       const store = createBitStore({
         initialValues: { name: "Leo" },
-        history: { enabled: true },
+        history: { enabled: true, debounceMs: 0 },
       });
 
       store.write.setField("name", "Leandro");
@@ -1036,7 +1036,7 @@ describe("BitStore Core", () => {
     it("should expose history metadata", () => {
       const store = createBitStore({
         initialValues: { name: "Leo" },
-        history: { enabled: true },
+        history: { enabled: true, debounceMs: 0 },
       });
 
       let history = store.read.getHistoryMetadata();
@@ -1056,7 +1056,7 @@ describe("BitStore Core", () => {
     it("should not allow redo after undo followed by new write", () => {
       const store = createBitStore({
         initialValues: { name: "A" },
-        history: { enabled: true },
+        history: { enabled: true, debounceMs: 0 },
       });
 
       store.write.setField("name", "B");
@@ -1080,7 +1080,7 @@ describe("BitStore Core", () => {
     it("should clear stale errors immediately when applying undo snapshot", async () => {
       const store = createBitStore({
         initialValues: { name: "A" },
-        history: { enabled: true },
+        history: { enabled: true, debounceMs: 0 },
         validation: {
           resolver: async (values: any) =>
             values.name ? {} : { name: "Required" },
@@ -1106,7 +1106,7 @@ describe("BitStore Core", () => {
 
       const store = createBitStore({
         initialValues: { name: "A" },
-        history: { enabled: true },
+        history: { enabled: true, debounceMs: 0 },
         validation: {
           resolver: () =>
             new Promise<Record<string, string>>((resolve) => {
@@ -1132,6 +1132,106 @@ describe("BitStore Core", () => {
 
       resolveResolver?.({ name: "Required" });
       unsubscribe();
+    });
+
+    it("should debounce history snapshots by default (300ms)", () => {
+      vi.useFakeTimers();
+
+      const store = createBitStore({
+        initialValues: { name: "" },
+        history: { enabled: true },
+      });
+
+      store.write.setField("name", "L");
+      store.write.setField("name", "Le");
+      store.write.setField("name", "Leo");
+
+      expect(store.read.getHistoryMetadata().historySize).toBe(1);
+
+      vi.advanceTimersByTime(300);
+
+      expect(store.read.getHistoryMetadata().historySize).toBe(2);
+      expect(store.read.getState().values.name).toBe("Leo");
+    });
+
+    it("should flush pending snapshot on blur before debounce elapses", () => {
+      vi.useFakeTimers();
+
+      const store = createBitStore({
+        initialValues: { name: "" },
+        history: { enabled: true },
+      });
+
+      store.write.setField("name", "Leandro");
+      expect(store.read.getHistoryMetadata().historySize).toBe(1);
+
+      store.write.blurField("name");
+
+      expect(store.read.getHistoryMetadata().historySize).toBe(2);
+      expect(store.read.getHistoryMetadata().canUndo).toBe(true);
+    });
+
+    it("should flush pending snapshot before undo", () => {
+      vi.useFakeTimers();
+
+      const store = createBitStore({
+        initialValues: { name: "A" },
+        history: { enabled: true },
+      });
+
+      store.write.setField("name", "B");
+      expect(store.read.getHistoryMetadata().historySize).toBe(1);
+
+      store.feature.undo();
+
+      expect(store.read.getState().values.name).toBe("A");
+      expect(store.read.getHistoryMetadata().canRedo).toBe(true);
+    });
+
+    it("should flush pending snapshot before reset", () => {
+      vi.useFakeTimers();
+
+      const store = createBitStore({
+        initialValues: { name: "A" },
+        history: { enabled: true },
+      });
+
+      store.write.setField("name", "B");
+      store.write.reset();
+
+      expect(store.read.getHistoryMetadata().historySize).toBe(1);
+      expect(store.read.getState().values.name).toBe("A");
+      expect(store.read.getHistoryMetadata().canUndo).toBe(false);
+    });
+
+    it("should not reintroduce pending snapshot after rebase", () => {
+      vi.useFakeTimers();
+
+      const store = createBitStore({
+        initialValues: { name: "A" },
+        history: { enabled: true },
+      });
+
+      store.write.setField("name", "B");
+      store.write.setValues({ name: "C" }, { rebase: true });
+
+      expect(store.read.getState().values.name).toBe("C");
+      expect(store.read.getHistoryMetadata()).toMatchObject({
+        canUndo: false,
+        canRedo: false,
+        historyIndex: 0,
+        historySize: 1,
+      });
+
+      vi.advanceTimersByTime(300);
+
+      expect(store.read.getState().values.name).toBe("C");
+      expect(store.read.getHistoryMetadata()).toMatchObject({
+        canUndo: false,
+        canRedo: false,
+        historyIndex: 0,
+        historySize: 1,
+      });
     });
   });
 

@@ -340,6 +340,7 @@ export function createBitStoreDomains<T extends object>(args: {
         });
       }
 
+      runtime.flushPendingHistorySnapshot();
       runtime.capabilities.validation.trigger([path]);
     },
     markFieldsTouched: (paths) => {
@@ -347,6 +348,10 @@ export function createBitStoreDomains<T extends object>(args: {
       runtime.dispatch(touchFieldsOperation(paths));
     },
     setValues: (values, options) => {
+      if (options?.rebase) {
+        runtime.flushPendingHistorySnapshot();
+      }
+
       runtime.capabilities.lifecycle.setValues(values, options);
     },
     setError: (path, message) => {
@@ -359,12 +364,16 @@ export function createBitStoreDomains<T extends object>(args: {
       runtime.capabilities.error.setServerErrors(serverErrors, options);
     },
     reset: () => {
+      runtime.flushPendingHistorySnapshot();
       runtime.runBatch(() => {
         runtime.capabilities.lifecycle.reset();
       });
     },
     transaction: (callback) => runtime.runBatch(callback),
-    submit: (onSuccess) => runtime.capabilities.lifecycle.submit(onSuccess),
+    submit: (onSuccess) => {
+      runtime.flushPendingHistorySnapshot();
+      return runtime.capabilities.lifecycle.submit(onSuccess);
+    },
     pushItem: (path, value) =>
       runtime.capabilities.arrays.pushItem(path, value),
     prependItem: (path, value) =>
@@ -387,6 +396,7 @@ export function createBitStoreDomains<T extends object>(args: {
 
   const featureDomain: BitStoreFeatureDomain<T> = {
     undo: () => {
+      runtime.flushPendingHistorySnapshot();
       runUndoFeature({
         history: runtime.capabilities.history,
         applyHistoryState: (values) =>
@@ -394,6 +404,7 @@ export function createBitStoreDomains<T extends object>(args: {
       });
     },
     redo: () => {
+      runtime.flushPendingHistorySnapshot();
       runRedoFeature({
         history: runtime.capabilities.history,
         applyHistoryState: (values) =>

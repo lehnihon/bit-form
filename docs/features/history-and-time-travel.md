@@ -15,14 +15,41 @@ const store = createBitStore({
 
 ## How it works
 
-Bit-Form registra histórico por checkpoint transacional: quando há mutação de `values`, o runtime consolida as mudanças do batch/transaction atual em um único patch incremental. Isso reduz ruído no stack e melhora custo em fluxos com múltiplas mutações encadeadas. Você pode configurar o limite:
+Bit-Form records history using incremental patches. In addition to transaction/batch consolidation, history snapshots are debounced by default to reduce noise during rapid typing.
+
+- `history.debounceMs` defaults to `300`.
+- Multiple value changes inside the debounce window are coalesced into one history snapshot.
+- Multiple mutations inside the same `transaction()` are still consolidated into one snapshot.
+
+You can configure both capacity and debounce behavior:
 
 ```tsx
 const store = createBitStore({
   initialValues: { documentText: "" },
-  history: { enabled: true, limit: 30 }, // Default limit is 50
+  history: {
+    enabled: true,
+    limit: 30, // default: 50
+    debounceMs: 150, // default: 300
+  },
 });
 ```
+
+Set `debounceMs: 0` to disable debounce and record snapshots immediately on each write.
+
+## Safety Flush
+
+To avoid losing the last pending snapshot, Bit-Form flushes pending history entries before timeline-sensitive operations.
+
+Pending snapshots are flushed before:
+
+- `undo()`
+- `redo()`
+- `reset()`
+- `submit()`
+- persisted value application
+- store cleanup/destroy
+
+Additionally, `blurField()` flushes pending history so typical field-edit flows commit a snapshot as the user leaves the field.
 
 ## Using Undo / Redo
 
