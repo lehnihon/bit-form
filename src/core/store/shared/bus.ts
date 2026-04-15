@@ -20,7 +20,7 @@ if (!rootGlobal.__BIT_FORM__) {
       this.listeners.forEach((fn: BitBusListener) => {
         try {
           fn(id, state);
-        } catch (error) {
+        } catch {
           // Silently swallow listener errors to prevent breaking the notification chain
         }
       });
@@ -67,7 +67,7 @@ export function createBitBus(): BitFormGlobal {
       listeners.forEach((fn) => {
         try {
           fn(id, state);
-        } catch (error) {
+        } catch {
           // Silently swallow listener errors to prevent breaking the notification chain
         }
       });

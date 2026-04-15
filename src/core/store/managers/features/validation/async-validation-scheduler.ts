@@ -159,7 +159,7 @@ export class BitAsyncValidationScheduler<T extends object> {
     if (this.cancelSchedulerTimeout) {
       try {
         this.cancelSchedulerTimeout();
-      } catch (e) {
+      } catch {
         // Ignore: may fail if cancellation already happened
       } finally {
         this.cancelSchedulerTimeout = undefined;
@@ -169,7 +169,7 @@ export class BitAsyncValidationScheduler<T extends object> {
     this.abortControllers.forEach((controller) => {
       try {
         controller.abort();
-      } catch (e) {
+      } catch {
         // Already aborted or invalid
       }
     });

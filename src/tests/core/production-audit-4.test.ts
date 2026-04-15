@@ -140,7 +140,7 @@ describe("Production Audit 4 - Regression Tests", () => {
 
     it("should not leave isLoading true when callbacks throw on success path", async () => {
       let callCount = 0;
-      const setLoading = vi.fn((...args) => {
+      const setLoading = vi.fn((..._args) => {
         callCount++;
         if (callCount === 1) {
           throw new Error("setLoading error on start");

@@ -38,7 +38,7 @@ export interface UploadKernelCallbacks {
 function safeCallbackExecution(fn: () => void): void {
   try {
     fn();
-  } catch (error) {
+  } catch {
     // Silently swallow callback errors to maintain upload state consistency
   }
 }

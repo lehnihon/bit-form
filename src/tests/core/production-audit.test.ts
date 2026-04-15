@@ -219,7 +219,7 @@ describe("Production Audit - Critical Fixes", () => {
       const store = createBitStore({
         initialValues: { fieldA: 2, fieldB: "" },
         validation: {
-          resolver: async (values: any) => {
+          resolver: async (_values: any) => {
             return {};
           },
         },

@@ -139,7 +139,7 @@ export function createInitialStoreState<T extends object>(args: {
     normalizerEntries: fieldRegistry.getNormalizerEntries(),
     applyComputed: (values, changedPaths) =>
       computedManager.apply(values, changedPaths),
-    onError: (error, path) => {
+    onError: (error, _path) => {
       config.onUnhandledError(error, "derivation");
     },
   });

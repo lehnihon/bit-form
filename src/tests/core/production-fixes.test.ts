@@ -97,7 +97,7 @@ describe("Production Fixes - Safeguards", () => {
       expect(result1).toBe(true);
 
       // Start second validation with current value, resolver will be slow
-      const validationPromise = store.feature.validate({
+      const _validationPromise = store.feature.validate({
         scopeFields: ["email"],
       });
 
@@ -153,7 +153,7 @@ describe("Production Fixes - Safeguards", () => {
         initialValues: { field1: "test", field2: "value" },
         fields: {
           field1: {
-            normalize: (value: string) => {
+            normalize: (_value: string) => {
               normalizerCalls.push("field1");
               throw new Error("normalizer crash");
             },
