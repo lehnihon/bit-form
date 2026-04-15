@@ -350,7 +350,7 @@ describe("React Integration (Context + Hooks)", () => {
           hasBonus: false,
           bonusValue: 0,
         },
-        history: { enabled: true },
+        history: { enabled: true, debounceMs: 0 },
       });
 
       const { result } = renderHook(
@@ -510,7 +510,7 @@ describe("React Integration (Context + Hooks)", () => {
           hasBonus: false,
           bonusValue: 0,
         },
-        history: { enabled: true },
+        history: { enabled: true, debounceMs: 0 },
       });
 
       const { result, rerender } = renderHook(() => useBitHistory<MyForm>(), {

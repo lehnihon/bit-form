@@ -260,6 +260,7 @@ interface BitConfig<T extends object = any> {
   history?: {
     enabled?: boolean;
     limit?: number;
+    debounceMs?: number;
   };
   devTools?: boolean | DevToolsOptions;
   persist?: BitPersistConfig<T>;
@@ -286,7 +287,7 @@ type BitIdFactory = (context: BitIdFactoryContext) => string;
 const store = createBitStore({
   initialValues: { email: "" },
   validation: { resolver: zodResolver(schema), delay: 300 },
-  history: { enabled: true, limit: 20 },
+  history: { enabled: true, limit: 20, debounceMs: 300 },
   fields: {
     email: {
       normalize: (v) => v?.trim(),
@@ -383,8 +384,11 @@ Public framework-facing config returned by `store.read.config`. It includes norm
 interface BitFrameworkConfig<T extends object = any> extends BitConfig<T> {
   initialValues: T;
   validationDelay: number;
-  enableHistory: boolean;
-  historyLimit: number;
+  history: {
+    enabled: boolean;
+    limit: number;
+    debounceMs: number;
+  };
   persist: BitPersistResolvedConfig<T>;
 }
 ```

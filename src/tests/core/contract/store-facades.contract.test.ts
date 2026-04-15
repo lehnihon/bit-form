@@ -113,7 +113,7 @@ describe("Store Contract (namespaced-only)", () => {
   it("feature de histórico expõe canUndo/canRedo e opera undo/redo", () => {
     const store = createBitStore({
       initialValues: { name: "Leo" },
-      history: { enabled: true },
+      history: { enabled: true, debounceMs: 0 },
     });
 
     store.write.setField("name", "Ana");

@@ -23,6 +23,12 @@ export interface BitHistoryConfig {
    * @default 50
    */
   limit?: number;
+  /**
+   * Debounce window (ms) used to coalesce rapid value changes into a single
+   * history snapshot.
+   * @default 300
+   */
+  debounceMs?: number;
 }
 
 /**
