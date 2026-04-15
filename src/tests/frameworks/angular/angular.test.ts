@@ -14,7 +14,6 @@ import {
 } from "bit-form/angular";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createBitStore as createBitStoreRuntime } from "../../../core";
-import { maskBRL } from "../../../mask";
 
 interface MyForm {
   user: { name: string };
@@ -52,7 +51,6 @@ describe("Angular Integration (Signals)", () => {
         hasBonus: false,
         bonusValue: 0,
       },
-      masks: { brl: maskBRL },
       fields: {
         salary: { mask: "brl" },
       },

@@ -57,7 +57,6 @@ export function normalizeConfig<T extends object>(
       enabled: history?.enabled ?? false,
       limit: history?.limit ?? 50,
     },
-    masks: config.masks,
     fields: config.fields,
     devTools: config.devTools,
     persist,

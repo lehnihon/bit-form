@@ -1,3 +1,4 @@
+import { bitMasks } from "../../../mask/built-ins";
 import { BitMask, BitMaskName } from "../../../mask/types";
 
 /**
@@ -12,6 +13,12 @@ import { BitMask, BitMaskName } from "../../../mask/types";
  */
 export class BitMaskManager {
   private masks: Map<string, BitMask> = new Map();
+
+  constructor() {
+    Object.entries(bitMasks).forEach(([name, mask]) => {
+      this.masks.set(name, mask);
+    });
+  }
 
   /**
    * Register a new input mask

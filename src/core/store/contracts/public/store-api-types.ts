@@ -1,4 +1,4 @@
-import { BitMask } from "../../../mask/types";
+import type { BitMask } from "../../../mask/types";
 import type { BitFormGlobal } from "../bus-types";
 import type { BitValidationTriggerOptions } from "../port-types";
 import {
@@ -49,7 +49,6 @@ export interface BitFrameworkConfig<
   resolver?: ValidatorFn<T>;
   validationDelay: number;
   history: { enabled: boolean; limit: number };
-  masks?: Record<string, BitMask>;
   fields?: Record<string, BitFieldDefinition<T>>;
   devTools?: boolean | DevToolsOptions;
   persist: BitPersistResolvedConfig<T>;

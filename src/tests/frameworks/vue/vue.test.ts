@@ -13,7 +13,6 @@ import {
 import { describe, expect, it, vi } from "vitest";
 import { defineComponent, nextTick } from "vue";
 import { createBitStore as createBitStoreRuntime } from "../../../core";
-import { maskBRL } from "../../../mask";
 import { BIT_STORE_KEY } from "../../../vue/context";
 
 function createBitStore<T extends object = Record<string, unknown>>(
@@ -92,7 +91,6 @@ describe("Vue Integration", () => {
   it("should apply masks and handle displayValue vs raw value", async () => {
     const store = createBitStore({
       initialValues: { salary: 10 },
-      masks: { brl: maskBRL },
       fields: { salary: { mask: "brl" } },
     });
     const wrapper = createWrapper(store, () => ({

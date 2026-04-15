@@ -67,17 +67,11 @@ Masks are defined in `fields.path.mask` at store construction (or by registering
 
 ### Option 1: `fields.path.mask` (declarative)
 
-Define the mask directly on the field. Use built-in names (`"brl"`, `"cpf"`, etc.) or a BitMask instance. For custom masks, create them and pass via `masks` in store config or directly as an instance on the field:
+Define the mask directly on the field. Use built-in names (`"brl"`, `"cpf"`, etc.) or pass a `BitMask` instance inline for custom behavior:
 
 ```tsx
 const store = createBitStore({
   initialValues: { salary: 0 },
-  masks: {
-    customSalary: {
-      format: (v) => `R$ ${v}`,
-      parse: (v) => v.replace(/\D/g, ""),
-    },
-  },
   fields: {
     salary: { mask: "brl" },
     age: { mask: "integer" }, // also accepts "int"
@@ -93,6 +87,8 @@ const salary = useBitField("salary");
 ## Custom Masks
 
 Create custom masks with `createPatternMask`, `createCurrencyMask`, and `createDateMask`.
+
+Custom masks are passed directly as `fields.path.mask`; there is no store-level `masks` config.
 
 ### Pattern Masks
 

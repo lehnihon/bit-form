@@ -57,12 +57,6 @@ export function composeBitStoreRuntime<T extends object>(args: {
   const dirtyManager = overrides?.dirtyManager ?? new BitDirtyManager<T>();
   const maskManager = overrides?.maskManager ?? new BitMaskManager();
 
-  if (config.masks) {
-    Object.entries(config.masks).forEach(([name, mask]) => {
-      maskManager.registerMask(name, mask);
-    });
-  }
-
   const invalidateFieldIndexes = () => {
     fieldRegistry.invalidateIndexes();
     computedManager.invalidateReverseDeps();
@@ -198,7 +192,7 @@ export function composeBitStoreRuntime<T extends object>(args: {
           normalizerEntries: fieldRegistry.getNormalizerEntries(),
           applyComputed: (nextValues, nextChangedPaths) =>
             computedManager.apply(nextValues, nextChangedPaths),
-          onError: (error, path) => {
+          onError: (error, _path) => {
             config.onUnhandledError(error, "derivation");
           },
         });

@@ -15,7 +15,7 @@ import {
 import React from "react";
 import { describe, expect, it, vi } from "vitest";
 import { createBitStore as createBitStoreRuntime } from "../../../core";
-import { maskBRL } from "../../../mask";
+import { createPatternMask } from "../../../mask";
 
 interface MyForm {
   salary: number;
@@ -38,7 +38,6 @@ describe("React Integration (Context + Hooks)", () => {
   const createTestStore = (
     initialValues?: Partial<MyForm>,
     fields?: Record<string, any>,
-    masks?: Record<string, any>,
   ) =>
     createBitStore<MyForm>({
       initialValues: {
@@ -49,7 +48,6 @@ describe("React Integration (Context + Hooks)", () => {
         bonusValue: 0,
         ...initialValues,
       },
-      masks: { brl: maskBRL, ...masks },
       fields,
       validation: { delay: 0 },
     });
@@ -209,8 +207,7 @@ describe("React Integration (Context + Hooks)", () => {
 
       const store = createTestStore(
         {}, // initialValues
-        { "user.lastName": { mask: "cpf" } }, // fields
-        { cpf: cpfMask }, // masks
+        { "user.lastName": { mask: cpfMask } }, // fields
       );
 
       const { result } = renderHook(() => useBitField("user.lastName"), {
@@ -223,6 +220,43 @@ describe("React Integration (Context + Hooks)", () => {
 
       expect(result.current.props.value).toBe("123.456.789-01");
       expect(store.read.getState().values.user.lastName).toBe("12345678901");
+    });
+
+    it("deve aceitar máscara inline custom sem config global", async () => {
+      const phoneMask = createPatternMask([
+        "(##) ####-####",
+        "(##) #####-####",
+      ]);
+      const store = createTestStore(
+        {},
+        { "user.lastName": { mask: phoneMask } },
+      );
+
+      const { result } = renderHook(() => useBitField("user.lastName"), {
+        wrapper: (props) => wrapper({ ...props, store }),
+      });
+
+      await act(() => {
+        result.current.setValue("11999991234");
+      });
+
+      expect(result.current.props.value).toBe("(11) 99999-1234");
+      expect(store.read.getState().values.user.lastName).toBe("11999991234");
+    });
+
+    it("deve aplicar máscara built-in phone em campo aninhado sem registro manual", async () => {
+      const store = createTestStore({}, { "user.lastName": { mask: "phone" } });
+
+      const { result } = renderHook(() => useBitField("user.lastName"), {
+        wrapper: (props) => wrapper({ ...props, store }),
+      });
+
+      await act(() => {
+        result.current.setValue("11999991234");
+      });
+
+      expect(result.current.props.value).toBe("(11) 99999-1234");
+      expect(store.read.getState().values.user.lastName).toBe("11999991234");
     });
   });
 

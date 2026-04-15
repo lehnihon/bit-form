@@ -1,4 +1,3 @@
-import type { BitMask } from "../../../mask/types";
 import type { BitFormGlobal } from "../bus-types";
 import type { BitFieldDefinition, ValidatorFn } from "./field-types";
 import type { BitPersistConfig } from "./persist-types";
@@ -36,7 +35,6 @@ export interface BitConfig<T extends object = Record<string, unknown>> {
   storeId?: string;
   idFactory?: BitIdFactory;
   initialValues?: T;
-  masks?: Record<string, BitMask>;
 
   /** Central field config: conditional, validation, transform, computed, mask, scope. */
   fields?: Record<string, BitFieldDefinition<T>>;

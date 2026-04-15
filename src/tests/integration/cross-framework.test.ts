@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { createBitStore as createBitStoreRuntime } from "../../core";
 import { createPatternMask } from "../../core/mask/creators";
-import { maskBRL } from "../../mask";
+import { bitMasks } from "../../mask";
 
 function createBitStore<T extends object = Record<string, unknown>>(
   config?: any,
@@ -26,15 +26,40 @@ describe("Cross-Framework Consistency", () => {
   it("should exhibit identical behavior for currency between frameworks", () => {
     const store = createBitStore({
       initialValues: { balance: 10 },
-      masks: { brl: maskBRL },
+      fields: { balance: { mask: "brl" } },
     });
-    const brl = store.read.config.masks!.brl;
+    const brl = bitMasks.brl;
 
     const display = brl.format(store.read.getState().values.balance);
     expect(display).toBe("R$ 10,00");
 
     const parsed = brl.parse("R$ 50,00");
     expect(parsed).toBe(50);
+  });
+
+  it("should expose built-in masks without explicit registration", () => {
+    const store = createBitStore({
+      initialValues: { company: { phone: "" } },
+      fields: { "company.phone": { mask: "phone" } },
+    });
+
+    const resolvedMask = store.feature.resolveMask("company.phone");
+
+    expect(resolvedMask).toBeDefined();
+    expect(resolvedMask?.format("11999991234")).toBe("(11) 99999-1234");
+  });
+
+  it("should accept inline custom masks without global config", () => {
+    const customDocMask = createPatternMask("UUU-####");
+    const store = createBitStore({
+      initialValues: { doc: "" },
+      fields: { doc: { mask: customDocMask } },
+    });
+
+    const resolvedMask = store.feature.resolveMask("doc");
+
+    expect(resolvedMask).toBe(customDocMask);
+    expect(resolvedMask?.format("abc1234")).toBe("ABC-1234");
   });
 
   it("should handle array error shifting and value integrity consistently", () => {
