@@ -1011,6 +1011,33 @@ describe("BitStore Core", () => {
   });
 
   describe("Undo/Redo History", () => {
+    it("should keep initial history metadata consistent with debounce enabled", () => {
+      vi.useFakeTimers();
+
+      const store = createBitStore({
+        initialValues: { name: "A" },
+        history: { enabled: true },
+      });
+
+      expect(store.read.getHistoryMetadata()).toMatchObject({
+        enabled: true,
+        canUndo: false,
+        canRedo: false,
+        historyIndex: 0,
+        historySize: 1,
+      });
+
+      vi.advanceTimersByTime(300);
+
+      expect(store.read.getHistoryMetadata()).toMatchObject({
+        enabled: true,
+        canUndo: false,
+        canRedo: false,
+        historyIndex: 0,
+        historySize: 1,
+      });
+    });
+
     it("should track history correctly", () => {
       const store = createBitStore({
         initialValues: { name: "Leo" },

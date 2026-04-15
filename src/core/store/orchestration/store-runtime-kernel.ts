@@ -10,6 +10,7 @@ import {
 import type { BitSubscriptionEngine } from "../engines/subscription-engine";
 import type { BitStoreCapabilities } from "./capabilities";
 import type { BitStoreCapabilityRegistry } from "./store-capability-registry";
+import { BitStoreHistoryOrchestrator } from "./store-history-orchestrator";
 import {
   commitStoreStateUpdate,
   dispatchStoreStateOperation,
@@ -32,9 +33,7 @@ export class BitStoreRuntimeKernel<T extends object> {
   private state: BitState<T>;
   private readonly batchState: BitStoreBatchState<T> =
     createStoreBatchState<T>();
-  private readonly historyDebounceMs: number;
-  private historyTimer: ReturnType<typeof setTimeout> | undefined;
-  private pendingHistoryValues: T | null = null;
+  private readonly historyOrchestrator: BitStoreHistoryOrchestrator<T>;
 
   readonly subscriptions: BitSubscriptionEngine<T>;
   readonly effects: BitStoreEffectEngine<T>;
@@ -47,7 +46,15 @@ export class BitStoreRuntimeKernel<T extends object> {
     this.effects = args.effects;
     this.capabilityRegistry = args.capabilityRegistry;
     this.capabilities = args.capabilityRegistry.toCapabilities();
-    this.historyDebounceMs = Math.max(0, args.historyDebounceMs ?? 300);
+    this.historyOrchestrator = new BitStoreHistoryOrchestrator<T>({
+      debounceMs: args.historyDebounceMs,
+      history: this.capabilities.history,
+      notifyHistoryChanged: () => {
+        this.subscriptions.notify(this.getState(), [
+          getHistorySubscriptionPath(),
+        ]);
+      },
+    });
   }
 
   getCapability<K extends keyof BitStoreCapabilities<T>>(
@@ -85,27 +92,17 @@ export class BitStoreRuntimeKernel<T extends object> {
     saveStoreHistorySnapshot({
       batchState: this.batchState,
       values: this.state.values,
-      saveHistory: (values) => this.queueHistorySnapshot(values),
+      saveHistory: (values) => this.historyOrchestrator.queueSnapshot(values),
     });
   }
 
   flushPendingHistorySnapshot(): void {
-    if (this.historyTimer) {
-      clearTimeout(this.historyTimer);
-      this.historyTimer = undefined;
-    }
-
-    if (!this.pendingHistoryValues) {
-      return;
-    }
-
-    const values = this.pendingHistoryValues;
-    this.pendingHistoryValues = null;
-    this.recordHistorySnapshot(values);
+    this.historyOrchestrator.flushPendingSnapshot();
   }
 
   cleanup(): void {
     this.flushPendingHistorySnapshot();
+    this.historyOrchestrator.dispose();
     this.subscriptions.destroy();
     this.capabilities.validation.cancelAll();
     this.effects.destroy();
@@ -135,33 +132,8 @@ export class BitStoreRuntimeKernel<T extends object> {
       applyValueDerivations: (values, changedPaths) =>
         this.applyValueDerivations(values, changedPaths),
       onStateCommitted: (payload) => this.onStateCommitted(payload),
-      saveHistory: (values) => this.queueHistorySnapshot(values),
+      saveHistory: (values) => this.historyOrchestrator.queueSnapshot(values),
     });
-  }
-
-  private queueHistorySnapshot(values: T): void {
-    if (this.historyDebounceMs <= 0) {
-      this.recordHistorySnapshot(values);
-      return;
-    }
-
-    this.pendingHistoryValues = values;
-
-    if (this.historyTimer) {
-      clearTimeout(this.historyTimer);
-    }
-
-    this.historyTimer = setTimeout(() => {
-      this.historyTimer = undefined;
-      this.flushPendingHistorySnapshot();
-    }, this.historyDebounceMs);
-  }
-
-  private recordHistorySnapshot(values: T): void {
-    const before = this.capabilities.history.getMetadata();
-    this.capabilities.history.saveSnapshot(values);
-    const after = this.capabilities.history.getMetadata();
-    this.notifyIfHistoryChanged(before, after);
   }
 
   private applyValueDerivations(
@@ -171,31 +143,5 @@ export class BitStoreRuntimeKernel<T extends object> {
     return this.args.applyValueDerivations
       ? this.args.applyValueDerivations(values, changedPaths)
       : values;
-  }
-
-  private notifyIfHistoryChanged(
-    before: {
-      canUndo: boolean;
-      canRedo: boolean;
-      historyIndex: number;
-      historySize: number;
-    },
-    after: {
-      canUndo: boolean;
-      canRedo: boolean;
-      historyIndex: number;
-      historySize: number;
-    },
-  ): void {
-    if (
-      before.canUndo === after.canUndo &&
-      before.canRedo === after.canRedo &&
-      before.historyIndex === after.historyIndex &&
-      before.historySize === after.historySize
-    ) {
-      return;
-    }
-
-    this.subscriptions.notify(this.getState(), [getHistorySubscriptionPath()]);
   }
 }
