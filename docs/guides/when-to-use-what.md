@@ -20,19 +20,23 @@ A quick reference for choosing the right Bit-Form feature for each scenario.
 
 ---
 
-## Values: computed vs transform
+## Values: normalize vs computed vs transform
 
-| Feature       | When to use                                   | Purpose                    |
-| ------------- | --------------------------------------------- | -------------------------- |
-| **computed**  | Derive a value from other fields in real time | `total = price * quantity` |
-| **transform** | Convert value **only on submit**              | `"R$ 1.500,00"` → `1500`   |
+| Feature       | When to use                                      | Purpose                    |
+| ------------- | ------------------------------------------------ | -------------------------- |
+| **normalize** | Clean the runtime state immediately after writes | `"  Ana  "` → `"Ana"`      |
+| **computed**  | Derive a value from other fields in real time    | `total = price * quantity` |
+| **transform** | Convert value **only on submit**                 | `"R$ 1.500,00"` → `1500`   |
 
 ### When to use each
 
+- **State should store the cleaned value right away?** (e.g. trim, lowercase, uppercase, collapse spaces) → `normalize`
 - **User sees the derived value?** (e.g. total, discount) → `computed`
 - **User types masked, API needs raw?** (e.g. currency, CPF) → `transform`
 
-`computed` runs on every change. `transform` runs only when the form is submitted.
+`normalize` runs after writes and batches. `computed` runs after dependencies change. `transform` runs only when the form is submitted.
+
+If input formatting is the main goal, use `mask` instead of `normalize`.
 
 ---
 
@@ -57,18 +61,19 @@ Use UI-only hide only if you have very custom rendering logic and are comfortabl
 
 ## Quick reference table
 
-| Scenario                        | Use                                                                 |
-| ------------------------------- | ------------------------------------------------------------------- |
-| Validate email format           | `resolver` (Zod/Yup)                                                |
-| Check if email exists in DB     | `asyncValidate`                                                     |
-| Show "Email taken" from API 422 | `setServerErrors` or `onSubmit`                                     |
-| Total = price × quantity        | `computed`                                                          |
-| Submit "R$ 1.500" as 1500       | `transform`                                                         |
-| Show CNPJ only when type=PJ     | `showIf` + `dependsOn`                                              |
-| Validate step before "Next"     | `fields[path].scope` + `useBitScope` / `injectBitScope`             |
-| Undo/Redo                       | `history: { enabled: true }`, `undo()`, `redo()`                    |
-| Debug form state                | `devTools: true` + `createDevToolsPlugin()`                         |
-| Release confidence              | `quality` gates (`test:bench`, `test:compat`, `test:release-gates`) |
+| Scenario                                   | Use                                                                 |
+| ------------------------------------------ | ------------------------------------------------------------------- |
+| Validate email format                      | `resolver` (Zod/Yup)                                                |
+| Check if email exists in DB                | `asyncValidate`                                                     |
+| Show "Email taken" from API 422            | `setServerErrors` or `onSubmit`                                     |
+| Store trimmed/lowercased value immediately | `normalize`                                                         |
+| Total = price × quantity                   | `computed`                                                          |
+| Submit "R$ 1.500" as 1500                  | `transform`                                                         |
+| Show CNPJ only when type=PJ                | `showIf` + `dependsOn`                                              |
+| Validate step before "Next"                | `fields[path].scope` + `useBitScope` / `injectBitScope`             |
+| Undo/Redo                                  | `history: { enabled: true }`, `undo()`, `redo()`                    |
+| Debug form state                           | `devTools: true` + `createDevToolsPlugin()`                         |
+| Release confidence                         | `quality` gates (`test:bench`, `test:compat`, `test:release-gates`) |
 
 ---
 

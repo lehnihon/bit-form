@@ -191,6 +191,7 @@ The complete documentation is available in the `/docs` folder. Explore the guide
 
 ### 🛠 Features
 
+- **[Normalization](./docs/features/normalization.md)**: Clean runtime state with `normalize` and control reruns with `normalizeDependsOn`.
 - **[Validation & Resolvers](./docs/features/validation.md)**: Integrating Zod, Yup, and Joi.
 - **[Masks & Formatting](./docs/features/masks.md)**: Using and creating input masks.
 - **[Conditional Logic](./docs/features/conditional-logic.md)**: Managing field dependencies.
@@ -204,7 +205,7 @@ The complete documentation is available in the `/docs` folder. Explore the guide
 
 ### 📖 Guides & Examples
 
-- **[When to Use What](./docs/guides/when-to-use-what.md)**: Quick reference for resolver vs asyncValidate vs setServerErrors, computed vs transform, and conditional fields.
+- **[When to Use What](./docs/guides/when-to-use-what.md)**: Quick reference for resolver vs asyncValidate vs setServerErrors, normalize vs computed vs transform, and conditional fields.
 - **[Troubleshooting](./docs/guides/troubleshooting.md)**: Debug common form setup, validation, and devtools issues.
 - **[Migration Guide](./docs/guides/migration.md)**: Plan upgrades and breaking-change checks safely.
 - **[Testing Guide](./docs/guides/testing.md)**: Unit, integration, and e2e testing strategies.

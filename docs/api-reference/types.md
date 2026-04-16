@@ -154,6 +154,8 @@ type BitNormalizeFn<T> = (value: unknown, allValues: T) => unknown;
 
 Used in `BitFieldDefinition.normalize` when the store state itself should be normalized after updates.
 
+See the [Normalization](../features/normalization.md) guide for runtime behavior, `normalizeDependsOn`, and feature selection guidance.
+
 ---
 
 ## `BitFieldDefinition<T>`

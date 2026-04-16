@@ -14,6 +14,7 @@ Use the path that best matches your goal:
 ## I need to solve a specific problem
 
 - Validation strategy: [When to Use What](./guides/when-to-use-what.md)
+- Normalize runtime values: [Normalization](./features/normalization.md)
 - Form not behaving as expected: [Troubleshooting](./guides/troubleshooting.md)
 - Upgrade safely: [Migration Guide](./guides/migration.md)
 - Test form behavior: [Testing Guide](./guides/testing.md)
@@ -32,6 +33,7 @@ Use the path that best matches your goal:
 
 ## Feature Guides
 
+- [Normalization](./features/normalization.md)
 - [Validation](./features/validation.md)
 - [Masks](./features/masks.md)
 - [Conditional Logic](./features/conditional-logic.md)
