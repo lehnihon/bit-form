@@ -43,6 +43,8 @@ export class BitArrayManager<T extends object = Record<string, unknown>> {
       return ids;
     });
 
+    this.store.unregisterPrefix?.(toPathPrefix(path));
+
     this.mutateArrayWithSetField(path, (arr) => [...arr, value], {
       origin: "array",
       operation: "push",

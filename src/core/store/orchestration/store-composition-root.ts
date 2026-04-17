@@ -89,11 +89,18 @@ export function composeBitStoreRuntime<T extends object>(args: {
       fieldAccess: {
         getFieldConfig: (path) => fieldRegistry.getFieldConfig(path),
         getScopeFields: (scopeName) =>
-          fieldRegistry.getScopeFields(scopeName, getRuntimeKernel().getState().values),
+          fieldRegistry.getScopeFields(
+            scopeName,
+            getRuntimeKernel().getState().values,
+          ),
         getNormalizerEntries: () =>
-          fieldRegistry.getNormalizerEntries(getRuntimeKernel().getState().values),
+          fieldRegistry.getNormalizerEntries(
+            getRuntimeKernel().getState().values,
+          ),
         getTransformEntries: () =>
-          fieldRegistry.getTransformEntries(getRuntimeKernel().getState().values),
+          fieldRegistry.getTransformEntries(
+            getRuntimeKernel().getState().values,
+          ),
       },
       featureAccess: {
         getEffects: () => getRuntimeKernel().effects,
@@ -136,6 +143,8 @@ export function composeBitStoreRuntime<T extends object>(args: {
                 .getCapability("validation")
                 .cleanupPrefix(fieldPrefix),
             invalidateFieldIndexes,
+            hasStaticConfigPath: (path) =>
+              !!config.fields?.[path as keyof typeof config.fields],
             dispatch: (operation) => getRuntimeKernel().dispatch(operation),
           });
         },

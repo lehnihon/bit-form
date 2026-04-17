@@ -7,6 +7,7 @@ import { buildFieldUnregisterPatch } from "../engines/store-field-cleanup-engine
 import { BitSubscriptionEngine } from "../engines/subscription-engine";
 import { analyzeCyclicDependencies } from "../managers/core/computed-dependency-analyzer";
 import { BitFieldRegistry } from "../registry/field-registry";
+import { isPathWithinPrefix, normalizePathPrefix } from "../shared/path-prefix";
 import { getScopeRegistrySubscriptionPath } from "../shared/scope-status";
 import type { BitStoreStateReader } from "../shared/store-state-reader";
 
@@ -174,6 +175,7 @@ export function unregisterStorePrefix<T extends object>(args: {
   validationCleanupPrefix: (prefix: string) => void;
   invalidateFieldIndexes: () => void;
   dispatch: (operation: BitStoreOperation<T>) => void;
+  hasStaticConfigPath?: (path: string) => boolean;
 }): void {
   const {
     prefix,
@@ -183,10 +185,38 @@ export function unregisterStorePrefix<T extends object>(args: {
     validationCleanupPrefix,
     invalidateFieldIndexes,
     dispatch,
+    hasStaticConfigPath,
   } = args;
 
   validationCleanupPrefix(prefix);
-  const removedEntries = fieldRegistry.unregisterPrefix(prefix);
+
+  const normalizedPrefix = normalizePathPrefix(prefix);
+  const isStaticPath = hasStaticConfigPath ?? (() => false);
+  const removablePaths: string[] = [];
+
+  fieldRegistry.forEachFieldConfig((_config, path) => {
+    if (!isPathWithinPrefix(path, normalizedPrefix)) {
+      return;
+    }
+
+    if (isStaticPath(path)) {
+      return;
+    }
+
+    removablePaths.push(path);
+  });
+
+  const removedEntries: [string, BitFieldDefinition<T>][] = [];
+  removablePaths.forEach((path) => {
+    const config = fieldRegistry.getFieldConfig(path);
+    if (!config) {
+      return;
+    }
+
+    fieldRegistry.unregister(path);
+    removedEntries.push([path, config]);
+  });
+
   invalidateFieldIndexes();
   subscriptions.invalidatePathExpansionCache(prefix);
 

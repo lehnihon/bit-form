@@ -213,7 +213,8 @@ export function createBitStoreDomains<T extends object>(args: {
       runtime.capabilities.scope.getScopeErrors(scopeName),
     getCanUndo: () => runtime.capabilities.history.canUndo,
     getCanRedo: () => runtime.capabilities.history.canRedo,
-    getScopeFields: (scopeName) => fieldRegistry.getScopeFields(scopeName, stateReader.getState().values),
+    getScopeFields: (scopeName) =>
+      fieldRegistry.getScopeFields(scopeName, stateReader.getState().values),
   };
 
   const observeDomain: BitStoreObserveDomain<T> = {
@@ -323,6 +324,8 @@ export function createBitStoreDomains<T extends object>(args: {
         invalidateFieldIndexes: () => {
           fieldRegistry.invalidateIndexes();
         },
+        hasStaticConfigPath: (path) =>
+          !!config.fields?.[path as keyof typeof config.fields],
         dispatch: (operation) => runtime.dispatch(operation),
       });
     },

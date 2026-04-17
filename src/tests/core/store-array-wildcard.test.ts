@@ -12,6 +12,55 @@ interface User {
 }
 
 describe("BitStore Array Wildcard Configurations", () => {
+  it("should resolve wildcard mask on first load", () => {
+    const store = createBitStore<User>({
+      initialValues: {
+        id: "1",
+        skills: [{ name: "React", years: 4 }],
+      },
+      fields: {
+        "skills.*.name": { mask: "phone" },
+      },
+    });
+
+    const resolvedMask = store.feature.resolveMask("skills.0.name");
+    expect(resolvedMask).toBeDefined();
+  });
+
+  it("should keep static wildcard config after unregisterPrefix cleanup", () => {
+    const store = createBitStore<User>({
+      initialValues: {
+        id: "1",
+        skills: [{ name: "React", years: 4 }],
+      },
+      fields: {
+        "skills.*.name": { mask: "phone" },
+      },
+    });
+
+    store.feature.unregisterPrefix("skills.");
+
+    const resolvedMask = store.feature.resolveMask("skills.0.name");
+    expect(resolvedMask).toBeDefined();
+  });
+
+  it("should resolve wildcard mask for item added via pushItem", () => {
+    const store = createBitStore<User>({
+      initialValues: {
+        id: "1",
+        skills: [{ name: "React", years: 4 }],
+      },
+      fields: {
+        "skills.*.name": { mask: "phone" },
+      },
+    });
+
+    store.feature.pushItem("skills", { name: "TypeScript", years: 3 });
+
+    const resolvedMask = store.feature.resolveMask("skills.1.name");
+    expect(resolvedMask).toBeDefined();
+  });
+
   it("should match wildcard paths for conditional scopes", () => {
     const store = createBitStore<User>({
       initialValues: {
@@ -75,7 +124,6 @@ describe("BitStore Array Wildcard Configurations", () => {
     // if `applyValueDerivations` is triggered.
     // Wait, does pushItem trigger derivations? Yes, `patchStateOperation` triggers observers,
     // but does it re-run derivations? Let's check state.
-    const stateAfterPush = store.read.getState();
 
     // In our implementation, `applyValueDerivations` runs on root batch changes but
     // `computedManager` listens to changes. `patchStateOperation(["skills"])`
@@ -113,9 +161,7 @@ describe("BitStore Array Wildcard Configurations", () => {
     const store = createBitStore<User>({
       initialValues: {
         id: "1",
-        skills: [
-          { name: "   react   ", years: 4 },
-        ],
+        skills: [{ name: "   react   ", years: 4 }],
       },
       fields: {
         "skills.*.name": {
