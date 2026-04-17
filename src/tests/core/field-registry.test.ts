@@ -107,21 +107,23 @@ describe("BitFieldRegistry", () => {
       { price: 10, total: 0, name: "", items: [] },
     );
 
-    expect(registry.getScopeFields("pricing")).toEqual(["price", "total"]);
-    expect(registry.getComputedEntries().map((entry) => entry.path)).toEqual([
+    const values = { price: 10, total: 0, name: "", items: [] };
+
+    expect(registry.getScopeFields("pricing", values)).toEqual(["price", "total"]);
+    expect(registry.getComputedEntries(values).map((entry) => entry.path)).toEqual([
       "total",
     ]);
-    expect(registry.getTransformEntries().map(([path]) => path)).toEqual([
+    expect(registry.getTransformEntries(values).map(([path]) => path)).toEqual([
       "name",
     ]);
-    expect(registry.getNormalizerEntries().map((entry) => entry.path)).toEqual([
+    expect(registry.getNormalizerEntries(values).map((entry) => entry.path)).toEqual([
       "name",
     ]);
 
     registry.unregister("total");
 
-    expect(registry.getScopeFields("pricing")).toEqual(["price"]);
-    expect(registry.getComputedEntries()).toHaveLength(0);
+    expect(registry.getScopeFields("pricing", values)).toEqual(["price"]);
+    expect(registry.getComputedEntries(values)).toHaveLength(0);
   });
 
   it("não deve quebrar evaluateAll quando showIf lança erro", () => {

@@ -67,7 +67,7 @@ describe("BitStore Array Wildcard Configurations", () => {
     // Updating a dependency should update the computed field
     // even though it doesn't strictly depend on it, it forces a recompute.
     store.write.setField("skills.1.years", 5);
-    
+
     // Test dynamically adding an item
     store.feature.pushItem("skills", { name: "", years: 2 });
     // After pushing, the computed value should be evaluated for the new item!
@@ -76,7 +76,7 @@ describe("BitStore Array Wildcard Configurations", () => {
     // Wait, does pushItem trigger derivations? Yes, `patchStateOperation` triggers observers,
     // but does it re-run derivations? Let's check state.
     const stateAfterPush = store.read.getState();
-    
+
     // In our implementation, `applyValueDerivations` runs on root batch changes but
     // `computedManager` listens to changes. `patchStateOperation(["skills"])`
     // Wait, derivations run synchronously in kernel during `dispatch`?

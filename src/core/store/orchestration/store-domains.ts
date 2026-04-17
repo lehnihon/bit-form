@@ -213,7 +213,7 @@ export function createBitStoreDomains<T extends object>(args: {
       runtime.capabilities.scope.getScopeErrors(scopeName),
     getCanUndo: () => runtime.capabilities.history.canUndo,
     getCanRedo: () => runtime.capabilities.history.canRedo,
-    getScopeFields: (scopeName) => fieldRegistry.getScopeFields(scopeName),
+    getScopeFields: (scopeName) => fieldRegistry.getScopeFields(scopeName, stateReader.getState().values),
   };
 
   const observeDomain: BitStoreObserveDomain<T> = {
