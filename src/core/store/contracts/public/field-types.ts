@@ -5,15 +5,15 @@ type BitBivariantFn<TArgs extends unknown[], TResult> = {
   bivarianceHack(...args: TArgs): TResult;
 }["bivarianceHack"];
 
-export type BitComputedFn<T> = (values: T) => unknown;
+export type BitComputedFn<T> = (values: T, path?: string) => unknown;
 
 export type BitNormalizeFn<T> = BitBivariantFn<
-  [value: unknown, allValues: T],
+  [value: unknown, allValues: T, path?: string],
   unknown
 >;
 
 export type BitTransformFn<T> = BitBivariantFn<
-  [value: unknown, allValues: T],
+  [value: unknown, allValues: T, path?: string],
   unknown
 >;
 

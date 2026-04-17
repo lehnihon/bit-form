@@ -26,7 +26,7 @@ export class BitComputedManager<T extends object> {
   } | null = null;
 
   constructor(
-    private getComputedEntries: () => BitComputedEntry<T>[],
+    private getComputedEntries: (values: T) => BitComputedEntry<T>[],
     private onError?: (error: unknown, path: string) => void,
   ) {}
 
@@ -48,7 +48,7 @@ export class BitComputedManager<T extends object> {
   }
 
   apply(values: T, changedPaths?: readonly string[]): T {
-    const computedEntries = this.getComputedEntries();
+    const computedEntries = this.getComputedEntries(values);
     if (computedEntries.length === 0) return values;
 
     this.ensureEntriesAreValid(computedEntries);

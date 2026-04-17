@@ -70,7 +70,7 @@ export function registerStoreField<T extends object>(args: {
 
   if (shouldValidateComputedGraph) {
     const cycles = analyzeCyclicDependencies(
-      fieldRegistry.getComputedEntries(),
+      fieldRegistry.getComputedEntries(state.values),
     );
 
     if (cycles.length > 0) {

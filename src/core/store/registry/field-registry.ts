@@ -124,20 +124,20 @@ export class BitFieldRegistry<
     );
   }
 
-  getScopeFields(scopeName: string): string[] {
-    return this.catalog.getScopeFields(scopeName);
+  getScopeFields(scopeName: string, values: T): string[] {
+    return this.catalog.getScopeFields(scopeName, values);
   }
 
-  getComputedEntries(): BitComputedEntry<T>[] {
-    return this.catalog.getComputedEntries();
+  getComputedEntries(values: T): BitComputedEntry<T>[] {
+    return this.catalog.getComputedEntries(values);
   }
 
-  getTransformEntries(): [string, BitTransformFn<T>][] {
-    return this.catalog.getTransformEntries();
+  getTransformEntries(values: T): [string, BitTransformFn<T>][] {
+    return this.catalog.getTransformEntries(values);
   }
 
-  getNormalizerEntries(): BitNormalizerEntry<T>[] {
-    return this.catalog.getNormalizerEntries();
+  getNormalizerEntries(values: T): BitNormalizerEntry<T>[] {
+    return this.catalog.getNormalizerEntries(values);
   }
 
   invalidateIndexes() {

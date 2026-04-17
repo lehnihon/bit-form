@@ -127,7 +127,7 @@ export function createInitialStoreState<T extends object>(args: {
   }
 
   const computedCycles = analyzeCyclicDependencies(
-    fieldRegistry.getComputedEntries(),
+    fieldRegistry.getComputedEntries(initialValues),
   );
 
   if (computedCycles.length > 0) {
@@ -136,7 +136,7 @@ export function createInitialStoreState<T extends object>(args: {
 
   const initialDerivedValues = applyValueDerivations({
     values: initialValues,
-    normalizerEntries: fieldRegistry.getNormalizerEntries(),
+    normalizerEntries: fieldRegistry.getNormalizerEntries(initialValues),
     applyComputed: (values, changedPaths) =>
       computedManager.apply(values, changedPaths),
     onError: (error, _path) => {

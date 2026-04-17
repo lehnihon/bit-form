@@ -34,22 +34,22 @@ export interface BitFieldMetadataProvider<
   /**
    * Get all computed field entries
    */
-  getComputedEntries(): BitComputedEntry<T>[];
+  getComputedEntries(values: T): BitComputedEntry<T>[];
 
   /**
    * Get all field transform entries (applied during setField)
    */
-  getTransformEntries(): [string, BitTransformFn<T>][];
+  getTransformEntries(values: T): [string, BitTransformFn<T>][];
 
   /**
    * Get all field normalizer entries (applied post-batch)
    */
-  getNormalizerEntries(): BitNormalizerEntry<T>[];
+  getNormalizerEntries(values: T): BitNormalizerEntry<T>[];
 
   /**
    * Get fields that belong to a specific scope
    */
-  getScopeFields(scopeName: string): string[];
+  getScopeFields(scopeName: string, values: T): string[];
 
   /**
    * Check if a field is hidden based on conditional logic

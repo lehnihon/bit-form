@@ -51,7 +51,7 @@ export function composeBitStoreRuntime<T extends object>(args: {
   const computedManager =
     overrides?.computedManager ??
     new BitComputedManager<T>(
-      () => fieldRegistry.getComputedEntries(),
+      (values) => fieldRegistry.getComputedEntries(values),
       (error) => config.onUnhandledError(error, "computed"),
     );
   const dirtyManager = overrides?.dirtyManager ?? new BitDirtyManager<T>();
@@ -88,9 +88,12 @@ export function composeBitStoreRuntime<T extends object>(args: {
       },
       fieldAccess: {
         getFieldConfig: (path) => fieldRegistry.getFieldConfig(path),
-        getScopeFields: (scopeName) => fieldRegistry.getScopeFields(scopeName),
-        getNormalizerEntries: () => fieldRegistry.getNormalizerEntries(),
-        getTransformEntries: () => fieldRegistry.getTransformEntries(),
+        getScopeFields: (scopeName) =>
+          fieldRegistry.getScopeFields(scopeName, getRuntimeKernel().getState().values),
+        getNormalizerEntries: () =>
+          fieldRegistry.getNormalizerEntries(getRuntimeKernel().getState().values),
+        getTransformEntries: () =>
+          fieldRegistry.getTransformEntries(getRuntimeKernel().getState().values),
       },
       featureAccess: {
         getEffects: () => getRuntimeKernel().effects,
@@ -192,7 +195,7 @@ export function composeBitStoreRuntime<T extends object>(args: {
         return applyValueDerivations({
           values,
           changedPaths,
-          normalizerEntries: fieldRegistry.getNormalizerEntries(),
+          normalizerEntries: fieldRegistry.getNormalizerEntries(values),
           applyComputed: (nextValues, nextChangedPaths) =>
             computedManager.apply(nextValues, nextChangedPaths),
           onError: (error, _path) => {
