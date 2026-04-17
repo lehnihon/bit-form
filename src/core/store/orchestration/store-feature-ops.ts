@@ -10,9 +10,10 @@ import {
 export function restorePersistedFeature<T extends object>(args: {
   dispatch: (operation: BitStoreOperation<T>) => void;
   effects: BitStoreEffectEngine<T>;
+  onUnhandledError?: (error: unknown, source: string) => void;
 }): Promise<boolean> {
-  const { dispatch, effects } = args;
-  return restoreStorePersisted({ dispatch, effects });
+  const { dispatch, effects, onUnhandledError } = args;
+  return restoreStorePersisted({ dispatch, effects, onUnhandledError });
 }
 
 export function forceSavePersistedFeature<T extends object>(args: {

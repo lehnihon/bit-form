@@ -129,19 +129,32 @@ describe("Store Subscriptions Contract", () => {
   });
 
   describe("subscribeSelector (mode: tracked)", () => {
-    it("deve falhar quando trackedSubscriptions não está habilitado", () => {
+    it("não deve lançar quando trackedSubscriptions está desabilitado — roteia para onUnhandledError", () => {
+      const onUnhandledError = vi.fn();
       const store = createBitStore({
         initialValues: { user: { name: "Leo", age: 30 }, title: "Dr" },
+        onUnhandledError,
       });
       const listener = vi.fn();
 
+      // Must NOT throw — crashing the component tree is unacceptable in production.
       expect(() =>
         store.observe.subscribeSelector(
           (state) => ({ name: (state.values as any).user.name }),
           listener,
           { mode: "tracked" },
         ),
-      ).toThrowError(/trackedSubscriptions=true/);
+      ).not.toThrow();
+
+      // The error must be surfaced via onUnhandledError instead.
+      expect(onUnhandledError).toHaveBeenCalledWith(
+        expect.objectContaining({ message: expect.stringMatching(/trackedSubscriptions=true/) }),
+        "subscription",
+      );
+
+      // Listener must remain silent — the subscription is a no-op.
+      store.write.setField("title" as any, "Mr" as any);
+      expect(listener).not.toHaveBeenCalled();
     });
 
     it("deve rastrear paths acessados automaticamente", () => {

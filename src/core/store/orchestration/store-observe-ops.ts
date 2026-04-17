@@ -36,6 +36,7 @@ export function subscribeStoreSelector<T extends object, TSlice>(args: {
   listener: (slice: TSlice) => void;
   options: BitSelectorSubscriptionOptions<TSlice>;
   trackedSubscriptionsEnabled: boolean;
+  onUnhandledError?: (error: unknown, source: string) => void;
 }): () => void {
   const {
     getState,
@@ -44,14 +45,23 @@ export function subscribeStoreSelector<T extends object, TSlice>(args: {
     listener,
     options,
     trackedSubscriptionsEnabled,
+    onUnhandledError,
   } = args;
   const equalityFn = options?.equalityFn ?? valueEqual;
 
   if (options?.mode === "tracked") {
     if (!trackedSubscriptionsEnabled) {
-      throw new Error(
-        'BitForm: subscribeSelector com mode="tracked" está desabilitado por padrão. Ative config.trackedSubscriptions=true para habilitar o modo avançado.',
+      // Do NOT throw — a synchronous throw here would propagate through the
+      // framework's rendering cycle and crash the entire component tree.
+      // Route via onUnhandledError and return a no-op so the call site stays
+      // functional (the subscription simply won't fire).
+      onUnhandledError?.(
+        new Error(
+          'BitForm: subscribeSelector com mode="tracked" está desabilitado por padrão. Ative config.trackedSubscriptions=true para habilitar o modo avançado.',
+        ),
+        "subscription",
       );
+      return () => {};
     }
 
     return createTrackedSubscription({
@@ -234,17 +244,28 @@ export function subscribeStoreScopeStatus<T extends object>(args: {
 
   subscribeScoped();
 
+  let resubscribeQueued = false;
+
   const unsubscribeRegistry = subscribeSelector(
     () => getScopeFields(scopeName).length,
     () => {
-      subscribeScoped();
-      const nextStatus = readScopeStatus(scopeName);
-      if (isScopeStatusEqual(lastStatus, nextStatus)) {
-        return;
-      }
+      // Coalesce rapid registry changes (e.g. two fields with same scope
+      // registered in a single batch) via queueMicrotask to prevent the
+      // second re-subscription from orphaning the one just created by the first.
+      if (resubscribeQueued) return;
+      resubscribeQueued = true;
 
-      lastStatus = nextStatus;
-      listener(nextStatus);
+      queueMicrotask(() => {
+        resubscribeQueued = false;
+        subscribeScoped();
+        const nextStatus = readScopeStatus(scopeName);
+        if (isScopeStatusEqual(lastStatus, nextStatus)) {
+          return;
+        }
+
+        lastStatus = nextStatus;
+        listener(nextStatus);
+      });
     },
     {
       paths: [registryPath],

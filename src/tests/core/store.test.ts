@@ -907,7 +907,7 @@ describe("BitStore Core", () => {
       expect(status.isDirty).toBe(true);
     });
 
-    it("should keep scope subscriptions reactive when new fields join the scope", () => {
+    it("should keep scope subscriptions reactive when new fields join the scope", async () => {
       const store = createBitStore({
         initialValues: { p1: "", p2: "" },
         fields: {
@@ -919,6 +919,12 @@ describe("BitStore Core", () => {
       const unsubscribe = store.observe.subscribeScopeStatus("step1", listener);
 
       store.feature.registerField("p2", { scope: "step1" });
+
+      // The registry change triggers a queueMicrotask re-subscription.
+      // Drain the microtask queue before mutating state so the new scoped
+      // subscription is active when the error is set.
+      await Promise.resolve();
+
       store.write.setError("p2", "Dynamic scope error");
 
       expect(listener).toHaveBeenCalledTimes(1);
