@@ -52,6 +52,7 @@ export function useBitUpload<
       setUploadKey: (key: string | null) => {
         uploadKeyRef.current = key;
       },
+      onCallbackError: (e: unknown) => store.read.config.onUnhandledError(e, "upload"),
     }),
     [store, setValue],
   );

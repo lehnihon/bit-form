@@ -15,6 +15,7 @@ export interface BitValidationDebouncerPort {
 export class BitValidationDebouncer {
   private cancelTimeout?: () => void;
   private pendingScopeFields: Set<string> | null = null;
+  private isGlobalPending = false;
 
   constructor(private readonly port: BitValidationDebouncerPort) {}
 
@@ -30,17 +31,17 @@ export class BitValidationDebouncer {
       : configuredDelay;
 
     if (delay > 0) {
-      // Acumula paths em vez de substituir — garante que paths de calls
-      // anteriores dentro do mesmo debounce não sejam descartados.
-      if (scopeFields && scopeFields.length > 0) {
+      // Se for global ou não tivermos paths, resetamos para global (null)
+      if (!scopeFields || scopeFields.length === 0) {
+        this.pendingScopeFields = null;
+        this.isGlobalPending = true;
+      } else if (!this.isGlobalPending) {
+        // Apenas acumula paths se não houver uma validação global pendente
         if (!this.pendingScopeFields) {
           this.pendingScopeFields = new Set(scopeFields);
         } else {
           for (const f of scopeFields) this.pendingScopeFields.add(f);
         }
-      } else {
-        // Sem scope = validação global, descarta paths acumulados
-        this.pendingScopeFields = null;
       }
 
       this.cancelTimeout = this.port.schedule(() => {
@@ -51,11 +52,13 @@ export class BitValidationDebouncer {
           ? Array.from(this.pendingScopeFields)
           : undefined;
         this.pendingScopeFields = null;
+        this.isGlobalPending = false;
         this.cancelTimeout = undefined;
         void this.validateWithOptionalScopeFields(resolvedScopeFields);
       }, delay);
     } else {
       this.pendingScopeFields = null;
+      this.isGlobalPending = false;
       void this.validateWithOptionalScopeFields(scopeFields);
     }
   }
