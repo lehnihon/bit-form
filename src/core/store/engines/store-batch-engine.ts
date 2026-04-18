@@ -112,8 +112,10 @@ export function flushStoreBatchState<T extends object>(args: {
   currentState: BitState<T>;
   batchState: BitStoreBatchState<T>;
   applyValueDerivations: (values: T, changedPaths?: readonly string[]) => T;
+  onDerivationError?: (error: unknown) => void;
 }): BitStoreBatchFlushResult<T> | null {
-  const { currentState, batchState, applyValueDerivations } = args;
+  const { currentState, batchState, applyValueDerivations, onDerivationError } =
+    args;
 
   if (!batchState.pendingState) {
     batchState.pendingHistorySnapshot = false;
@@ -125,10 +127,17 @@ export function flushStoreBatchState<T extends object>(args: {
   const valuesChanged = batchState.valuesChanged;
 
   if (valuesChanged) {
-    nextState = {
-      ...nextState,
-      values: applyValueDerivations(nextState.values, changedPaths),
-    };
+    try {
+      nextState = {
+        ...nextState,
+        values: applyValueDerivations(nextState.values, changedPaths),
+      };
+    } catch (error) {
+      // Derivation failed: commit the raw accumulated state without derived
+      // values so that kernel.state and subscribers stay in sync.
+      // The error is surfaced via onDerivationError for observability.
+      onDerivationError?.(error);
+    }
   }
 
   batchState.pendingState = null;

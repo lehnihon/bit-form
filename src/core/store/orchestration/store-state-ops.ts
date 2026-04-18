@@ -96,6 +96,7 @@ export function flushStoreBatchedStateUpdates<T extends object>(args: {
   state: BitState<T>;
   batchState: BitStoreBatchState<T>;
   applyValueDerivations: (values: T, changedPaths?: readonly string[]) => T;
+  onDerivationError?: (error: unknown) => void;
   onStateCommitted: (payload: {
     nextState: BitState<T>;
     changedPaths?: Iterable<string>;
@@ -107,6 +108,7 @@ export function flushStoreBatchedStateUpdates<T extends object>(args: {
     state,
     batchState,
     applyValueDerivations,
+    onDerivationError,
     onStateCommitted,
     saveHistory,
   } = args;
@@ -115,6 +117,7 @@ export function flushStoreBatchedStateUpdates<T extends object>(args: {
     state,
     batchState,
     applyValueDerivations,
+    onDerivationError,
     onStateCommitted,
   });
 

@@ -249,6 +249,8 @@ export function createBitStoreDomains<T extends object>(args: {
         listener,
         options,
         trackedSubscriptionsEnabled: !!config.trackedSubscriptions,
+        onUnhandledError: (error, source) =>
+          config.onUnhandledError(error, source),
       }),
     subscribePath: (path, listener, options) =>
       subscribeStorePath({
@@ -423,6 +425,8 @@ export function createBitStoreDomains<T extends object>(args: {
       restorePersistedFeature({
         dispatch: featureDispatch,
         effects: runtime.effects,
+        onUnhandledError: (error, source) =>
+          config.onUnhandledError(error, source),
       }),
     forceSave: () =>
       forceSavePersistedFeature({

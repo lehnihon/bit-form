@@ -43,11 +43,13 @@ export class BitValidationDebouncer {
         this.pendingScopeFields = null;
       }
 
-      const resolvedScopeFields = this.pendingScopeFields
-        ? Array.from(this.pendingScopeFields)
-        : undefined;
-
       this.cancelTimeout = this.port.schedule(() => {
+        // Lê pendingScopeFields aqui — captura todos os campos acumulados
+        // dentro da janela de debounce, inclusive os adicionados por trigger()
+        // chamados após este agendamento.
+        const resolvedScopeFields = this.pendingScopeFields
+          ? Array.from(this.pendingScopeFields)
+          : undefined;
         this.pendingScopeFields = null;
         this.cancelTimeout = undefined;
         void this.validateWithOptionalScopeFields(resolvedScopeFields);

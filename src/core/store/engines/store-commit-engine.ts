@@ -191,18 +191,26 @@ export function flushStoreKernelBatch<T extends object>(args: {
   state: BitState<T>;
   batchState: BitStoreBatchState<T>;
   applyValueDerivations: (values: T, changedPaths?: readonly string[]) => T;
+  onDerivationError?: (error: unknown) => void;
   onStateCommitted: (payload: {
     nextState: BitState<T>;
     changedPaths?: Iterable<string>;
     valuesChanged: boolean;
   }) => void;
 }): BitState<T> {
-  const { state, batchState, applyValueDerivations, onStateCommitted } = args;
+  const {
+    state,
+    batchState,
+    applyValueDerivations,
+    onDerivationError,
+    onStateCommitted,
+  } = args;
 
   const flushResult = flushStoreBatchState({
     currentState: state,
     batchState,
     applyValueDerivations,
+    onDerivationError,
   });
 
   if (!flushResult) {

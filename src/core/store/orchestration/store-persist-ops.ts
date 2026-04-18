@@ -89,8 +89,9 @@ function finalizePersistOperation<T extends object>(args: {
 export async function restoreStorePersisted<T extends object>(args: {
   dispatch: (operation: BitStoreOperation<T>) => void;
   effects: BitStoreEffectEngine<T>;
+  onUnhandledError?: (error: unknown, source: string) => void;
 }): Promise<boolean> {
-  const { dispatch, effects } = args;
+  const { dispatch, effects, onUnhandledError } = args;
   beginPersistOperation({ dispatch, type: "restoring" });
 
   let operationError: Error | null = null;
@@ -99,6 +100,9 @@ export async function restoreStorePersisted<T extends object>(args: {
     return await effects.restorePersisted();
   } catch (error) {
     operationError = error instanceof Error ? error : new Error(String(error));
+    // Route to global error handler so observability tools (Sentry, Datadog,
+    // etc.) capture the failure — the UI metadata update alone is not enough.
+    onUnhandledError?.(operationError, "persist");
     return false;
   } finally {
     finalizePersistOperation({

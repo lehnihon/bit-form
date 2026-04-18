@@ -131,6 +131,8 @@ export class BitStoreRuntimeKernel<T extends object> {
       batchState: this.batchState,
       applyValueDerivations: (values, changedPaths) =>
         this.applyValueDerivations(values, changedPaths),
+      onDerivationError: (error) =>
+        this.args.onUnhandledError?.(error, "derivation"),
       onStateCommitted: (payload) => this.onStateCommitted(payload),
       saveHistory: (values) => this.historyOrchestrator.queueSnapshot(values),
     });
