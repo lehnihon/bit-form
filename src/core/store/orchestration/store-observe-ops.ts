@@ -245,6 +245,11 @@ export function subscribeStoreScopeStatus<T extends object>(args: {
   subscribeScoped();
 
   let resubscribeQueued = false;
+  // Tracks whether the caller has unsubscribed. The queueMicrotask callback
+  // captures this flag so it can bail out if cleanup happens before the
+  // microtask fires — preventing orphan subscriptions and setState calls on
+  // unmounted components.
+  let destroyed = false;
 
   const unsubscribeRegistry = subscribeSelector(
     () => getScopeFields(scopeName).length,
@@ -257,6 +262,11 @@ export function subscribeStoreScopeStatus<T extends object>(args: {
 
       queueMicrotask(() => {
         resubscribeQueued = false;
+        // If the caller unsubscribed while this microtask was queued, do
+        // nothing: creating a new scoped subscription here would leak it
+        // (no one holds a reference to unsubscribe it), and calling listener
+        // would update state on an already-unmounted component.
+        if (destroyed) return;
         subscribeScoped();
         const nextStatus = readScopeStatus(scopeName);
         if (isScopeStatusEqual(lastStatus, nextStatus)) {
@@ -273,6 +283,7 @@ export function subscribeStoreScopeStatus<T extends object>(args: {
   );
 
   return () => {
+    destroyed = true;
     unsubscribeScoped();
     unsubscribeRegistry();
   };

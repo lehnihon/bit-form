@@ -1,3 +1,4 @@
+import { getDeepValue } from "../../../../utils";
 import type { BitValidationPipelinePort } from "../../../contracts/port-types";
 import type { BitErrors } from "../../../contracts/types";
 import { validationCommitOperation } from "../../../engines/operation-engine";
@@ -20,11 +21,14 @@ export async function commitSynchronousScopeValidation<T extends object>(args: {
   // Capture current state AFTER async operations to avoid stale state
   const currentState = store.getState();
 
-  // Guard: if any of the scope fields' values changed, abort to prevent overwriting newer validation
+  // Guard: if any of the scope fields' values changed, abort to prevent overwriting newer validation.
+  // Uses getDeepValue so that nested paths (e.g. "address.street", "items.0.name") are correctly
+  // compared — direct bracket access (`values[field]`) always returns undefined for dot-separated
+  // paths, making the guard a no-op and allowing stale errors to overwrite current ones.
   const valuesStale = scopeFields.some(
     (field) =>
-      (initialState.values as Record<string, unknown>)[field] !==
-      (currentState.values as Record<string, unknown>)[field],
+      getDeepValue(initialState.values, field) !==
+      getDeepValue(currentState.values, field),
   );
   const currentHiddenFields = store.getHiddenFields();
   const visibilityStale = scopeFields.some(

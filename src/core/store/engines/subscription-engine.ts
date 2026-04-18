@@ -285,7 +285,12 @@ export class BitSubscriptionEngine<T extends object> {
     changedPaths: string[],
   ): SelectorListenerEntry<T>[] {
     const scopedSubscribers: SelectorListenerEntry<T>[] = [];
-    const currentVersion = ++this.notifyVersion;
+    // Wrap in 32-bit signed integer to avoid Number.MAX_SAFE_INTEGER stall:
+    // ++x at MAX_SAFE_INTEGER returns MAX_SAFE_INTEGER again, making the
+    // `seenVersion >= currentVersion` guard fire on every subsequent call and
+    // silently stopping all scoped subscribers. Bitwise OR forces 32-bit wrap.
+    this.notifyVersion = (this.notifyVersion + 1) | 0;
+    const currentVersion = this.notifyVersion;
 
     const addByPath = (path: string) => {
       const listeners = this.pathSelectorIndex.get(path);
@@ -313,7 +318,8 @@ export class BitSubscriptionEngine<T extends object> {
     changedPath: string,
   ): SelectorListenerEntry<T>[] {
     const scopedSubscribers: SelectorListenerEntry<T>[] = [];
-    const currentVersion = ++this.notifyVersion;
+    this.notifyVersion = (this.notifyVersion + 1) | 0;
+    const currentVersion = this.notifyVersion;
 
     const addByPath = (path: string) => {
       const listeners = this.pathSelectorIndex.get(path);
