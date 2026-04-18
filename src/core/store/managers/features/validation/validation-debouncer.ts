@@ -77,5 +77,6 @@ export class BitValidationDebouncer {
       this.cancelTimeout = undefined;
     }
     this.pendingScopeFields = null;
+    this.isGlobalPending = false;
   }
 }
