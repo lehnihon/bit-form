@@ -83,6 +83,7 @@ export class BitPersistManager<T extends object = Record<string, unknown>> {
       if (result.ok) {
         if (this.activeWrites === 0) {
           this.callbacks.onWriteSuccess?.();
+          this.callbacks.onWriteSettled?.();
         }
         return;
       }
