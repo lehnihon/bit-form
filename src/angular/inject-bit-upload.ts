@@ -32,6 +32,8 @@ export function injectBitUpload<
     setUploadKey: (key: string | null) => {
       uploadKey = key;
     },
+    onCallbackError: (e: unknown) =>
+      store.read.config.onUnhandledError(e, "upload"),
   };
 
   const upload = createUploadHandler(fieldPath, uploadFn, kernelCallbacks);
