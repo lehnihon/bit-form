@@ -108,7 +108,10 @@ export function createRemoveHandler(
       } catch (error) {
         const message =
           error instanceof Error ? error.message : "Delete failed";
-        callbacks.setError(fieldPath, message);
+        // Use safeCallbackExecution to mirror createUploadHandler: if the adapter
+        // throws inside setError (e.g. component already unmounted), the error is
+        // routed to onCallbackError instead of escaping the promise unhandled.
+        safeCallbackExecution(() => callbacks.setError(fieldPath, message), onError);
         return;
       }
     }
