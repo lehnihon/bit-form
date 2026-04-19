@@ -126,29 +126,32 @@ export function flushStoreBatchState<T extends object>(args: {
   const changedPaths = batchState.changedPathList ?? undefined;
   const valuesChanged = batchState.valuesChanged;
 
-  if (valuesChanged) {
-    try {
-      nextState = {
-        ...nextState,
-        values: applyValueDerivations(nextState.values, changedPaths),
-      };
-    } catch (error) {
-      // Derivation failed: commit the raw accumulated state without derived
-      // values so that kernel.state and subscribers stay in sync.
-      // The error is surfaced via onDerivationError for observability.
-      onDerivationError?.(error);
-      // Do NOT save a history snapshot with unresolved computed fields:
-      // if we did, undo() would restore a state where computed fields are
-      // stale (showing the value before the failed derivation ran). Clear
-      // the flag so flushStoreBatchedStateUpdates skips saveHistory.
-      batchState.pendingHistorySnapshot = false;
+  try {
+    if (valuesChanged) {
+      try {
+        nextState = {
+          ...nextState,
+          values: applyValueDerivations(nextState.values, changedPaths),
+        };
+      } catch (error) {
+        // Derivation failed: commit the raw accumulated state without derived
+        // values so that kernel.state and subscribers stay in sync.
+        // The error is surfaced via onDerivationError for observability.
+        onDerivationError?.(error);
+        // Do NOT save a history snapshot with unresolved computed fields:
+        // if we did, undo() would restore a state where computed fields are
+        // stale (showing the value before the failed derivation ran). Clear
+        // the flag so flushStoreBatchedStateUpdates skips saveHistory.
+        batchState.pendingHistorySnapshot = false;
+      }
     }
+  } finally {
+    batchState.pendingState = null;
+    batchState.changedPathSet = null;
+    batchState.changedPathList = null;
+    batchState.valuesChanged = false;
   }
 
-  batchState.pendingState = null;
-  batchState.changedPathSet = null;
-  batchState.changedPathList = null;
-  batchState.valuesChanged = false;
   // Note: pendingHistorySnapshot is reset by the caller after it records the snapshot.
 
   return {

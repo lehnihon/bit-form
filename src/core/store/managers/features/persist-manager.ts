@@ -62,8 +62,13 @@ export class BitPersistManager<T extends object = Record<string, unknown>> {
   private enqueueWriteOperation(operation: () => Promise<void>): Promise<void> {
     this.activeWrites += 1;
 
-    if (this.activeWrites === 1) {
-      this.callbacks.onWriteStart?.();
+    try {
+      if (this.activeWrites === 1) {
+        this.callbacks.onWriteStart?.();
+      }
+    } catch (error) {
+      this.activeWrites = Math.max(0, this.activeWrites - 1);
+      throw error;
     }
 
     const run = this.writeQueue.then(operation, operation);
