@@ -114,6 +114,10 @@ export function createRemoveHandler(
         safeCallbackExecution(() => callbacks.setError(fieldPath, message), onError);
         return;
       }
+
+      if (callbacks.getUploadKey() !== uploadKey) {
+        return;
+      }
     }
 
     safeCallbackExecution(() => callbacks.setValue(null), onError);

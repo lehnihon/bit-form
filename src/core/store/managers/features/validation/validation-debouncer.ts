@@ -57,9 +57,20 @@ export class BitValidationDebouncer {
         void this.validateWithOptionalScopeFields(resolvedScopeFields);
       }, delay);
     } else {
+      let mergedScopeFields = scopeFields;
+
+      if (this.isGlobalPending) {
+        mergedScopeFields = undefined;
+      } else if (this.pendingScopeFields) {
+        if (scopeFields) {
+          for (const f of scopeFields) this.pendingScopeFields.add(f);
+        }
+        mergedScopeFields = Array.from(this.pendingScopeFields);
+      }
+
       this.pendingScopeFields = null;
       this.isGlobalPending = false;
-      void this.validateWithOptionalScopeFields(scopeFields);
+      void this.validateWithOptionalScopeFields(mergedScopeFields);
     }
   }
 
