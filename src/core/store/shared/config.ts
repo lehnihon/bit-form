@@ -23,8 +23,23 @@ export function normalizeConfig<T extends object>(
     ? `bit-form:${config.name}:draft`
     : "bit-form:draft";
 
-  const onUnhandledError =
+  const userUnhandledError =
     config.onUnhandledError ?? defaultUnhandledErrorReporter;
+
+  const safeUnhandledErrorReporter = (
+    error: unknown,
+    source: string,
+  ) => {
+    try {
+      userUnhandledError(error, source);
+    } catch (fallbackError) {
+      // Isolamento fail-open: se o SDK do Datadog/Sentry der crash (ex: Cycle Object),
+      // fazemos um fallback nativo ignorando o crash para não gerar Unhandled Promise Rejections.
+      defaultUnhandledErrorReporter(error);
+      defaultUnhandledErrorReporter(fallbackError);
+    }
+  };
+
   const persistErrorHandler = config.persist?.onError;
 
   const persist: BitPersistResolvedConfig<T> = {
@@ -44,7 +59,7 @@ export function normalizeConfig<T extends object>(
         return;
       }
 
-      onUnhandledError(error, "persist");
+      safeUnhandledErrorReporter(error, "persist");
     },
   };
 
@@ -67,6 +82,6 @@ export function normalizeConfig<T extends object>(
     subscriptionCacheSize: config.subscriptionCacheSize,
     trackedSubscriptions: config.trackedSubscriptions ?? false,
     bus: config.bus,
-    onUnhandledError,
+    onUnhandledError: safeUnhandledErrorReporter,
   } as BitFrameworkConfig<T>;
 }
