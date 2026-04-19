@@ -297,7 +297,7 @@ export class BitSubscriptionEngine<T extends object> {
       if (!listeners) return;
 
       listeners.forEach((subscription) => {
-        const seenVersion = this.subscriptionSeenVersion.get(subscription) ?? 0;
+        const seenVersion = this.subscriptionSeenVersion.get(subscription) ?? Number.NaN;
         if (seenVersion === currentVersion) {
           return;
         }
@@ -326,7 +326,7 @@ export class BitSubscriptionEngine<T extends object> {
       if (!listeners) return;
 
       listeners.forEach((subscription) => {
-        const seenVersion = this.subscriptionSeenVersion.get(subscription) ?? 0;
+        const seenVersion = this.subscriptionSeenVersion.get(subscription) ?? Number.NaN;
         if (seenVersion === currentVersion) {
           return;
         }
