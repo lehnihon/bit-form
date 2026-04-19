@@ -168,7 +168,7 @@ export class BitValuesLifecycleManager<T extends object> {
           errors: {},
           touched: {},
           isValidating: {},
-          isValid: true,
+          isValid: false,
           isDirty: false,
         },
         ["*"],

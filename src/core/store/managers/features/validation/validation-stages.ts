@@ -12,8 +12,10 @@ export function mergeValidationErrors<T extends object>(args: {
   currentErrors: BitErrors<T>;
   allErrors: Record<string, string | undefined>;
   asyncErrors: ReadonlyMap<string, string>;
+  hiddenFields?: ReadonlySet<string>;
 }) {
-  const { targetFields, currentErrors, allErrors, asyncErrors } = args;
+  const { targetFields, currentErrors, allErrors, asyncErrors, hiddenFields } =
+    args;
 
   if (targetFields && targetFields.length > 0) {
     let scopedErrors = currentErrors;
@@ -32,6 +34,14 @@ export function mergeValidationErrors<T extends object>(args: {
       const key = field as keyof BitErrors<T>;
       const currentMessage = currentErrors[key] as string | undefined;
 
+      // Hidden fields are excluded from committed errors regardless of asyncErrors state.
+      if (hiddenFields?.has(field)) {
+        if (currentMessage !== undefined) {
+          delete ensureScopedMutable()[key];
+        }
+        return;
+      }
+
       if (allErrors[field] !== undefined) {
         if (currentMessage !== allErrors[field]) {
           ensureScopedMutable()[key] = allErrors[field];
@@ -49,7 +59,9 @@ export function mergeValidationErrors<T extends object>(args: {
     });
 
     const scopedResult = targetFields.every(
-      (field) => allErrors[field] === undefined && !asyncErrors.has(field),
+      (field) =>
+        hiddenFields?.has(field) ||
+        (allErrors[field] === undefined && !asyncErrors.has(field)),
     );
 
     return {
@@ -62,6 +74,10 @@ export function mergeValidationErrors<T extends object>(args: {
   const globalErrors = {} as BitErrors<T>;
 
   asyncErrors.forEach((message, path) => {
+    // Skip async errors for currently hidden fields.
+    // We no longer delete them from the shared Map (they survive visibility toggles),
+    // so we must exclude them here at commit time instead.
+    if (hiddenFields?.has(path)) return;
     globalErrors[path as keyof BitErrors<T>] = message;
   });
 

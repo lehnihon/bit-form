@@ -47,7 +47,8 @@ export async function commitSynchronousScopeValidation<T extends object>(args: {
 
   currentHiddenFields.forEach((hiddenPath) => {
     delete allErrors[hiddenPath];
-    asyncErrors.delete(hiddenPath);
+    // NOTE: Do NOT delete from asyncErrors here — same contract as validation-pipeline-stages.
+    // The shared asyncErrors Map must not lose entries for temporarily hidden paths.
   });
 
   const scopedErrors = { ...currentState.errors } as BitErrors<T>;

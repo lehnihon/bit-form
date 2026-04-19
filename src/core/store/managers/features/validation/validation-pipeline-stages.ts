@@ -83,7 +83,11 @@ export async function runSynchronousTrackStage<T extends object>(args: {
 
   deps.store.getHiddenFields().forEach((hiddenPath) => {
     delete ctx.allErrors[hiddenPath];
-    deps.asyncErrors.delete(hiddenPath);
+    // NOTE: Do NOT mutate deps.asyncErrors here. The shared asyncErrors Map
+    // must survive field visibility toggles. When the field becomes visible again
+    // the async error needs to still be present for the next validation commit.
+    // Hidden paths are excluded during mergeValidationErrors via the
+    // committedErrors merge path — they simply won't appear in the final errors.
   });
 }
 
@@ -132,6 +136,7 @@ export function mergeAsyncTrackStage<T extends object>(args: {
     currentErrors: ctx.currentState.errors,
     allErrors: ctx.allErrors,
     asyncErrors: deps.asyncErrors,
+    hiddenFields: deps.store.getHiddenFields(),
   });
 
   ctx.committedErrors = merged.committedErrors;
