@@ -189,12 +189,16 @@ export class BitSubscriptionEngine<T extends object> {
   }
 
   private reportError(error: unknown): void {
-    if (this.onError) {
-      this.onError(error, SUBSCRIPTION_ERROR_SOURCE);
-      return;
+    try {
+      if (this.onError) {
+        this.onError(error, SUBSCRIPTION_ERROR_SOURCE);
+        return;
+      }
+  
+      console.error("Subscription listener error:", error);
+    } catch (e) {
+      // Isolamento total contra quebras no laço de inscrição
     }
-
-    console.error("Subscription listener error:", error);
   }
 
   destroy(): void {

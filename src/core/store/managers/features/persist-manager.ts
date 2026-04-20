@@ -87,16 +87,21 @@ export class BitPersistManager<T extends object = Record<string, unknown>> {
 
       if (result.ok) {
         if (this.activeWrites === 0) {
-          this.callbacks.onWriteSuccess?.();
-          this.callbacks.onWriteSettled?.();
+          try {
+            this.callbacks.onWriteSuccess?.();
+          } finally {
+            this.callbacks.onWriteSettled?.();
+          }
         }
         return;
       }
 
-      this.callbacks.onWriteError?.(result.error);
-
-      if (this.activeWrites === 0) {
-        this.callbacks.onWriteSettled?.();
+      try {
+        this.callbacks.onWriteError?.(result.error);
+      } finally {
+        if (this.activeWrites === 0) {
+          this.callbacks.onWriteSettled?.();
+        }
       }
 
       throw result.error;
