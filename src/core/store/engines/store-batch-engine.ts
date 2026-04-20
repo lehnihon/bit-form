@@ -137,7 +137,12 @@ export function flushStoreBatchState<T extends object>(args: {
         // Derivation failed: commit the raw accumulated state without derived
         // values so that kernel.state and subscribers stay in sync.
         // The error is surfaced via onDerivationError for observability.
-        onDerivationError?.(error);
+        try {
+          onDerivationError?.(error);
+        } catch (observabilityError) {
+          // Prevent observability exceptions from poisoning the entire batch 
+          // and dropping the state updates.
+        }
         // Do NOT save a history snapshot with unresolved computed fields:
         // if we did, undo() would restore a state where computed fields are
         // stale (showing the value before the failed derivation ran). Clear
