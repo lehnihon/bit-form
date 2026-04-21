@@ -118,7 +118,6 @@ export function flushStoreBatchState<T extends object>(args: {
     args;
 
   if (!batchState.pendingState) {
-    batchState.pendingHistorySnapshot = false;
     return null;
   }
 
