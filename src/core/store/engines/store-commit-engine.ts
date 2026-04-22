@@ -92,7 +92,11 @@ function executeStatePatchOperation<T extends object>(args: {
       applyValueDerivations,
     });
   } catch (error) {
-    onOperationError?.(error);
+    try {
+      onOperationError?.(error);
+    } catch (observabilityError) {
+      // Impede que erros de observabilidade abortem o commit do state update com valores em raw
+    }
     result = applyStateUpdate({
       currentState,
       partialState: operation.partialState,
