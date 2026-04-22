@@ -94,7 +94,7 @@ function executeStatePatchOperation<T extends object>(args: {
   } catch (error) {
     try {
       onOperationError?.(error);
-    } catch (observabilityError) {
+    } catch {
       // Impede que erros de observabilidade abortem o commit do state update com valores em raw
     }
     try {
@@ -104,7 +104,7 @@ function executeStatePatchOperation<T extends object>(args: {
         changedPaths: effectiveChangedPaths,
         applyValueDerivations: (values) => values, // No derivation fallback
       });
-    } catch (fallbackError) {
+    } catch {
       // If the raw fallback also fails (e.g. immutable proxy, serialisation
       // error), abort the mutation gracefully rather than letting an unhandled
       // exception crash the framework component tree.

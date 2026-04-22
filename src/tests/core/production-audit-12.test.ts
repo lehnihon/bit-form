@@ -16,9 +16,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { BitStore } from "../../core/store/bit-store-class";
 import {
-  beginStoreBatch,
   createStoreBatchState,
-  endStoreBatch,
   flushStoreBatchState,
   trackBatchedStoreUpdate,
 } from "../../core/store/engines/store-batch-engine";
@@ -29,12 +27,12 @@ import { patchStateOperation } from "../../core/store/engines/operation-engine";
 // Shared helpers
 // ---------------------------------------------------------------------------
 
-function makeBaseState<T extends object>(values: T) {
+function makeBaseState<T extends object>(values: T): any {
   return {
     values,
-    errors: {} as Record<string, string>,
-    touched: {} as Record<string, boolean>,
-    isValidating: {} as Record<string, boolean>,
+    errors: {},
+    touched: {},
+    isValidating: {},
     isSubmitting: false,
     isDirty: false,
     isValid: true,
@@ -208,9 +206,9 @@ describe("Production Audit 12 — FINDING-2: Unhandled Exceptions in Commit Engi
     const batchState = createStoreBatchState<any>();
 
     // patchStateOperation that will drive a values update
-    const operation = {
-      kind: "state.patch" as const,
+    const _operation = {
       ...patchStateOperation({ values: { a: 2 } }),
+      kind: "state.patch" as const,
     };
 
     // applyValueDerivations always fails — triggers the fallback path
@@ -244,7 +242,7 @@ describe("Production Audit 12 — FINDING-2: Unhandled Exceptions in Commit Engi
     const onStateCommitted = vi.fn();
 
     // Must NOT throw — must abort gracefully and return original state
-    let nextState: typeof state | undefined;
+    let nextState: any;
     expect(() => {
       nextState = dispatchStoreKernelOperation({
         state,
@@ -271,8 +269,8 @@ describe("Production Audit 12 — FINDING-2: Unhandled Exceptions in Commit Engi
     const batchState = createStoreBatchState<any>();
 
     const operation = {
-      kind: "state.patch" as const,
       ...patchStateOperation({ values: { score: 20 } }),
+      kind: "state.patch" as const,
     };
 
     const applyValueDerivations = vi.fn().mockImplementation(() => {
@@ -304,8 +302,8 @@ describe("Production Audit 12 — FINDING-2: Unhandled Exceptions in Commit Engi
     const batchState = createStoreBatchState<any>();
 
     const operation = {
-      kind: "state.patch" as const,
       ...patchStateOperation({ values: { label: "after" } }),
+      kind: "state.patch" as const,
     };
 
     const applyValueDerivations = vi.fn().mockImplementation(() => {
@@ -316,7 +314,7 @@ describe("Production Audit 12 — FINDING-2: Unhandled Exceptions in Commit Engi
     });
     const onStateCommitted = vi.fn();
 
-    let nextState: typeof state | undefined;
+    let nextState: any;
     expect(() => {
       nextState = dispatchStoreKernelOperation({
         state,

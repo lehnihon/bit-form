@@ -138,7 +138,7 @@ export function flushStoreBatchState<T extends object>(args: {
         // The error is surfaced via onDerivationError for observability.
         try {
           onDerivationError?.(error);
-        } catch (observabilityError) {
+        } catch {
           // Prevent observability exceptions from poisoning the entire batch
           // and dropping the state updates.
         }
