@@ -138,15 +138,14 @@ export function flushStoreBatchState<T extends object>(args: {
         // The error is surfaced via onDerivationError for observability.
         try {
           onDerivationError?.(error);
-        } catch (observabilityError) {
-          // Prevent observability exceptions from poisoning the entire batch 
+        } catch {
+          // Prevent observability exceptions from poisoning the entire batch
           // and dropping the state updates.
         }
-        // Do NOT save a history snapshot with unresolved computed fields:
-        // if we did, undo() would restore a state where computed fields are
-        // stale (showing the value before the failed derivation ran). Clear
-        // the flag so flushStoreBatchedStateUpdates skips saveHistory.
-        batchState.pendingHistorySnapshot = false;
+        // The raw state still advances into the store, so the history snapshot
+        // MUST be recorded. Clearing the flag here would cause undo() to skip
+        // this user mutation entirely, permanently desynchronising the history
+        // stack from the live store state — a silent data-loss bug.
       }
     }
   } finally {
