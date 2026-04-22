@@ -97,12 +97,19 @@ function executeStatePatchOperation<T extends object>(args: {
     } catch (observabilityError) {
       // Impede que erros de observabilidade abortem o commit do state update com valores em raw
     }
-    result = applyStateUpdate({
-      currentState,
-      partialState: operation.partialState,
-      changedPaths: effectiveChangedPaths,
-      applyValueDerivations: (values) => values, // No derivation fallback
-    });
+    try {
+      result = applyStateUpdate({
+        currentState,
+        partialState: operation.partialState,
+        changedPaths: effectiveChangedPaths,
+        applyValueDerivations: (values) => values, // No derivation fallback
+      });
+    } catch (fallbackError) {
+      // If the raw fallback also fails (e.g. immutable proxy, serialisation
+      // error), abort the mutation gracefully rather than letting an unhandled
+      // exception crash the framework component tree.
+      result = undefined;
+    }
   }
   return result;
 }
