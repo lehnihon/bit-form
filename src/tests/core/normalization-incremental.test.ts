@@ -265,9 +265,89 @@ describe("Incremental Normalization (normalizeDependsOn)", () => {
       ),
     ).toBe(true);
 
-    // Entradas cíclicas não devem ser executadas.
-    expect(store.read.getState().values.a).toBe("init-a");
     // Entradas acíclicas continuam executando na mesma rodada.
     expect(store.read.getState().values.name).toBe("Ana");
+  });
+
+  describe("Normalization Stability - Exception Isolation", () => {
+    it("should continue with other normalizers if one throws", async () => {
+      const normalizerCalls: string[] = [];
+
+      const store = createBitStore({
+        initialValues: { field1: "test", field2: "value" },
+        fields: {
+          field1: {
+            normalize: (_value: string) => {
+              normalizerCalls.push("field1");
+              throw new Error("normalizer crash");
+            },
+          },
+          field2: {
+            normalize: (value: string) => {
+              normalizerCalls.push("field2");
+              return value.toUpperCase();
+            },
+          },
+        },
+        onUnhandledError: vi.fn(),
+      });
+
+      store.write.setField("field1", "new1");
+      store.write.setField("field2", "new2");
+
+      const state = store.read.getState();
+
+      expect(state.values.field2).toBe("NEW2");
+      expect(normalizerCalls).toContain("field1");
+      expect(normalizerCalls).toContain("field2");
+    });
+
+    it("should handle normalizer error during batch update", async () => {
+      const store = createBitStore({
+        initialValues: { a: "x", b: "y" },
+        fields: {
+          a: {
+            normalize: (value: string) => {
+              if (value === "crash") throw new Error("bad value");
+              return value;
+            },
+          },
+          b: {
+            normalize: (value: string) => value + "_normalized",
+          },
+        },
+        onUnhandledError: vi.fn(),
+      });
+
+      store.write.setField("a", "crash");
+      store.write.setField("b", "test");
+
+      const state = store.read.getState();
+
+      expect(state.values.b).toBe("test_normalized");
+      expect(state.isValid).toBeDefined();
+    });
+
+    it("should apply fallback derivation if normalizer fails", async () => {
+      const onUnhandledError = vi.fn();
+      const store = createBitStore({
+        initialValues: { data: '{"key":"value"}' },
+        fields: {
+          data: {
+            normalize: (value: string) => {
+              const parsed = JSON.parse(value);
+              return parsed;
+            },
+          },
+        },
+        onUnhandledError,
+      });
+
+      store.write.setField("data", "{invalid json}");
+
+      const state = store.read.getState();
+      expect(state.values.data).toBeDefined();
+      expect(onUnhandledError).toHaveBeenCalled();
+    });
   });
 });

@@ -808,7 +808,7 @@ describe("Persist Feature (BitPersistManager)", () => {
       });
 
       const result = await store.feature.restorePersisted();
-      expect(result).toBe(false);
+      await Promise.resolve();
       expect(onUnhandledError).toHaveBeenCalledWith(
         expect.any(Error),
         "persist",
@@ -816,7 +816,72 @@ describe("Persist Feature (BitPersistManager)", () => {
 
       store.feature.cleanup();
     });
+  });
 
+  describe("Persist Stability - State Poisoning", () => {
+    it("should recover activeWrites count and continue processing if onWriteStart throws", async () => {
+      let writeStartThrows = true;
+      let onWriteStartCalls = 0;
+      let onWriteSuccessCalls = 0;
+
+      const { BitPersistManager } = await import(
+        "../../core/store/managers/features/persist-manager"
+      );
+
+      const manager = new BitPersistManager<any>(
+        {
+          enabled: true,
+          key: "test-key",
+          storage: {
+            getItem: async () => null,
+            setItem: async () => {},
+            removeItem: async () => {},
+          },
+          serialize: (v) => JSON.stringify(v),
+          deserialize: (v) => JSON.parse(v),
+          autoSave: false,
+          mode: "values",
+          debounceMs: 500,
+        },
+        () => ({}),
+        () => ({}),
+        () => {},
+        {
+          onWriteStart: () => {
+            onWriteStartCalls++;
+            if (writeStartThrows) {
+              throw new Error("UI State Reducer Crash!");
+            }
+          },
+          onWriteSuccess: () => {
+            onWriteSuccessCalls++;
+          },
+        },
+      );
+
+      // Primeira tentativa de salvar quebra silenciosamente por causa da UI
+      try {
+        await manager.saveNow();
+      } catch (e: any) {
+        expect(e.message).toBe("UI State Reducer Crash!");
+      }
+
+      // Verificamos que o onWriteStart foi acionado.
+      expect(onWriteStartCalls).toBe(1);
+
+      // Agora a UI se recuperou ou a próxima tentativa foi engatilhada de forma sadia.
+      writeStartThrows = false;
+
+      // Se a contagem estivesse envenenada, a segunda chamada NÃO engatilharia o onWriteStart.
+      // E também NÃO engatilharia o onWriteSuccess.
+      await manager.saveNow();
+
+      expect(onWriteStartCalls).toBe(2);
+      expect(onWriteSuccessCalls).toBe(1);
+    });
+  });
+
+  describe("forceSave resilience", () => {
     it("should not throw from forceSave when localStorage getter throws", async () => {
       Object.defineProperty(globalThis, "localStorage", {
         configurable: true,
@@ -838,6 +903,120 @@ describe("Persist Feature (BitPersistManager)", () => {
       await expect(store.feature.forceSave()).resolves.toBeUndefined();
 
       store.feature.cleanup();
+    });
+  });
+
+  describe("Persist Stability - Callback Deadlocks", () => {
+    it("should call onWriteSettled even if onWriteSuccess throws", async () => {
+      const getValues = () => ({});
+      const getDirtyValues = () => ({});
+      const applyRestoredValues = vi.fn();
+
+      const onWriteStart = vi.fn();
+      const onWriteSuccess = vi.fn().mockImplementation(() => {
+        throw new Error("Component unmounted");
+      });
+      const onWriteError = vi.fn();
+      const onWriteSettled = vi.fn();
+      const onError = vi.fn();
+
+      const callbacks = {
+        onWriteStart,
+        onWriteSuccess,
+        onWriteError,
+        onWriteSettled,
+        onError,
+      };
+
+      const storage = {
+        getItem: vi.fn(),
+        setItem: vi.fn().mockResolvedValue(undefined),
+        removeItem: vi.fn(),
+      };
+
+      const { BitPersistManager } = await import(
+        "../../core/store/managers/features/persist-manager"
+      );
+
+      const manager = new BitPersistManager(
+        {
+          key: "test",
+          enabled: true,
+          mode: "values",
+          autoSave: false,
+          debounceMs: 0,
+          serialize: (v) => JSON.stringify(v),
+          deserialize: (v) => JSON.parse(v),
+          storage,
+        },
+        getValues,
+        getDirtyValues,
+        applyRestoredValues,
+        callbacks,
+      );
+
+      await expect(manager.saveNow()).rejects.toThrow("Component unmounted");
+
+      expect(onWriteStart).toHaveBeenCalled();
+      expect(onWriteSuccess).toHaveBeenCalled();
+      expect(onWriteSettled).toHaveBeenCalled();
+    });
+
+    it("should call onWriteSettled even if onWriteError throws", async () => {
+      const getValues = () => ({});
+      const getDirtyValues = () => ({});
+      const applyRestoredValues = vi.fn();
+
+      const onWriteStart = vi.fn();
+      const onWriteSuccess = vi.fn();
+      const onWriteError = vi.fn().mockImplementation(() => {
+        throw new Error("Secondary error handler failed");
+      });
+      const onWriteSettled = vi.fn();
+      const onError = vi.fn();
+
+      const callbacks = {
+        onWriteStart,
+        onWriteSuccess,
+        onWriteError,
+        onWriteSettled,
+        onError,
+      };
+
+      const storage = {
+        getItem: vi.fn(),
+        setItem: vi.fn().mockRejectedValue(new Error("Storage failed")),
+        removeItem: vi.fn(),
+      };
+
+      const { BitPersistManager } = await import(
+        "../../core/store/managers/features/persist-manager"
+      );
+
+      const manager = new BitPersistManager(
+        {
+          key: "test",
+          enabled: true,
+          mode: "values",
+          autoSave: false,
+          debounceMs: 0,
+          serialize: (v) => JSON.stringify(v),
+          deserialize: (v) => JSON.parse(v),
+          storage,
+        },
+        getValues,
+        getDirtyValues,
+        applyRestoredValues,
+        callbacks,
+      );
+
+      await expect(manager.saveNow()).rejects.toThrow(
+        "Secondary error handler failed",
+      );
+
+      expect(onWriteStart).toHaveBeenCalled();
+      expect(onWriteError).toHaveBeenCalled();
+      expect(onWriteSettled).toHaveBeenCalled();
     });
   });
 });

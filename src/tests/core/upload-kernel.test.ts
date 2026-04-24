@@ -108,4 +108,137 @@ describe("createUploadHandler", () => {
     const falseCount = loadingCalls.filter(([v]) => v === false).length;
     expect(falseCount).toBe(1);
   });
+
+  describe("Error Resilience", () => {
+    it("should complete upload despite callback errors and reset loading state", async () => {
+      const failingCallback = vi.fn(() => {
+        throw new Error("Callback error");
+      });
+
+      const setLoading = vi.fn().mockImplementation(failingCallback);
+      const setError = vi.fn();
+      const setValue = vi.fn();
+      const setUploadKey = vi.fn();
+      const getUploadKey = vi.fn(() => null);
+
+      const uploadFn = vi.fn(async () => ({
+        url: "https://example.com/file.jpg",
+        key: "file-key-123",
+      }));
+
+      const handler = createUploadHandler("avatar", uploadFn, {
+        setLoading,
+        setError,
+        setValue,
+        setUploadKey,
+        getUploadKey,
+      });
+
+      const file = new File(["content"], "test.jpg", { type: "image/jpeg" });
+
+      await handler(file);
+
+      expect(setLoading).toHaveBeenCalledWith(true);
+      expect(setLoading).toHaveBeenCalledWith(false);
+      expect(setValue).toHaveBeenCalledWith("https://example.com/file.jpg");
+    });
+
+    it("should not leave isLoading true when callbacks throw on success path", async () => {
+      let callCount = 0;
+      const setLoading = vi.fn((..._args) => {
+        callCount++;
+        if (callCount === 1) {
+          throw new Error("setLoading error on start");
+        }
+      });
+      const setError = vi.fn();
+      const setValue = vi.fn(() => {
+        throw new Error("setValue callback error");
+      });
+      const setUploadKey = vi.fn();
+      const getUploadKey = vi.fn(() => null);
+
+      const uploadFn = vi.fn(async () => ({
+        url: "https://example.com/file.jpg",
+        key: "file-key-123",
+      }));
+
+      const handler = createUploadHandler("photo", uploadFn, {
+        setLoading,
+        setError,
+        setValue,
+        setUploadKey,
+        getUploadKey,
+      });
+
+      const file = new File(["content"], "photo.jpg");
+
+      await handler(file);
+
+      expect(setLoading).toHaveBeenCalledTimes(2);
+      expect(setLoading).toHaveBeenLastCalledWith(false);
+    });
+
+    it("should handle concurrent upload callbacks without state leakage", async () => {
+      const setLoading = vi.fn();
+      const setError = vi.fn();
+      const setValue = vi.fn();
+      const setUploadKey = vi.fn();
+      const getUploadKey = vi.fn(() => null);
+
+      const uploadFn = vi.fn(async () => ({
+        url: "https://example.com/file.jpg",
+        key: "file-key-123",
+      }));
+
+      const handler = createUploadHandler("file", uploadFn, {
+        setLoading,
+        setError,
+        setValue,
+        setUploadKey,
+        getUploadKey,
+      });
+
+      const file1 = new File(["1"], "file1.jpg");
+      const file2 = new File(["2"], "file2.jpg");
+
+      const [result1, result2] = await Promise.all([
+        handler(file1),
+        handler(file2),
+      ]);
+
+      expect(setLoading).toHaveBeenCalledWith(false);
+      expect(result1).toBeUndefined();
+      expect(result2).toBeUndefined();
+    });
+
+    it("should reset loading even when error callback throws", async () => {
+      const setLoading = vi.fn();
+      const setError = vi.fn(() => {
+        throw new Error("setError failed");
+      });
+      const setValue = vi.fn();
+      const setUploadKey = vi.fn();
+      const getUploadKey = vi.fn(() => null);
+
+      const uploadFn = vi.fn(async () => {
+        throw new Error("Upload failed");
+      });
+
+      const handler = createUploadHandler("avatar", uploadFn, {
+        setLoading,
+        setError,
+        setValue,
+        setUploadKey,
+        getUploadKey,
+      });
+
+      const file = new File(["content"], "avatar.jpg");
+
+      await handler(file);
+
+      expect(setLoading).toHaveBeenCalledWith(true);
+      expect(setLoading).toHaveBeenLastCalledWith(false);
+    });
+  });
 });

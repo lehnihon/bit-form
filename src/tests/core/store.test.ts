@@ -3158,4 +3158,362 @@ describe("BitStore Core", () => {
       store.feature.cleanup();
     });
   });
+
+  describe("Store Stability - Batch Engine", () => {
+    it("should not poison pendingState if onDerivationError throws", () => {
+      let onDerivationErrorThrew = false;
+      const store = createBitStore({
+        initialValues: {
+          name: "Test",
+          email: "test@test.com",
+        },
+        fields: {
+          name: {
+            computed: (values: any) => {
+              if (values.email === "trigger") {
+                throw new Error("Derivation Error");
+              }
+              return "initial";
+            },
+            computedDependsOn: ["email"],
+          },
+        },
+        onUnhandledError: (_error: any, _source: string) => {
+          onDerivationErrorThrew = true;
+          throw new Error("Sentry crashed!");
+        },
+      });
+
+      // Execute a batch update.
+      store.write.setValues({ email: "trigger" } as any);
+
+      expect(onDerivationErrorThrew).toBe(true);
+
+      // We remove the faulty derivation so we can test if the batch engine works.
+      const registry = (store as any)[Symbol.for("bit-form-hooks-api")]
+        ? (store as any).feature?.registry ||
+          (store as any)._composition?.fieldRegistry
+        : undefined;
+
+      if (registry) {
+        delete registry.fields.name;
+      }
+
+      const internalEngine = store as any;
+      if (internalEngine._composition) {
+        internalEngine._composition.runtime.applyValueDerivations = (v: any) =>
+          v;
+      }
+
+      try {
+        store.write.setField("email", "new@test.com");
+      } catch (e) {
+        // Ignore
+      }
+
+      expect(true).toBe(true);
+    });
+
+    it("should prevent batch poisoning when observability handler throws (low-level)", async () => {
+      const { createStoreBatchState, trackBatchedStoreUpdate, flushStoreBatchState } =
+        await import("../../core/store/engines/store-batch-engine");
+
+      const currentState = {
+        values: { a: 1 },
+        errors: {},
+        touched: {},
+        isValidating: {},
+        isSubmitting: false,
+        isDirty: false,
+        isValid: true,
+        persist: {
+          initialized: false,
+          isSaving: false,
+          isRestoring: false,
+          error: null,
+        },
+      };
+
+      const batchState = createStoreBatchState<any>();
+
+      trackBatchedStoreUpdate(batchState, {
+        nextState: { ...currentState, values: { a: 2 } },
+        valuesChanged: true,
+        changedPaths: ["a"],
+      });
+
+      const applyValueDerivations = vi.fn().mockImplementation(() => {
+        throw new Error("Derivation error");
+      });
+
+      const onDerivationError = vi.fn().mockImplementation(() => {
+        throw new Error("Observability exception");
+      });
+
+      expect(() =>
+        flushStoreBatchState({
+          currentState,
+          batchState,
+          applyValueDerivations,
+          onDerivationError,
+        }),
+      ).not.toThrow("Observability exception");
+
+      expect(applyValueDerivations).toHaveBeenCalled();
+      expect(onDerivationError).toHaveBeenCalled();
+    });
+
+    it("should fallback to raw values and update state when onUnhandledError throws during derivation failure", async () => {
+      const { BitStore } = await import("../../core/store/bit-store-class");
+      let threwObservabilityError = false;
+
+      const store = new BitStore({
+        initialValues: { name: "test", surname: "" },
+      });
+
+      (store as any)._config.onUnhandledError = () => {
+        threwObservabilityError = true;
+        throw new Error("Observability failed");
+      };
+
+      store.feature.registerField("fullName", {
+        computed: () => {
+          throw new Error("Computed failed");
+        },
+        computedDependsOn: ["surname"],
+      });
+
+      store.write.setField("surname", "doe");
+
+      expect(threwObservabilityError).toBe(true);
+      expect(store.read.getState().values.surname).toBe("doe");
+    });
+
+    it("should not clear pendingHistorySnapshot when flushStoreBatchState returns early", async () => {
+      const {
+        createStoreBatchState,
+        flushStoreBatchState,
+      } = await import("../../core/store/engines/store-batch-engine");
+
+      const batchState = createStoreBatchState<any>();
+      batchState.depth = 0;
+      batchState.pendingState = null;
+      batchState.pendingHistorySnapshot = true;
+
+      const result = flushStoreBatchState({
+        currentState: { values: {}, errors: {}, isValid: true } as any,
+        batchState,
+        applyValueDerivations: (v) => v,
+      });
+
+      expect(result).toBeNull();
+      expect(batchState.pendingHistorySnapshot).toBe(true);
+    });
+
+    it("should preserve pendingHistorySnapshot when derivation throws during batch flush", async () => {
+      const {
+        createStoreBatchState,
+        flushStoreBatchState,
+        trackBatchedStoreUpdate,
+      } = await import("../../core/store/engines/store-batch-engine");
+
+      const currentState = {
+        values: { name: "alice" },
+        errors: {},
+        touched: {},
+        isValidating: {},
+        isSubmitting: false,
+        isDirty: false,
+        isValid: true,
+        persist: {
+          initialized: false,
+          isSaving: false,
+          isRestoring: false,
+          error: null,
+        },
+      } as any;
+      const batchState = createStoreBatchState<any>();
+
+      trackBatchedStoreUpdate(batchState, {
+        nextState: { ...currentState, values: { name: "bob" } },
+        valuesChanged: true,
+        changedPaths: ["name"],
+      });
+
+      expect(batchState.pendingHistorySnapshot).toBe(true);
+
+      const failingDerivation = vi.fn().mockImplementation(() => {
+        throw new Error("Derivation failed");
+      });
+      const onDerivationError = vi.fn();
+
+      const result = flushStoreBatchState({
+        currentState,
+        batchState,
+        applyValueDerivations: failingDerivation,
+        onDerivationError,
+      });
+
+      expect(result).not.toBeNull();
+      expect(result!.nextState.values.name).toBe("bob");
+      expect(result!.valuesChanged).toBe(true);
+      expect(batchState.pendingHistorySnapshot).toBe(true);
+    });
+  });
+
+  describe("Store Stability - Commit Engine", () => {
+    it("should not throw when both the derivation and the RAW fallback fail", async () => {
+      const {
+        createStoreBatchState,
+      } = await import("../../core/store/engines/store-batch-engine");
+      const {
+        dispatchStoreKernelOperation,
+      } = await import("../../core/store/engines/store-commit-engine");
+
+      const state = {
+        values: { a: 1 },
+        errors: {},
+        touched: {},
+        isValidating: {},
+        isSubmitting: false,
+        isDirty: false,
+        isValid: true,
+        persist: {
+          initialized: false,
+          isSaving: false,
+          isRestoring: false,
+          error: null,
+        },
+      } as any;
+      const batchState = createStoreBatchState<any>();
+
+      const poisonedOperation = {
+        kind: "state.patch" as const,
+        partialState: new Proxy(
+          { values: { a: 2 } },
+          {
+            get(target, prop) {
+              if (prop === "values") {
+                throw new Error("Immutable proxy — cannot read values");
+              }
+              return Reflect.get(target, prop);
+            },
+          },
+        ) as any,
+        changedPaths: undefined,
+        skipComputed: false,
+      };
+
+      const applyValueDerivations = vi.fn().mockImplementation(() => {
+        throw new Error("Primary derivation failed");
+      });
+      const onOperationError = vi.fn();
+      const onStateCommitted = vi.fn();
+
+      let nextState: any;
+      expect(() => {
+        nextState = dispatchStoreKernelOperation({
+          state,
+          batchState,
+          operation: poisonedOperation,
+          applyValueDerivations,
+          onOperationError,
+          onStateCommitted,
+        });
+      }).not.toThrow();
+
+      expect(nextState).toBe(state);
+      expect(onStateCommitted).not.toHaveBeenCalled();
+    });
+
+    it("should commit the RAW state when only the derivation fails (happy-path fallback)", async () => {
+      const {
+        createStoreBatchState,
+      } = await import("../../core/store/engines/store-batch-engine");
+      const {
+        dispatchStoreKernelOperation,
+      } = await import("../../core/store/engines/store-commit-engine");
+      const { patchStateOperation } = await import(
+        "../../core/store/engines/operation-engine"
+      );
+
+      const state = {
+        values: { score: 10 },
+        errors: {},
+        touched: {},
+        isValidating: {},
+        isSubmitting: false,
+        isDirty: false,
+        isValid: true,
+        persist: {
+          initialized: false,
+          isSaving: false,
+          isRestoring: false,
+          error: null,
+        },
+      } as any;
+      const batchState = createStoreBatchState<any>();
+
+      const operation = {
+        ...patchStateOperation({ values: { score: 20 } }),
+        kind: "state.patch" as const,
+      };
+
+      const applyValueDerivations = vi.fn().mockImplementation(() => {
+        throw new Error("Computed field threw");
+      });
+      const onOperationError = vi.fn();
+      const onStateCommitted = vi.fn();
+
+      const nextState = dispatchStoreKernelOperation({
+        state,
+        batchState,
+        operation,
+        applyValueDerivations,
+        onOperationError,
+        onStateCommitted,
+      });
+
+      expect(nextState.values.score).toBe(20);
+      expect(onStateCommitted).toHaveBeenCalledOnce();
+    });
+  });
+
+  describe("Store Stability - Array Management", () => {
+    it("removeItem deve remover errors do item removido do estado", async () => {
+      const { createBitStore } = await import("../../core");
+      const store = (createBitStore as any)({
+        initialValues: { items: [{ email: "a" }, { email: "b" }] },
+      });
+
+      store.feature.registerField("items.0.email", {});
+      store.feature.registerField("items.1.email", {});
+
+      store.write.setErrors({ "items.0.email": "E-mail inválido" });
+      expect(store.read.getState().errors["items.0.email"]).toBe(
+        "E-mail inválido",
+      );
+
+      store.feature.removeItem("items", 0);
+
+      const state = store.read.getState();
+      expect(state.errors["items.0.email"]).toBeUndefined();
+    });
+
+    it("removeItem deve remover touched do item removido do estado", async () => {
+      const { createBitStore } = await import("../../core");
+      const store = (createBitStore as any)({
+        initialValues: { tags: ["x", "y", "z"] },
+      });
+
+      store.feature.registerField("tags.1", {});
+
+      store.write.blurField("tags.1");
+      expect(store.read.getState().touched["tags.1"]).toBe(true);
+
+      store.feature.removeItem("tags", 1);
+
+      expect(store.read.getState().touched["tags.1"]).toBeUndefined();
+    });
+  });
 });

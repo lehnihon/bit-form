@@ -295,4 +295,242 @@ describe("BitSubscriptionEngine", () => {
     unsubB();
     expect(engine.getActiveSubscribersCount()).toBe(0);
   });
+
+  describe("Integer Wrap Silence Bug", () => {
+    it("should continue notifying subscribers even after notifyVersion wraps to negative", () => {
+      let currentState = createState({ user: { name: "initial", age: 30 } });
+
+      const engine = new BitSubscriptionEngine<any>(() => currentState);
+
+      // Force notifyVersion to max positive 32-bit integer
+      (engine as any).notifyVersion = 2147483647;
+
+      const listener = vi.fn();
+
+      const unsubscribe = engine.subscribeSelector(
+        (state) => state.values.user.name,
+        listener,
+        { paths: ["user.name"], emitImmediately: false },
+        (prev, next) => prev === next,
+      );
+
+      // Trigger first notification to record the seenVersion (will be -2147483648 because it bumps then wraps)
+      currentState = createState({ user: { name: "update1", age: 30 } });
+      engine.notify(currentState, ["user.name"]);
+
+      expect(listener).toHaveBeenCalledTimes(1);
+      expect(listener).toHaveBeenCalledWith("update1");
+
+      // Trigger second notification (now notifyVersion is -2147483647, which is mathematically larger,
+      // but prior to the fix, a positive seenVersion would incorrectly block it).
+      currentState = createState({ user: { name: "update2", age: 30 } });
+      engine.notify(currentState, ["user.name"]);
+
+      expect(listener).toHaveBeenCalledTimes(2);
+      expect(listener).toHaveBeenCalledWith("update2");
+
+      unsubscribe();
+    });
+  });
+
+  describe("seenVersion Deduplication Collision", () => {
+    it("should notify fresh subscribers even when notifyVersion wraps back to 0", () => {
+      let currentState = createState({ user: { name: "initial", age: 30 } });
+      const engine = new BitSubscriptionEngine<any>(() => currentState);
+
+      // Force notifyVersion to -1: next wrap brings it to 0
+      (engine as any).notifyVersion = -1;
+
+      const listener = vi.fn();
+
+      // Subscribe AFTER forcing notifyVersion so seenVersion is not in the map
+      engine.subscribeSelector(
+        (state: any) => state.values.user.name,
+        listener,
+        { paths: ["user.name"], emitImmediately: false },
+        (prev: string, next: string) => prev === next,
+      );
+
+      // This notification wraps notifyVersion from -1 to 0
+      currentState = createState({ user: { name: "update1", age: 30 } });
+      engine.notify(currentState, ["user.name"]);
+
+      expect(listener).toHaveBeenCalledTimes(1);
+      expect(listener).toHaveBeenCalledWith("update1");
+    });
+
+    it("should deduplicate correctly across multiple paths when notifyVersion is 0", () => {
+      let currentState = createState({
+        user: { name: "initial", age: 30 },
+      }) as any;
+      const engine = new BitSubscriptionEngine<any>(() => currentState);
+
+      // Put notifyVersion one step before wrapping to 0
+      (engine as any).notifyVersion = -1;
+
+      const listener = vi.fn();
+
+      // Subscribe to BOTH name and email
+      engine.subscribeSelector(
+        (state: any) => state.values.user,
+        listener,
+        { paths: ["user.name", "user.age"], emitImmediately: false },
+        (prev: any, next: any) => prev === next,
+      );
+
+      // Notify both paths changed at once — subscriber should fire exactly once
+      currentState = createState({ user: { name: "changed", age: 31 } });
+      engine.notify(currentState, ["user.name", "user.age"]);
+
+      expect(listener).toHaveBeenCalledTimes(1);
+    });
+
+    it("should continue deduplication normally on subsequent notifications after wrap", () => {
+      let currentState = createState({ user: { name: "initial", age: 30 } });
+      const engine = new BitSubscriptionEngine<any>(() => currentState);
+
+      // Force wrap scenario: notifyVersion will pass through 0
+      (engine as any).notifyVersion = -1;
+
+      const listener = vi.fn();
+      engine.subscribeSelector(
+        (state: any) => state.values.user.name,
+        listener,
+        { paths: ["user.name"], emitImmediately: false },
+        (prev: string, next: string) => prev === next,
+      );
+
+      // Notification at 0
+      currentState = createState({ user: { name: "update-at-zero", age: 30 } });
+      engine.notify(currentState, ["user.name"]);
+      expect(listener).toHaveBeenCalledTimes(1);
+
+      // Notification at 1 — state did not change, equality returns true → skip
+      engine.notify(currentState, ["user.name"]);
+      expect(listener).toHaveBeenCalledTimes(1);
+
+      // Notification at 2 — state changed
+      currentState = createState({ user: { name: "update-at-two", age: 30 } });
+      engine.notify(currentState, ["user.name"]);
+      expect(listener).toHaveBeenCalledTimes(2);
+      expect(listener).toHaveBeenCalledWith("update-at-two");
+    });
+  });
+
+  describe("Observability Resilience", () => {
+    it("should not break subscription notification loop if observer throws", () => {
+      const state = createState({ user: { name: "initial", age: 30 } });
+      const getState = () => state;
+
+      const onError = vi.fn().mockImplementation(() => {
+        throw new Error("Log timeout");
+      });
+
+      const engine = new BitSubscriptionEngine(getState, onError);
+
+      const listener1 = vi.fn().mockImplementation(() => {
+        throw new Error("Render error");
+      });
+      const listener2 = vi.fn();
+      const listener3 = vi.fn();
+
+      engine.subscribe(listener1);
+      engine.subscribe(listener2);
+      engine.subscribe(listener3);
+
+      expect(() => engine.notify(state, ["*"])).not.toThrow();
+
+      expect(listener1).toHaveBeenCalled();
+      expect(onError).toHaveBeenCalled();
+      expect(listener2).toHaveBeenCalled();
+      expect(listener3).toHaveBeenCalled();
+    });
+  });
+
+  describe("Subscription Orphaning", () => {
+    it("tracked selector lifecycle handles rapid resubscribe+unmount gracefully", async () => {
+      const { createBitStore } = await import("../../core");
+      const store = (createBitStore as any)({
+        initialValues: { field1: "" },
+      });
+
+      for (let i = 0; i < 50; i++) {
+        store.write.setField("field1", `value${i}`);
+      }
+
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      const state = store.read.getState();
+      expect(state).toBeDefined();
+      expect(state.values.field1).toBe("value49");
+    });
+  });
+
+  describe("Subscription Stability - Listener Exceptions", () => {
+    it("should notify all subscribers even if one throws", async () => {
+      const { createBitStore } = await import("../../core");
+      const store = (createBitStore as any)({
+        initialValues: { field1: "test" },
+      });
+
+      const consoleErrorSpy = vi
+        .spyOn(console, "error")
+        .mockImplementation(() => {});
+      const results: number[] = [];
+
+      const collector1 = () => {
+        throw new Error("crash");
+      };
+      const collector2 = () => {
+        results.push(2);
+      };
+      const collector3 = () => {
+        results.push(3);
+      };
+
+      store.observe.subscribe(collector1);
+      store.observe.subscribe(collector2);
+      store.observe.subscribe(collector3);
+
+      store.write.setField("field1", "updated");
+
+      expect(results).toEqual([2, 3]);
+      expect(consoleErrorSpy).toHaveBeenCalled();
+      consoleErrorSpy.mockRestore();
+    });
+
+    it("should continue notifying scoped subscribers if one throws", async () => {
+      const { createBitStore } = await import("../../core");
+      const store = (createBitStore as any)({
+        initialValues: { user: { name: "leo", age: 30 } },
+      });
+
+      const consoleErrorSpy = vi
+        .spyOn(console, "error")
+        .mockImplementation(() => {});
+      const results: string[] = [];
+
+      store.observe.subscribeSelector(
+        (state) => (state.values as any).user.age,
+        () => {
+          throw new Error("crash");
+        },
+        { paths: ["user.age"] },
+      );
+
+      store.observe.subscribeSelector(
+        (state) => (state.values as any).user.age,
+        (age) => {
+          results.push(`age:${age}`);
+        },
+        { paths: ["user.age"] },
+      );
+
+      store.write.setField("user.age", 31);
+
+      expect(results).toContain("age:31");
+      expect(consoleErrorSpy).toHaveBeenCalled();
+      consoleErrorSpy.mockRestore();
+    });
+  });
 });

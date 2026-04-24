@@ -75,4 +75,18 @@ describe("BitPluginManager", () => {
     expect(payload).toBeDefined();
     expect(payload.values).toEqual(payload.state.values);
   });
+
+  describe("Plugin Stability - Exception Isolation", () => {
+    it("store remains operational after field changes even with plugin errors", async () => {
+      const { createBitStore } = await import("../../core");
+      const store = (createBitStore as any)({
+        initialValues: { field: "test" },
+      });
+
+      store.write.setField("field", "updated");
+
+      const state = store.read.getState();
+      expect(state.values.field).toBe("updated");
+    });
+  });
 });

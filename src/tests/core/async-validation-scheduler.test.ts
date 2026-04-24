@@ -88,4 +88,148 @@ describe("BitAsyncValidationScheduler", () => {
 
     vi.useRealTimers();
   });
+
+  describe("cancelAll resilience", () => {
+    it("should reset isValidating=false for in-flight jobs when cancelAll() is called", async () => {
+      const fieldValidatingCalls: Array<[string, boolean]> = [];
+      let resolveValidation: (() => void) | undefined;
+
+      const port = {
+        schedule: (fn: () => void, delay: number) => {
+          const id = setTimeout(fn, delay);
+          return () => clearTimeout(id);
+        },
+        getValues: () => ({ email: "test@test.com" }),
+        setFieldValidating: (path: string, isValidating: boolean) => {
+          fieldValidatingCalls.push([path, isValidating]);
+        },
+        setAsyncError: vi.fn(),
+        clearAsyncError: vi.fn(),
+        onValidationPassed: vi.fn().mockResolvedValue(undefined),
+        onError: vi.fn(),
+      };
+
+      const scheduler = new BitAsyncValidationScheduler(port as any);
+
+      const hangingValidate = vi.fn(
+        () =>
+          new Promise<null>((resolve) => {
+            resolveValidation = () => resolve(null);
+          }),
+      );
+
+      scheduler.handle("email", "test@test.com", hangingValidate as any, 0);
+
+      await new Promise((r) => setTimeout(r, 10));
+
+      const setTrueCalls = fieldValidatingCalls.filter(([, v]) => v === true);
+      expect(setTrueCalls.length).toBeGreaterThanOrEqual(1);
+
+      fieldValidatingCalls.length = 0;
+
+      scheduler.cancelAll();
+
+      const resetCalls = fieldValidatingCalls.filter(
+        ([path, v]) => path === "email" && v === false,
+      );
+      expect(resetCalls.length).toBeGreaterThanOrEqual(1);
+
+      resolveValidation?.();
+    });
+
+    it("should reset isValidating=false for pending (not yet started) jobs on cancelAll()", async () => {
+      const fieldValidatingCalls: Array<[string, boolean]> = [];
+
+      const port = {
+        schedule: (fn: () => void, delay: number) => {
+          const id = setTimeout(fn, delay);
+          return () => clearTimeout(id);
+        },
+        getValues: () => ({ name: "leo" }),
+        setFieldValidating: (path: string, isValidating: boolean) => {
+          fieldValidatingCalls.push([path, isValidating]);
+        },
+        setAsyncError: vi.fn(),
+        clearAsyncError: vi.fn(),
+        onValidationPassed: vi.fn().mockResolvedValue(undefined),
+        onError: vi.fn(),
+      };
+
+      const scheduler = new BitAsyncValidationScheduler(port as any);
+
+      const neverStarted = vi.fn().mockResolvedValue(null);
+      scheduler.handle("name", "leo", neverStarted as any, 99999);
+
+      fieldValidatingCalls.length = 0;
+
+      scheduler.cancelAll();
+
+      const resetCalls = fieldValidatingCalls.filter(
+        ([path, v]) => path === "name" && v === false,
+      );
+      expect(resetCalls.length).toBeGreaterThanOrEqual(1);
+
+      expect(neverStarted).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("Async Validation Stability - Integration", () => {
+    it("should cleanup all pending async validations gracefully", async () => {
+      const { createBitStore } = await import("../../core");
+      const store = (createBitStore as any)({
+        initialValues: { email: "" },
+        fields: {
+          email: {
+            validation: {
+              asyncValidate: async (value: string) => {
+                return new Promise((resolve) => {
+                  setTimeout(() => {
+                    resolve(value.includes("@") ? null : "invalid email");
+                  }, 100);
+                });
+              },
+            },
+          },
+        },
+      });
+
+      store.write.setField("email", "test");
+      expect(store.read.getState()).toBeDefined();
+    });
+
+    it("should handle rapid value changes in async validation", async () => {
+      const { createBitStore } = await import("../../core");
+      const validationCalls: string[] = [];
+
+      const store = (createBitStore as any)({
+        initialValues: { email: "" },
+        fields: {
+          email: {
+            validation: {
+              asyncValidate: async (value: string) => {
+                validationCalls.push(value);
+                return new Promise((resolve) => {
+                  setTimeout(() => {
+                    resolve(value.includes("@") ? null : "invalid");
+                  }, 50);
+                });
+              },
+            },
+          },
+        },
+      });
+
+      store.write.setField("email", "t");
+      store.write.setField("email", "te");
+      store.write.setField("email", "tes");
+      store.write.setField("email", "test@");
+      store.write.setField("email", "test@example.com");
+
+      await new Promise((resolve) => setTimeout(resolve, 200));
+
+      const finalState = store.read.getState();
+      expect(finalState.values.email).toBe("test@example.com");
+      expect(finalState.errors.email).toBeUndefined();
+    });
+  });
 });

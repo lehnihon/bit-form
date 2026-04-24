@@ -1199,4 +1199,259 @@ describe("BitValidationManager", () => {
 
     expect(state.isValidating.email).toBeUndefined();
   });
+
+  describe("Validation Stability - Reset", () => {
+    it("should not expose isValid=true during reset with a failing validator", async () => {
+      const { createBitStore } = await import("../../core");
+      const isValidEvents: boolean[] = [];
+
+      const store = (createBitStore as any)({
+        initialValues: {
+          name: "Test",
+          email: "test@test.com",
+        },
+        validation: {
+          resolver: () => ({ email: "always invalid" }),
+          delay: 0,
+        },
+      });
+
+      const unsub = store.observe.subscribeFormMeta((meta: any) => {
+        isValidEvents.push(meta.isValid);
+      });
+
+      await store.feature.validate();
+      expect(store.read.getState().isValid).toBe(false);
+
+      isValidEvents.length = 0;
+
+      store.write.reset();
+
+      const hasOptimisticTrue = isValidEvents.includes(true);
+      expect(hasOptimisticTrue).toBe(false);
+
+      await store.feature.validate();
+      expect(store.read.getState().isValid).toBe(false);
+
+      unsub();
+    });
+
+    it("should settle to isValid=true after reset when there is no validator", async () => {
+      const { createBitStore } = await import("../../core");
+      const store = (createBitStore as any)({
+        initialValues: {
+          name: "Test",
+          email: "test@test.com",
+        },
+        validation: { delay: 0 },
+      });
+
+      store.write.setField("name", "Changed");
+      store.write.reset();
+
+      await store.feature.validate();
+      expect(store.read.getState().isValid).toBe(true);
+    });
+  });
+
+  describe("Validation Stability - Visibility", () => {
+    it("should preserve async error when field toggles hidden then visible again", async () => {
+      const { createBitStore } = await import("../../core");
+      const store = (createBitStore as any)({
+        initialValues: { showEmail: true, email: "" },
+        validation: {
+          delay: 0,
+        },
+      });
+
+      store.feature.registerField("email", {
+        conditional: {
+          dependsOn: ["showEmail"],
+          showIf: (values: any) => values.showEmail === true,
+        },
+        validation: {
+          asyncValidateOn: "change",
+          asyncValidateDelay: 0,
+          asyncValidate: async () => "email is invalid",
+        },
+      });
+
+      store.write.setField("email", "bad@");
+      await new Promise((r) => setTimeout(r, 50));
+
+      expect(store.read.getState().errors.email).toBe("email is invalid");
+
+      store.write.setField("showEmail", false);
+      await new Promise((r) => setTimeout(r, 50));
+
+      expect(store.read.getState().errors.email).toBeUndefined();
+
+      store.write.setField("showEmail", true);
+      await store.feature.validate();
+
+      expect(store.read.getState().errors.email).toBe("email is invalid");
+    });
+
+    it("should not commit async errors for currently hidden fields", async () => {
+      const { createBitStore } = await import("../../core");
+      const store = (createBitStore as any)({
+        initialValues: { showEmail: true, email: "" },
+        validation: { delay: 0 },
+      });
+
+      store.feature.registerField("email", {
+        conditional: {
+          dependsOn: ["showEmail"],
+          showIf: (values: any) => values.showEmail === true,
+        },
+        validation: {
+          asyncValidateOn: "change",
+          asyncValidateDelay: 0,
+          asyncValidate: async () => "email is invalid",
+        },
+      });
+
+      store.write.setField("email", "bad@");
+      await new Promise((r) => setTimeout(r, 50));
+
+      store.write.setField("showEmail", false);
+      await store.feature.validate();
+
+      expect(store.read.getState().errors.email).toBeUndefined();
+      expect(store.read.getState().isValid).toBe(true);
+    });
+
+    it("should not set required error for hidden fields", async () => {
+      const { createBitStore } = await import("../../core");
+      const store = (createBitStore as any)({
+        initialValues: { fieldA: 2, fieldB: "" },
+        validation: {
+          resolver: async () => ({}),
+        },
+        fields: {
+          fieldA: { type: "number" },
+          fieldB: {
+            type: "string",
+            conditional: {
+              dependsOn: ["fieldA"],
+              showIf: (v: any) => v.fieldA > 5,
+              requiredIf: (v: any) => v.fieldA > 0,
+            },
+          },
+        },
+      });
+
+      const state = store.read.getState();
+      expect(state.errors.fieldB).toBeUndefined();
+    });
+
+    it("should not prevent form submission when hidden required field is empty", async () => {
+      const { createBitStore } = await import("../../core");
+      const store = (createBitStore as any)({
+        initialValues: { fieldA: 2, fieldB: "" },
+        validation: {
+          resolver: async (values: any) => {
+            if (!values.fieldB && values.fieldA > 0) {
+              return { fieldB: "required" };
+            }
+            return {};
+          },
+        },
+        fields: {
+          fieldA: { type: "number" },
+          fieldB: {
+            type: "string",
+            conditional: {
+              dependsOn: ["fieldA"],
+              showIf: (v: any) => v.fieldA > 5,
+              requiredIf: (v: any) => v.fieldA > 0,
+            },
+          },
+        },
+      });
+
+      const state = store.read.getState();
+      expect(state.errors.fieldB).toBeUndefined();
+    });
+  });
+
+  describe("Validation Stability - Regression Fixes", () => {
+    it("should not apply stale validation result when values changed during resolver", async () => {
+      const { createBitStore } = await import("../../core");
+      const store = (createBitStore as any)({
+        initialValues: { email: "test@example.com" },
+        validation: {
+          resolver: async (values: any) => {
+            await new Promise((resolve) => setTimeout(resolve, 50));
+            return values.email === "invalid@example.com"
+              ? { email: "invalid email" }
+              : {};
+          },
+        },
+      });
+
+      const result1 = await store.feature.validate({ scopeFields: ["email"] });
+      expect(result1).toBe(true);
+
+      const _validationPromise = store.feature.validate({
+        scopeFields: ["email"],
+      });
+
+      store.write.setField("email", "invalid@example.com");
+
+      await new Promise((resolve) => setTimeout(resolve, 150));
+
+      await store.feature.validate({ scopeFields: ["email"] });
+
+      const finalState = store.read.getState();
+      expect(finalState.errors.email).toBeDefined();
+    });
+
+    it("should handle rapid field changes with async resolver", async () => {
+      const { createBitStore } = await import("../../core");
+      const resolverCalls: string[] = [];
+      const store = (createBitStore as any)({
+        initialValues: { field: "a" },
+        validation: {
+          resolver: async (values: any) => {
+            resolverCalls.push(values.field);
+            await new Promise((resolve) => setTimeout(resolve, 20));
+            return values.field === "valid" ? {} : { field: "error" };
+          },
+        },
+      });
+
+      store.feature.validate({ scopeFields: ["field"] });
+      store.write.setField("field", "b");
+      store.feature.validate({ scopeFields: ["field"] });
+      store.write.setField("field", "valid");
+      const finalResult = await store.feature.validate({
+        scopeFields: ["field"],
+      });
+
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
+      expect(finalResult).toBe(true);
+      expect(store.read.getState().errors.field).toBeUndefined();
+    });
+
+    it("validateNow rejection is handled without crashing", async () => {
+      const { createBitStore } = await import("../../core");
+      const store = (createBitStore as any)({
+        initialValues: { data: "test" },
+        validation: {
+          resolver: async () => {
+            throw new Error("validation failed");
+          },
+        },
+      });
+
+      store.write.setValues({ data: "updated" });
+
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      const state = store.read.getState();
+      expect(state.values.data).toBe("updated");
+    });
+  });
 });
