@@ -328,4 +328,71 @@ describe("BitComputedManager", () => {
     // "a" preserva valor antigo
     expect(result.a).toBe("old");
   });
+
+  describe("Computed Stability - Integration Performance", () => {
+    it("should handle circular field dependencies without O(n²) explosion", async () => {
+      const { createBitStore } = await import("../../core");
+      const store = (createBitStore as any)({
+        initialValues: { fieldA: 5, fieldB: 0 },
+        fields: {
+          fieldA: {
+            conditional: {
+              dependsOn: ["fieldB"],
+              showIf: (v: any) => v.fieldB > 0,
+            },
+          },
+          fieldB: {
+            conditional: {
+              dependsOn: ["fieldA"],
+              showIf: (v: any) => v.fieldA > 0,
+              requiredIf: (v: any) => v.fieldA > 3,
+            },
+          },
+        },
+      });
+
+      const start = performance.now();
+      store.write.setField("fieldA", 10);
+      const duration = performance.now() - start;
+
+      expect(duration).toBeLessThan(50);
+    });
+
+    it("should not cause UI freeze with highly interdependent fields", async () => {
+      const { createBitStore } = await import("../../core");
+      const fields: Record<string, any> = {};
+
+      for (let i = 0; i < 30; i++) {
+        const dependsOn = i > 0 ? [`field${i - 1}`] : [];
+        fields[`field${i}`] = {
+          conditional: {
+            dependsOn,
+            showIf: (v: any) => {
+              if (dependsOn.length === 0) return true;
+              const prevField = dependsOn[0];
+              return (
+                (v as any)[prevField] !== undefined && (v as any)[prevField] > 0
+              );
+            },
+          },
+        };
+      }
+
+      const initialValues: Record<string, number> = {};
+      for (let i = 0; i < 30; i++) {
+        initialValues[`field${i}`] = i;
+      }
+
+      const store = (createBitStore as any)({
+        initialValues,
+        fields,
+      });
+
+      const start = performance.now();
+      store.write.setField("field0", 100);
+      const duration = performance.now() - start;
+
+      expect(duration).toBeLessThan(100);
+    });
+  });
 });

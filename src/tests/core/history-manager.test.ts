@@ -117,4 +117,34 @@ describe("BitHistoryManager", () => {
       shipping: { city: "Osaka" },
     });
   });
+
+  describe("History Stability - Integration", () => {
+    it("should record history via BitStore when a batch-level derivation fails", async () => {
+      const { BitStore } = await import("../../core/store/bit-store-class");
+
+      const store = new BitStore({
+        initialValues: { count: 0, computed: "" },
+        history: { enabled: true, debounceMs: 0 },
+      });
+
+      store.feature.registerField("computed", {
+        computed: () => {
+          throw new Error("computed always fails");
+        },
+        computedDependsOn: ["count"],
+      });
+
+      const initialValues = store.read.getState().values;
+
+      store.write.transaction(() => {
+        store.write.setField("count", 1);
+        store.write.setField("count", 2);
+      });
+
+      expect(store.read.getState().values.count).toBe(2);
+
+      store.feature.undo();
+      expect(store.read.getState().values.count).toBe(initialValues.count);
+    });
+  });
 });
