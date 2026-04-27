@@ -21,14 +21,20 @@ export const yupResolver = <T extends object>(
       await Promise.all(
         options.scopeFields.map(async (field) => {
           try {
-            await schema.validateAt(field, values);
+            await schema.validateAt(field, values, {
+              abortEarly: config?.abortEarly ?? false,
+            });
           } catch (error: unknown) {
-            if (error instanceof ValidationError && error.path) {
-              setFirstError(
-                errors,
-                normalizeErrorPath(error.path),
-                error.message,
-              );
+            if (error instanceof ValidationError) {
+              if (error.inner && error.inner.length > 0) {
+                for (const item of error.inner) {
+                  if (item.path) {
+                    setFirstError(errors, normalizeErrorPath(item.path), item.message);
+                  }
+                }
+              } else if (error.path) {
+                setFirstError(errors, normalizeErrorPath(error.path), error.message);
+              }
             }
           }
         }),

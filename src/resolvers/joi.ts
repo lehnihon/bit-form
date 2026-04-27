@@ -1,6 +1,6 @@
 import { ObjectSchema } from "joi";
 import { BitErrors } from "../core";
-import { filterErrorsByScope, setFirstError } from "./utils";
+import { filterErrorsByScope, setFirstError, normalizeErrorPath } from "./utils";
 import { BitJoiResolverConfig, BitResolverScopeOptions } from "./types";
 
 export const joiResolver = <T extends object>(
@@ -22,7 +22,7 @@ export const joiResolver = <T extends object>(
     const errors: BitErrors<T> = {};
 
     error.details.forEach((detail) => {
-      const path = detail.path.join(".");
+      const path = normalizeErrorPath(detail.path.join("."));
 
       setFirstError(errors, path, detail.message);
     });
