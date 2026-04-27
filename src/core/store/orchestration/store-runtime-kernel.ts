@@ -100,6 +100,10 @@ export class BitStoreRuntimeKernel<T extends object> {
     this.historyOrchestrator.flushPendingSnapshot();
   }
 
+  cancelPendingHistorySnapshot(): void {
+    this.batchState.pendingHistorySnapshot = false;
+  }
+
   cleanup(): void {
     this.flushPendingHistorySnapshot();
     this.historyOrchestrator.dispose();

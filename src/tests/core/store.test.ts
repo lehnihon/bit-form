@@ -219,6 +219,25 @@ describe("BitStore Core", () => {
       expect(listener).toHaveBeenCalledTimes(1);
     });
 
+    it("BUG-5: transaction should not revoke proxies when passing state to subscribers (Vue/MobX compatibility)", () => {
+      const store = createBitStore({ initialValues: { name: "Leo" } });
+
+      let trappedState: any = null;
+      store.observe.subscribeFormMeta(() => {
+        // Simula o Vue lendo propriedades do proxy logo após o commit
+        trappedState = store.read.getState().values.name;
+      });
+
+      // Em um ambiente com Proxy.revocable no batch engine, isso falharia ao ler a prop no final do commit
+      expect(() => {
+        store.write.transaction(() => {
+          store.write.setField("name", "Leandro");
+        });
+      }).not.toThrow();
+
+      expect(trappedState).toBe("Leandro");
+    });
+
     it("should allow watching specific fields", () => {
       const store = createBitStore({
         initialValues: { user: { name: "Leo", age: 30 } },
@@ -1235,6 +1254,33 @@ describe("BitStore Core", () => {
       expect(store.read.getHistoryMetadata().historySize).toBe(1);
       expect(store.read.getState().values.name).toBe("A");
       expect(store.read.getHistoryMetadata().canUndo).toBe(false);
+    });
+
+    it("should maintain historySize=1 and canUndo=false after reset()", () => {
+      const store = createBitStore({
+        initialValues: { name: "Alice" },
+        history: { enabled: true },
+      });
+
+      store.write.setField("name", "Bob");
+      store.write.reset();
+
+      const meta = store.read.getHistoryMetadata();
+      expect(meta.historySize).toBe(1);
+      expect(meta.canUndo).toBe(false);
+    });
+
+    it("should have no-op undo() after reset()", () => {
+      const store = createBitStore({
+        initialValues: { name: "Alice" },
+        history: { enabled: true },
+      });
+
+      store.write.setField("name", "Bob");
+      store.write.reset();
+      store.feature.undo();
+
+      expect(store.read.getState().values.name).toBe("Alice");
     });
 
     it("should not reintroduce pending snapshot after rebase", () => {

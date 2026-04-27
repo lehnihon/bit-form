@@ -121,7 +121,7 @@ export function flushStoreBatchState<T extends object>(args: {
     return null;
   }
 
-  let nextState = batchState.pendingState;
+  let nextState = { ...batchState.pendingState };
   const changedPaths = batchState.changedPathList ?? undefined;
   const valuesChanged = batchState.valuesChanged;
 
