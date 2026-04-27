@@ -1453,5 +1453,67 @@ describe("BitValidationManager", () => {
       const state = store.read.getState();
       expect(state.values.data).toBe("updated");
     });
+
+    it("BUG-2: scope-validation-commit guard should not abort if normalizer changes object reference but value is identical", async () => {
+      const { createBitStore } = await import("../../core");
+      const store = (createBitStore as any)({
+        initialValues: { addr: { street: "" } },
+        fields: {
+          addr: { normalize: (v: any) => ({ ...v }) },
+        },
+        validation: {
+          resolver: async (values: any) => {
+            if (!values.addr.street) return { "addr.street": "Required" };
+            return {};
+          },
+        },
+      });
+
+      store.write.setField("addr", { street: "" });
+      await store.feature.validate();
+      expect(store.read.getState().errors["addr.street"]).toBe("Required");
+    });
+
+    it("BUG-3: cancelAll() must prevent validation spinners from getting stuck if promise resolves during teardown", async () => {
+      const { createBitStore } = await import("../../core");
+      let resolveAsync!: (val: string | null) => void;
+
+      const store = (createBitStore as any)({
+        initialValues: { email: "" },
+        validation: {
+          delay: 0,
+        },
+        fields: {
+          email: {
+            validation: {
+              asyncValidateOn: "change",
+              asyncValidateDelay: 0,
+              asyncValidate: async () =>
+                new Promise<string | null>((resolve) => {
+                  resolveAsync = resolve;
+                }),
+            },
+          },
+        },
+      });
+
+      // Start validation
+      store.write.setField("email", "test");
+      await new Promise((r) => setTimeout(r, 0)); // let asyncValidate trigger
+
+      expect(store.read.getState().isValidating.email).toBe(true);
+
+      // Simulate the race: the promise resolves right as we cancel
+      resolveAsync(null);
+      
+      // Cancel everything (e.g., component unmount or form submit teardown)
+      store.feature.cleanup();
+
+      // Ensure the microtask queue flushes the resolved promise
+      await new Promise((r) => setTimeout(r, 0));
+
+      // Spinner should be clear
+      expect(store.read.getState().isValidating.email).toBeUndefined();
+    });
   });
 });

@@ -626,6 +626,43 @@ describe("Persist Feature (BitPersistManager)", () => {
 
       store.feature.cleanup();
     });
+
+    it("BUG-4: should not restore or leave isRestoring=true if store is destroyed before restore finishes", async () => {
+      let resolveStorage!: (value: string | null) => void;
+      const storage = {
+        getItem: vi.fn(() => new Promise<string | null>((resolve) => {
+          resolveStorage = resolve;
+        })),
+        setItem: vi.fn(),
+        removeItem: vi.fn(),
+      };
+
+      const store = createBitStore<TestForm>({
+        initialValues: { name: "Leo", email: "leo@test.com", age: 30 },
+        persist: {
+          enabled: true,
+          key: "test-form",
+          storage,
+        },
+      });
+
+      // trigger restore but do not await
+      const restorePromise = store.feature.restorePersisted();
+      
+      expect(store.read.getState().persist.isRestoring).toBe(true);
+
+      // destroy before storage resolves
+      store.feature.cleanup();
+      
+      // resolve storage now
+      resolveStorage(JSON.stringify({ name: "Restored" }));
+      
+      const restored = await restorePromise;
+      expect(restored).toBe(false);
+      
+      // The store should not have its state mutated by the aborted restore
+      expect(store.read.getState().values.name).toBe("Leo");
+    });
   });
 
   describe("clearPersisted", () => {

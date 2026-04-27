@@ -84,16 +84,25 @@ export function createStoreEffects<T extends object>(args: {
     : getNoopBitBus();
 
   const registry = new BitEffectRegistry<T>();
+  let destroyed = false;
 
   const persistEffects = new BitPersistEffects<T>(persistManager);
   registry.register({
     name: "persist",
     onStateUpdated: (nextState, valuesChanged) =>
       persistEffects.onStateUpdated(nextState, valuesChanged),
-    restorePersisted: () => persistEffects.restorePersisted(),
+    restorePersisted: async () => {
+      if (destroyed) return false;
+      const restored = await persistEffects.restorePersisted();
+      if (destroyed) return false;
+      return restored;
+    },
     savePersistedNow: () => persistEffects.savePersistedNow(),
     clearPersisted: () => persistEffects.clearPersisted(),
-    destroy: () => persistEffects.destroy(),
+    destroy: () => {
+      destroyed = true;
+      persistEffects.destroy();
+    },
   });
 
   const pluginEffects = new BitPluginEffects<T>(pluginManager);

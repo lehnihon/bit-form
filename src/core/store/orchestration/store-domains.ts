@@ -372,6 +372,7 @@ export function createBitStoreDomains<T extends object>(args: {
       runtime.flushPendingHistorySnapshot();
       runtime.runBatch(() => {
         runtime.capabilities.lifecycle.reset();
+        runtime.cancelPendingHistorySnapshot();
       });
     },
     transaction: (callback) => runtime.runBatch(callback),

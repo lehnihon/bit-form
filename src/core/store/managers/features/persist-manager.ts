@@ -37,6 +37,7 @@ export class BitPersistManager<T extends object = Record<string, unknown>> {
   private timer: ReturnType<typeof setTimeout> | undefined;
   private writeQueue: Promise<void> = Promise.resolve();
   private activeWrites = 0;
+  private isDestroyed = false;
 
   constructor(
     private config: BitPersistResolvedConfig<T>,
@@ -149,14 +150,14 @@ export class BitPersistManager<T extends object = Record<string, unknown>> {
   }
 
   async restore() {
-    if (!this.canPersist()) return false;
+    if (this.isDestroyed || !this.canPersist()) return false;
 
     const storage = this.getStorage();
     if (!storage) return false;
 
     try {
       const raw = await storage.getItem(this.config.key);
-      if (!raw) return false;
+      if (this.isDestroyed || !raw) return false;
 
       const parsed = this.config.deserialize(raw);
       if (!parsed || typeof parsed !== "object") {
@@ -188,6 +189,7 @@ export class BitPersistManager<T extends object = Record<string, unknown>> {
   }
 
   destroy() {
+    this.isDestroyed = true;
     if (this.timer) {
       clearTimeout(this.timer);
       this.timer = undefined;

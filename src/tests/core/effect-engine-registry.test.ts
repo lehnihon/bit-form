@@ -119,4 +119,42 @@ describe("effect engine registry", () => {
 
     consoleErrorSpy.mockRestore();
   });
+
+  it("BUG-6: deve isolar falhas em onStateUpdated e continuar chamando outros efeitos", () => {
+    const consoleErrorSpy = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+    const registry = new BitEffectRegistry<Record<string, unknown>>();
+    const onStateUpdatedA = vi.fn(() => {
+      throw new Error("effect-a-failed");
+    });
+    const onStateUpdatedB = vi.fn();
+
+    registry.register({
+      name: "effect-a",
+      onStateUpdated: onStateUpdatedA,
+    });
+
+    registry.register({
+      name: "effect-b",
+      onStateUpdated: onStateUpdatedB,
+    });
+
+    const engine = new BitStoreEffectEngine(registry);
+
+    expect(() => {
+      engine.onStateUpdated({} as any, true);
+    }).not.toThrow();
+
+    expect(onStateUpdatedA).toHaveBeenCalledTimes(1);
+    expect(onStateUpdatedB).toHaveBeenCalledTimes(1);
+    expect(consoleErrorSpy).toHaveBeenCalledWith(
+      expect.stringContaining(
+        'effect "effect-a" failed in hook "onStateUpdated"',
+      ),
+      expect.any(Error),
+    );
+
+    consoleErrorSpy.mockRestore();
+  });
 });

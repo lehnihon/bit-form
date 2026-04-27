@@ -28,9 +28,13 @@ export class BitStoreEffectEngine<T extends object> {
   }
 
   onStateUpdated(nextState: BitState<T>, valuesChanged: boolean): void {
-    this.effects.forEach((effect) =>
-      effect.onStateUpdated?.(nextState, valuesChanged),
-    );
+    this.effects.forEach((effect) => {
+      try {
+        effect.onStateUpdated?.(nextState, valuesChanged);
+      } catch (error) {
+        this.logEffectHookError(effect.name, "onStateUpdated", error);
+      }
+    });
   }
 
   async restorePersisted(): Promise<boolean> {
@@ -159,6 +163,7 @@ export class BitStoreEffectEngine<T extends object> {
       | "beforeSubmit"
       | "afterSubmit"
       | "onFieldChange"
+      | "onStateUpdated"
       | "reportOperationalError",
     error: unknown,
   ): void {
