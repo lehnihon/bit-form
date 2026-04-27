@@ -1,4 +1,4 @@
-import { computed, onMounted, onUnmounted, ref, watch } from "vue";
+import { computed, onUnmounted, ref } from "vue";
 import type { ScopeStatus, ValidateScopeResult } from "../core";
 import { isScopeStatusEqual } from "../core";
 import { useBitStore } from "./context";
@@ -10,13 +10,6 @@ export function useBitSteps(scopeNames: string[]): UseBitStepsResult {
 
   const scope = computed(() => scopeNames[stepIndex.value] ?? "");
   const status = ref<ScopeStatus>(store.read.getScopeStatus(scope.value));
-  let unsubscribe: (() => void) | undefined;
-
-  watch(scope, (newScope) => {
-    status.value = store.read.getScopeStatus(newScope);
-    unsubscribe?.();
-    unsubscribe = store.observe.subscribeScopeStatus(newScope, updateStatus);
-  });
 
   const updateStatus = () => {
     const scopeName = scope.value;
@@ -26,12 +19,15 @@ export function useBitSteps(scopeNames: string[]): UseBitStepsResult {
     }
   };
 
-  onMounted(() => {
+  let unsubscribe = store.observe.subscribeScopeStatus(scope.value, updateStatus);
+
+  const rebindScopeSubscription = () => {
+    unsubscribe();
     unsubscribe = store.observe.subscribeScopeStatus(scope.value, updateStatus);
-  });
+  };
 
   onUnmounted(() => {
-    unsubscribe?.();
+    unsubscribe();
   });
 
   const validate = async (): Promise<ValidateScopeResult> => {
@@ -54,6 +50,8 @@ export function useBitSteps(scopeNames: string[]): UseBitStepsResult {
     const valid = await store.feature.validate({ scope: scopeName });
     if (valid) {
       stepIndex.value = Math.min(stepIndex.value + 1, scopeNames.length - 1);
+      status.value = store.read.getScopeStatus(scope.value);
+      rebindScopeSubscription();
     } else {
       const errors = store.read.getScopeErrors(scopeName);
       const pathsWithErrors = Object.keys(errors);
@@ -66,6 +64,8 @@ export function useBitSteps(scopeNames: string[]): UseBitStepsResult {
 
   const prev = () => {
     stepIndex.value = Math.max(stepIndex.value - 1, 0);
+    status.value = store.read.getScopeStatus(scope.value);
+    rebindScopeSubscription();
   };
 
   const goTo = (targetStep: number) => {
@@ -73,6 +73,8 @@ export function useBitSteps(scopeNames: string[]): UseBitStepsResult {
       0,
       Math.min(targetStep - 1, scopeNames.length - 1),
     );
+    status.value = store.read.getScopeStatus(scope.value);
+    rebindScopeSubscription();
   };
 
   const step = computed(() => stepIndex.value + 1);

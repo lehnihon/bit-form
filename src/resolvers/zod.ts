@@ -1,6 +1,6 @@
 import { ZodError, ZodSchema } from "zod";
 import { BitErrors } from "../core";
-import { filterErrorsByScope, setFirstError } from "./utils";
+import { filterErrorsByScope, setFirstError, normalizeErrorPath } from "./utils";
 import { BitResolverScopeOptions, BitZodResolverConfig } from "./types";
 
 export const zodResolver = <T extends object>(
@@ -19,7 +19,7 @@ export const zodResolver = <T extends object>(
 
       if (error instanceof ZodError) {
         for (const issue of error.issues) {
-          const path = issue.path.join(".");
+          const path = normalizeErrorPath(issue.path.join("."));
           setFirstError(errors, path, issue.message);
         }
       }

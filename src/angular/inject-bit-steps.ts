@@ -15,25 +15,24 @@ export function injectBitSteps(scopeNames: string[]): InjectBitStepsResult {
     store.read.getScopeStatus(getCurrentScope()),
   );
 
-  const updateStatus = () => {
-    const scopeName = getCurrentScope();
+  const updateStatus = (scopeName: string) => {
     const newStatus = store.read.getScopeStatus(scopeName);
     const current = status();
-    if (!isScopeStatusEqual(current, newStatus)) {
+    if (getCurrentScope() === scopeName && !isScopeStatusEqual(current, newStatus)) {
       status.set(newStatus);
     }
   };
 
   let unsubscribe = store.observe.subscribeScopeStatus(
     getCurrentScope(),
-    updateStatus,
+    () => updateStatus(getCurrentScope()),
   );
 
   const rebindScopeSubscription = () => {
     unsubscribe();
     unsubscribe = store.observe.subscribeScopeStatus(
       getCurrentScope(),
-      updateStatus,
+      () => updateStatus(getCurrentScope()),
     );
   };
 
