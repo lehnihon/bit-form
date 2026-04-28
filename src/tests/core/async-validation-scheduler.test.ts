@@ -232,4 +232,88 @@ describe("BitAsyncValidationScheduler", () => {
       expect(finalState.errors.email).toBeUndefined();
     });
   });
+
+  describe("Production Audit Regressions", () => {
+    it("ACHADO-5: should clear isValidating even when asyncValidate throws an exception", async () => {
+      const fieldValidatingCalls: Array<[string, boolean]> = [];
+
+      const port = {
+        schedule: (fn: () => void, delay: number) => {
+          const id = setTimeout(fn, delay);
+          return () => clearTimeout(id);
+        },
+        getValues: () => ({ email: "test@test.com" }),
+        setFieldValidating: (path: string, val: boolean) => {
+          fieldValidatingCalls.push([path, val]);
+        },
+        setAsyncError: vi.fn(),
+        clearAsyncError: vi.fn(),
+        onValidationPassed: vi.fn().mockResolvedValue(undefined),
+        onError: vi.fn(),
+      };
+
+      const scheduler = new BitAsyncValidationScheduler(port as any);
+
+      const throwingValidate = vi.fn(async () => {
+        throw new Error("validator crashed unexpectedly");
+      });
+
+      scheduler.handle("email", "test@test.com", throwingValidate as any, 0);
+
+      // Wait for the job to flush and run
+      await new Promise((r) => setTimeout(r, 30));
+
+      const falseCalls = fieldValidatingCalls.filter(
+        ([path, val]) => path === "email" && val === false,
+      );
+
+      // isValidating(false) MUST have been called even though asyncValidate threw
+      expect(falseCalls.length).toBeGreaterThanOrEqual(1);
+    });
+
+    it("ACHADO-5: should not leave isValidating=true when asyncValidate throws after abort signal", async () => {
+      const fieldValidatingCalls: Array<[string, boolean]> = [];
+      let abortSignalRef: AbortSignal | undefined;
+
+      const port = {
+        schedule: (fn: () => void, delay: number) => {
+          const id = setTimeout(fn, delay);
+          return () => clearTimeout(id);
+        },
+        getValues: () => ({ email: "test@test.com" }),
+        setFieldValidating: (path: string, val: boolean) => {
+          fieldValidatingCalls.push([path, val]);
+        },
+        setAsyncError: vi.fn(),
+        clearAsyncError: vi.fn(),
+        onValidationPassed: vi.fn().mockResolvedValue(undefined),
+        onError: vi.fn(),
+      };
+
+      const scheduler = new BitAsyncValidationScheduler(port as any);
+
+      // Validator that captures the abort signal and throws after abort
+      const throwAfterAbort = vi.fn(async (value: unknown, allValues: unknown) => {
+        // Simulate a slow validator that checks abort mid-flight
+        await new Promise((r) => setTimeout(r, 20));
+        throw new Error("crashed after long computation");
+      });
+
+      scheduler.handle("email", "test@test.com", throwAfterAbort as any, 0);
+
+      // Cancel before the validator finishes
+      await new Promise((r) => setTimeout(r, 5));
+      scheduler.cancel("email");
+
+      // Wait for all async work to settle
+      await new Promise((r) => setTimeout(r, 50));
+
+      const trueAfterCancel = fieldValidatingCalls
+        .slice(fieldValidatingCalls.findIndex(([, v]) => v === false))
+        .filter(([, v]) => v === true);
+
+      // No spurious isValidating=true after cleanup
+      expect(trueAfterCancel).toHaveLength(0);
+    });
+  });
 });

@@ -3586,5 +3586,42 @@ describe("BitStore Core", () => {
       await new Promise(r => setTimeout(r, 10)); // wait for history debounce 0 to flush
       expect(store.read.getHistoryMetadata().historyIndex).toBe(1);
     });
+
+    it("ACHADO-4: should not corrupt isDirty baseline when external reference is mutated after rebaseValues", async () => {
+      const { createBitStore } = await import("../../core");
+      const store = createBitStore({ initialValues: { count: 0, name: "Leo" } });
+
+      const externalValues = { count: 0, name: "Leo" };
+      store.write.setValues(externalValues, { rebase: true });
+
+      // Mutação externa DEPOIS do rebase — não deve afetar o baseline
+      externalValues.count = 99;
+      externalValues.name = "Corrupted";
+
+      store.write.setField("count", 1);
+
+      // isDirty deve ser true: 1 !== 0 (baseline original, não 99)
+      expect(store.read.getState().isDirty).toBe(true);
+
+      // getDirtyValues deve incluir count com o valor correto
+      const dirty = store.read.getDirtyValues();
+      expect((dirty as any).count).toBe(1);
+    });
+
+    it("ACHADO-4: rebaseValues with non-object items in array should not corrupt baseline", async () => {
+      const { createBitStore } = await import("../../core");
+      const store = createBitStore({ initialValues: { tags: ["a", "b"] } });
+
+      const values = { tags: ["a", "b"] };
+      store.write.setValues(values, { rebase: true });
+
+      // External mutation to the array
+      values.tags.push("c");
+
+      store.write.setField("tags", ["a", "b", "x"]);
+
+      // isDirty should be true: ["a","b","x"] !== baseline ["a","b"]
+      expect(store.read.getState().isDirty).toBe(true);
+    });
   });
 });

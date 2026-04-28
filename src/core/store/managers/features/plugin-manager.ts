@@ -9,10 +9,17 @@ import type {
   BitPluginErrorEvent,
 } from "../../contracts/types";
 
+interface PendingPluginError<T extends object> {
+  source: BitPluginErrorEvent<T>["source"];
+  pluginName?: string;
+  error: unknown;
+  event?: unknown;
+}
+
 export class BitPluginManager<T extends object = Record<string, unknown>> {
   private teardownFns: Array<() => void> = [];
   private notifyingError = false;
-  private pendingErrorQueue: BitPluginErrorEvent<T>[] = [];
+  private pendingErrorQueue: PendingPluginError<T>[] = [];
   private cachedContext: BitPluginContext<T> | null = null;
 
   constructor(
@@ -75,18 +82,15 @@ export class BitPluginManager<T extends object = Record<string, unknown>> {
     event?: unknown,
     pluginName?: string,
   ) {
-    const context = this.getContext();
-    const stateSnapshot = context.getState();
-    this.pendingErrorQueue.push({
-      source,
-      pluginName,
-      error,
-      event,
-      values: stateSnapshot.values,
-      state: stateSnapshot,
-    });
+    // Enqueue with minimal data — state snapshot is captured at processing time
+    // to ensure plugins receive the freshest state, not a stale copy from the
+    // moment the error was enqueued (which may be several ticks earlier).
+    this.pendingErrorQueue.push({ source, pluginName, error, event });
 
     if (this.notifyingError) {
+      // The active drain loop will pick up this entry in its next iteration.
+      // Do NOT return without re-checking: the while-loop below handles the
+      // re-entrancy case automatically.
       return;
     }
 
@@ -94,10 +98,21 @@ export class BitPluginManager<T extends object = Record<string, unknown>> {
 
     try {
       while (this.pendingErrorQueue.length > 0) {
-        const payload = this.pendingErrorQueue.shift();
-        if (!payload) {
+        const entry = this.pendingErrorQueue.shift();
+        if (!entry) {
           break;
         }
+
+        // Build the full payload with a fresh state snapshot at dispatch time.
+        const stateSnapshot = this.contextFactory().getState();
+        const payload: BitPluginErrorEvent<T> = {
+          source: entry.source,
+          pluginName: entry.pluginName,
+          error: entry.error,
+          event: entry.event,
+          values: stateSnapshot.values,
+          state: stateSnapshot,
+        };
 
         for (const plugin of this.plugins) {
           const onError = plugin.hooks?.onError;

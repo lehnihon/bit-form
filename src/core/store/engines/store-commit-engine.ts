@@ -106,9 +106,28 @@ function executeStatePatchOperation<T extends object>(args: {
       });
     } catch {
       // If the raw fallback also fails (e.g. immutable proxy, serialisation
-      // error), abort the mutation gracefully rather than letting an unhandled
-      // exception crash the framework component tree.
-      result = undefined;
+      // error), still try to commit the non-values portion of the patch
+      // (errors, touched, isValidating, isDirty, isValid, etc.) so the
+      // store does not silently diverge from the UI.
+      try {
+        const { values: _ignored, ...safePartial } = operation.partialState as {
+          values?: unknown;
+          [key: string]: unknown;
+        };
+
+        if (Object.keys(safePartial).length > 0) {
+          result = applyStateUpdate({
+            currentState,
+            partialState: safePartial,
+            changedPaths: effectiveChangedPaths,
+            applyValueDerivations: (values) => values,
+          });
+        }
+      } catch {
+        // Completely unrecoverable — abort the mutation gracefully to
+        // avoid crashing the component tree. All paths exhausted.
+        result = undefined;
+      }
     }
   }
   return result;

@@ -483,7 +483,7 @@ describe("BitSubscriptionEngine", () => {
       const unsubscribe = subscribeStoreScopeStatus({
         scopeName: "myScope",
         getScopeFields: () => ["field1"],
-        readScopeStatus: () => ({ isValid: true, isDirty: false, isValidating: false, progress: 0 }),
+        readScopeStatus: () => ({ hasErrors: false, isDirty: false, errors: {} }),
         subscribeSelector: subscribeSelector as any,
         listener: vi.fn(),
       });

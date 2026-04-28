@@ -316,7 +316,12 @@ export class BitAsyncValidationScheduler<T extends object> {
     } finally {
       const currentPath = this.findControllerPath(job.controller) ?? path;
 
-      if (!job.controller.signal.aborted && !this._cancellingAll) {
+      // Always clear the validating flag unless cancelAll() is orchestrating
+      // a bulk teardown. The !aborted guard was removed intentionally: if
+      // asyncValidate throws after being aborted (an uncommon but valid path),
+      // the aborted signal would skip this cleanup and leave isValidating=true
+      // permanently, blocking submission indefinitely.
+      if (!this._cancellingAll) {
         this.port.setFieldValidating(currentPath, false);
       }
 
