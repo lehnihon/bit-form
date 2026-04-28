@@ -92,7 +92,12 @@ export class BitValuesLifecycleManager<T extends object> {
     const previousValues = this.store.getState().values;
     const clonedValues = deepClone(newValues);
 
-    this.store.setBaselineValues(newValues);
+    // Use the clone for the baseline, not the original reference.
+    // If the caller mutates `newValues` after calling rebaseValues(), the
+    // baseline would be silently corrupted and isDirty comparisons would yield
+    // wrong results. The deep clone ensures the baseline is immutable from
+    // the outside world's perspective.
+    this.store.setBaselineValues(clonedValues);
 
     this.store.cancelAllValidations();
     this.store.evaluateAllDependencies(clonedValues);

@@ -164,6 +164,12 @@ export class BitPersistManager<T extends object = Record<string, unknown>> {
         return false;
       }
 
+      // Guard against component unmounting during deserialize. In React
+      // StrictMode effects run twice; destroy() may be called while we are
+      // between the final await and apply. Without this check, stale data
+      // from a previous mount would be applied to the freshly-created store.
+      if (this.isDestroyed) return false;
+
       this.applyRestoredValues(parsed);
       return true;
     } catch (error) {

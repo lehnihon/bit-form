@@ -3562,4 +3562,66 @@ describe("BitStore Core", () => {
       expect(store.read.getState().touched["tags.1"]).toBeUndefined();
     });
   });
+
+  describe("Production Audit Regressions", () => {
+    it("should not create a history snapshot when transaction does not mutate state", async () => {
+      const { createBitStore } = await import("../../core");
+      const store = createBitStore({ initialValues: { nome: "Leandro" }, history: { enabled: true, debounceMs: 0 } });
+      
+      const beforeSnapshot = store.read.getHistoryMetadata().historyIndex;
+      expect(beforeSnapshot).toBe(0);
+
+      // Iniciar transação sem alterar nada
+      store.write.transaction(() => {
+        // Nada muda
+      });
+
+      const afterSnapshot = store.read.getHistoryMetadata().historyIndex;
+      expect(afterSnapshot).toBe(0); // Não deve ter criado snapshot fantasma
+
+      // Alterar de verdade deve criar
+      store.write.transaction(() => {
+        store.write.setField("nome", "Leo");
+      });
+      await new Promise(r => setTimeout(r, 10)); // wait for history debounce 0 to flush
+      expect(store.read.getHistoryMetadata().historyIndex).toBe(1);
+    });
+
+    it("ACHADO-4: should not corrupt isDirty baseline when external reference is mutated after rebaseValues", async () => {
+      const { createBitStore } = await import("../../core");
+      const store = createBitStore({ initialValues: { count: 0, name: "Leo" } });
+
+      const externalValues = { count: 0, name: "Leo" };
+      store.write.setValues(externalValues, { rebase: true });
+
+      // Mutação externa DEPOIS do rebase — não deve afetar o baseline
+      externalValues.count = 99;
+      externalValues.name = "Corrupted";
+
+      store.write.setField("count", 1);
+
+      // isDirty deve ser true: 1 !== 0 (baseline original, não 99)
+      expect(store.read.getState().isDirty).toBe(true);
+
+      // getDirtyValues deve incluir count com o valor correto
+      const dirty = store.read.getDirtyValues();
+      expect((dirty as any).count).toBe(1);
+    });
+
+    it("ACHADO-4: rebaseValues with non-object items in array should not corrupt baseline", async () => {
+      const { createBitStore } = await import("../../core");
+      const store = createBitStore({ initialValues: { tags: ["a", "b"] } });
+
+      const values = { tags: ["a", "b"] };
+      store.write.setValues(values, { rebase: true });
+
+      // External mutation to the array
+      values.tags.push("c");
+
+      store.write.setField("tags", ["a", "b", "x"]);
+
+      // isDirty should be true: ["a","b","x"] !== baseline ["a","b"]
+      expect(store.read.getState().isDirty).toBe(true);
+    });
+  });
 });

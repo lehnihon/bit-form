@@ -464,6 +464,48 @@ describe("BitSubscriptionEngine", () => {
       expect(state).toBeDefined();
       expect(state.values.field1).toBe("value49");
     });
+
+    it("should not orphan scope subscription if destroyed during registry change microtask", async () => {
+      const { subscribeStoreScopeStatus } = await import("../../core/store/orchestration/store-observe-ops");
+
+      let selectorUnsubscribeCalls = 0;
+      let registryListener: any = null;
+
+      const subscribeSelector = vi.fn((selector, listener, options) => {
+        if (options.paths.some((p: string) => p.includes("__scope__"))) {
+          registryListener = listener;
+        }
+        return () => {
+          selectorUnsubscribeCalls++;
+        };
+      });
+
+      const unsubscribe = subscribeStoreScopeStatus({
+        scopeName: "myScope",
+        getScopeFields: () => ["field1"],
+        readScopeStatus: () => ({ hasErrors: false, isDirty: false, errors: {} }),
+        subscribeSelector: subscribeSelector as any,
+        listener: vi.fn(),
+      });
+
+      // Simula uma mudança no registry. Isso enfileira a microtask.
+      registryListener();
+
+      // Desmonta/destrói o componente/scope *antes* da microtask rodar.
+      unsubscribe();
+
+      // Deixa a microtask rodar
+      await new Promise(r => setTimeout(r, 0));
+
+      // 1 call from initial scope sub, 1 from registry sub. 
+      // Se a microtask vazou e fez um novo resubscribe, selectorUnsubscribeCalls não vai bater (ou a gente vaza memória).
+      // Na verdade, o mock subscribeSelector foi chamado mais uma vez se vazou.
+      
+      const callsAfterFirstSubscribe = subscribeSelector.mock.calls.length;
+      
+      // se não tivesse `if (destroyed) { unsubscribeScoped(); return; }`, ele chamaria subscribeScoped de novo (mais 1 call pro subscribeSelector)
+      expect(subscribeSelector).toHaveBeenCalledTimes(2); // 1 pro escopo, 1 pro registry. A microtask NÃO deve fazer o 3o se destroyed.
+    });
   });
 
   describe("Subscription Stability - Listener Exceptions", () => {

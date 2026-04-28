@@ -14,6 +14,10 @@ interface ValidationAccess {
   validate(): Promise<boolean>;
 }
 
+// NOTA: Estes WeakMaps são module-level intencionalmente.
+// A chave `dispatch` é sempre uma closure única por instância de store em produção.
+// Em testes, garanta que cada `createStore()` use um mock de dispatch diferente 
+// para evitar vazamento de estado `isRestoring` entre testes.
 const activeRestoringOpsByDispatch = new WeakMap<Function, number>();
 const lastRestoringErrorByDispatch = new WeakMap<Function, Error | null>();
 

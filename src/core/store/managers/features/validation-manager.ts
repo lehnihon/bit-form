@@ -288,13 +288,13 @@ export class BitValidationManager<T extends object> {
     this.validatingCount = 0;
     this.debouncer.cancelPending();
 
-    // Dispatch clear BEFORE aborting async validation, so that any resolving promises
-    // in the microtask queue that leak past the abort check won't overwrite the clear state.
-    this.store.dispatch(patchStateOperation({ isValidating: {} }));
-
     this.asyncScheduler.cancelAll();
     this.asyncErrors.clear();
     this.coordinator.cancelAllImmediate();
+
+    // Dispatch clear AFTER aborting async validation, to overwrite any residual state
+    // that might have been dispatched synchronously by the cancelAll operations.
+    this.store.dispatch(patchStateOperation({ isValidating: {} }));
   }
 
   private async runImmediateAsyncValidation(

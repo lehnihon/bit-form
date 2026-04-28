@@ -663,6 +663,54 @@ describe("Persist Feature (BitPersistManager)", () => {
       // The store should not have its state mutated by the aborted restore
       expect(store.read.getState().values.name).toBe("Leo");
     });
+
+    it("ACHADO-3: should not apply restored values if destroy() is called between deserialize and apply", async () => {
+      // Models the React StrictMode scenario: the second effect cleanup fires
+      // after getItem resolves but before applyRestoredValues executes.
+      let resolveStorage!: (value: string | null) => void;
+      const applyCalls: unknown[] = [];
+
+      const storage = {
+        getItem: vi.fn(
+          () =>
+            new Promise<string | null>((resolve) => {
+              resolveStorage = resolve;
+            }),
+        ),
+        setItem: vi.fn(),
+        removeItem: vi.fn(),
+      };
+
+      const store = createBitStore<TestForm>({
+        initialValues: { name: "Leo", email: "leo@test.com", age: 30 },
+        persist: {
+          enabled: true,
+          key: "test-form",
+          storage,
+        },
+      });
+
+      // Wrap applyRestoredValues via observation to detect if it was called
+      const unsubscribe = store.observe.subscribe(() => {
+        const v = store.read.getState().values;
+        if (v.name === "Restored") applyCalls.push(v);
+      });
+
+      const restorePromise = store.feature.restorePersisted();
+
+      // Storage resolves with data...
+      resolveStorage(JSON.stringify({ name: "Restored" }));
+
+      // ...but destroy() fires in the same microtask queue, before applyRestoredValues
+      store.feature.cleanup();
+      unsubscribe();
+
+      await restorePromise;
+
+      // applyRestoredValues must NOT have applied the value
+      expect(applyCalls).toHaveLength(0);
+      expect(store.read.getState().values.name).toBe("Leo");
+    });
   });
 
   describe("clearPersisted", () => {

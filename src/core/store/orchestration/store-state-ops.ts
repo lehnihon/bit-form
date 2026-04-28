@@ -123,7 +123,9 @@ export function flushStoreBatchedStateUpdates<T extends object>(args: {
 
   if (batchState.pendingHistorySnapshot) {
     batchState.pendingHistorySnapshot = false;
-    saveHistory(nextState.values);
+    if (nextState !== state) {
+      saveHistory(nextState.values);
+    }
   }
 
   return nextState;
