@@ -3562,4 +3562,29 @@ describe("BitStore Core", () => {
       expect(store.read.getState().touched["tags.1"]).toBeUndefined();
     });
   });
+
+  describe("Production Audit Regressions", () => {
+    it("should not create a history snapshot when transaction does not mutate state", async () => {
+      const { createBitStore } = await import("../../core");
+      const store = createBitStore({ initialValues: { nome: "Leandro" }, history: { enabled: true, debounceMs: 0 } });
+      
+      const beforeSnapshot = store.read.getHistoryMetadata().historyIndex;
+      expect(beforeSnapshot).toBe(0);
+
+      // Iniciar transação sem alterar nada
+      store.write.transaction(() => {
+        // Nada muda
+      });
+
+      const afterSnapshot = store.read.getHistoryMetadata().historyIndex;
+      expect(afterSnapshot).toBe(0); // Não deve ter criado snapshot fantasma
+
+      // Alterar de verdade deve criar
+      store.write.transaction(() => {
+        store.write.setField("nome", "Leo");
+      });
+      await new Promise(r => setTimeout(r, 10)); // wait for history debounce 0 to flush
+      expect(store.read.getHistoryMetadata().historyIndex).toBe(1);
+    });
+  });
 });

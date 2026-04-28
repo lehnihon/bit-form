@@ -245,4 +245,45 @@ describe("restoreStorePersisted", () => {
       patch: { isRestoring: false, error: null },
     });
   });
+
+  it("should not share isRestoring state between different stores (dispatch closures)", async () => {
+    const dispatch1 = vi.fn();
+    const dispatch2 = vi.fn();
+
+    const def1 = createDeferred<boolean>();
+    const def2 = createDeferred<boolean>();
+
+    const effects1 = { restorePersisted: vi.fn(() => def1.promise) } as any;
+    const effects2 = { restorePersisted: vi.fn(() => def2.promise) } as any;
+
+    const op1 = restoreStorePersisted({ dispatch: dispatch1, effects: effects1 });
+    const op2 = restoreStorePersisted({ dispatch: dispatch2, effects: effects2 });
+
+    expect(dispatch1).toHaveBeenNthCalledWith(1, {
+      kind: "form.persistMeta",
+      patch: { isRestoring: true, error: null },
+    });
+    expect(dispatch2).toHaveBeenNthCalledWith(1, {
+      kind: "form.persistMeta",
+      patch: { isRestoring: true, error: null },
+    });
+
+    def1.resolve(true);
+    await op1;
+
+    expect(dispatch1).toHaveBeenNthCalledWith(2, {
+      kind: "form.persistMeta",
+      patch: { isRestoring: false, error: null },
+    });
+    // dispatch2 should NOT have received a false patch yet
+    expect(dispatch2).toHaveBeenCalledTimes(1);
+
+    def2.resolve(true);
+    await op2;
+
+    expect(dispatch2).toHaveBeenNthCalledWith(2, {
+      kind: "form.persistMeta",
+      patch: { isRestoring: false, error: null },
+    });
+  });
 });

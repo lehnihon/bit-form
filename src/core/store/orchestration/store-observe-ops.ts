@@ -266,7 +266,10 @@ export function subscribeStoreScopeStatus<T extends object>(args: {
         // nothing: creating a new scoped subscription here would leak it
         // (no one holds a reference to unsubscribe it), and calling listener
         // would update state on an already-unmounted component.
-        if (destroyed) return;
+        if (destroyed) {
+          unsubscribeScoped();
+          return;
+        }
         subscribeScoped();
         const nextStatus = readScopeStatus(scopeName);
         if (isScopeStatusEqual(lastStatus, nextStatus)) {

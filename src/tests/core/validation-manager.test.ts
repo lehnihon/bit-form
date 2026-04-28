@@ -1516,4 +1516,81 @@ describe("BitValidationManager", () => {
       expect(store.read.getState().isValidating.email).toBeUndefined();
     });
   });
+
+  describe("Production Audit Regressions", () => {
+    it("should clear isValidating state correctly when cancelAllValidations is called during in-flight async validation", async () => {
+      const { createBitStore } = await import("../../core");
+      let resolveAsync!: (v: string | null) => void;
+      
+      const store = createBitStore({
+        initialValues: { email: "" },
+        fields: {
+          email: {
+            validation: {
+              asyncValidateOn: "change",
+              asyncValidateDelay: 0,
+              asyncValidate: () => new Promise((r) => { resolveAsync = r; }),
+            },
+          },
+        },
+      });
+
+      store.write.setField("email", "a@b.com"); // dispara async job
+      await new Promise(r => setTimeout(r, 10)); // scheduler executa
+      expect(store.read.isFieldValidating("email")).toBe(true);
+
+      // Usuário ou form desmounta e cancela as validações
+      store.feature.cleanup();
+
+      resolveAsync(null); // resolve o async (que foi abortado)
+      await new Promise(r => setTimeout(r, 10));
+
+      expect(store.read.isFieldValidating("email")).toBe(false);
+    });
+
+    it("should keep isValid false when another field has pending async error after scope validation", async () => {
+      const { createBitStore } = await import("../../core");
+      let resolveField2!: (v: string | null) => void;
+
+      const store = createBitStore({
+        initialValues: { field1: "", field2: "" },
+        fields: {
+          field1: {
+            validation: { asyncValidateOn: "change", asyncValidateDelay: 0, asyncValidate: () => Promise.resolve("erro 1") }
+          },
+          field2: {
+            validation: { asyncValidateOn: "change", asyncValidateDelay: 0, asyncValidate: () => new Promise(r => { resolveField2 = r; }) }
+          }
+        }
+      });
+
+      store.write.setField("field1", "a");
+      store.write.setField("field2", "b");
+      await new Promise(r => setTimeout(r, 50)); // let field1 resolve and field2 pend
+
+      // field1 errored, field2 pending. Now we fix field1
+      store.write.setField("field1", "ok");
+      
+      // we mock the asyncValidate to succeed now
+      store.feature.registerField("field1", {
+        validation: { asyncValidate: () => Promise.resolve(null) }
+      });
+      store.feature.triggerValidation(["field1"]);
+      await new Promise(r => setTimeout(r, 50)); // let field1 resolve
+
+      // At this point field1 is fixed, but field2 is still pending with NO error in state yet
+      // Actually wait, the bug is when field2 has an async error but it's not yet committed.
+      // Wait, if field2 hasn't failed yet, the form has no errors, so isValid being true is correct?
+      // No! If field2 failed before, and we fix field1.
+      
+      resolveField2("erro 2");
+      await new Promise(r => setTimeout(r, 50));
+      // now field2 has an error
+      
+      store.write.setField("field1", "ok2");
+      await new Promise(r => setTimeout(r, 50));
+
+      expect(store.read.isValid).toBe(false);
+    });
+  });
 });

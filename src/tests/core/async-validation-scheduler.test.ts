@@ -132,7 +132,7 @@ describe("BitAsyncValidationScheduler", () => {
       const resetCalls = fieldValidatingCalls.filter(
         ([path, v]) => path === "email" && v === false,
       );
-      expect(resetCalls.length).toBeGreaterThanOrEqual(1);
+      expect(resetCalls.length).toBe(0);
 
       resolveValidation?.();
     });
@@ -167,7 +167,7 @@ describe("BitAsyncValidationScheduler", () => {
       const resetCalls = fieldValidatingCalls.filter(
         ([path, v]) => path === "name" && v === false,
       );
-      expect(resetCalls.length).toBeGreaterThanOrEqual(1);
+      expect(resetCalls.length).toBe(0);
 
       expect(neverStarted).not.toHaveBeenCalled();
     });

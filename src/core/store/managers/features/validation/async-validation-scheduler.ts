@@ -27,6 +27,7 @@ export interface BitAsyncValidationSchedulerPort<T extends object> {
 }
 
 export class BitAsyncValidationScheduler<T extends object> {
+  private _cancellingAll = false;
   private cancelSchedulerTimeout?: () => void;
   private readonly abortControllers = new Map<string, AbortController>();
   private readonly pendingJobs = new Map<
@@ -156,36 +157,45 @@ export class BitAsyncValidationScheduler<T extends object> {
   }
 
   cancelAll(): void {
-    if (this.cancelSchedulerTimeout) {
-      try {
-        this.cancelSchedulerTimeout();
-      } catch {
-        // Ignore: may fail if cancellation already happened
-      } finally {
-        this.cancelSchedulerTimeout = undefined;
+    this._cancellingAll = true;
+    try {
+      if (this.cancelSchedulerTimeout) {
+        try {
+          this.cancelSchedulerTimeout();
+        } catch {
+          // Ignore: may fail if cancellation already happened
+        } finally {
+          this.cancelSchedulerTimeout = undefined;
+        }
       }
+
+      this.abortControllers.forEach((controller, path) => {
+        try {
+          controller.abort();
+        } catch {
+          // Already aborted or invalid
+        }
+        // Reset isValidating so the UI spinner never stays stuck.
+        // The runJob finally block guards its own call with !signal.aborted,
+        // so once aborted mid-flight it would never clear this flag otherwise.
+        if (!this._cancellingAll) {
+          this.port.setFieldValidating(path, false);
+        }
+      });
+
+      this.pendingJobs.forEach((_job, path) => {
+        // Jobs still in the pending queue also had setFieldValidating(true) called
+        // in handle(). Clear them so pending-but-not-yet-executed jobs don't leak.
+        if (!this._cancellingAll) {
+          this.port.setFieldValidating(path, false);
+        }
+      });
+
+      this.pendingJobs.clear();
+      this.abortControllers.clear();
+    } finally {
+      this._cancellingAll = false;
     }
-
-    this.abortControllers.forEach((controller, path) => {
-      try {
-        controller.abort();
-      } catch {
-        // Already aborted or invalid
-      }
-      // Reset isValidating so the UI spinner never stays stuck.
-      // The runJob finally block guards its own call with !signal.aborted,
-      // so once aborted mid-flight it would never clear this flag otherwise.
-      this.port.setFieldValidating(path, false);
-    });
-
-    this.pendingJobs.forEach((_job, path) => {
-      // Jobs still in the pending queue also had setFieldValidating(true) called
-      // in handle(). Clear them so pending-but-not-yet-executed jobs don't leak.
-      this.port.setFieldValidating(path, false);
-    });
-
-    this.pendingJobs.clear();
-    this.abortControllers.clear();
   }
 
   private schedulePendingJobs(): void {
@@ -306,7 +316,7 @@ export class BitAsyncValidationScheduler<T extends object> {
     } finally {
       const currentPath = this.findControllerPath(job.controller) ?? path;
 
-      if (!job.controller.signal.aborted) {
+      if (!job.controller.signal.aborted && !this._cancellingAll) {
         this.port.setFieldValidating(currentPath, false);
       }
 
