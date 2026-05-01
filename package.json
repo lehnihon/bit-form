@@ -156,7 +156,8 @@
     "prepublishOnly": "npm run build && npm run test",
     "release": "npm publish",
     "dry-run": "npm publish --dry-run",
-    "bundle-ctx": "repomix"
+    "bundle-ctx": "repomix",
+    "setup-hooks": "sh scripts/setup-hooks.sh"
   },
   "peerDependencies": {
     "@angular/core": ">=16.0.0",

@@ -1,15 +1,20 @@
 {
   "output": {
     "filePath": "bit-form-context.txt",
-    "headerText": "Contexto completo da biblioteca bit-form para análise de IA.",
+    "style": "xml",
+    "headerText": "bit-form — framework-agnostic form state management library.\nIncludes: full source (src/), documentation (docs/), unit tests (src/tests/), build config.\nUse this to analyze architecture, APIs, integrations (React, Vue, Angular, React Native), plugins, devtools, and test coverage.",
+    "instructionFilePath": "repomix-instructions.md",
     "removeComments": false,
-    "showLineNumbers": true
+    "showLineNumbers": true,
+    "topFilesLen": 15
   },
   "include": [
     "src/**/*",
+    "docs/**/*.md",
     "package.json",
     "tsup.config.ts",
-    "tsconfig.json"
+    "tsconfig.json",
+    "tsconfig.base.json"
   ],
   "exclude": [
     "node_modules",
@@ -17,6 +22,8 @@
     "coverage",
     "*.log",
     ".git",
-    "package-lock.json"
+    "package-lock.json",
+    "src/tests/frameworks/snapshots",
+    "**/*.snap"
   ]
 }
