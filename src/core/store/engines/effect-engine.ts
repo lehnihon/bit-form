@@ -39,13 +39,23 @@ export class BitStoreEffectEngine<T extends object> {
 
   async restorePersisted(): Promise<boolean> {
     let restored = false;
+    let firstError: unknown = null;
 
     for (const effect of this.effects) {
       if (!effect.restorePersisted) {
         continue;
       }
 
-      restored = (await effect.restorePersisted()) || restored;
+      try {
+        restored = (await effect.restorePersisted()) || restored;
+      } catch (error) {
+        this.logEffectHookError(effect.name, "restorePersisted", error);
+        firstError ??= error;
+      }
+    }
+
+    if (firstError) {
+      throw firstError;
     }
 
     return restored;
@@ -164,7 +174,8 @@ export class BitStoreEffectEngine<T extends object> {
       | "afterSubmit"
       | "onFieldChange"
       | "onStateUpdated"
-      | "reportOperationalError",
+      | "reportOperationalError"
+      | "restorePersisted",
     error: unknown,
   ): void {
     console.error(

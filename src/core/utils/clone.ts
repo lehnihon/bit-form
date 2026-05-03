@@ -87,9 +87,14 @@ export function cloneValue<T>(
   visited.set(obj as object, clone);
 
   for (const key in obj) {
-    if (Object.prototype.hasOwnProperty.call(obj, key)) {
-      clone[key] = cloneValue((obj as any)[key], visited);
+    if (
+      key === "__proto__" ||
+      key === "constructor" ||
+      !Object.prototype.hasOwnProperty.call(obj, key)
+    ) {
+      continue;
     }
+    clone[key] = cloneValue((obj as any)[key], visited);
   }
 
   return clone as T;

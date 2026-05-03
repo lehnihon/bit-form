@@ -20,7 +20,7 @@
  * ```
  */
 
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState, useEffect } from "react";
 import type { BitDeleteUploadFn, BitUploadFn } from "../core";
 import { createRemoveHandler, createUploadHandler } from "../core/adapters";
 import { useBitStore } from "./context";
@@ -59,13 +59,17 @@ export function useBitUpload<
     onCallbackError: (e: unknown) =>
       store.read.config.onUnhandledError(e, "upload"),
   });
-  // Mantém os closures da ref atualizados a cada render sem recriar o objeto.
-  callbacksRef.current.setLoading = setIsUploading;
-  callbacksRef.current.setError = (path, msg) =>
-    store.write.setError(path, msg);
-  callbacksRef.current.setValue = (val) => setValue(val as any);
-  callbacksRef.current.onCallbackError = (e) =>
-    store.read.config.onUnhandledError(e, "upload");
+  // Mantém os closures da ref atualizados sem recriar o objeto.
+  // Usamos useEffect para evitar mutações de ref durante o render phase
+  // (React concurrent mode pode descartar renders, tornando mutações inseguras).
+  useEffect(() => {
+    callbacksRef.current.setLoading = setIsUploading;
+    callbacksRef.current.setError = (path, msg) =>
+      store.write.setError(path, msg);
+    callbacksRef.current.setValue = (val) => setValue(val as any);
+    callbacksRef.current.onCallbackError = (e) =>
+      store.read.config.onUnhandledError(e, "upload");
+  });
 
   const stableCallbacks = useMemo(
     () => ({

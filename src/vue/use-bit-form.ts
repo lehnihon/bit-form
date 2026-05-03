@@ -1,4 +1,4 @@
-import { computed, onUnmounted, shallowRef, ref } from "vue";
+import { computed, onUnmounted, shallowRef, ref, reactive } from "vue";
 import { useBitStore } from "./context";
 import { createFrameworkFormBinding, observeFormMetaSnapshot } from "../core";
 import type { UseBitFormResult } from "./types";
@@ -39,13 +39,13 @@ export function useBitForm<T extends object>(): UseBitFormResult<T> {
   const onSubmit = controller.onSubmit;
   const reset = controller.reset;
 
-  const meta = {
+  const meta = reactive({
     isValid,
     isDirty,
     isSubmitting,
     submitError,
     lastResponse,
-  };
+  });
 
   return {
     // Metadata (grouped)

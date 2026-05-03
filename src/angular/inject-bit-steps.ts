@@ -36,8 +36,8 @@ export function injectBitSteps(scopeNames: string[]): InjectBitStepsResult {
     );
   };
 
-  const destroyRef = inject(DestroyRef, { optional: true });
-  destroyRef?.onDestroy(() => unsubscribe());
+  const destroyRef = inject(DestroyRef);
+  destroyRef.onDestroy(() => unsubscribe());
 
   const validate = async (): Promise<ValidateScopeResult> => {
     const scopeName = getCurrentScope();

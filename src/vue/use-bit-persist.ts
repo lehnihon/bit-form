@@ -1,4 +1,4 @@
-import { computed, onUnmounted, ref } from "vue";
+import { computed, onUnmounted, ref, reactive } from "vue";
 import { useBitStore } from "./context";
 import { observePersistMetaSnapshot } from "../core";
 import type { UseBitPersistResult } from "./types";
@@ -29,10 +29,10 @@ export function useBitPersist<T extends object = any>(): UseBitPersistResult {
     restore,
     save,
     clear,
-    meta: {
+    meta: reactive({
       isSaving: computed(() => meta.value.isSaving),
       isRestoring: computed(() => meta.value.isRestoring),
       error: computed(() => meta.value.error),
-    },
+    }),
   };
 }

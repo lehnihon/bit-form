@@ -192,5 +192,10 @@ export function applyStorePersistedValues<T extends object>(args: {
   );
 
   saveHistorySnapshot();
-  void validation.validate();
+  void validation.validate().catch((error: unknown) => {
+    console.error(
+      "BitStore: post-persist validation failed — form values persisted but validation error may be stale",
+      error,
+    );
+  });
 }

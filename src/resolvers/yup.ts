@@ -35,6 +35,8 @@ export const yupResolver = <T extends object>(
               } else if (error.path) {
                 setFirstError(errors, normalizeErrorPath(error.path), error.message);
               }
+            } else {
+              throw error;
             }
           }
         }),
@@ -59,7 +61,7 @@ export const yupResolver = <T extends object>(
         return filterErrorsByScope(errors, options?.scopeFields);
       }
 
-      return {};
+      throw error;
     }
   };
 };

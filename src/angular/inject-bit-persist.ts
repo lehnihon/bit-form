@@ -13,8 +13,8 @@ export function injectBitPersist<
     persist.set(nextPersist);
   });
 
-  const destroyRef = inject(DestroyRef, { optional: true });
-  destroyRef?.onDestroy(() => unsubscribe());
+  const destroyRef = inject(DestroyRef);
+  destroyRef.onDestroy(() => unsubscribe());
 
   const restore = async (): Promise<boolean> => {
     return store.feature.restorePersisted();

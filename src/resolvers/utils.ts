@@ -26,6 +26,14 @@ export function setFirstError<T extends object>(
     return;
   }
 
+  if (
+    normalizedPath === "__proto__" ||
+    normalizedPath === "constructor" ||
+    normalizedPath === "prototype"
+  ) {
+    return;
+  }
+
   if (!errors[normalizedPath as keyof BitErrors<T>]) {
     errors[normalizedPath as keyof BitErrors<T>] = message;
   }

@@ -1,4 +1,4 @@
-import { computed, onUnmounted, shallowRef } from "vue";
+import { computed, onUnmounted, shallowRef, reactive } from "vue";
 import { useBitStore } from "./context";
 import type { UseBitFieldVueResult } from "./types";
 import type { BitPath, BitPathValue } from "../core";
@@ -78,7 +78,7 @@ export function useBitField<
     onInput,
     onBlur,
     // Metadata (grouped)
-    meta: {
+    meta: reactive({
       error,
       touched,
       invalid,
@@ -87,6 +87,6 @@ export function useBitField<
       isHidden,
       isRequired,
       hasError,
-    },
+    }),
   };
 }

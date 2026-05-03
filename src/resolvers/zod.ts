@@ -22,9 +22,11 @@ export const zodResolver = <T extends object>(
           const path = normalizeErrorPath(issue.path.join("."));
           setFirstError(errors, path, issue.message);
         }
+
+        return filterErrorsByScope(errors, options?.scopeFields);
       }
 
-      return filterErrorsByScope(errors, options?.scopeFields);
+      throw error;
     }
   };
 };

@@ -30,7 +30,15 @@ export const formatMaskedValue = (value: unknown, mask?: BitMask): string => {
     return "";
   }
 
-  return mask ? mask.format(value) : String(value);
+  if (!mask) {
+    return String(value);
+  }
+
+  try {
+    return mask.format(value);
+  } catch {
+    return String(value);
+  }
 };
 
 export const parseMaskedInput = (value: unknown, mask?: BitMask): unknown => {
@@ -38,5 +46,9 @@ export const parseMaskedInput = (value: unknown, mask?: BitMask): unknown => {
     return value;
   }
 
-  return mask.parse(String(value ?? ""));
+  try {
+    return mask.parse(String(value ?? ""));
+  } catch {
+    return String(value ?? "");
+  }
 };

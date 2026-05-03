@@ -1,16 +1,43 @@
 import { WebSocketServer } from "ws";
 import type http from "node:http";
+import type { WebSocket } from "ws";
 import {
   isDevToolsHelloMessage,
   isDevToolsPingMessage,
 } from "../devtools/protocol";
 
+const MAX_MESSAGE_SIZE = 1 * 1024 * 1024; // 1 MB
+const MAX_MESSAGES_PER_SECOND = 100;
+
 export function attachDevToolsRelay(server: http.Server): WebSocketServer {
   const wss = new WebSocketServer({ server });
 
+  const clientRateLimit = new Map<
+    WebSocket,
+    { count: number; resetAt: number }
+  >();
+
   wss.on("connection", (ws) => {
+    clientRateLimit.set(ws, { count: 0, resetAt: Date.now() + 1000 });
+
     ws.on("message", (messageBuffer) => {
+      const rate = clientRateLimit.get(ws);
+      if (!rate) return;
+
+      if (Date.now() > rate.resetAt) {
+        rate.count = 0;
+        rate.resetAt = Date.now() + 1000;
+      }
+
+      if (++rate.count > MAX_MESSAGES_PER_SECOND) {
+        return;
+      }
+
       const messageStr = messageBuffer.toString();
+
+      if (messageStr.length > MAX_MESSAGE_SIZE) {
+        return;
+      }
 
       try {
         const data = JSON.parse(messageStr) as unknown;
@@ -19,7 +46,7 @@ export function attachDevToolsRelay(server: http.Server): WebSocketServer {
           return;
         }
       } catch {
-        // ignore malformed relay payloads and forward raw message below
+        return;
       }
 
       wss.clients.forEach((client) => {
@@ -27,6 +54,10 @@ export function attachDevToolsRelay(server: http.Server): WebSocketServer {
           client.send(messageStr);
         }
       });
+    });
+
+    ws.on("close", () => {
+      clientRateLimit.delete(ws);
     });
   });
 

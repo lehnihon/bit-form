@@ -35,8 +35,14 @@ export function deepMerge<T>(
 
   activeMerges.set(sourceObject, base);
 
+  const BLOCKED_KEYS = new Set(["__proto__", "constructor", "prototype"]);
+
   try {
     for (const key of Object.keys(source)) {
+      if (BLOCKED_KEYS.has(key)) {
+        continue;
+      }
+
       const sourceValue = source[key];
       const baseValue = (base as Record<string, unknown>)[key];
 
