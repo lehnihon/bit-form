@@ -33,7 +33,8 @@ export function useBitField<
   );
 
   const setValue = useCallback(
-    (val: any) => fieldController.setValue(val),
+    (val: BitPathValue<TForm, P> | string | number | null | undefined) =>
+      fieldController.setValue(val),
     [fieldController],
   );
 
@@ -44,14 +45,8 @@ export function useBitField<
     setBlur();
   }, [setBlur]);
 
-  return {
-    value: value as BitPathValue<TForm, P>,
-    displayValue,
-    setValue,
-    setBlur,
-    onChangeText: handleChange,
-    onBlur,
-    meta: {
+  const meta = useMemo(
+    () => ({
       error: metaState.error,
       touched: metaState.touched,
       invalid: metaState.invalid,
@@ -60,11 +55,39 @@ export function useBitField<
       isHidden: metaState.isHidden,
       isRequired: metaState.isRequired,
       hasError: metaState.hasError,
-    },
-    props: {
+    }),
+    [
+      metaState.error,
+      metaState.touched,
+      metaState.invalid,
+      metaState.isValidating,
+      metaState.isDirty,
+      metaState.isHidden,
+      metaState.isRequired,
+      metaState.hasError,
+    ],
+  );
+
+  const props = useMemo(
+    () => ({
       value: displayValue,
       onChangeText: handleChange,
       onBlur,
-    },
-  };
+    }),
+    [displayValue, handleChange, onBlur],
+  );
+
+  return useMemo(
+    () => ({
+      value: value as BitPathValue<TForm, P>,
+      displayValue,
+      setValue,
+      setBlur,
+      onChangeText: handleChange,
+      onBlur,
+      meta,
+      props,
+    }),
+    [value, displayValue, setValue, setBlur, handleChange, onBlur, meta, props],
+  );
 }

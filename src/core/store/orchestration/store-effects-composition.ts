@@ -135,7 +135,14 @@ export function createStoreEffects<T extends object>(args: {
 
   const effects = new BitStoreEffectEngine<T>(registry);
 
-  effects.initialize();
+  try {
+    effects.initialize();
+  } catch (error) {
+    console.error(
+      "BitStoreEffects: initialize() failed — store will operate without initialized effects",
+      error,
+    );
+  }
 
   return effects;
 }

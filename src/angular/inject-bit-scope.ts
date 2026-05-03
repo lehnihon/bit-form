@@ -31,8 +31,8 @@ export function injectBitScope(scopeName: string): InjectBitScopeResult {
     },
   );
 
-  const destroyRef = inject(DestroyRef, { optional: true });
-  destroyRef?.onDestroy(() => unsubscribe());
+  const destroyRef = inject(DestroyRef);
+  destroyRef.onDestroy(() => unsubscribe());
 
   const validate = async (): Promise<ValidateScopeResult> => {
     const valid = await store.feature.validate({ scope: scopeName });

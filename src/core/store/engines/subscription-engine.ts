@@ -252,6 +252,7 @@ export class BitSubscriptionEngine<T extends object> {
     const normalized: string[] = [];
 
     for (const path of paths) {
+      if (path == null) continue;
       const trimmed = path.trim();
       if (trimmed.length === 0 || seen.has(trimmed)) {
         continue;
@@ -273,6 +274,7 @@ export class BitSubscriptionEngine<T extends object> {
     const normalized: string[] = [];
 
     for (const path of paths) {
+      if (path == null) continue;
       const trimmed = path.trim();
       if (trimmed.length === 0 || seen.has(trimmed)) {
         continue;

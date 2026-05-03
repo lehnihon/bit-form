@@ -45,13 +45,13 @@ describe("Vue Integration", () => {
       form: useBitForm(),
     }));
 
-    expect(wrapper.vm.form.meta.isDirty.value).toBe(false);
+    expect(wrapper.vm.form.meta.isDirty).toBe(false);
 
     wrapper.vm.field.setValue("Leandro");
     await nextTick();
 
     expect(wrapper.vm.form.getValues().user.info.name).toBe("Leandro");
-    expect(wrapper.vm.form.meta.isDirty.value).toBe(true);
+    expect(wrapper.vm.form.meta.isDirty).toBe(true);
   });
 
   it("should react to isHidden and isRequired changes", async () => {
@@ -69,12 +69,12 @@ describe("Vue Integration", () => {
       cnpj: useBitField("cnpj"),
     }));
 
-    expect(wrapper.vm.cnpj.meta.isHidden.value).toBe(true);
+    expect(wrapper.vm.cnpj.meta.isHidden).toBe(true);
 
     wrapper.vm.type.setValue("PJ");
     await nextTick();
 
-    expect(wrapper.vm.cnpj.meta.isHidden.value).toBe(false);
+    expect(wrapper.vm.cnpj.meta.isHidden).toBe(false);
   });
 
   it("should call unregisterField on unmount", async () => {
@@ -166,10 +166,10 @@ describe("Vue Integration", () => {
 
     const submitFn = wrapper.vm.form.submit(onSubmit);
     const promise = submitFn();
-    expect(wrapper.vm.form.meta.isSubmitting.value).toBe(true);
+    expect(wrapper.vm.form.meta.isSubmitting).toBe(true);
 
     await promise;
-    expect(wrapper.vm.form.meta.isValid.value).toBe(false);
+    expect(wrapper.vm.form.meta.isValid).toBe(false);
   });
 
   it("should reset form to initial values", async () => {
@@ -358,9 +358,9 @@ describe("Vue Integration", () => {
       expect(typeof wrapper.vm.persist.save).toBe("function");
       expect(typeof wrapper.vm.persist.restore).toBe("function");
       expect(typeof wrapper.vm.persist.clear).toBe("function");
-      expect(wrapper.vm.persist.meta.isSaving.value).toBe(false);
-      expect(wrapper.vm.persist.meta.isRestoring.value).toBe(false);
-      expect(wrapper.vm.persist.meta.error.value).toBeNull();
+      expect(wrapper.vm.persist.meta.isSaving).toBe(false);
+      expect(wrapper.vm.persist.meta.isRestoring).toBe(false);
+      expect(wrapper.vm.persist.meta.error).toBeNull();
     });
 
     it("deve salvar e restaurar valores", async () => {

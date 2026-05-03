@@ -44,9 +44,9 @@ export function useBitUpload<
   return {
     value: field.value as ComputedRef<string | File | null>,
     setValue: field.setValue,
-    error: computed(() => field.meta.error.value),
+    error: computed(() => field.meta.error),
     isValidating: computed(
-      () => !!field.meta.isValidating.value || isUploading.value,
+      () => !!field.meta.isValidating || isUploading.value,
     ),
     upload,
     remove,

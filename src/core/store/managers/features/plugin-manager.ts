@@ -128,6 +128,37 @@ export class BitPluginManager<T extends object = Record<string, unknown>> {
     } finally {
       this.notifyingError = false;
     }
+
+    if (this.pendingErrorQueue.length > 0) {
+      this.notifyingError = true;
+      try {
+        while (this.pendingErrorQueue.length > 0) {
+          const entry = this.pendingErrorQueue.shift();
+          if (!entry) break;
+
+          const stateSnapshot = this.contextFactory().getState();
+          const payload: BitPluginErrorEvent<T> = {
+            source: entry.source,
+            pluginName: entry.pluginName,
+            error: entry.error,
+            event: entry.event,
+            values: stateSnapshot.values,
+            state: stateSnapshot,
+          };
+
+          for (const plugin of this.plugins) {
+            const onError = plugin.hooks?.onError;
+            if (!onError) continue;
+
+            try {
+              await onError(payload, this.contextFactory());
+            } catch {}
+          }
+        }
+      } finally {
+        this.notifyingError = false;
+      }
+    }
   }
 
   destroy() {

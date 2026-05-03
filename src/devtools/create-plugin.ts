@@ -17,6 +17,26 @@ function resolveDevToolsOptions(
   };
 }
 
+function isProductionEnv(): boolean {
+  if (
+    typeof process !== "undefined" &&
+    typeof process.env !== "undefined" &&
+    process.env.NODE_ENV === "production"
+  ) {
+    return true;
+  }
+
+  if (
+    typeof process !== "undefined" &&
+    typeof process.env !== "undefined" &&
+    process.env.VITEST === "true"
+  ) {
+    return false;
+  }
+
+  return false;
+}
+
 export function createDevToolsPlugin<T extends object = any>(
   override?: boolean | DevToolsOptions,
 ): BitPlugin<T> {
@@ -28,6 +48,10 @@ export function createDevToolsPlugin<T extends object = any>(
       );
 
       if (!options.enabled) {
+        return;
+      }
+
+      if (isProductionEnv() && override !== true) {
         return;
       }
 

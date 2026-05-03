@@ -86,6 +86,16 @@ export function runAddCommand(args: string[]): void {
   const cwd = process.cwd();
   const outDir = path.resolve(cwd, flags.path);
 
+  const relativeToProject = path.relative(cwd, outDir);
+  if (
+    relativeToProject.startsWith("..") ||
+    path.isAbsolute(relativeToProject)
+  ) {
+    throw new Error(
+      `bit-form add: output directory must be inside the project root (resolved: ${outDir})`,
+    );
+  }
+
   // Project detection: for shadcn, warn if components.json is missing
   if (adapter.name === "shadcn" && !hasComponentsJson(cwd)) {
     console.warn(

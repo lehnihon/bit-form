@@ -143,6 +143,7 @@ export class BitPersistManager<T extends object = Record<string, unknown>> {
 
     this.timer = setTimeout(() => {
       this.timer = undefined;
+      if (this.isDestroyed) return;
       void this.saveNow().catch(() => {
         // saveNow already routes persist errors via callbacks and config handlers.
       });

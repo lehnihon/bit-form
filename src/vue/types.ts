@@ -4,7 +4,6 @@ import type {
   BitHistoryAdapterResult,
   BitHistoryMetadata,
   BitPersistAdapterResult,
-  BitPersistMetadata,
   BitStepsAdapterResult,
   BitTouched,
   BitUploadAdapterResult,
@@ -14,16 +13,17 @@ import type {
 
 /**
  * Metadata describing the current state of a form field (Vue reactive).
+ * Values are unwrapped — reactive() desempacota nested Ref/ComputedRef.
  */
 export interface UseBitFieldVueMeta {
-  error: ComputedRef<string | undefined>;
-  touched: ComputedRef<boolean>;
-  invalid: ComputedRef<boolean>;
-  isValidating: ComputedRef<boolean>;
-  isDirty: ComputedRef<boolean>;
-  isHidden: ComputedRef<boolean>;
-  isRequired: ComputedRef<boolean>;
-  hasError: ComputedRef<boolean>;
+  error: string | undefined;
+  touched: boolean;
+  invalid: boolean;
+  isValidating: boolean;
+  isDirty: boolean;
+  isHidden: boolean;
+  isRequired: boolean;
+  hasError: boolean;
 }
 
 /**
@@ -79,18 +79,18 @@ export type UseBitHistoryResult = BitHistoryAdapterResult<
 >;
 
 export type UseBitPersistResult = BitPersistAdapterResult<{
-  isSaving: Ref<BitPersistMetadata["isSaving"]>;
-  isRestoring: Ref<BitPersistMetadata["isRestoring"]>;
-  error: Ref<BitPersistMetadata["error"]>;
+  isSaving: boolean;
+  isRestoring: boolean;
+  error: Error | null;
 }>;
 
 export interface UseBitFormResult<T extends object = any> {
   meta: {
-    isValid: ComputedRef<boolean>;
-    isDirty: ComputedRef<boolean>;
-    isSubmitting: ComputedRef<boolean>;
-    submitError: Ref<Error | null>;
-    lastResponse: Ref<unknown>;
+    isValid: boolean;
+    isDirty: boolean;
+    isSubmitting: boolean;
+    submitError: Error | null;
+    lastResponse: unknown;
   };
   getValues: () => T;
   getErrors: () => BitErrors<T>;

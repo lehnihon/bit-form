@@ -56,6 +56,17 @@ export const createPatternMask = (
     p.split("").filter((c) => tokens[c]).length;
 
   const patterns = Array.isArray(pattern) ? pattern : [pattern];
+
+  if (patterns.length === 0) {
+    return {
+      format: (value: unknown) =>
+        value === undefined || value === null || value === ""
+          ? ""
+          : String(value),
+      parse: (value: unknown) => String(value ?? ""),
+    };
+  }
+
   const sortedPatterns = [...patterns].sort(
     (a, b) => getRawLength(a) - getRawLength(b),
   );
@@ -165,6 +176,12 @@ export const createCurrencyMask = ({
     if (!stringValue && String(value).includes("-") && allowNegative)
       return "-";
     if (!stringValue) return "";
+
+    // Truncate to prevent ReDoS on pathological input
+    const MAX_CURRENCY_DIGITS = 20;
+    if (stringValue.length > MAX_CURRENCY_DIGITS) {
+      stringValue = stringValue.slice(0, MAX_CURRENCY_DIGITS);
+    }
 
     stringValue = stringValue.padStart(precision + 1, "0");
 
