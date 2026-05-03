@@ -20,7 +20,7 @@ describe("release-gate observability", () => {
       },
     });
 
-    await store.feature.forceSave();
+    await expect(store.feature.forceSave()).rejects.toThrow("storage down");
     expect(onError).toHaveBeenCalledTimes(1);
     expect(store.read.getPersistMetadata().isSaving).toBe(false);
     expect(store.read.getPersistMetadata().isRestoring).toBe(false);
