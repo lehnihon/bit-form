@@ -175,20 +175,16 @@ export class BitAsyncValidationScheduler<T extends object> {
         } catch {
           // Already aborted or invalid
         }
-        // Reset isValidating so the UI spinner never stays stuck.
-        // The runJob finally block guards its own call with !signal.aborted,
-        // so once aborted mid-flight it would never clear this flag otherwise.
-        if (!this._cancellingAll) {
-          this.port.setFieldValidating(path, false);
-        }
+        // Always reset isValidating synchronously so the UI spinner never stays
+        // stuck. The runJob finally block is guarded by _cancellingAll so it
+        // will not race against this reset.
+        this.port.setFieldValidating(path, false);
       });
 
       this.pendingJobs.forEach((_job, path) => {
-        // Jobs still in the pending queue also had setFieldValidating(true) called
-        // in handle(). Clear them so pending-but-not-yet-executed jobs don't leak.
-        if (!this._cancellingAll) {
-          this.port.setFieldValidating(path, false);
-        }
+        // Jobs in the pending queue also had setFieldValidating(true) called in
+        // handle(). Clear them so they do not leak on bulk teardown.
+        this.port.setFieldValidating(path, false);
       });
 
       this.pendingJobs.clear();

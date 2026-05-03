@@ -433,11 +433,15 @@ export function createBitStoreDomains<T extends object>(args: {
       forceSavePersistedFeature({
         dispatch: featureDispatch,
         effects: runtime.effects,
+        onUnhandledError: (error, source) =>
+          config.onUnhandledError(error, source),
       }),
     clearPersisted: () =>
       clearPersistedFeature({
         dispatch: featureDispatch,
         effects: runtime.effects,
+        onUnhandledError: (error, source) =>
+          config.onUnhandledError(error, source),
       }),
     getArrayItemIds: (path, length) =>
       runtime.capabilities.arrays.getItemIds(path, length),

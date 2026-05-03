@@ -114,18 +114,21 @@ describe("forceStorePersistedSave", () => {
     expect(effects.savePersistedNow).toHaveBeenCalledTimes(1);
   });
 
-  it("should swallow save errors and avoid local metadata dispatch", async () => {
+  it("should propagate save errors to the caller and route them through onUnhandledError", async () => {
     const dispatch = vi.fn();
+    const onUnhandledError = vi.fn();
+    const saveError = new Error("save failed");
     const effects = {
       savePersistedNow: vi.fn(async () => {
-        throw new Error("save failed");
+        throw saveError;
       }),
     } as any;
 
     await expect(
-      forceStorePersistedSave({ dispatch, effects }),
-    ).resolves.toBeUndefined();
+      forceStorePersistedSave({ dispatch, effects, onUnhandledError }),
+    ).rejects.toThrow("save failed");
 
+    expect(onUnhandledError).toHaveBeenCalledWith(saveError, "persist");
     expect(dispatch).not.toHaveBeenCalled();
   });
 
@@ -153,8 +156,9 @@ describe("forceStorePersistedSave", () => {
     expect(dispatch).not.toHaveBeenCalled();
   });
 
-  it("should resolve when a failed save completes before a successful one", async () => {
+  it("should reject when save fails and resolve independently when another save succeeds", async () => {
     const dispatch = vi.fn();
+    const onUnhandledError = vi.fn();
 
     const first = createDeferred<void>();
     const second = createDeferred<void>();
@@ -165,11 +169,16 @@ describe("forceStorePersistedSave", () => {
         .mockImplementationOnce(() => second.promise),
     } as any;
 
-    const op1 = forceStorePersistedSave({ dispatch, effects });
+    const op1 = forceStorePersistedSave({
+      dispatch,
+      effects,
+      onUnhandledError,
+    });
     const op2 = forceStorePersistedSave({ dispatch, effects });
 
     first.reject(new Error("first failed"));
-    await op1;
+    await expect(op1).rejects.toThrow("first failed");
+    expect(onUnhandledError).toHaveBeenCalledTimes(1);
 
     second.resolve();
     await op2;
@@ -191,18 +200,21 @@ describe("clearStorePersisted", () => {
     expect(effects.clearPersisted).toHaveBeenCalledTimes(1);
   });
 
-  it("should swallow clear failures and avoid local metadata dispatch", async () => {
+  it("should propagate clear errors to the caller and route them through onUnhandledError", async () => {
     const dispatch = vi.fn();
+    const onUnhandledError = vi.fn();
+    const clearError = new Error("clear failed");
     const effects = {
       clearPersisted: vi.fn(async () => {
-        throw new Error("clear failed");
+        throw clearError;
       }),
     } as any;
 
     await expect(
-      clearStorePersisted({ dispatch, effects }),
-    ).resolves.toBeUndefined();
+      clearStorePersisted({ dispatch, effects, onUnhandledError }),
+    ).rejects.toThrow("clear failed");
 
+    expect(onUnhandledError).toHaveBeenCalledWith(clearError, "persist");
     expect(dispatch).not.toHaveBeenCalled();
   });
 });
@@ -256,8 +268,14 @@ describe("restoreStorePersisted", () => {
     const effects1 = { restorePersisted: vi.fn(() => def1.promise) } as any;
     const effects2 = { restorePersisted: vi.fn(() => def2.promise) } as any;
 
-    const op1 = restoreStorePersisted({ dispatch: dispatch1, effects: effects1 });
-    const op2 = restoreStorePersisted({ dispatch: dispatch2, effects: effects2 });
+    const op1 = restoreStorePersisted({
+      dispatch: dispatch1,
+      effects: effects1,
+    });
+    const op2 = restoreStorePersisted({
+      dispatch: dispatch2,
+      effects: effects2,
+    });
 
     expect(dispatch1).toHaveBeenNthCalledWith(1, {
       kind: "form.persistMeta",
