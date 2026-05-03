@@ -1,6 +1,6 @@
 import type { BitHistoryMetadata } from "../contracts/public/meta-types";
-import type { BitStoreOperation } from "../engines/operation-engine";
 import type { BitStoreEffectEngine } from "../engines/effect-engine";
+import type { BitStoreOperation } from "../engines/operation-engine";
 import {
   clearStorePersisted,
   forceStorePersistedSave,
@@ -19,17 +19,19 @@ export function restorePersistedFeature<T extends object>(args: {
 export function forceSavePersistedFeature<T extends object>(args: {
   dispatch: (operation: BitStoreOperation<T>) => void;
   effects: BitStoreEffectEngine<T>;
+  onUnhandledError?: (error: unknown, source: string) => void;
 }): Promise<void> {
-  const { dispatch, effects } = args;
-  return forceStorePersistedSave({ dispatch, effects });
+  const { dispatch, effects, onUnhandledError } = args;
+  return forceStorePersistedSave({ dispatch, effects, onUnhandledError });
 }
 
 export function clearPersistedFeature<T extends object>(args: {
   dispatch: (operation: BitStoreOperation<T>) => void;
   effects: BitStoreEffectEngine<T>;
+  onUnhandledError?: (error: unknown, source: string) => void;
 }): Promise<void> {
-  const { dispatch, effects } = args;
-  return clearStorePersisted({ dispatch, effects });
+  const { dispatch, effects, onUnhandledError } = args;
+  return clearStorePersisted({ dispatch, effects, onUnhandledError });
 }
 
 type HistoryFeaturePort<T extends object> = {

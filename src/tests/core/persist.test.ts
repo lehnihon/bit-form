@@ -275,7 +275,7 @@ describe("Persist Feature (BitPersistManager)", () => {
         },
       });
 
-      await store.feature.forceSave();
+      await expect(store.feature.forceSave()).rejects.toThrow("quota exceeded");
 
       expect(onError).toHaveBeenCalledWith(expect.any(Error));
       expect(store.read.getState().persist.isSaving).toBe(false);
@@ -307,7 +307,7 @@ describe("Persist Feature (BitPersistManager)", () => {
         },
       });
 
-      await store.feature.forceSave();
+      await expect(store.feature.forceSave()).rejects.toThrow("write failed");
 
       expect(store.read.getState().persist.isSaving).toBe(false);
       expect(store.read.getState().persist.error).toBeInstanceOf(Error);
@@ -630,9 +630,12 @@ describe("Persist Feature (BitPersistManager)", () => {
     it("BUG-4: should not restore or leave isRestoring=true if store is destroyed before restore finishes", async () => {
       let resolveStorage!: (value: string | null) => void;
       const storage = {
-        getItem: vi.fn(() => new Promise<string | null>((resolve) => {
-          resolveStorage = resolve;
-        })),
+        getItem: vi.fn(
+          () =>
+            new Promise<string | null>((resolve) => {
+              resolveStorage = resolve;
+            }),
+        ),
         setItem: vi.fn(),
         removeItem: vi.fn(),
       };
@@ -648,18 +651,18 @@ describe("Persist Feature (BitPersistManager)", () => {
 
       // trigger restore but do not await
       const restorePromise = store.feature.restorePersisted();
-      
+
       expect(store.read.getState().persist.isRestoring).toBe(true);
 
       // destroy before storage resolves
       store.feature.cleanup();
-      
+
       // resolve storage now
       resolveStorage(JSON.stringify({ name: "Restored" }));
-      
+
       const restored = await restorePromise;
       expect(restored).toBe(false);
-      
+
       // The store should not have its state mutated by the aborted restore
       expect(store.read.getState().values.name).toBe("Leo");
     });
@@ -909,9 +912,8 @@ describe("Persist Feature (BitPersistManager)", () => {
       let onWriteStartCalls = 0;
       let onWriteSuccessCalls = 0;
 
-      const { BitPersistManager } = await import(
-        "../../core/store/managers/features/persist-manager"
-      );
+      const { BitPersistManager } =
+        await import("../../core/store/managers/features/persist-manager");
 
       const manager = new BitPersistManager<any>(
         {
@@ -1019,9 +1021,8 @@ describe("Persist Feature (BitPersistManager)", () => {
         removeItem: vi.fn(),
       };
 
-      const { BitPersistManager } = await import(
-        "../../core/store/managers/features/persist-manager"
-      );
+      const { BitPersistManager } =
+        await import("../../core/store/managers/features/persist-manager");
 
       const manager = new BitPersistManager(
         {
@@ -1074,9 +1075,8 @@ describe("Persist Feature (BitPersistManager)", () => {
         removeItem: vi.fn(),
       };
 
-      const { BitPersistManager } = await import(
-        "../../core/store/managers/features/persist-manager"
-      );
+      const { BitPersistManager } =
+        await import("../../core/store/managers/features/persist-manager");
 
       const manager = new BitPersistManager(
         {

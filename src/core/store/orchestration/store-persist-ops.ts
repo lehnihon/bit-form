@@ -16,7 +16,7 @@ interface ValidationAccess {
 
 // NOTA: Estes WeakMaps são module-level intencionalmente.
 // A chave `dispatch` é sempre uma closure única por instância de store em produção.
-// Em testes, garanta que cada `createStore()` use um mock de dispatch diferente 
+// Em testes, garanta que cada `createStore()` use um mock de dispatch diferente
 // para evitar vazamento de estado `isRestoring` entre testes.
 const activeRestoringOpsByDispatch = new WeakMap<Function, number>();
 const lastRestoringErrorByDispatch = new WeakMap<Function, Error | null>();
@@ -120,26 +120,34 @@ export async function restoreStorePersisted<T extends object>(args: {
 export async function forceStorePersistedSave<T extends object>(args: {
   dispatch: (operation: BitStoreOperation<T>) => void;
   effects: BitStoreEffectEngine<T>;
+  onUnhandledError?: (error: unknown, source: string) => void;
 }): Promise<void> {
-  const { effects } = args;
+  const { effects, onUnhandledError } = args;
 
   try {
     await effects.savePersistedNow();
-  } catch {
-    // Save lifecycle metadata is managed by persist-manager callbacks.
+  } catch (error) {
+    // Route to global error handler so observability tools capture the failure,
+    // then re-throw so the caller can react (e.g., show an error message).
+    onUnhandledError?.(error, "persist");
+    throw error;
   }
 }
 
 export async function clearStorePersisted<T extends object>(args: {
   dispatch: (operation: BitStoreOperation<T>) => void;
   effects: BitStoreEffectEngine<T>;
+  onUnhandledError?: (error: unknown, source: string) => void;
 }): Promise<void> {
-  const { effects } = args;
+  const { effects, onUnhandledError } = args;
 
   try {
     await effects.clearPersisted();
-  } catch {
-    // Clear lifecycle metadata is managed by persist-manager callbacks.
+  } catch (error) {
+    // Route to global error handler so observability tools capture the failure,
+    // then re-throw so the caller can react (e.g., show an error message).
+    onUnhandledError?.(error, "persist");
+    throw error;
   }
 }
 

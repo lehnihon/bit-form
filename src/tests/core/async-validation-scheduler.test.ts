@@ -132,7 +132,9 @@ describe("BitAsyncValidationScheduler", () => {
       const resetCalls = fieldValidatingCalls.filter(
         ([path, v]) => path === "email" && v === false,
       );
-      expect(resetCalls.length).toBe(0);
+      // cancelAll must synchronously emit setFieldValidating(path, false)
+      // for every in-flight job so spinners never stay stuck.
+      expect(resetCalls.length).toBeGreaterThanOrEqual(1);
 
       resolveValidation?.();
     });
@@ -167,7 +169,9 @@ describe("BitAsyncValidationScheduler", () => {
       const resetCalls = fieldValidatingCalls.filter(
         ([path, v]) => path === "name" && v === false,
       );
-      expect(resetCalls.length).toBe(0);
+      // cancelAll must synchronously emit setFieldValidating(path, false)
+      // for pending (not yet started) jobs too.
+      expect(resetCalls.length).toBeGreaterThanOrEqual(1);
 
       expect(neverStarted).not.toHaveBeenCalled();
     });
@@ -293,11 +297,13 @@ describe("BitAsyncValidationScheduler", () => {
       const scheduler = new BitAsyncValidationScheduler(port as any);
 
       // Validator that captures the abort signal and throws after abort
-      const throwAfterAbort = vi.fn(async (value: unknown, allValues: unknown) => {
-        // Simulate a slow validator that checks abort mid-flight
-        await new Promise((r) => setTimeout(r, 20));
-        throw new Error("crashed after long computation");
-      });
+      const throwAfterAbort = vi.fn(
+        async (value: unknown, allValues: unknown) => {
+          // Simulate a slow validator that checks abort mid-flight
+          await new Promise((r) => setTimeout(r, 20));
+          throw new Error("crashed after long computation");
+        },
+      );
 
       scheduler.handle("email", "test@test.com", throwAfterAbort as any, 0);
 
