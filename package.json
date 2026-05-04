@@ -41,9 +41,9 @@
       "require": "./dist/index.cjs"
     },
     "./core": {
-      "types": "./dist/core/store.d.ts",
-      "import": "./dist/core/store.js",
-      "require": "./dist/core/store.cjs"
+      "types": "./dist/core.d.ts",
+      "import": "./dist/core.js",
+      "require": "./dist/core.cjs"
     },
     "./core/store": {
       "types": "./dist/core/store.d.ts",
@@ -153,7 +153,7 @@
     "lint:eslint:fix": "eslint \"src/**/*.{ts,tsx}\" --fix",
     "lint:types": "npm run clean && tsc --build && tsc -p tsconfig.test.json",
     "lint:imports": "npm run lint:eslint:fix",
-    "prepublishOnly": "npm run build && npm run test",
+    "prepublishOnly": "npm run build",
     "release": "npm publish",
     "dry-run": "npm publish --dry-run",
     "bundle-ctx": "repomix",

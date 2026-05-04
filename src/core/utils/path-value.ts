@@ -138,6 +138,11 @@ export function setDeepValues(
           clonedNodes.add(current[key]);
         }
       } else {
+        if (typeof currentValue !== "undefined") {
+          console.warn(
+            `BitStore: overwriting non-object value at "${keys.slice(0, i).join(".")}"`,
+          );
+        }
         current[key] = isNextNumeric ? [] : {};
         clonedNodes.add(current[key]);
       }
@@ -217,7 +222,7 @@ export function unsetDeepValues(obj: any, paths: ReadonlyArray<string>): any {
 
   for (const path of safePaths) {
     if (!path) {
-      return Array.isArray(obj) ? [] : {};
+      continue;
     }
 
     const keys = getPathKeys(path);

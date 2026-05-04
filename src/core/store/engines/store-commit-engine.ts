@@ -126,6 +126,14 @@ function executeStatePatchOperation<T extends object>(args: {
       } catch {
         // Completely unrecoverable — abort the mutation gracefully to
         // avoid crashing the component tree. All paths exhausted.
+        const unrecoverableError = new Error(
+          "BitStore: all commit fallback strategies failed — operation lost",
+        );
+        try {
+          onOperationError?.(unrecoverableError);
+        } catch {
+          // Prevent error-handling errors from crashing the store
+        }
         result = undefined;
       }
     }

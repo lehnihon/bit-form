@@ -5,7 +5,7 @@ export function cleanPrefixedKeys(
   const newObj: Record<string, any> = {};
   const prefixWithDot = `${prefix}.`;
 
-  for (const key in obj) {
+  for (const key of Object.keys(obj)) {
     if (key !== prefix && !key.startsWith(prefixWithDot)) {
       newObj[key] = obj[key];
     }

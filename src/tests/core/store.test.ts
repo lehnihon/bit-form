@@ -868,10 +868,12 @@ describe("BitStore Core", () => {
       const leakedConfig = store.read.getFieldConfig("email");
       expect(leakedConfig).toBeDefined();
 
-      leakedConfig!.validation = {
-        ...leakedConfig!.validation,
-        asyncValidate: async () => new Promise<string | null>(() => {}),
-      };
+      expect(() => {
+        leakedConfig!.validation = {
+          ...leakedConfig!.validation,
+          asyncValidate: async () => new Promise<string | null>(() => {}),
+        };
+      }).toThrow(TypeError);
 
       store.write.setField("email", "local-mutation");
       expect(store.read.getState().isValidating.email).toBeUndefined();

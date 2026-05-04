@@ -180,4 +180,13 @@ export class BitStoreStateReader<T extends object> {
   invalidatePath(path: string): void {
     this.fieldStateCache.delete(path);
   }
+
+  invalidatePathTree(parentPath: string): void {
+    const prefix = `${parentPath}.`;
+    for (const key of this.fieldStateCache.keys()) {
+      if (key === parentPath || key.startsWith(prefix)) {
+        this.fieldStateCache.delete(key);
+      }
+    }
+  }
 }

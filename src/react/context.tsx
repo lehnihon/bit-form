@@ -1,4 +1,4 @@
-import React, { createContext, useContext } from "react";
+import React, { createContext, useContext, useMemo } from "react";
 import type { BitFrameworkStoreApi, BitStoreApi } from "../core";
 import { createFrameworkStoreAdapter } from "../core";
 
@@ -23,8 +23,10 @@ export const BitFormProvider: BitFormProviderComponent = ({
   store,
   children,
 }: BitFormProviderRuntimeProps) => {
+  const adapted = useMemo(() => createFrameworkStoreAdapter(store), [store]);
+
   return (
-    <BitContext.Provider value={createFrameworkStoreAdapter(store)}>
+    <BitContext.Provider value={adapted}>
       {children}
     </BitContext.Provider>
   );
