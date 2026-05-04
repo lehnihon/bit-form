@@ -13,8 +13,6 @@ export function attachDevToolsRelay(server: http.Server): WebSocketServer {
   const wss = new WebSocketServer({
     server,
     maxPayload: MAX_MESSAGE_SIZE,
-    pingInterval: 30000,
-    pingTimeout: 10000,
   });
 
   const MAX_CONNECTIONS = 50;
@@ -75,6 +73,31 @@ export function attachDevToolsRelay(server: http.Server): WebSocketServer {
       activeConnections = Math.max(0, activeConnections - 1);
       clientRateLimit.delete(ws);
     });
+
+    // Heartbeat: mark alive on pong
+    ws.on("pong", () => { (ws as any).__isAlive = true; });
+
+    ws.on("close", () => {
+      activeConnections = Math.max(0, activeConnections - 1);
+      clientRateLimit.delete(ws);
+    });
+  });
+
+  // Periodic heartbeat to detect dead clients
+  const heartbeatTimer = setInterval(() => {
+    wss.clients.forEach((ws) => {
+      if ((ws as any).__isAlive === false) {
+        ws.terminate();
+        return;
+      }
+      (ws as any).__isAlive = false;
+      ws.ping();
+    });
+  }, 30000);
+
+  wss.on("close", () => {
+    clearInterval(heartbeatTimer);
+    wss.clients.forEach((ws) => ws.terminate());
   });
 
   return wss;
