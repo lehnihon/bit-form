@@ -34,6 +34,7 @@ export class BitStoreRuntimeKernel<T extends object> {
   private readonly batchState: BitStoreBatchState<T> =
     createStoreBatchState<T>();
   private readonly historyOrchestrator: BitStoreHistoryOrchestrator<T>;
+  private destroyed = false;
 
   readonly subscriptions: BitSubscriptionEngine<T>;
   readonly effects: BitStoreEffectEngine<T>;
@@ -105,6 +106,8 @@ export class BitStoreRuntimeKernel<T extends object> {
   }
 
   cleanup(): void {
+    if (this.destroyed) return;
+    this.destroyed = true;
     this.flushPendingHistorySnapshot();
     this.historyOrchestrator.dispose();
     this.subscriptions.destroy();

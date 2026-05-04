@@ -20,8 +20,10 @@ if (!rootGlobal.__BIT_FORM__) {
       this.listeners.forEach((fn: BitBusListener) => {
         try {
           fn(id, state);
-        } catch {
-          // Silently swallow listener errors to prevent breaking the notification chain
+        } catch (error) {
+          if (typeof console !== "undefined" && console.warn) {
+            console.warn("[bit-form] Bus listener error:", error);
+          }
         }
       });
     },

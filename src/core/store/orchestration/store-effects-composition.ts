@@ -91,6 +91,7 @@ export function createStoreEffects<T extends object>(args: {
     name: "persist",
     onStateUpdated: (nextState, valuesChanged) =>
       persistEffects.onStateUpdated(nextState, valuesChanged),
+    initialize: () => persistEffects.initialize(),
     restorePersisted: async () => {
       if (destroyed) return false;
       const restored = await persistEffects.restorePersisted();
