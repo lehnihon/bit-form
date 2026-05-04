@@ -1,4 +1,4 @@
-import { getDeepValue } from "../../utils";
+import { deepEqual, getDeepValue } from "../../utils";
 import type { BitDependencyUpdateDiff } from "../contracts/port-types";
 import type { BitErrors, BitFieldDefinition } from "../contracts/types";
 
@@ -137,7 +137,7 @@ export class BitFieldConditions<T extends object = Record<string, unknown>> {
     if (
       cached &&
       cached.version === this.requiredEvaluationVersion &&
-      cached.valuesRef === values
+      deepEqual(cached.valuesRef, values)
     ) {
       return cached.result;
     }

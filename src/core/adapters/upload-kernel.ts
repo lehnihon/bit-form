@@ -46,10 +46,14 @@ function safeCallbackExecution(fn: () => void, onError?: (e: unknown) => void): 
   try {
     fn();
   } catch (error) {
-    // Route to the provided handler so observability tools can capture it.
-    // Swallowing is intentional only when no handler is given — callers should
-    // always provide onCallbackError in production to avoid silent data loss.
-    onError?.(error);
+    if (onError) {
+      onError(error);
+    } else {
+      console.error(
+        "BitForm upload: state callback failed without error handler — provide onCallbackError to route to observability",
+        error,
+      );
+    }
   }
 }
 

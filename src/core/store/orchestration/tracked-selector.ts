@@ -14,10 +14,17 @@ export function collectTrackedSelectorPaths<T extends object, TSlice>(
   const createTrackingProxy = <TValue>(
     value: TValue,
     basePath: string,
+    visited: WeakSet<object> = new WeakSet(),
   ): TValue => {
     if (value === null || typeof value !== "object") {
       return value;
     }
+
+    if (visited.has(value as object)) {
+      return value;
+    }
+
+    visited.add(value as object);
 
     return new Proxy(value as object, {
       get: (target, key, receiver) => {

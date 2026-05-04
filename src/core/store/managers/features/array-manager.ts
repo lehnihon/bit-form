@@ -45,9 +45,11 @@ export class BitArrayManager<T extends object = Record<string, unknown>> {
 
     this.store.unregisterPrefix?.(toPathPrefix(path));
 
-    this.mutateArrayWithSetField(path, (arr) => [...arr, value], {
-      origin: "array",
-      operation: "push",
+    this.commitArrayMutationWithFieldPipeline({
+      path,
+      nextArray: [...((getDeepValue(this.store.getState().values, path) as unknown[] | undefined) ?? []), value],
+      meta: { origin: "array", operation: "push" },
+      reindex: (currentIdx) => currentIdx,
     });
   }
 

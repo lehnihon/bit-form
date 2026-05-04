@@ -27,10 +27,18 @@ function parseAddArgs(args: string[]): {
 
   for (let i = 0; i < rest.length; i++) {
     const arg = rest[i];
-    if (arg === "--path" && rest[i + 1]) {
-      pathDir = rest[++i];
-    } else if (arg === "--ui-path" && rest[i + 1]) {
-      uiPath = rest[++i];
+    if (arg === "--path") {
+      if (!rest[i + 1]) {
+        throw new Error("bit-form add: --path requires a value");
+      }
+      pathDir = rest[i + 1];
+      i++;
+    } else if (arg === "--ui-path") {
+      if (!rest[i + 1]) {
+        throw new Error("bit-form add: --ui-path requires a value");
+      }
+      uiPath = rest[i + 1];
+      i++;
     } else if (arg === "--overwrite") {
       overwrite = true;
     } else if (arg === "--yes" || arg === "-y") {

@@ -99,6 +99,9 @@ export class BitComputedManager<T extends object> {
         valuesEqual = deepEqual(currentValue, newValue);
 
         if (canUseScalarCache) {
+          if (this.equalityCache.size > 1000) {
+            this.equalityCache.clear();
+          }
           this.equalityCache.set(entry.path, {
             current: currentValue,
             next: newValue,

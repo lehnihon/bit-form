@@ -1,6 +1,9 @@
 import { deepClone } from "../../utils";
 import type { BitFieldDefinition } from "../contracts/types";
 
+const freezeConfig = <T extends object>(config: T): T =>
+  Object.freeze(deepClone(config));
+
 import type { BitMask } from "../../mask/types";
 import type {
   BitStoreFeatureApi,
@@ -40,7 +43,7 @@ export function buildStoreSlicesApi<T extends object>(
       return deps.identity.storeId;
     },
     get config() {
-      return deepClone(deps.identity.config);
+      return freezeConfig(deps.identity.config);
     },
     get isValid() {
       return deps.read.getIsValid();
@@ -54,7 +57,7 @@ export function buildStoreSlicesApi<T extends object>(
     getState: readState,
     getFieldConfig: (path) => {
       const config = deps.getFieldConfig(path);
-      return config ? deepClone(config) : undefined;
+      return config ? freezeConfig(config) : undefined;
     },
     getFieldState: (path) => deps.read.getFieldState(path),
     isHidden: (path) => deps.read.isHidden(path),

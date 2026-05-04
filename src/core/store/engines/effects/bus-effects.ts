@@ -46,5 +46,6 @@ export class BitBusEffects<T extends object> {
     }
 
     delete this.bus.stores[this.storeId];
+    this.storeBusPort = undefined;
   }
 }
