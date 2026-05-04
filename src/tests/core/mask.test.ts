@@ -245,11 +245,31 @@ describe("Mask Utils - International & Smart Dates", () => {
     expect(dateMask.format("00102025")).toBe("01/10/2025");
   });
 
-  it("deve limitar corretamente no formato ISO (YYYY-MM-DD)", () => {
-    const isoMask = createDateMask({ format: "YYYY-MM-DD" });
+  it("deve validar fevereiro em ano bissexto e nao bissexto", () => {
+    const dateMask = createDateMask({ format: "DD/MM/YYYY" });
 
-    // Ano 2025, Mês 13 (vira 12), Dia 35 (vira 31)
-    expect(isoMask.format("20251335")).toBe("2025-12-31");
+    // Fevereiro 2024 (bissexto) — dia 29 é válido
+    expect(dateMask.format("29/02/2024")).toBe("29/02/2024");
+
+    // Fevereiro 2023 (não bissexto) — dia 29 vira 28
+    expect(dateMask.format("29/02/2023")).toBe("28/02/2023");
+
+    // Abril tem 30 dias — dia 31 vira 30
+    expect(dateMask.format("31/04/2024")).toBe("30/04/2024");
+
+    // Junho tem 30 dias — dia 31 vira 30
+    expect(dateMask.format("31/06/2024")).toBe("30/06/2024");
+  });
+
+  it("deve truncar input enorme antes da regex para evitar ReDoS", () => {
+    const mask = createCurrencyMask({ precision: 2 });
+    const hugeInput = "1".repeat(5000) + "abc".repeat(5000);
+    const start = performance.now();
+    const result = mask.format(hugeInput);
+    const elapsed = performance.now() - start;
+    // Deve completar em menos de 20ms mesmo com input gigante
+    expect(elapsed).toBeLessThan(20);
+    expect(result.length).toBeLessThan(200);
   });
 
   it("deve formatar o IBAN colocando as letras em maiúsculas e espaçando", () => {

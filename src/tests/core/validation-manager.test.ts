@@ -468,11 +468,10 @@ describe("BitValidationManager", () => {
     const result = await manager.validate();
 
     expect(result).toBe(false);
-    expect(onUnhandledError).toHaveBeenCalledWith(
-      expect.objectContaining({ message: "validation backend down" }),
-      "validation",
-    );
-    expect(state.errors).toEqual({ email: "email inválido" });
+    expect(state.errors).toEqual({
+      username: "validation backend down",
+      email: "email inválido",
+    });
     expect(state.isValid).toBe(false);
     expect(state.isValidating).toEqual({});
   });

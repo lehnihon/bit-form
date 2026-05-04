@@ -115,6 +115,10 @@ export class BitFieldConditions<T extends object = Record<string, unknown>> {
     this.dependencies.forEach((dependentsSet) => {
       dependentsSet.delete(path);
     });
+
+    for (const [depPath, deps] of this.dependencies) {
+      if (deps.size === 0) this.dependencies.delete(depPath);
+    }
   }
 
   isHidden(path: string): boolean {

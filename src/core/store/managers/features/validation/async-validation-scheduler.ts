@@ -169,7 +169,10 @@ export class BitAsyncValidationScheduler<T extends object> {
         }
       }
 
-      this.abortControllers.forEach((controller, path) => {
+      const controllerPaths = Array.from(this.abortControllers.keys());
+      for (const path of controllerPaths) {
+        const controller = this.abortControllers.get(path);
+        if (!controller) continue;
         try {
           controller.abort();
         } catch {
@@ -179,7 +182,7 @@ export class BitAsyncValidationScheduler<T extends object> {
         // stuck. The runJob finally block is guarded by _cancellingAll so it
         // will not race against this reset.
         this.port.setFieldValidating(path, false);
-      });
+      }
 
       this.pendingJobs.forEach((_job, path) => {
         // Jobs in the pending queue also had setFieldValidating(true) called in

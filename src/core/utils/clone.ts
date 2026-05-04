@@ -60,6 +60,22 @@ export function cloneValue<T>(
     return clone as T;
   }
 
+  if (ArrayBuffer.isView(obj)) {
+    return new (obj.constructor as any)(obj) as T;
+  }
+
+  if (obj instanceof ArrayBuffer) {
+    return obj.slice(0) as T;
+  }
+
+  if (obj instanceof WeakMap || obj instanceof WeakSet) {
+    return obj;
+  }
+
+  if (obj instanceof Promise) {
+    return obj.then((v) => cloneValue(v, new WeakMap())) as T;
+  }
+
   const prototype = Object.getPrototypeOf(obj);
   const isPlainObject = prototype === Object.prototype || prototype === null;
 
@@ -86,15 +102,17 @@ export function cloneValue<T>(
   const clone: any = {};
   visited.set(obj as object, clone);
 
-  for (const key in obj) {
+  for (const key of Reflect.ownKeys(obj as object)) {
     if (
-      key === "__proto__" ||
-      key === "constructor" ||
-      !Object.prototype.hasOwnProperty.call(obj, key)
+      typeof key === "string" &&
+      (key === "__proto__" || key === "constructor")
     ) {
       continue;
     }
-    clone[key] = cloneValue((obj as any)[key], visited);
+    const desc = Object.getOwnPropertyDescriptor(obj as object, key);
+    if (desc && "value" in desc) {
+      clone[key] = cloneValue((obj as any)[key], visited);
+    }
   }
 
   return clone as T;

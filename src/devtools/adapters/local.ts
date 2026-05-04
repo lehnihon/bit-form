@@ -18,13 +18,19 @@ export function setupLocalDevTools(
 
   ui.updateState(getFullSnapshot());
 
+  let rafId: number | undefined;
   const unsubscribe = bus.subscribe(() => {
-    ui.updateState(getFullSnapshot());
+    if (rafId !== undefined) return;
+    rafId = requestAnimationFrame(() => {
+      rafId = undefined;
+      ui.updateState(getFullSnapshot());
+    });
   });
 
   return {
     ui,
     destroy: () => {
+      if (rafId !== undefined) cancelAnimationFrame(rafId);
       unsubscribe();
       container.innerHTML = "";
     },

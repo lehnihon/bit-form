@@ -17,7 +17,9 @@ export function isValidationErrorShape(
     ([key, v]) =>
       key.length > 0 &&
       (typeof v === "string" ||
-        (Array.isArray(v) && v.every((i) => typeof i === "string"))),
+        (Array.isArray(v) && v.every((i) => typeof i === "string")) ||
+        (typeof v === "object" && v !== null && "message" in v &&
+          typeof (v as Record<string, unknown>).message === "string")),
   );
 }
 

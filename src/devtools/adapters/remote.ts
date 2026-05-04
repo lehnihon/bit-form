@@ -16,7 +16,7 @@ export function setupRemoteDevTools(
   url: string = "ws://localhost:3000",
   _bus?: BitBus,
 ) {
-  const socket = new WebSocket(url);
+  let socket: WebSocket;
 
   const sendMessage = (message: DevToolsRemoteMessage) => {
     if (socket.readyState === WebSocket.OPEN) {
@@ -43,35 +43,61 @@ export function setupRemoteDevTools(
     onReset: (id) => sendAction(id, "reset"),
   });
 
-  socket.addEventListener("open", () => {
-    const helloMessage: DevToolsHelloMessage = {
-      type: "HELLO",
-      protocolVersion: DEVTOOLS_PROTOCOL_VERSION,
-      payload: { role: "client", protocolVersion: DEVTOOLS_PROTOCOL_VERSION },
-    };
+  let destroyed = false;
+  let reconnectTimer: ReturnType<typeof setTimeout> | undefined;
 
-    sendMessage(helloMessage);
-    console.log(`[bit-form] Conectado ao DevTools remoto em ${url}`);
-  });
+  function attachListeners() {
+    socket.addEventListener("open", () => {
+      const helloMessage: DevToolsHelloMessage = {
+        type: "HELLO",
+        protocolVersion: DEVTOOLS_PROTOCOL_VERSION,
+        payload: { role: "client", protocolVersion: DEVTOOLS_PROTOCOL_VERSION },
+      };
 
-  socket.addEventListener("message", (msg: MessageEvent) => {
-    try {
-      const data = JSON.parse(msg.data) as DevToolsRemoteMessage;
-      if (isDevToolsStateUpdateMessage(data)) {
-        ui.updateState(data.payload);
+      sendMessage(helloMessage);
+      console.log(`[bit-form] Conectado ao DevTools remoto em ${url}`);
+    });
+
+    socket.addEventListener("message", (msg: MessageEvent) => {
+      try {
+        const data = JSON.parse(msg.data) as DevToolsRemoteMessage;
+        if (isDevToolsStateUpdateMessage(data)) {
+          ui.updateState(data.payload);
+        }
+      } catch (e) {
+        console.error("[bit-form] Erro ao processar mensagem do WebSocket:", e);
       }
-    } catch (e) {
-      console.error("[bit-form] Erro ao processar mensagem do WebSocket:", e);
-    }
-  });
+    });
 
-  socket.addEventListener("error", (err) => {
-    console.error("[bit-form] Erro na conexão do DevTools remoto:", err);
-  });
+    socket.addEventListener("error", (err) => {
+      console.error("[bit-form] Erro na conexão do DevTools remoto:", err);
+    });
+
+    socket.addEventListener("close", () => {
+      if (destroyed) return;
+      console.log("[bit-form] Conexão DevTools remota fechada. Reconectando em 5s...");
+      reconnectTimer = setTimeout(() => {
+        if (destroyed) return;
+        connect();
+      }, 5000);
+    });
+  }
+
+  function connect() {
+    socket = new WebSocket(url);
+    attachListeners();
+  }
+
+  connect();
 
   return {
     ui,
     destroy: () => {
+      destroyed = true;
+      if (reconnectTimer) {
+        clearTimeout(reconnectTimer);
+        reconnectTimer = undefined;
+      }
       if (
         socket.readyState === WebSocket.OPEN ||
         socket.readyState === WebSocket.CONNECTING

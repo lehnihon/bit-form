@@ -10,7 +10,13 @@ const MAX_MESSAGE_SIZE = 1 * 1024 * 1024; // 1 MB
 const MAX_MESSAGES_PER_SECOND = 100;
 
 export function attachDevToolsRelay(server: http.Server): WebSocketServer {
-  const wss = new WebSocketServer({ server });
+  const wss = new WebSocketServer({
+    server,
+    maxPayload: MAX_MESSAGE_SIZE,
+    maxClients: 50,
+    pingInterval: 30000,
+    pingTimeout: 10000,
+  });
 
   const clientRateLimit = new Map<
     WebSocket,

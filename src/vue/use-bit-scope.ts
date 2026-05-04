@@ -1,4 +1,4 @@
-import { computed, onMounted, onUnmounted, ref } from "vue";
+import { computed, onUnmounted, ref } from "vue";
 import type { ScopeStatus, ValidateScopeResult } from "../core";
 import { observeScopeStatusSnapshot } from "../core";
 import { useBitStore } from "./context";
@@ -8,16 +8,13 @@ export type { ScopeStatus, ValidateScopeResult };
 export function useBitScope(scopeName: string) {
   const store = useBitStore();
   const status = ref<ScopeStatus>(store.read.getScopeStatus(scopeName));
-  let unsubscribe: () => void;
 
-  onMounted(() => {
-    unsubscribe = observeScopeStatusSnapshot(store, scopeName, (nextStatus) => {
-      status.value = nextStatus;
-    });
+  const unsubscribe = observeScopeStatusSnapshot(store, scopeName, (nextStatus) => {
+    status.value = nextStatus;
   });
 
   onUnmounted(() => {
-    unsubscribe?.();
+    unsubscribe();
   });
 
   const validate = async (): Promise<ValidateScopeResult> => {
