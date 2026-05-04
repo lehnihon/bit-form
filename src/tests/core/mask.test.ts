@@ -262,7 +262,11 @@ describe("Mask Utils - International & Smart Dates", () => {
   });
 
   it("deve truncar input enorme antes da regex para evitar ReDoS", () => {
-    const mask = createCurrencyMask({ precision: 2 });
+    const mask = createCurrencyMask({
+      precision: 2,
+      thousand: ".",
+      decimal: ",",
+    });
     const hugeInput = "1".repeat(5000) + "abc".repeat(5000);
     const start = performance.now();
     const result = mask.format(hugeInput);

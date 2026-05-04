@@ -13,10 +13,12 @@ export function attachDevToolsRelay(server: http.Server): WebSocketServer {
   const wss = new WebSocketServer({
     server,
     maxPayload: MAX_MESSAGE_SIZE,
-    maxClients: 50,
     pingInterval: 30000,
     pingTimeout: 10000,
   });
+
+  const MAX_CONNECTIONS = 50;
+  let activeConnections = 0;
 
   const clientRateLimit = new Map<
     WebSocket,
@@ -24,6 +26,13 @@ export function attachDevToolsRelay(server: http.Server): WebSocketServer {
   >();
 
   wss.on("connection", (ws) => {
+    if (++activeConnections > MAX_CONNECTIONS) {
+      const code = 1013; // Try Again Later
+      ws.close(code, "Too many connections");
+      activeConnections = MAX_CONNECTIONS;
+      return;
+    }
+
     clientRateLimit.set(ws, { count: 0, resetAt: Date.now() + 1000 });
 
     ws.on("message", (messageBuffer) => {
@@ -63,6 +72,7 @@ export function attachDevToolsRelay(server: http.Server): WebSocketServer {
     });
 
     ws.on("close", () => {
+      activeConnections = Math.max(0, activeConnections - 1);
       clientRateLimit.delete(ws);
     });
   });
