@@ -254,6 +254,14 @@ export class BitFieldCatalog<T extends object = Record<string, unknown>> {
     }
 
     if (this.computedEntriesCache && config.computed) {
+      // Remove any existing entry for the same path to prevent duplicates
+      // on re-register (the same field registered with a new computed fn).
+      const existingIdx = this.computedEntriesCache.findIndex(
+        (e) => e.path === path,
+      );
+      if (existingIdx >= 0) {
+        this.computedEntriesCache.splice(existingIdx, 1);
+      }
       this.computedEntriesCache.push({
         path,
         compute: config.computed,

@@ -207,7 +207,10 @@ export async function runImmediateAsyncValidationStage<T extends object>(args: {
       });
     }
 
-    const errorMessage = await validationPromise;
+    const errorMessage = await validationPromise.catch((error) => {
+      // asyncValidate rejected — treat as a string error so the user sees feedback
+      return error instanceof Error ? error.message : String(error ?? "");
+    });
 
     if (
       controller.signal.aborted ||

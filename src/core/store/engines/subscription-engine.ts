@@ -57,6 +57,9 @@ export class BitSubscriptionEngine<T extends object> {
   }
 
   subscribe(listener: () => void): () => void {
+    if (this.isDestroyed) {
+      return () => {};
+    }
     this.listeners.add(listener);
     return () => this.listeners.delete(listener);
   }
@@ -201,7 +204,10 @@ export class BitSubscriptionEngine<T extends object> {
     }
   }
 
+  private isDestroyed = false;
+
   destroy(): void {
+    this.isDestroyed = true;
     this.listeners.clear();
     this.pathScopedSubscriptions.clear();
     this.pathSelectorIndex.clear();

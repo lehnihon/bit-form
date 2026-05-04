@@ -161,7 +161,13 @@ export class BitPersistManager<T extends object = Record<string, unknown>> {
       if (this.isDestroyed || !raw) return false;
 
       const parsed = this.config.deserialize(raw);
-      if (!parsed || typeof parsed !== "object") {
+      if (this.isDestroyed) return false;
+
+      if (
+        !parsed ||
+        typeof parsed !== "object" ||
+        Array.isArray(parsed)
+      ) {
         return false;
       }
 

@@ -11,11 +11,11 @@ export function createFrameworkFormBinding<T extends object>(
   options?: BitFormControllerOptions,
 ) {
   const controllerStore = {
-    getState: store.read.getState,
-    getDirtyValues: store.read.getDirtyValues,
-    submit: store.write.submit,
-    reset: store.write.reset,
-    setServerErrors: store.write.setServerErrors,
+    getState: store.read.getState.bind(store.read),
+    getDirtyValues: store.read.getDirtyValues.bind(store.read),
+    submit: store.write.submit.bind(store.write),
+    reset: store.write.reset.bind(store.write),
+    setServerErrors: store.write.setServerErrors.bind(store.write),
   };
 
   return {

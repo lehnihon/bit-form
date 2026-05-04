@@ -10,7 +10,13 @@ const MAX_MESSAGE_SIZE = 1 * 1024 * 1024; // 1 MB
 const MAX_MESSAGES_PER_SECOND = 100;
 
 export function attachDevToolsRelay(server: http.Server): WebSocketServer {
-  const wss = new WebSocketServer({ server });
+  const wss = new WebSocketServer({
+    server,
+    maxPayload: MAX_MESSAGE_SIZE,
+  });
+
+  const MAX_CONNECTIONS = 50;
+  let activeConnections = 0;
 
   const clientRateLimit = new Map<
     WebSocket,
@@ -18,6 +24,13 @@ export function attachDevToolsRelay(server: http.Server): WebSocketServer {
   >();
 
   wss.on("connection", (ws) => {
+    if (++activeConnections > MAX_CONNECTIONS) {
+      const code = 1013; // Try Again Later
+      ws.close(code, "Too many connections");
+      activeConnections = MAX_CONNECTIONS;
+      return;
+    }
+
     clientRateLimit.set(ws, { count: 0, resetAt: Date.now() + 1000 });
 
     ws.on("message", (messageBuffer) => {
@@ -57,8 +70,34 @@ export function attachDevToolsRelay(server: http.Server): WebSocketServer {
     });
 
     ws.on("close", () => {
+      activeConnections = Math.max(0, activeConnections - 1);
       clientRateLimit.delete(ws);
     });
+
+    // Heartbeat: mark alive on pong
+    ws.on("pong", () => { (ws as any).__isAlive = true; });
+
+    ws.on("close", () => {
+      activeConnections = Math.max(0, activeConnections - 1);
+      clientRateLimit.delete(ws);
+    });
+  });
+
+  // Periodic heartbeat to detect dead clients
+  const heartbeatTimer = setInterval(() => {
+    wss.clients.forEach((ws) => {
+      if ((ws as any).__isAlive === false) {
+        ws.terminate();
+        return;
+      }
+      (ws as any).__isAlive = false;
+      ws.ping();
+    });
+  }, 30000);
+
+  wss.on("close", () => {
+    clearInterval(heartbeatTimer);
+    wss.clients.forEach((ws) => ws.terminate());
   });
 
   return wss;

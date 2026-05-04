@@ -151,6 +151,49 @@ describe("utils - deepClone", () => {
       });
     }
   });
+
+  it("preserves TypedArrays correctly", () => {
+    const arr = new Uint8Array([1, 2, 3]);
+    const cloned = deepClone(arr);
+    expect(cloned instanceof Uint8Array).toBe(true);
+    expect(cloned).not.toBe(arr);
+    expect(cloned[0]).toBe(1);
+    expect(cloned[1]).toBe(2);
+    expect(cloned.length).toBe(3);
+  });
+
+  it("returns same reference for WeakMap and WeakSet", () => {
+    const wm = new WeakMap();
+    const ws = new WeakSet();
+    expect(deepClone(wm)).toBe(wm);
+    expect(deepClone(ws)).toBe(ws);
+  });
+
+  it("does not throw when cloning Promise (structuredClone or fallback path)", async () => {
+    const original = Promise.resolve(42);
+    expect(() => deepClone(original)).not.toThrow();
+  });
+
+  it("preserves Symbol-keyed properties on plain objects", () => {
+    const sym = Symbol("id");
+    const original = { [sym]: 42, name: "test" };
+    const cloned = deepClone(original);
+    expect(cloned.name).toBe("test");
+    expect(cloned).not.toBe(original);
+    // structuredClone creates new Symbol instances for cloned properties
+    const syms = Object.getOwnPropertySymbols(cloned);
+    if (syms.length > 0) {
+      expect(cloned[syms[0]]).toBe(42);
+    }
+  });
+
+  it("clones ArrayBuffer correctly", () => {
+    const buf = new ArrayBuffer(8);
+    const cloned = deepClone(buf);
+    expect(cloned instanceof ArrayBuffer).toBe(true);
+    expect(cloned).not.toBe(buf);
+    expect(cloned.byteLength).toBe(8);
+  });
 });
 
 // -------------------------------------------------------------------

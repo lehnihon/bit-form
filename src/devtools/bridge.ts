@@ -20,6 +20,7 @@ export function setupRemoteBridge(url: string, bus: BitBus = bitBus) {
   let unsubscribeBus: (() => void) | null = null;
   let heartbeatInterval: ReturnType<typeof setInterval>;
   let batchFlushTimeout: ReturnType<typeof setTimeout> | null = null;
+  let reconnectTimer: ReturnType<typeof setTimeout> | undefined;
   const pendingStoreIds = new Set<string>();
   let isIntentionalDisconnect = false;
 
@@ -145,7 +146,7 @@ export function setupRemoteBridge(url: string, bus: BitBus = bitBus) {
 
       if (!isIntentionalDisconnect) {
         console.log("[bit-form] Conexão perdida. Reconectando em 3s...");
-        setTimeout(connect, 3000);
+        reconnectTimer = setTimeout(connect, 3000);
       } else {
         console.log("[bit-form] Ponte antiga encerrada com sucesso.");
       }
@@ -156,6 +157,10 @@ export function setupRemoteBridge(url: string, bus: BitBus = bitBus) {
 
   const cleanup = () => {
     isIntentionalDisconnect = true;
+    if (reconnectTimer) {
+      clearTimeout(reconnectTimer);
+      reconnectTimer = undefined;
+    }
 
     if (unsubscribeBus) unsubscribeBus();
     clearInterval(heartbeatInterval);

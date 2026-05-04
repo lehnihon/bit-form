@@ -3,6 +3,9 @@ import type { BitFrameworkConfig } from "../contracts/public/store-api-types";
 import type { BitConfig, BitPersistResolvedConfig } from "../contracts/types";
 
 function defaultIdFactory() {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return `bit-form-${crypto.randomUUID()}`;
+  }
   return `bit-form-${Math.random().toString(36).slice(2, 9)}`;
 }
 

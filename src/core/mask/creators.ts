@@ -168,10 +168,15 @@ export const createCurrencyMask = ({
   const formatFn = (value: any) => {
     if (value === undefined || value === null || value === "") return "";
 
+    let rawString = String(value);
+    // Truncate input BEFORE stripping non-digits to avoid ReDoS on huge strings
+    if (rawString.length > 200) {
+      rawString = rawString.slice(0, 200);
+    }
     let stringValue =
       typeof value === "number"
         ? Math.abs(value).toFixed(precision).replace(/\D/g, "")
-        : String(value).replace(/\D/g, "");
+        : rawString.replace(/\D/g, "");
 
     if (!stringValue && String(value).includes("-") && allowNegative)
       return "-";
@@ -282,11 +287,31 @@ export const createDateMask = (config?: DateMaskConfig): BitMask => {
         year = stringVal.substring(4, 8);
       }
 
-      // Validação do Dia (01 a 31)
+      // Validação do Dia (01 a 31) com limites por mês e ano bissexto
       if (day.length === 2) {
-        const d = parseInt(day, 10);
-        if (d > 31) day = "31";
-        if (d === 0) day = "01";
+        let d = parseInt(day, 10);
+        if (d > 31) d = 31;
+        if (d === 0) d = 1;
+
+        if (month.length === 2) {
+          const m = parseInt(month, 10);
+          const y =
+            year.length === 4
+              ? parseInt(year, 10)
+              : year.length > 0
+                ? parseInt(year.padEnd(4, "0"), 10)
+                : 0;
+          const isLeapYear =
+            y > 0 && ((y % 4 === 0 && y % 100 !== 0) || y % 400 === 0);
+          const daysInMonth: Record<number, number> = {
+            1: 31, 2: isLeapYear ? 29 : 28, 3: 31, 4: 30, 5: 31, 6: 30,
+            7: 31, 8: 31, 9: 30, 10: 31, 11: 30, 12: 31,
+          };
+          const maxDay = daysInMonth[m] ?? 31;
+          if (d > maxDay) d = maxDay;
+        }
+
+        day = String(d).padStart(2, "0");
       }
 
       // Validação do Mês (01 a 12)
