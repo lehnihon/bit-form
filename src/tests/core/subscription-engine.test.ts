@@ -575,4 +575,31 @@ describe("BitSubscriptionEngine", () => {
       consoleErrorSpy.mockRestore();
     });
   });
+
+  describe("destroy lifecycle", () => {
+    it("subscribe returns noop after destroy", () => {
+      const state = createState({ user: { name: "A", age: 1 } });
+      const engine = new BitSubscriptionEngine<Values>(() => state);
+      engine.destroy();
+      const fn = vi.fn();
+      const unsub = engine.subscribe(fn);
+      unsub();
+      expect(fn).not.toHaveBeenCalled();
+    });
+
+    it("subscribeSelector returns noop after destroy", () => {
+      const state = createState({ user: { name: "A", age: 1 } });
+      const engine = new BitSubscriptionEngine<Values>(() => state);
+      engine.destroy();
+      let called = false;
+      const unsub = engine.subscribeSelector(
+        (s) => (s.values as any).user.name,
+        () => { called = true; },
+        {},
+        (a, b) => a === b,
+      );
+      unsub();
+      expect(called).toBe(false);
+    });
+  });
 });

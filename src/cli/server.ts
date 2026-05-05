@@ -36,22 +36,39 @@ export function startDevServer(port = 3000) {
         return;
       }
 
+      // Resolve symlinks to prevent traversal past the dist path containment
+      let resolvedPath: string;
       try {
-        if (fs.existsSync(filePath)) {
-          const content = fs.readFileSync(filePath);
-          const ext = path.extname(filePath);
-          const mimeTypes: Record<string, string> = {
-            ".js": "application/javascript",
-            ".css": "text/css",
-          };
-          res.writeHead(200, {
-            "Content-Type": mimeTypes[ext] || "text/plain",
-          });
-          res.end(content);
-        } else {
-          res.writeHead(404);
-          res.end("Not Found");
-        }
+        resolvedPath = fs.realpathSync(filePath);
+      } catch {
+        // realpathSync fails if the file does not exist — that is a 404, not a traversal
+        res.writeHead(404);
+        res.end("Not Found");
+        return;
+      }
+
+      if (path.relative(distRoot, resolvedPath).startsWith("..")) {
+        res.writeHead(403);
+        res.end("Forbidden");
+        return;
+      }
+
+      try {
+        const content = fs.readFileSync(resolvedPath);
+        const ext = path.extname(resolvedPath);
+        const mimeTypes: Record<string, string> = {
+          ".js": "application/javascript",
+          ".mjs": "application/javascript",
+          ".css": "text/css",
+          ".json": "application/json",
+          ".map": "application/json",
+          ".svg": "image/svg+xml",
+          ".html": "text/html",
+        };
+        res.writeHead(200, {
+          "Content-Type": mimeTypes[ext] || "text/plain",
+        });
+        res.end(content);
       } catch {
         res.writeHead(500);
         res.end("Internal Error");

@@ -69,11 +69,6 @@ export function attachDevToolsRelay(server: http.Server): WebSocketServer {
       });
     });
 
-    ws.on("close", () => {
-      activeConnections = Math.max(0, activeConnections - 1);
-      clientRateLimit.delete(ws);
-    });
-
     // Heartbeat: mark alive on pong
     ws.on("pong", () => { (ws as any).__isAlive = true; });
 

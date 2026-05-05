@@ -70,6 +70,10 @@ export class BitSubscriptionEngine<T extends object> {
     options: BitScopedSelectorSubscriptionOptions<TSlice>,
     equalityFn: (previous: TSlice, next: TSlice) => boolean,
   ): () => void {
+    if (this.isDestroyed) {
+      return () => {};
+    }
+
     let lastSlice = selector(this.getState());
 
     const subscription: SelectorListenerEntry<T> = {

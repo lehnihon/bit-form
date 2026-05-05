@@ -20,12 +20,12 @@ export function BitFormSwitch({
   id,
 }: BitFormSwitchProps) {
   const field = useBitField(path);
-  const { field: valueField, meta } = field;
+  const { meta } = field;
 
   if (meta.isHidden) return null;
 
   const inputId = id ?? path;
-  const checked = Boolean(valueField.value);
+  const checked = Boolean(field.value);
 
   return (
     <div className="space-y-2" data-invalid={meta.invalid || undefined}>
@@ -33,7 +33,7 @@ export function BitFormSwitch({
         <Switch
           id={inputId}
           checked={checked}
-          onCheckedChange={(checked) => valueField.setValue(!!checked)}
+          onCheckedChange={(checked) => field.setValue(!!checked)}
           aria-invalid={meta.invalid || undefined}
           aria-required={meta.isRequired || undefined}
           className={className}

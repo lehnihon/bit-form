@@ -20,12 +20,12 @@ export function BitFormCheckbox({
   id,
 }: BitFormCheckboxProps) {
   const field = useBitField(path);
-  const { field: valueField, meta } = field;
+  const { meta } = field;
 
   if (meta.isHidden) return null;
 
   const inputId = id ?? path;
-  const checked = Boolean(valueField.value);
+  const checked = Boolean(field.value);
 
   return (
     <div className="space-y-2" data-invalid={meta.invalid || undefined}>
@@ -33,8 +33,8 @@ export function BitFormCheckbox({
         <Checkbox
           id={inputId}
           checked={checked}
-          onCheckedChange={(checked) => valueField.setValue(!!checked)}
-          onBlur={valueField.setBlur}
+          onCheckedChange={(checked) => field.setValue(!!checked)}
+          onBlur={field.setBlur}
           aria-invalid={meta.invalid || undefined}
           aria-required={meta.isRequired || undefined}
           className={className}

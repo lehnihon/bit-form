@@ -79,6 +79,7 @@ export function getDevToolsDashboardHtml(port: number): string {
       if (btn && !panel) {
         btn.click();
         document.body.classList.add('has-panel');
+        observer.disconnect();
       }
     });
 
