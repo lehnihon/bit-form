@@ -595,7 +595,7 @@ describe("BitSubscriptionEngine", () => {
       const unsub = engine.subscribeSelector(
         (s) => (s.values as any).user.name,
         () => { called = true; },
-        {},
+        { paths: [] },
         (a, b) => a === b,
       );
       unsub();
