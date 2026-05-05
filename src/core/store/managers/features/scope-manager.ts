@@ -20,7 +20,15 @@ export class BitScopeManager<T extends object = Record<string, unknown>> {
    * Returns whether the scope has errors, is dirty, and the error details.
    */
   getScopeStatus(scopeName: string) {
+    if (!scopeName) {
+      return { hasErrors: false, isDirty: false, errors: {} };
+    }
+
     const fields = this.getScopeFields(scopeName);
+    if (fields.length === 0) {
+      return { hasErrors: false, isDirty: false, errors: {} };
+    }
+
     const state = this.getState();
 
     const hasErrors = fields.some(

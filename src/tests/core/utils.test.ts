@@ -686,3 +686,28 @@ describe("utils - hasAnyError", () => {
     expect(hasAnyError({ email: undefined, name: "Required" })).toBe(true);
   });
 });
+
+describe("utils - path value edge cases", () => {
+  it("consecutive dots are treated as single separator", () => {
+    const obj = { user: { name: "Leo" } };
+    const result = setDeepValue(obj, "user..name", "Fixed");
+    expect(getDeepValue(result, "user.name")).toBe("Fixed");
+  });
+
+  it("trailing dot is ignored", () => {
+    const obj = { user: { name: "Leo" } };
+    const result = setDeepValue(obj, "user.name.", "Fixed");
+    expect(getDeepValue(result, "user.name")).toBe("Fixed");
+  });
+
+  it("leading dot is ignored", () => {
+    const obj = { user: { name: "Leo" } };
+    const result = getDeepValue(obj, ".user.name");
+    expect(result).toBe("Leo");
+  });
+
+  it("getDeepValue with consecutive dots reads correctly", () => {
+    const obj = { user: { name: "Leo" } };
+    expect(getDeepValue(obj, "user..name")).toBe("Leo");
+  });
+});

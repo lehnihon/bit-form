@@ -3256,10 +3256,10 @@ describe("BitStore Core", () => {
       try {
         store.write.setField("email", "new@test.com");
       } catch (e) {
-        // Ignore
+        // Ignore — the test verifies that no derivation error corrupted pending state
       }
 
-      expect(true).toBe(true);
+      expect(store.read.getState().values.email).toBe("new@test.com");
     });
 
     it("should prevent batch poisoning when observability handler throws (low-level)", async () => {
@@ -3701,6 +3701,29 @@ describe("BitStore Core", () => {
       store.feature.cleanup();
       // After cleanup, store operations should not crash
       expect(() => store.read.getState()).not.toThrow();
+    });
+
+    it("transaction rolls back state on callback error", () => {
+      const store = createBitStore({ initialValues: { a: 0, b: 0 } });
+      expect(() =>
+        store.write.transaction(() => {
+          store.write.setField("a", 1);
+          throw new Error("fail");
+        }),
+      ).toThrow("fail");
+      expect(store.read.getState().values.a).toBe(0);
+      expect(store.read.getState().values.b).toBe(0);
+    });
+
+    it("unregisterField does not orphan errors/touched after cleanup", () => {
+      const store = createBitStore({ initialValues: { user: { name: "", email: "" } } });
+      store.feature.registerField("user.email", { validation: { required: true } });
+      store.write.setError("user.email", "Required");
+
+      store.feature.unregisterField("user.email");
+
+      const state = store.read.getState();
+      expect(state.errors["user.email"]).toBeUndefined();
     });
   });
 });
