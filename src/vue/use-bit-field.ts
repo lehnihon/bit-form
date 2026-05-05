@@ -35,7 +35,7 @@ export function useBitField<
 
   const modelValue = computed({
     get: () => displayValue.value,
-    set: (val: string) => {
+    set: (val: string | number | null | undefined) => {
       fieldController.setValue(val);
     },
   });

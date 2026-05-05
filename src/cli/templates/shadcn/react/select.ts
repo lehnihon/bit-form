@@ -35,7 +35,7 @@ export function BitFormSelect({
   id,
 }: BitFormSelectProps) {
   const field = useBitField(path);
-  const { field: valueField, meta } = field;
+  const { meta } = field;
 
   if (meta.isHidden) return null;
 
@@ -53,8 +53,8 @@ export function BitFormSelect({
         </label>
       )}
       <Select
-        value={valueField.value ?? ""}
-        onValueChange={(val) => valueField.setValue(val)}
+        value={field.value ?? ""}
+        onValueChange={(val) => field.setValue(val)}
       >
         <SelectTrigger
           id={inputId}

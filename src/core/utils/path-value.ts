@@ -21,7 +21,7 @@ function getPathKeys(path: string): string[] {
     return cached;
   }
 
-  const keys = path.split(".");
+  const keys = path.split(".").filter((k) => k.length > 0);
   setPathCacheEntry(path, keys);
   return keys;
 }

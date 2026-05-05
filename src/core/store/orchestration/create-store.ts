@@ -45,7 +45,11 @@ function isFrameworkBindingStore<T extends object>(
   }
 
   const candidate = store as Record<PropertyKey, unknown>;
-  return candidate[BIT_FRAMEWORK_STORE_SYMBOL] === true;
+  return (
+    candidate[BIT_FRAMEWORK_STORE_SYMBOL] === true &&
+    typeof (candidate as Record<PropertyKey, unknown>).read === "object" &&
+    typeof (candidate as Record<PropertyKey, unknown>).feature === "object"
+  );
 }
 
 export function createFrameworkStoreAdapter<T extends object>(

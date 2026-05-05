@@ -20,6 +20,10 @@ export function runStoreStateBatch<T extends object, TResult>(args: {
 
   try {
     return callback();
+  } catch (error) {
+    batchState.pendingState = null;
+    batchState.pendingHistorySnapshot = false;
+    throw error;
   } finally {
     if (endStoreBatch(batchState)) {
       flushBatchedStateUpdates();

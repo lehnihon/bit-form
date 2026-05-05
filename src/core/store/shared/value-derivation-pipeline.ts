@@ -73,6 +73,7 @@ export function filterDependencyEntries<TEntry extends BitDependencyAwareEntry>(
 
 function orderDependencyEntries<TEntry extends BitDependencyAwareEntry>(
   entries: readonly TEntry[],
+  onError?: (error: unknown, path: string) => void,
 ): {
   orderedEntries: TEntry[];
   cyclePaths: string[];
@@ -95,7 +96,21 @@ function orderDependencyEntries<TEntry extends BitDependencyAwareEntry>(
 
   entries.forEach((entry) => {
     entry.dependsOn.forEach((dependencyPath) => {
-      if (dependencyPath === entry.path || !entryByPath.has(dependencyPath)) {
+      if (dependencyPath === entry.path) {
+        return;
+      }
+      if (!entryByPath.has(dependencyPath)) {
+        if (typeof console !== "undefined" && console.warn) {
+          console.warn(
+            `BitStore: normalizer "${entry.path}" depends on "${dependencyPath}" which is not a registered normalizer. It will receive pre-computed values.`,
+          );
+        }
+        onError?.(
+          new Error(
+            `BitStore: normalizer "${entry.path}" depends on "${dependencyPath}" which is not a registered normalizer.`,
+          ),
+          entry.path,
+        );
         return;
       }
 
@@ -169,6 +184,7 @@ export function applyValueDerivations<T extends object>(args: {
 
   const orderedResult = orderDependencyEntries(
     filterDependencyEntries(normalizerEntries, changedPaths),
+    onError,
   );
   const { orderedEntries: targetedNormalizers, cyclePaths } = orderedResult;
 

@@ -181,4 +181,19 @@ describe("bit-form add", () => {
       true,
     );
   });
+
+  it("shadcn templates do not destructure field property from useBitField", () => {
+    runAddCommand(["shadcn", "select", "checkbox", "switch", "radio-group", "--path", "."]);
+
+    const selectCode = fs.readFileSync(path.join(tmpDir, "bit-form-select.tsx"), "utf-8");
+    const checkboxCode = fs.readFileSync(path.join(tmpDir, "bit-form-checkbox.tsx"), "utf-8");
+    const switchCode = fs.readFileSync(path.join(tmpDir, "bit-form-switch.tsx"), "utf-8");
+    const radioCode = fs.readFileSync(path.join(tmpDir, "bit-form-radio-group.tsx"), "utf-8");
+
+    // Must not destructure a non-existent `field` property
+    for (const code of [selectCode, checkboxCode, switchCode, radioCode]) {
+      expect(code).not.toMatch(/\{ field:/);
+      expect(code).toContain("field.value");
+    }
+  });
 });

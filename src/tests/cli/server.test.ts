@@ -8,6 +8,7 @@ const {
   listenMock,
   existsSyncMock,
   readFileSyncMock,
+  realpathSyncMock,
   attachDevToolsRelayMock,
   getDevToolsDashboardHtmlMock,
 } = vi.hoisted(() => ({
@@ -15,6 +16,7 @@ const {
   listenMock: vi.fn(),
   existsSyncMock: vi.fn(),
   readFileSyncMock: vi.fn(),
+  realpathSyncMock: vi.fn((p: string) => p),
   attachDevToolsRelayMock: vi.fn(),
   getDevToolsDashboardHtmlMock: vi.fn(() => "<html>dashboard</html>"),
 }));
@@ -31,6 +33,7 @@ vi.mock("node:fs", () => ({
   default: {
     existsSync: existsSyncMock,
     readFileSync: readFileSyncMock,
+    realpathSync: realpathSyncMock,
   },
 }));
 
@@ -65,7 +68,6 @@ describe("startDevServer static /dist", () => {
   });
 
   it("serve arquivo dentro de dist", () => {
-    existsSyncMock.mockReturnValue(true);
     readFileSyncMock.mockReturnValue(Buffer.from("console.log('ok')"));
 
     startDevServer(3001);
@@ -73,7 +75,7 @@ describe("startDevServer static /dist", () => {
     const res = createMockResponse();
     requestHandler?.({ url: "/dist/app.js" }, res);
 
-    expect(existsSyncMock).toHaveBeenCalledTimes(1);
+    expect(realpathSyncMock).toHaveBeenCalledTimes(1);
     expect(readFileSyncMock).toHaveBeenCalledTimes(1);
     expect(res.writeHead).toHaveBeenCalledWith(200, {
       "Content-Type": "application/javascript",

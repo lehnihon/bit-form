@@ -12,6 +12,8 @@ export type {
   UseBitFieldBindProps,
   UseBitFieldMeta,
   UseBitFieldResult,
+  UseBitFormMeta,
+  UseBitFormResult,
   UseBitStepsResult,
   UseBitUploadResult,
   UseBitHistoryResult,

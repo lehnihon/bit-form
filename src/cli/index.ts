@@ -10,7 +10,13 @@ if (command === "devtools") {
   // Procura se o usuário passou a flag -p ou --port
   const portIndex =
     args.indexOf("-p") !== -1 ? args.indexOf("-p") : args.indexOf("--port");
-  const port = portIndex !== -1 ? Number(args[portIndex + 1]) : 3000;
+  const portStr = portIndex !== -1 ? args[portIndex + 1] : undefined;
+  const port = portStr ? Number(portStr) : 3000;
+
+  if (portStr !== undefined && (isNaN(port) || port < 1 || port > 65535)) {
+    console.error(`bit-form: invalid port "${portStr}". Must be a number between 1 and 65535.`);
+    process.exit(1);
+  }
 
   startDevServer(port);
 } else if (command === "add") {

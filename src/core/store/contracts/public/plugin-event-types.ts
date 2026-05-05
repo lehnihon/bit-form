@@ -14,6 +14,9 @@ export type BitOperationalErrorSource =
   | "submit"
   | "validation"
   | "persist"
+  | "derivation"
+  | "computed"
+  | "subscription"
   | (string & {});
 
 export type BitFieldChangeOrigin =

@@ -21,6 +21,8 @@ export function normalizeConfig<T extends object>(
   const rawInitial = (config.initialValues ?? {}) as T;
   const validation = config.validation;
   const history = config.history;
+  const isPersistExplicitlyEnabled = config.persist?.enabled === true;
+  const isPersistExplicitlyConfigured = config.persist !== undefined;
 
   const defaultPersistKey = config.name
     ? `bit-form:${config.name}:draft`
@@ -49,7 +51,11 @@ export function normalizeConfig<T extends object>(
     enabled: config.persist?.enabled ?? false,
     key: config.persist?.key ?? defaultPersistKey,
     storage: config.persist?.storage,
-    autoSave: config.persist?.autoSave ?? true,
+    autoSave: isPersistExplicitlyConfigured
+      ? (config.persist?.autoSave ?? true)
+      : isPersistExplicitlyEnabled
+        ? (config.persist?.autoSave ?? true)
+        : false,
     debounceMs: config.persist?.debounceMs ?? 300,
     mode: config.persist?.mode ?? "values",
     serialize: config.persist?.serialize ?? JSON.stringify,

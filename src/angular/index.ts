@@ -11,6 +11,7 @@ export { injectBitPersist } from "./inject-bit-persist";
 export type {
   InjectBitFieldMeta,
   InjectBitFieldResult,
+  InjectBitFormResult,
   InjectBitStepsResult,
   InjectBitUploadResult,
   InjectBitHistoryResult,

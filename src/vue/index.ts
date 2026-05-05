@@ -11,6 +11,7 @@ export { useBitPersist } from "./use-bit-persist";
 export type {
   UseBitFieldVueMeta,
   UseBitFieldVueResult,
+  UseBitFormResult,
   UseBitStepsResult,
   UseBitUploadResult,
   UseBitHistoryResult,
