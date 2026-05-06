@@ -5,6 +5,9 @@ import { useBitStore } from "./provider";
 import type { InjectBitStepsResult } from "./types";
 
 export function injectBitSteps(scopeNames: string[]): InjectBitStepsResult {
+  if (scopeNames.length === 0) {
+    throw new Error("injectBitSteps: scopeNames must not be empty");
+  }
   const store = useBitStore();
   const stepIndex = signal(0);
 

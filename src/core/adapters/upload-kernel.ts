@@ -63,30 +63,31 @@ export function createUploadHandler<
   fieldPath: string,
   uploadFn: BitUploadFn<TMetadata>,
   callbacks: UploadKernelCallbacks,
+  sharedGeneration?: { current: number },
 ): (file: File | null | undefined) => Promise<void> {
-  let currentGeneration = 0;
+  const generation = sharedGeneration ?? { current: 0 };
   const onError = callbacks.onCallbackError;
 
   return async (file) => {
     if (!file) return;
 
-    const myGeneration = ++currentGeneration;
+    const myGeneration = ++generation.current;
     safeCallbackExecution(() => callbacks.setLoading(true), onError);
     safeCallbackExecution(() => callbacks.setError(fieldPath, undefined), onError);
 
     try {
       const result = await uploadFn(file);
 
-      if (myGeneration !== currentGeneration) return;
+      if (myGeneration !== generation.current) return;
       safeCallbackExecution(() => callbacks.setValue(result.url), onError);
       safeCallbackExecution(() => callbacks.setUploadKey(result.key), onError);
       safeCallbackExecution(() => callbacks.setError(fieldPath, undefined), onError);
     } catch (error) {
-      if (myGeneration !== currentGeneration) return;
+      if (myGeneration !== generation.current) return;
       const message = error instanceof Error ? error.message : "Upload failed";
       safeCallbackExecution(() => callbacks.setError(fieldPath, message), onError);
     } finally {
-      if (myGeneration === currentGeneration) {
+      if (myGeneration === generation.current) {
         safeCallbackExecution(() => callbacks.setLoading(false), onError);
       }
     }
@@ -100,10 +101,14 @@ export function createRemoveHandler(
   fieldPath: string,
   deleteFile: BitDeleteUploadFn | undefined,
   callbacks: UploadKernelCallbacks,
+  sharedGeneration?: { current: number },
 ): () => Promise<void> {
   const onError = callbacks.onCallbackError;
 
   return async () => {
+    if (sharedGeneration) {
+      ++sharedGeneration.current;
+    }
     const uploadKey = callbacks.getUploadKey();
 
     if (uploadKey && deleteFile) {
