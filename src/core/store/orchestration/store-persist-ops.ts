@@ -172,7 +172,7 @@ export function applyStorePersistedValues<T extends object>(args: {
     saveHistorySnapshot,
   } = args;
 
-  const nextValues = deepClone(deepMerge(initialValues, values));
+  const nextValues = deepClone(deepMerge(deepClone(state.values), values));
 
   validation.cancelAll();
   fieldRegistry.evaluateAll(nextValues);

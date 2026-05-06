@@ -7,10 +7,15 @@ on:
     branches: [main]
   workflow_dispatch:
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   perf-baseline:
     name: Performance Baseline
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     continue-on-error: false
     steps:
       - uses: actions/checkout@v4
@@ -18,7 +23,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 24
+          node-version: 22
           cache: npm
 
       - name: Install dependencies
@@ -30,6 +35,7 @@ jobs:
   compat-smoke:
     name: Package Compatibility Smoke
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     continue-on-error: false
     steps:
       - uses: actions/checkout@v4
@@ -37,7 +43,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 24
+          node-version: 22
           cache: npm
 
       - name: Install dependencies
@@ -49,6 +55,7 @@ jobs:
   release-gates:
     name: Release Gates (Perf + Bundle + Observability)
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     continue-on-error: false
     steps:
       - uses: actions/checkout@v4
@@ -56,11 +63,14 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 24
+          node-version: 22
           cache: npm
 
       - name: Install dependencies
         run: npm ci --fetch-retries=5 --fetch-retry-mintimeout=20000 --fetch-retry-maxtimeout=120000
+
+      - name: Lint (Check Types)
+        run: npm run lint
 
       - name: Run release gates
         run: npm run test:release-gates

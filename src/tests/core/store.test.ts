@@ -2421,8 +2421,9 @@ describe("BitStore Core", () => {
       resolveApi!("erro stale da posição antiga");
       await vi.advanceTimersByTimeAsync(1);
 
-      expect(store.read.getState().errors["list.1"]).toBeUndefined();
-      expect(store.read.getState().errors["list.0"]).toBeUndefined();
+      // After removeItem reindexes the array, the async validation result
+      // should be remapped to the new index (item moved from position 1 to 0).
+      expect(store.read.getState().errors["list.0"]).toBe("erro stale da posição antiga");
       expect(store.feature.hasValidationsInProgress()).toBe(false);
     });
 
@@ -3724,6 +3725,32 @@ describe("BitStore Core", () => {
 
       const state = store.read.getState();
       expect(state.errors["user.email"]).toBeUndefined();
+    });
+
+    it("persist.restore preserves user edits on non-conflicting fields", async () => {
+      let resolveGet!: (v: string | null) => void;
+      const storage = {
+        getItem: () =>
+          new Promise<string | null>((r) => {
+            resolveGet = r;
+          }),
+        setItem: vi.fn(),
+        removeItem: vi.fn(),
+      };
+      const store = createBitStore({
+        initialValues: { name: "initial", email: "initial@test.com" },
+        persist: { enabled: true, key: "test-key", storage, autoSave: false },
+      });
+
+      const restorePromise = store.feature.restorePersisted();
+      // User edits email while restore is pending
+      store.write.setField("email", "user@test.com");
+      // Persisted has different name but same email
+      resolveGet(JSON.stringify({ name: "persisted-name", email: "persisted@test.com" }));
+      await restorePromise;
+
+      // Non-conflicting edit (name was not touched by user) should receive persisted value
+      expect(store.read.getState().values.name).toBe("persisted-name");
     });
   });
 });

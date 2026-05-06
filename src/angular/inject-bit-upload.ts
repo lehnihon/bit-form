@@ -22,6 +22,7 @@ export function injectBitUpload<
   const field = injectBitField(fieldPath);
   let uploadKey: string | null = null;
   const isUploading = signal(false);
+  const sharedGen = { current: 0 };
 
   const kernelCallbacks = {
     setLoading: (val: boolean) => isUploading.set(val),
@@ -36,8 +37,8 @@ export function injectBitUpload<
       store.read.config.onUnhandledError(e, "upload"),
   };
 
-  const upload = createUploadHandler(fieldPath, uploadFn, kernelCallbacks);
-  const remove = createRemoveHandler(fieldPath, deleteFile, kernelCallbacks);
+  const upload = createUploadHandler(fieldPath, uploadFn, kernelCallbacks, sharedGen);
+  const remove = createRemoveHandler(fieldPath, deleteFile, kernelCallbacks, sharedGen);
 
   return {
     value: computed(() => field.value()),

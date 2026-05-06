@@ -17,7 +17,9 @@ npm dist-tag ls @lehnihon/bit-form
 ## 3) Force stable pin in pilot apps
 
 ```bash
-npm i @lehnihon/bit-form@2.2.4
+LAST_STABLE=$(npm dist-tag ls @lehnihon/bit-form | grep 'latest' | awk '{print $2}')
+echo "Rolling back to $LAST_STABLE"
+npm i @lehnihon/bit-form@$LAST_STABLE
 ```
 
 ## 4) Publish fixed canary (optional)

@@ -1,5 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
-import { createUploadHandler } from "../../core/adapters/upload-kernel";
+import {
+  createUploadHandler,
+  createRemoveHandler,
+} from "../../core/adapters/upload-kernel";
 
 function makeCallbacks() {
   return {
@@ -239,6 +242,68 @@ describe("createUploadHandler", () => {
 
       expect(setLoading).toHaveBeenCalledWith(true);
       expect(setLoading).toHaveBeenLastCalledWith(false);
+    });
+  });
+
+  describe("sharedGeneration", () => {
+    it("remove during upload invalidates stale upload result", async () => {
+      let resolveUpload!: (v: { url: string; key: string }) => void;
+      const uploadFn = () =>
+        new Promise<{ url: string; key: string }>((r) => {
+          resolveUpload = r;
+        });
+
+      const callbacks = makeCallbacks();
+      const gen = { current: 0 };
+
+      const upload = createUploadHandler("file", uploadFn as any, callbacks, gen);
+      const remove = createRemoveHandler("file", undefined, callbacks, gen);
+
+      // Start upload
+      const uploadPromise = upload(new File(["a"], "file.jpg"));
+      expect(callbacks.setLoading).toHaveBeenCalledWith(true);
+
+      // Remove while upload is pending
+      await remove();
+      expect(callbacks.setValue).toHaveBeenCalledWith(null);
+      callbacks.setValue.mockClear();
+
+      // Upload completes — should be ignored
+      resolveUpload({ url: "stale.jpg", key: "k1" });
+      await uploadPromise;
+
+      // Stale URL should NOT have overwritten the null
+      expect(callbacks.setValue).not.toHaveBeenCalledWith("stale.jpg");
+    });
+
+    it("shared generation prevents race with deleteFile", async () => {
+      let resolveUpload!: (v: { url: string; key: string }) => void;
+      const uploadFn = () =>
+        new Promise<{ url: string; key: string }>((r) => {
+          resolveUpload = r;
+        });
+      const deleteFn = vi.fn().mockResolvedValue(undefined);
+
+      const callbacks = makeCallbacks();
+      callbacks.getUploadKey = vi.fn().mockReturnValue("existing-key");
+      const gen = { current: 0 };
+
+      const upload = createUploadHandler("file", uploadFn as any, callbacks, gen);
+      const remove = createRemoveHandler("file", deleteFn, callbacks, gen);
+
+      // Start upload
+      const uploadPromise = upload(new File(["a"], "file.jpg"));
+
+      // Remove (with deleteFile) while upload is pending
+      await remove();
+      expect(callbacks.setValue).toHaveBeenCalledWith(null);
+      callbacks.setValue.mockClear();
+
+      // Upload completes — stale, should be ignored
+      resolveUpload({ url: "stale.jpg", key: "k2" });
+      await uploadPromise;
+
+      expect(callbacks.setValue).not.toHaveBeenCalledWith("stale.jpg");
     });
   });
 });

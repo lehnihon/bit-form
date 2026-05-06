@@ -11,6 +11,9 @@ import { useBitStore } from "./context";
 import type { UseBitStepsResult } from "./types";
 
 export function useBitSteps(scopeNames: string[]): UseBitStepsResult {
+  if (scopeNames.length === 0) {
+    throw new Error("useBitSteps: scopeNames must not be empty");
+  }
   const store = useBitStore();
   const [stepIndex, setStepIndex] = useState(0);
 

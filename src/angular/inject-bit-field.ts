@@ -52,6 +52,8 @@ export function injectBitField<
 
   const hasError = computed(() => metaState().hasError);
 
+  const onBlur = () => fieldController.setBlur();
+
   const update = (e: BitFieldInputEvent) =>
     setValue(isBitFieldInputEventObject(e) ? (e.target?.value ?? null) : e);
 
@@ -62,6 +64,7 @@ export function injectBitField<
     setValue,
     setBlur,
     update,
+    onBlur,
     // Metadata (grouped)
     meta: {
       error,

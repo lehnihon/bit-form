@@ -22,6 +22,7 @@ export function useBitUpload<
   const field = useBitField(fieldPath);
   let uploadKey: string | null = null;
   const isUploading = ref(false);
+  const sharedGen = { current: 0 };
 
   const kernelCallbacks = {
     setLoading: (val: boolean) => {
@@ -38,8 +39,8 @@ export function useBitUpload<
       store.read.config.onUnhandledError(e, "upload"),
   };
 
-  const upload = createUploadHandler(fieldPath, uploadFn, kernelCallbacks);
-  const remove = createRemoveHandler(fieldPath, deleteFile, kernelCallbacks);
+  const upload = createUploadHandler(fieldPath, uploadFn, kernelCallbacks, sharedGen);
+  const remove = createRemoveHandler(fieldPath, deleteFile, kernelCallbacks, sharedGen);
 
   return {
     value: field.value as ComputedRef<string | File | null>,

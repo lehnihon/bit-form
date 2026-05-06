@@ -95,11 +95,6 @@
       "import": "./dist/mask.js",
       "require": "./dist/mask.cjs"
     },
-    "./resolvers/*": {
-      "types": "./dist/resolvers/*.d.ts",
-      "import": "./dist/resolvers/*.js",
-      "require": "./dist/resolvers/*.cjs"
-    },
     "./resolvers": {
       "types": "./dist/resolvers/index.d.ts",
       "import": "./dist/resolvers/index.js",
@@ -119,6 +114,28 @@
       "types": "./dist/devtools/protocol.d.ts",
       "import": "./dist/devtools/protocol.js",
       "require": "./dist/devtools/protocol.cjs"
+    }
+  },
+  "typesVersions": {
+    "*": {
+      "core": ["./dist/core.d.ts"],
+      "core/store": ["./dist/core/store.d.ts"],
+      "core/bindings": ["./dist/core/bindings.d.ts"],
+      "core/status": ["./dist/core/status.d.ts"],
+      "core/utils": ["./dist/core/utils.d.ts"],
+      "utils": ["./dist/utils.d.ts"],
+      "react": ["./dist/react/index.d.ts"],
+      "react-native": ["./dist/react-native/index.d.ts"],
+      "vue": ["./dist/vue/index.d.ts"],
+      "angular": ["./dist/angular/index.d.ts"],
+      "mask": ["./dist/mask.d.ts"],
+      "resolvers": ["./dist/resolvers/index.d.ts"],
+      "resolvers/zod": ["./dist/resolvers/zod.d.ts"],
+      "resolvers/yup": ["./dist/resolvers/yup.d.ts"],
+      "resolvers/joi": ["./dist/resolvers/joi.d.ts"],
+      "devtools": ["./dist/devtools/index.d.ts"],
+      "devtools/bridge": ["./dist/devtools/bridge.d.ts"],
+      "devtools/protocol": ["./dist/devtools/protocol.d.ts"]
     }
   },
   "files": [

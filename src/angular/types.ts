@@ -49,6 +49,7 @@ export interface InjectBitFieldResult<
   ) => void;
   setBlur: () => void;
   update: (e: BitFieldInputEvent) => void;
+  onBlur: () => void;
   // Readonly metadata (grouped)
   meta: InjectBitFieldMeta;
 }

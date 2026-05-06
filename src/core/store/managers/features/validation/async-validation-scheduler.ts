@@ -298,7 +298,19 @@ export class BitAsyncValidationScheduler<T extends object> {
 
       const currentValue = getDeepValue(this.port.getValues(), path);
       if (!valueEqual(currentValue, job.value)) {
-        return;
+        // The value at the original path changed, but the job may have been
+        // remapped to a new path (e.g., after array reorder). Check if the
+        // value at the remapped path matches instead.
+        const remappedPath = this.findControllerPath(job.controller);
+        if (!remappedPath || remappedPath === path) {
+          return;
+        }
+        const remappedValue = getDeepValue(this.port.getValues(), remappedPath);
+        if (!valueEqual(remappedValue, job.value)) {
+          return;
+        }
+        // Use remapped path from now on
+        (path as any) = remappedPath;
       }
 
       if (errorMessage === BIT_ASYNC_VALIDATION_TIMEOUT) {

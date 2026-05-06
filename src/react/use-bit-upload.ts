@@ -42,6 +42,11 @@ export function useBitUpload<
   const uploadKeyRef = useRef<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
 
+  // Shared generation counter so remove() invalidates in-flight uploads.
+  // This prevents a remove-during-upload race where the stale upload URL
+  // would overwrite the null set by remove.
+  const sharedGen = useRef({ current: 0 }).current;
+
   // Ref que sempre aponta para os valores mais recentes de render,
   // permitindo que o handler factory (e seu `currentGeneration`) seja
   // criado uma única vez por (fieldPath, uploadFn). Sem este padrão,
@@ -87,12 +92,12 @@ export function useBitUpload<
   );
 
   const upload = useMemo(
-    () => createUploadHandler(fieldPath, uploadFn, stableCallbacks),
+    () => createUploadHandler(fieldPath, uploadFn, stableCallbacks, sharedGen),
     [fieldPath, uploadFn, stableCallbacks],
   );
 
   const remove = useMemo(
-    () => createRemoveHandler(fieldPath, deleteFile, stableCallbacks),
+    () => createRemoveHandler(fieldPath, deleteFile, stableCallbacks, sharedGen),
     [fieldPath, deleteFile, stableCallbacks],
   );
 
