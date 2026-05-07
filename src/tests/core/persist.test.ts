@@ -895,7 +895,7 @@ describe("Persist Feature (BitPersistManager)", () => {
         },
       });
 
-      const result = await store.feature.restorePersisted();
+      const _result = await store.feature.restorePersisted();
       await Promise.resolve();
       expect(onUnhandledError).toHaveBeenCalledWith(
         expect.any(Error),

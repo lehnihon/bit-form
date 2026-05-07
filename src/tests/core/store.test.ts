@@ -3256,7 +3256,7 @@ describe("BitStore Core", () => {
 
       try {
         store.write.setField("email", "new@test.com");
-      } catch (e) {
+      } catch {
         // Ignore — the test verifies that no derivation error corrupted pending state
       }
 
