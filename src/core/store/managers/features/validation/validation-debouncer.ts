@@ -23,6 +23,7 @@ export class BitValidationDebouncer {
     if (this.cancelTimeout) {
       this.cancelTimeout();
       this.cancelTimeout = undefined;
+      this.isGlobalPending = false;
     }
 
     const configuredDelay = this.port.validationDelay ?? 300;

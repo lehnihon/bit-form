@@ -3785,5 +3785,29 @@ describe("BitStore Core", () => {
       );
       spy.mockRestore();
     });
+
+    it("maxHistory=2 allows at least one undo", () => {
+      const store = createBitStore({
+        initialValues: { name: "" },
+        history: { enabled: true, maxHistory: 2, debounceMs: 0 },
+      });
+      store.write.setField("name", "Leo");
+      expect(store.read.getHistoryMetadata().canUndo).toBe(true);
+    });
+
+    it("NaN field value is properly detected as dirty change", () => {
+      const store = createBitStore({ initialValues: { price: 0 } });
+      store.write.setField("price", NaN);
+      // NaN !== 0, so isDirty should be true
+      expect(store.read.getState().isDirty).toBe(true);
+    });
+
+    it("NaN value not falsely dirty when set to same NaN", () => {
+      const store = createBitStore({ initialValues: { price: NaN as any } });
+      store.write.setField("price", NaN);
+      // NaN should compare equal to NaN (from valueEqual fix)
+      // isDirty should be false since value didn't change
+      expect(store.read.getState().isDirty).toBe(false);
+    });
   });
 });
