@@ -15,6 +15,7 @@ import {
   createDateMask,
   maskJPY,
   maskInteger,
+  maskRG,
   bitMasks,
   formatMaskedValue,
   parseMaskedInput,
@@ -399,5 +400,34 @@ describe("Mask Utils - field-binding helpers", () => {
 
   it("parseMaskedInput chama parse da máscara quando fornecida", () => {
     expect(parseMaskedInput("111.222.333-44", maskCPF)).toBe("11122233344");
+  });
+});
+
+describe("Mask regression (Audit #9)", () => {
+  it("maskRG sem dígito verificador não produz hífen pendente", () => {
+    expect(maskRG.format("12345678")).toBe("12.345.678");
+  });
+
+  it("maskRG com dígito verificador inclui hífen", () => {
+    expect(maskRG.format("12345678x")).toBe("12.345.678-x");
+    expect(maskRG.format("123456789")).toBe("12.345.678-9");
+  });
+
+  it("currency mask parse(format(empty)) round-trip", () => {
+    const formatted = maskBRL.format("");
+    const parsed = maskBRL.parse(formatted);
+    // Empty input should round-trip to 0 (as per unmaskCurrency behavior)
+    expect(parsed).toBe(0);
+  });
+
+  it("currency mask format handles empty/null/undefined safely", () => {
+    expect(maskBRL.format("")).toBe("");
+    expect(maskBRL.format(null as any)).toBe("");
+    expect(maskBRL.format(undefined as any)).toBe("");
+  });
+
+  it("currency mask parse handles empty safely", () => {
+    expect(maskBRL.parse("")).toBe(0);
+    expect(maskBRL.parse("R$ 0,00")).toBe(0);
   });
 });

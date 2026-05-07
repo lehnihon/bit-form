@@ -2,6 +2,7 @@
 
 import { mount } from "@vue/test-utils";
 import {
+  provideBitStore,
   useBitArray,
   useBitField,
   useBitForm,
@@ -381,6 +382,27 @@ describe("Vue Integration", () => {
       const ok = await wrapper.vm.persist.restore();
       expect(ok).toBe(true);
       expect(store.read.getState().values.name).toBe("Leo");
+    });
+  });
+
+  describe("Provider cleanup on unmount (Audit #9)", () => {
+    it("calls store.feature.cleanup when provideBitStore component unmounts", () => {
+      const store = createBitStore({ initialValues: { name: "" } }) as any;
+      const cleanupSpy = vi.spyOn(store.feature, "cleanup");
+
+      const TestComponent = defineComponent({
+        setup() {
+          provideBitStore(store);
+          return {};
+        },
+        template: "<div></div>",
+      });
+
+      const wrapper = mount(TestComponent);
+      expect(cleanupSpy).not.toHaveBeenCalled();
+      wrapper.unmount();
+      expect(cleanupSpy).toHaveBeenCalledTimes(1);
+      cleanupSpy.mockRestore();
     });
   });
 });

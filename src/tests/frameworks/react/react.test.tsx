@@ -898,4 +898,21 @@ describe("React Integration (Context + Hooks)", () => {
       expect(result.current).toBe(initialRef);
     });
   });
+
+  describe("Provider cleanup on unmount (Audit #9)", () => {
+    it("calls store.feature.cleanup when BitFormProvider unmounts", () => {
+      const store = createTestStore({ name: "" });
+      const cleanupSpy = vi.spyOn(store.feature, "cleanup");
+
+      const Wrapper = ({ children }: { children: React.ReactNode }) => (
+        <BitFormProvider store={store}>{children}</BitFormProvider>
+      );
+
+      const { unmount } = renderHook(() => {}, { wrapper: Wrapper });
+      expect(cleanupSpy).not.toHaveBeenCalled();
+      unmount();
+      expect(cleanupSpy).toHaveBeenCalledTimes(1);
+      cleanupSpy.mockRestore();
+    });
+  });
 });
