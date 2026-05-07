@@ -901,7 +901,7 @@ describe("React Integration (Context + Hooks)", () => {
 
   describe("Provider cleanup on unmount (Audit #9)", () => {
     it("calls store.feature.cleanup when BitFormProvider unmounts", () => {
-      const store = createTestStore({ name: "" });
+      const store = createTestStore();
       const cleanupSpy = vi.spyOn(store.feature, "cleanup");
 
       const Wrapper = ({ children }: { children: React.ReactNode }) => (
