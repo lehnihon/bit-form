@@ -1,4 +1,4 @@
-import { inject, InjectionToken, Provider } from "@angular/core";
+import { DestroyRef, inject, InjectionToken, Provider } from "@angular/core";
 import type { BitFrameworkStoreApi, BitStoreApi } from "../core";
 import { createFrameworkStoreAdapter } from "../core";
 
@@ -9,9 +9,21 @@ export const BIT_STORE_TOKEN = new InjectionToken<BitFrameworkStoreApi<any>>(
 export function provideBitStore<T extends object>(
   store: BitFrameworkStoreApi<T> | BitStoreApi<T>,
 ): Provider {
+  const adapted = createFrameworkStoreAdapter<T>(store);
+
+  try {
+    const destroyRef = inject(DestroyRef);
+    destroyRef.onDestroy(() => {
+      (adapted as any).feature?.cleanup?.();
+    });
+  } catch {
+    // Called outside injection context (e.g., root module) — cleanup is
+    // the caller's responsibility.
+  }
+
   return {
     provide: BIT_STORE_TOKEN,
-    useValue: createFrameworkStoreAdapter<T>(store),
+    useValue: adapted,
   };
 }
 

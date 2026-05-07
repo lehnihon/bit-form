@@ -22,12 +22,15 @@ export type {
   BitValidationOptions,
   BitHistoryMetadata,
   BitFormMeta,
+  BitServerErrorOptions,
 } from "./store/contracts/public/meta-types";
 
 export type {
   BitSelector,
   BitEqualityFn,
   BitSelectorSubscriptionOptions,
+  BitScopedSelectorSubscriptionOptions,
+  BitTrackedSelectorSubscriptionOptions,
 } from "./store/contracts/public/subscription-types";
 
 export type {
@@ -69,6 +72,9 @@ export type {
   BitAfterSubmitEvent,
   BitSubmitResult,
   BitPersistMetadata,
+  BitPersistResolvedConfig,
+  BitIdFactory,
+  BitMaybePromise,
 } from "./store/contracts/types";
 
 export { bitBus, createBitBus } from "./store/shared/bus";

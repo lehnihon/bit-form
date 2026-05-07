@@ -366,6 +366,15 @@ describe("Mask Utils - Built-in Registry (bitMasks)", () => {
   it("ssn deve aceitar formato ###-##-####", () => {
     expect(bitMasks.ssn.format("123456789")).toBe("123-45-6789");
   });
+
+  it("rg sem dígito verificador não produz hífen pendente", () => {
+    expect(bitMasks.rg.format("12345678")).toBe("12.345.678");
+  });
+
+  it("rg com dígito verificador inclui hífen", () => {
+    expect(bitMasks.rg.format("12345678x")).toBe("12.345.678-x");
+    expect(bitMasks.rg.format("123456789")).toBe("12.345.678-9");
+  });
 });
 
 describe("Mask Utils - field-binding helpers", () => {

@@ -3752,5 +3752,38 @@ describe("BitStore Core", () => {
       // Non-conflicting edit (name was not touched by user) should receive persisted value
       expect(store.read.getState().values.name).toBe("persisted-name");
     });
+
+    it("persist error reaches onUnhandledError callback", async () => {
+      const onError = vi.fn();
+      const storage = {
+        getItem: () => null,
+        setItem: () => { throw new Error("storage down"); },
+        removeItem: vi.fn(),
+      };
+      const store = createBitStore({
+        initialValues: { name: "test" },
+        persist: { enabled: true, key: "test-key", storage },
+        onUnhandledError: onError,
+      });
+      await expect(store.feature.forceSave()).rejects.toThrow();
+      // onUnhandledError should be called with source "persist"
+      expect(onError).toHaveBeenCalledWith(expect.any(Error), "persist");
+    });
+
+    it("plugin error without onError hook logs to console", async () => {
+      const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+      const store = createBitStore({
+        initialValues: { name: "" },
+        plugins: [{ name: "test", hooks: { beforeSubmit: () => { throw new Error("plugin bug"); } } }],
+      });
+      await store.write.submit(vi.fn().mockResolvedValue(undefined));
+      // Plugin errors without an onError handler should be logged
+      expect(spy).toHaveBeenCalledWith(
+        expect.stringContaining("BitForm: plugin error"),
+        expect.any(String),
+        expect.any(Error),
+      );
+      spy.mockRestore();
+    });
   });
 });

@@ -114,15 +114,25 @@ export class BitPluginManager<T extends object = Record<string, unknown>> {
           state: stateSnapshot,
         };
 
+        let consumed = false;
         for (const plugin of this.plugins) {
           const onError = plugin.hooks?.onError;
           if (!onError) continue;
 
+          consumed = true;
           try {
             await onError(payload, this.contextFactory());
           } catch {
             // fail-open: ignore secondary errors from onError handlers
           }
+        }
+
+        if (!consumed && typeof console !== "undefined" && console.error) {
+          console.error(
+            `BitForm: plugin error without onError handler`,
+            payload.source,
+            payload.error,
+          );
         }
       }
     } finally {
