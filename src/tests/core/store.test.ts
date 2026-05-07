@@ -3809,5 +3809,47 @@ describe("BitStore Core", () => {
       // isDirty should be false since value didn't change
       expect(store.read.getState().isDirty).toBe(false);
     });
+
+    it("pushItem on non-array path does not crash", () => {
+      const store = createBitStore({ initialValues: { user: { name: "Leo" } } });
+      expect(() => store.feature.pushItem("user", "extra")).not.toThrow();
+    });
+
+    it("insertItem on non-array path does not crash", () => {
+      const store = createBitStore({ initialValues: { user: { name: "Leo" } } });
+      expect(() => store.feature.insertItem("user", 0, "extra")).not.toThrow();
+    });
+
+    it("replaceItems with null does not crash", () => {
+      const store = createBitStore({ initialValues: { items: ["a"] } });
+      expect(() => store.feature.replaceItems("items", null as any)).not.toThrow();
+    });
+
+    it("setServerErrors with null does not crash", () => {
+      const store = createBitStore({ initialValues: { name: "" } });
+      expect(() => store.write.setServerErrors(null as any)).not.toThrow();
+    });
+
+    it("createArrayItemId produces unique IDs across indices", () => {
+      const store = createBitStore({ initialValues: { items: ["a", "b"] } });
+      const id0 = store.feature.createArrayItemId("items", 0);
+      const id1 = store.feature.createArrayItemId("items", 1);
+      expect(id0).not.toBe(id1);
+    });
+
+    it("createArrayItemId includes path in ID", () => {
+      const store = createBitStore({ initialValues: { a: ["x"], b: ["y"] } });
+      const idA = store.feature.createArrayItemId("a", 0);
+      const idB = store.feature.createArrayItemId("b", 0);
+      expect(idA).not.toBe(idB);
+    });
+
+    it("pushItem only unregisters the new index, not all items", () => {
+      const store = createBitStore({ initialValues: { items: ["a"] } });
+      store.feature.registerField("items.0", { validation: { required: true } });
+      // Push should preserve items.0 config
+      store.feature.pushItem("items", "b");
+      expect(store.read.getFieldConfig("items.0")).toBeDefined();
+    });
   });
 });
