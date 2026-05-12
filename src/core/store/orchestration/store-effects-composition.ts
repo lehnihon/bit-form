@@ -68,12 +68,6 @@ export function createStoreEffects<T extends object>(args: {
     },
   );
 
-  const pluginManager = new BitPluginManager<T>([...config.plugins], () => ({
-    storeId,
-    getState: () => deepClone(getState()),
-    getConfig: () => deepClone(getConfig()),
-  }));
-
   const enableBusDispatch = shouldEnableStoreBus(config);
   const isTestEnv =
     typeof process !== "undefined" &&
@@ -82,6 +76,13 @@ export function createStoreEffects<T extends object>(args: {
   const resolvedBus = enableBusDispatch
     ? (config.bus ?? (isTestEnv ? getNoopBitBus() : bitBus))
     : getNoopBitBus();
+
+  const pluginManager = new BitPluginManager<T>([...config.plugins], () => ({
+    storeId,
+    getState: () => deepClone(getState()),
+    getConfig: () => deepClone(getConfig()),
+    bus: resolvedBus,
+  }));
 
   const registry = new BitEffectRegistry<T>();
   let destroyed = false;

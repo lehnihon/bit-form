@@ -134,6 +134,6 @@ export class BitHistoryManager<T extends object = Record<string, unknown>> {
   }
 
   private getCapacity() {
-    return Math.max(1, this.maxHistory);
+    return Math.max(2, this.maxHistory);
   }
 }

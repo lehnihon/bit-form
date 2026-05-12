@@ -117,8 +117,8 @@ export const maskTime = createPatternMask("##:##");
 /** CNH (Carteira de Motorista - 11 dígitos) */
 export const maskCNH = createPatternMask("###########");
 
-/** RG (00.000.000-X) - Suporta o 'X' como dígito verificador */
-export const maskRG = createPatternMask("##.###.###-X");
+/** RG (00.000.000 ou 00.000.000-X) - Suporta o 'X' como dígito verificador e RG sem dígito */
+export const maskRG = createPatternMask(["##.###.###", "##.###.###-X"]);
 
 /**
  * CPF + CNPJ combinado — alterna automaticamente pelo número de dígitos:

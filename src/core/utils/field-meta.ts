@@ -15,7 +15,7 @@ export function deriveFieldMeta<T extends object, TValue>(
   state: Readonly<BitFieldState<T, TValue>>,
 ): BitDerivedFieldMeta {
   const error = state.touched ? state.error : undefined;
-  const hasError = !!state.error;
+  const hasError = state.error !== undefined;
 
   return {
     error,

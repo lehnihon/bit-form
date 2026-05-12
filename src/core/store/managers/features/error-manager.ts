@@ -93,6 +93,7 @@ export class BitErrorManager<T extends object = Record<string, unknown>> {
     serverErrors: Record<string, string[] | string>,
     options?: BitServerErrorOptions,
   ): void {
+    if (!serverErrors) return;
     const arrayStrategy = options?.arrayStrategy ?? "first";
     const joinSeparator = options?.joinSeparator ?? "; ";
     const formattedErrors: BitErrors<T> = {};
@@ -120,7 +121,7 @@ export class BitErrorManager<T extends object = Record<string, unknown>> {
         continue;
       }
 
-      formattedErrors[key as keyof BitErrors<T>] = value;
+      formattedErrors[key as keyof BitErrors<T>] = value !== undefined ? value : undefined as any;
     }
 
     this.setErrors(formattedErrors);

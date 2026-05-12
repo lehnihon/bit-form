@@ -11,7 +11,12 @@ const rootGlobal =
       ? global
       : window;
 
-if (!rootGlobal.__BIT_FORM__) {
+const isSSREnv =
+  typeof window === "undefined" &&
+  typeof process !== "undefined" &&
+  typeof process.env !== "undefined";
+
+if (!isSSREnv && !rootGlobal.__BIT_FORM__) {
   rootGlobal.__BIT_FORM__ = {
     stores: {},
     listeners: new Set<BitBusListener>(),
@@ -37,7 +42,9 @@ if (!rootGlobal.__BIT_FORM__) {
   };
 }
 
-export const bitBus = rootGlobal.__BIT_FORM__ as BitFormGlobal;
+export const bitBus: BitFormGlobal = isSSREnv
+  ? createBitBus()
+  : (rootGlobal.__BIT_FORM__ as BitFormGlobal);
 
 const noopBus: BitFormGlobal = {
   stores: {},

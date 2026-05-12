@@ -30,7 +30,7 @@ export class BitArrayManager<T extends object = Record<string, unknown>> {
 
   getItemIds(path: string, length?: number): string[] {
     const targetLength =
-      typeof length === "number"
+      typeof length === "number" && Number.isFinite(length)
         ? Math.max(0, length)
         : this.getCurrentArrayLength(path);
 
@@ -43,11 +43,16 @@ export class BitArrayManager<T extends object = Record<string, unknown>> {
       return ids;
     });
 
-    this.store.unregisterPrefix?.(toPathPrefix(path));
+    const newIndex = this.getCurrentArrayLength(path);
+    this.store.unregisterPrefix?.(toPathPrefix(path, newIndex));
+
+    const current = getDeepValue(this.store.getState().values, path);
+    const arr: unknown[] = Array.isArray(current) ? [...current] : [];
+    arr.push(value);
 
     this.commitArrayMutationWithFieldPipeline({
       path,
-      nextArray: [...((getDeepValue(this.store.getState().values, path) as unknown[] | undefined) ?? []), value],
+      nextArray: arr,
       meta: { origin: "array", operation: "push" },
       reindex: (currentIdx) => currentIdx,
     });
@@ -61,13 +66,13 @@ export class BitArrayManager<T extends object = Record<string, unknown>> {
 
     this.store.unregisterPrefix?.(toPathPrefix(path));
 
-    const current =
-      (getDeepValue(this.store.getState().values, path) as
-        | unknown[]
-        | undefined) ?? [];
+    const current = getDeepValue(this.store.getState().values, path);
+    const arr = Array.isArray(current) ? [...current] : [];
+    arr.unshift(value);
+
     this.commitArrayMutationWithFieldPipeline({
       path,
-      nextArray: [value, ...current],
+      nextArray: arr,
       meta: { origin: "array", operation: "prepend" },
       reindex: (currentIdx) => currentIdx + 1,
     });
@@ -89,16 +94,13 @@ export class BitArrayManager<T extends object = Record<string, unknown>> {
       }
     }
 
-    const current =
-      (getDeepValue(this.store.getState().values, path) as
-        | unknown[]
-        | undefined) ?? [];
-    const nextArray = [...current];
-    nextArray.splice(safeIndex, 0, value);
+    const current = getDeepValue(this.store.getState().values, path);
+    const arr = Array.isArray(current) ? [...current] : [];
+    arr.splice(safeIndex, 0, value);
 
     this.commitArrayMutationWithFieldPipeline({
       path,
-      nextArray,
+      nextArray: arr,
       meta: { origin: "array", operation: "insert", index: safeIndex },
       reindex: (currentIdx) =>
         currentIdx < safeIndex ? currentIdx : currentIdx + 1,
@@ -236,6 +238,7 @@ export class BitArrayManager<T extends object = Record<string, unknown>> {
   }
 
   replaceItems(path: string, items: unknown[]) {
+    if (!Array.isArray(items)) return;
     this.store.unregisterPrefix?.(toPathPrefix(path));
 
     if (items.length === 0) {

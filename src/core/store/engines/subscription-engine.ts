@@ -203,7 +203,7 @@ export class BitSubscriptionEngine<T extends object> {
       }
   
       console.error("Subscription listener error:", error);
-    } catch (e) {
+    } catch {
       // Isolamento total contra quebras no laço de inscrição
     }
   }

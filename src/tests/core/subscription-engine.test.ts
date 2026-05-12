@@ -468,7 +468,7 @@ describe("BitSubscriptionEngine", () => {
     it("should not orphan scope subscription if destroyed during registry change microtask", async () => {
       const { subscribeStoreScopeStatus } = await import("../../core/store/orchestration/store-observe-ops");
 
-      let selectorUnsubscribeCalls = 0;
+      let _selectorUnsubscribeCalls = 0;
       let registryListener: any = null;
 
       const subscribeSelector = vi.fn((selector, listener, options) => {
@@ -476,7 +476,7 @@ describe("BitSubscriptionEngine", () => {
           registryListener = listener;
         }
         return () => {
-          selectorUnsubscribeCalls++;
+          _selectorUnsubscribeCalls++;
         };
       });
 
@@ -501,7 +501,7 @@ describe("BitSubscriptionEngine", () => {
       // Se a microtask vazou e fez um novo resubscribe, selectorUnsubscribeCalls não vai bater (ou a gente vaza memória).
       // Na verdade, o mock subscribeSelector foi chamado mais uma vez se vazou.
       
-      const callsAfterFirstSubscribe = subscribeSelector.mock.calls.length;
+      const _callsAfterFirstSubscribe = subscribeSelector.mock.calls.length;
       
       // se não tivesse `if (destroyed) { unsubscribeScoped(); return; }`, ele chamaria subscribeScoped de novo (mais 1 call pro subscribeSelector)
       expect(subscribeSelector).toHaveBeenCalledTimes(2); // 1 pro escopo, 1 pro registry. A microtask NÃO deve fazer o 3o se destroyed.

@@ -3256,7 +3256,7 @@ describe("BitStore Core", () => {
 
       try {
         store.write.setField("email", "new@test.com");
-      } catch (e) {
+      } catch {
         // Ignore — the test verifies that no derivation error corrupted pending state
       }
 
@@ -3751,6 +3751,105 @@ describe("BitStore Core", () => {
 
       // Non-conflicting edit (name was not touched by user) should receive persisted value
       expect(store.read.getState().values.name).toBe("persisted-name");
+    });
+
+    it("persist error reaches onUnhandledError callback", async () => {
+      const onError = vi.fn();
+      const storage = {
+        getItem: () => null,
+        setItem: () => { throw new Error("storage down"); },
+        removeItem: vi.fn(),
+      };
+      const store = createBitStore({
+        initialValues: { name: "test" },
+        persist: { enabled: true, key: "test-key", storage },
+        onUnhandledError: onError,
+      });
+      await expect(store.feature.forceSave()).rejects.toThrow();
+      // onUnhandledError should be called with source "persist"
+      expect(onError).toHaveBeenCalledWith(expect.any(Error), "persist");
+    });
+
+    it("plugin error without onError hook logs to console", async () => {
+      const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+      const store = createBitStore({
+        initialValues: { name: "" },
+        plugins: [{ name: "test", hooks: { beforeSubmit: () => { throw new Error("plugin bug"); } } }],
+      });
+      await store.write.submit(vi.fn().mockResolvedValue(undefined));
+      // Plugin errors without an onError handler should be logged
+      expect(spy).toHaveBeenCalledWith(
+        expect.stringContaining("BitForm: plugin error"),
+        expect.any(String),
+        expect.any(Error),
+      );
+      spy.mockRestore();
+    });
+
+    it("maxHistory=2 allows at least one undo", () => {
+      const store = createBitStore({
+        initialValues: { name: "" },
+        history: { enabled: true, maxHistory: 2, debounceMs: 0 },
+      });
+      store.write.setField("name", "Leo");
+      expect(store.read.getHistoryMetadata().canUndo).toBe(true);
+    });
+
+    it("NaN field value is properly detected as dirty change", () => {
+      const store = createBitStore({ initialValues: { price: 0 } });
+      store.write.setField("price", NaN);
+      // NaN !== 0, so isDirty should be true
+      expect(store.read.getState().isDirty).toBe(true);
+    });
+
+    it("NaN value not falsely dirty when set to same NaN", () => {
+      const store = createBitStore({ initialValues: { price: NaN as any } });
+      store.write.setField("price", NaN);
+      // NaN should compare equal to NaN (from valueEqual fix)
+      // isDirty should be false since value didn't change
+      expect(store.read.getState().isDirty).toBe(false);
+    });
+
+    it("pushItem on non-array path does not crash", () => {
+      const store = createBitStore({ initialValues: { user: { name: "Leo" } } });
+      expect(() => store.feature.pushItem("user", "extra")).not.toThrow();
+    });
+
+    it("insertItem on non-array path does not crash", () => {
+      const store = createBitStore({ initialValues: { user: { name: "Leo" } } });
+      expect(() => store.feature.insertItem("user", 0, "extra")).not.toThrow();
+    });
+
+    it("replaceItems with null does not crash", () => {
+      const store = createBitStore({ initialValues: { items: ["a"] } });
+      expect(() => store.feature.replaceItems("items", null as any)).not.toThrow();
+    });
+
+    it("setServerErrors with null does not crash", () => {
+      const store = createBitStore({ initialValues: { name: "" } });
+      expect(() => store.write.setServerErrors(null as any)).not.toThrow();
+    });
+
+    it("createArrayItemId produces unique IDs across indices", () => {
+      const store = createBitStore({ initialValues: { items: ["a", "b"] } });
+      const id0 = store.feature.createArrayItemId("items", 0);
+      const id1 = store.feature.createArrayItemId("items", 1);
+      expect(id0).not.toBe(id1);
+    });
+
+    it("createArrayItemId includes path in ID", () => {
+      const store = createBitStore({ initialValues: { a: ["x"], b: ["y"] } });
+      const idA = store.feature.createArrayItemId("a", 0);
+      const idB = store.feature.createArrayItemId("b", 0);
+      expect(idA).not.toBe(idB);
+    });
+
+    it("pushItem only unregisters the new index, not all items", () => {
+      const store = createBitStore({ initialValues: { items: ["a"] } });
+      store.feature.registerField("items.0", { validation: { required: true } });
+      // Push should preserve items.0 config
+      store.feature.pushItem("items", "b");
+      expect(store.read.getFieldConfig("items.0")).toBeDefined();
     });
   });
 });

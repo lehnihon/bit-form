@@ -711,3 +711,34 @@ describe("utils - path value edge cases", () => {
     expect(getDeepValue(obj, "user..name")).toBe("Leo");
   });
 });
+
+describe("utils - equality edge cases (Audit #10)", () => {
+  it("valueEqual treats NaN as equal to NaN", () => {
+    expect(valueEqual(NaN, NaN)).toBe(true);
+  });
+
+  it("deepEqual treats NaN as equal to NaN", () => {
+    expect(deepEqual({ a: NaN }, { a: NaN })).toBe(true);
+  });
+
+  it("deepEqual rejects Date vs plain object", () => {
+    expect(deepEqual(new Date("2025-01-01"), {})).toBe(false);
+  });
+
+  it("deepEqual rejects RegExp vs plain object", () => {
+    expect(deepEqual(/foo/, {})).toBe(false);
+  });
+
+  it("deepEqual rejects Date vs RegExp", () => {
+    expect(deepEqual(new Date(), new RegExp(""))).toBe(false);
+  });
+
+  it("deepEqual matches same Date correctly", () => {
+    const d = new Date("2025-01-01");
+    expect(deepEqual(d, new Date("2025-01-01"))).toBe(true);
+  });
+
+  it("deepEqual matches same RegExp correctly", () => {
+    expect(deepEqual(/foo/gi, new RegExp("foo", "gi"))).toBe(true);
+  });
+});

@@ -71,6 +71,7 @@ export function deepMerge<T>(
 }
 
 export function valueEqual(a: any, b: any): boolean {
+  if (Number.isNaN(a) && Number.isNaN(b)) return true;
   if (a === b) return true;
   if (
     a === null ||
@@ -92,6 +93,7 @@ function deepEqualInner(
   b: any,
   visitedPairs: WeakMap<object, WeakSet<object>>,
 ): boolean {
+  if (Number.isNaN(a) && Number.isNaN(b)) return true;
   if (a === b) return true;
   if (
     a === null ||
@@ -112,6 +114,7 @@ function deepEqualInner(
   }
 
   if (Array.isArray(a) !== Array.isArray(b)) return false;
+  if (a.constructor !== null && b.constructor !== null && a.constructor !== b.constructor) return false;
 
   if (a instanceof Date && b instanceof Date)
     return a.getTime() === b.getTime();

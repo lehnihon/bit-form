@@ -2,11 +2,14 @@ import { deepClone } from "../../utils";
 import type { BitFrameworkConfig } from "../contracts/public/store-api-types";
 import type { BitConfig, BitPersistResolvedConfig } from "../contracts/types";
 
-function defaultIdFactory() {
+function defaultIdFactory(args?: { scope?: string; path?: string; index?: number }) {
+  const p = args?.path ?? "";
+  const i = args?.index;
+  const seed = i !== undefined ? `${p}:${i}` : `${p}:${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
   if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
-    return `bit-form-${crypto.randomUUID()}`;
+    return `bit-form-${seed}-${crypto.randomUUID().slice(0, 8)}`;
   }
-  return `bit-form-${Math.random().toString(36).slice(2, 9)}`;
+  return `bit-form-${seed}`;
 }
 
 function defaultUnhandledErrorReporter(error: unknown) {

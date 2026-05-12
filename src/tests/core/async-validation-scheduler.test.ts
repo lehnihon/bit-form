@@ -277,7 +277,7 @@ describe("BitAsyncValidationScheduler", () => {
 
     it("ACHADO-5: should not leave isValidating=true when asyncValidate throws after abort signal", async () => {
       const fieldValidatingCalls: Array<[string, boolean]> = [];
-      let abortSignalRef: AbortSignal | undefined;
+      let _abortSignalRef: AbortSignal | undefined;
 
       const port = {
         schedule: (fn: () => void, delay: number) => {
@@ -298,7 +298,7 @@ describe("BitAsyncValidationScheduler", () => {
 
       // Validator that captures the abort signal and throws after abort
       const throwAfterAbort = vi.fn(
-        async (value: unknown, allValues: unknown) => {
+        async (_value: unknown, _allValues: unknown) => {
           // Simulate a slow validator that checks abort mid-flight
           await new Promise((r) => setTimeout(r, 20));
           throw new Error("crashed after long computation");

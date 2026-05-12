@@ -23,6 +23,9 @@ export function runStoreStateBatch<T extends object, TResult>(args: {
   } catch (error) {
     batchState.pendingState = null;
     batchState.pendingHistorySnapshot = false;
+    batchState.changedPathSet = null;
+    batchState.changedPathList = null;
+    batchState.valuesChanged = false;
     throw error;
   } finally {
     if (endStoreBatch(batchState)) {
