@@ -1,6 +1,6 @@
 {
   "name": "@lehnihon/bit-form",
-  "version": "2.2.19",
+  "version": "2.2.20",
   "description": "Gerenciamento de estado de formulários agnóstico e performático",
   "publishConfig": {
     "access": "public"
@@ -118,24 +118,60 @@
   },
   "typesVersions": {
     "*": {
-      "core": ["./dist/core.d.ts"],
-      "core/store": ["./dist/core/store.d.ts"],
-      "core/bindings": ["./dist/core/bindings.d.ts"],
-      "core/status": ["./dist/core/status.d.ts"],
-      "core/utils": ["./dist/core/utils.d.ts"],
-      "utils": ["./dist/utils.d.ts"],
-      "react": ["./dist/react/index.d.ts"],
-      "react-native": ["./dist/react-native/index.d.ts"],
-      "vue": ["./dist/vue/index.d.ts"],
-      "angular": ["./dist/angular/index.d.ts"],
-      "mask": ["./dist/mask.d.ts"],
-      "resolvers": ["./dist/resolvers/index.d.ts"],
-      "resolvers/zod": ["./dist/resolvers/zod.d.ts"],
-      "resolvers/yup": ["./dist/resolvers/yup.d.ts"],
-      "resolvers/joi": ["./dist/resolvers/joi.d.ts"],
-      "devtools": ["./dist/devtools/index.d.ts"],
-      "devtools/bridge": ["./dist/devtools/bridge.d.ts"],
-      "devtools/protocol": ["./dist/devtools/protocol.d.ts"]
+      "core": [
+        "./dist/core.d.ts"
+      ],
+      "core/store": [
+        "./dist/core/store.d.ts"
+      ],
+      "core/bindings": [
+        "./dist/core/bindings.d.ts"
+      ],
+      "core/status": [
+        "./dist/core/status.d.ts"
+      ],
+      "core/utils": [
+        "./dist/core/utils.d.ts"
+      ],
+      "utils": [
+        "./dist/utils.d.ts"
+      ],
+      "react": [
+        "./dist/react/index.d.ts"
+      ],
+      "react-native": [
+        "./dist/react-native/index.d.ts"
+      ],
+      "vue": [
+        "./dist/vue/index.d.ts"
+      ],
+      "angular": [
+        "./dist/angular/index.d.ts"
+      ],
+      "mask": [
+        "./dist/mask.d.ts"
+      ],
+      "resolvers": [
+        "./dist/resolvers/index.d.ts"
+      ],
+      "resolvers/zod": [
+        "./dist/resolvers/zod.d.ts"
+      ],
+      "resolvers/yup": [
+        "./dist/resolvers/yup.d.ts"
+      ],
+      "resolvers/joi": [
+        "./dist/resolvers/joi.d.ts"
+      ],
+      "devtools": [
+        "./dist/devtools/index.d.ts"
+      ],
+      "devtools/bridge": [
+        "./dist/devtools/bridge.d.ts"
+      ],
+      "devtools/protocol": [
+        "./dist/devtools/protocol.d.ts"
+      ]
     }
   },
   "files": [
