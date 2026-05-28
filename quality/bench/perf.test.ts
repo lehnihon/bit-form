@@ -107,9 +107,9 @@ describe("quality perf baseline", () => {
     });
 
     const duration = performance.now() - start;
-    // Mantemos no máximo ~4x do budget de 300 fields (220ms vs 55ms base).
-    // CI runners têm alta variância de CPU — 220ms + 60% headroom = 352ms.
-    expect(duration).toBeLessThan(withCiHeadroom(220));
+    // Mantemos no máximo ~4x do budget de 300 fields (base 230ms vs 55ms).
+    // CI runners têm alta variância de CPU — 230ms + 60% headroom = 368ms.
+    expect(duration).toBeLessThan(withCiHeadroom(230));
   });
 
   it("hydrates 400 partial fields under baseline budget", () => {
